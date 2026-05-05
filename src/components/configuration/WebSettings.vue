@@ -95,7 +95,8 @@
           <!-- PyMC Console Option -->
           <label
             :class="[
-              'flex items-start space-x-3 p-4 bg-background-mute dark:bg-background/30 rounded-lg border-2 cursor-pointer transition-all',
+              'flex items-start space-x-3 p-4 bg-background-mute dark:bg-background/30 rounded-lg border-2 transition-all',
+              !pymcConsoleExists ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               !localConfig.use_default_frontend
                 ? 'border-accent-cyan bg-accent-cyan/10'
                 : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50',
@@ -106,7 +107,7 @@
               name="frontend"
               :checked="!localConfig.use_default_frontend"
               @change="selectPymcConsole"
-              :disabled="saving"
+              :disabled="saving || !pymcConsoleExists"
               class="mt-1 h-4 w-4 text-accent-cyan focus:ring-accent-cyan focus:ring-offset-background"
             />
             <div class="flex-1">
@@ -438,6 +439,11 @@ async function selectDefaultFrontend() {
 }
 
 async function selectPymcConsole() {
+  // Guard: Prevent switching to PyMC Console if it's not installed
+  if (!pymcConsoleExists.value) {
+    showMessage('PyMC Console is not installed. Please install it before switching.', false);
+    return;
+  }
   localConfig.use_default_frontend = false;
   await saveSettings();
 }
