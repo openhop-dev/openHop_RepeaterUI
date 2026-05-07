@@ -54,12 +54,12 @@ const formatTimestamp = (timestamp: number) => {
 };
 
 const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
+  if (rssi === null || rssi === undefined) return 'N/A';
   return `${rssi} dBm`;
 };
 
 const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
+  if (snr === null || snr === undefined) return 'N/A';
   return `${snr.toFixed(1)} dB`;
 };
 
@@ -277,7 +277,7 @@ watch(
 
 // Get signal quality
 const signalQuality = computed(() => {
-  if (!props.neighbor?.rssi) return null;
+  if (!props.neighbor) return null;
   return getSignalQuality(props.neighbor.rssi);
 });
 </script>
@@ -434,17 +434,20 @@ const signalQuality = computed(() => {
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex gap-0.5">
-                        <div
-                          v-for="i in 4"
-                          :key="i"
-                          class="w-1 h-3 rounded-sm"
-                          :class="
-                            i <= signalQuality.bars
-                              ? signalQuality.color
-                              : 'bg-gray-300 dark:bg-gray-700'
-                          "
-                        ></div>
+                      <div class="flex items-end gap-0.5">
+                        <template v-for="i in 5" :key="i">
+                          <div
+                            :class="[
+                              'w-1 transition-colors',
+                              i <= signalQuality.bars
+                                ? signalQuality.color
+                                : 'text-gray-600 dark:text-gray-700',
+                            ]"
+                            :style="{ height: `${4 + i * 2}px` }"
+                          >
+                            <div class="w-full h-full bg-current rounded-sm"></div>
+                          </div>
+                        </template>
                       </div>
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
@@ -527,7 +530,7 @@ const signalQuality = computed(() => {
                       v-if="distance !== null"
                       class="text-content-primary dark:text-content-primary font-medium"
                     >
-                      {{ distance.toFixed(2) }} km
+                      {{ `${distance.toFixed(2)} km` }}
                     </div>
                     <button
                       v-else

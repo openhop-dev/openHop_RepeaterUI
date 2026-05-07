@@ -16,12 +16,15 @@ interface Props {
   selectedNodeId: number | null;
   level: number;
   disabled?: boolean;
+  unlocked?: boolean;
 }
 
 const props = defineProps<Props>();
 
 const emit = defineEmits<{
   select: [nodeId: number];
+  edit: [nodeId: number];
+  delete: [nodeId: number];
 }>();
 
 // Use the global tree state store
@@ -74,6 +77,15 @@ function getTruncatedKey(key: string | undefined): string {
   return `${key.slice(0, 8)}...${key.slice(-8)}`;
 }
 
+function handleRowClick() {
+  if (props.unlocked) {
+    selectNode();
+  }
+  if (hasChildren.value) {
+    toggleExpanded();
+  }
+}
+
 function toggleExpanded() {
   if (hasChildren.value) {
     const newValue = !isExpanded.value;
@@ -87,6 +99,14 @@ function selectNode() {
 
 function handleChildSelect(nodeId: number) {
   emit('select', nodeId);
+}
+
+function handleChildEdit(nodeId: number) {
+  emit('edit', nodeId);
+}
+
+function handleChildDelete(nodeId: number) {
+  emit('delete', nodeId);
 }
 
 function toggleShowFullKey(event: Event) {
@@ -107,14 +127,16 @@ function copyToClipboard(event: Event) {
     <!-- Node Content -->
     <div
       :class="[
-        'flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg cursor-pointer transition-all duration-200',
-        props.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/5',
-        selectedNodeId === node.id && !props.disabled
-          ? 'bg-primary/20 text-primary'
-          : 'text-white/80 hover:text-white',
+        'flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg border transition-colors duration-150',
+        props.disabled ? 'opacity-50' : '',
+        props.unlocked && selectedNodeId === node.id
+          ? 'bg-primary/10 border-primary/30 text-white'
+          : 'border-white/8 text-white/80',
+        props.unlocked && selectedNodeId !== node.id ? 'hover:bg-white/5 hover:border-white/15' : '',
+        hasChildren && !props.disabled ? 'cursor-pointer' : '',
         `ml-${level * 4}`,
       ]"
-      @click="!props.disabled && selectNode()"
+      @click.stop="!props.disabled && handleRowClick()"
     >
       <!-- Expand/Collapse Arrow -->
       <div
@@ -176,7 +198,7 @@ function copyToClipboard(event: Event) {
           selectedNodeId === node.id ? 'text-primary font-medium' : '',
         ]"
       >
-        {{ node.name }}
+        {{ node.name.startsWith('#') ? node.name.slice(1) : node.name }}
       </span>
 
       <!-- Transport Key Display -->
@@ -272,54 +294,54 @@ function copyToClipboard(event: Event) {
         </div>
       </div>
 
-      <!-- Last Used Display and Flood Policy Badge Container -->
-      <div class="flex items-center gap-1 sm:gap-2 ml-auto flex-shrink-0">
-        <!-- Last Used Display - Hidden on mobile -->
+      <!-- Last Used Display and Flood Policy Container -->
+      <div class="flex items-center gap-2 sm:gap-3 ml-auto flex-shrink-0">
+        <!-- Last Heard -->
         <div v-if="node.last_used" class="hidden sm:flex items-center gap-1">
-          <svg class="w-3 h-3 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <span class="text-xs text-white/40">Last Heard:</span>
           <span class="text-xs text-white/50" :title="node.last_used.toLocaleString()">
             {{ formatLastUsed(node.last_used) }}
           </span>
         </div>
-
-        <!-- Never Used Display -->
         <div v-else class="hidden sm:flex items-center gap-1">
-          <svg class="w-3 h-3 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <span class="text-xs text-white/30">Last Heard:</span>
           <span class="text-xs text-white/30 italic">Never</span>
         </div>
 
-        <!-- Flood Policy Badge -->
+        <!-- Flood Policy -->
         <span
           :class="[
-            'px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded-md transition-colors',
-            node.floodPolicy === 'allow'
-              ? 'bg-accent-green/10 text-accent-green/90 border border-accent-green/20'
-              : 'bg-accent-red/10 text-accent-red/90 border border-accent-red/20',
+            'text-[10px] sm:text-xs',
+            node.floodPolicy === 'allow' ? 'text-accent-green/80' : 'text-accent-red/80',
           ]"
         >
-          {{ node.floodPolicy === 'allow' ? 'ALLOW' : 'DENY' }}
+          Flood: {{ node.floodPolicy === 'allow' ? 'Allow' : 'Deny' }}
         </span>
+
+        <!-- Inline Edit / Delete (unlocked mode) -->
+        <template v-if="props.unlocked">
+          <button
+            @click.stop="emit('edit', node.id)"
+            class="px-2 py-0.5 text-[10px] sm:text-xs bg-primary/10 hover:bg-primary/20 text-content-secondary dark:text-content-muted rounded border border-primary/30 transition-colors whitespace-nowrap"
+          >
+            Edit
+          </button>
+          <button
+            @click.stop="emit('delete', node.id)"
+            class="p-1 text-accent-red/50 hover:text-accent-red transition-colors"
+            title="Delete"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </template>
 
         <!-- Children Count Badge -->
         <span
-          v-if="hasChildren"
+          v-if="hasChildren && !props.unlocked"
           class="hidden sm:inline-block px-2 py-1 bg-white/10 text-white/60 text-xs rounded-full ml-1"
         >
-          >
           {{ node.children.length }}
         </span>
       </div>
@@ -342,7 +364,10 @@ function copyToClipboard(event: Event) {
           :selected-node-id="selectedNodeId"
           :level="level + 1"
           :disabled="props.disabled"
+          :unlocked="props.unlocked"
           @select="handleChildSelect"
+          @edit="handleChildEdit"
+          @delete="handleChildDelete"
         />
       </div>
     </Transition>

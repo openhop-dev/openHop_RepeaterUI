@@ -20,6 +20,8 @@ export const usePacketStore = defineStore('packets', () => {
   const recentPackets = ref<RecentPacket[]>([]);
   const noiseFloorHistory = ref<NoiseFloorHistory[]>([]);
   const noiseFloorStats = ref<NoiseFloorStats | null>(null);
+  const lastKnownGoodNoiseFloor = ref<number | null>(null);
+  const consecutiveBadNoiseFloorPolls = ref(0);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const lastUpdated = ref<Date | null>(null);
@@ -51,7 +53,10 @@ export const usePacketStore = defineStore('packets', () => {
   const hasSystemStats = computed(() => systemStats.value !== null);
   const hasRecentPackets = computed(() => recentPackets.value.length > 0);
   const hasNoiseFloorData = computed(() => noiseFloorHistory.value.length > 0);
-  const currentNoiseFloor = computed(() => noiseFloorStats.value?.avg_noise_floor ?? 0);
+  const currentNoiseFloor = computed<number | null>(() => {
+    if (consecutiveBadNoiseFloorPolls.value >= 5) return null;
+    return lastKnownGoodNoiseFloor.value;
+  });
   const totalPackets = computed(() => packetStats.value?.total_packets ?? 0);
   const averageRSSI = computed(() => packetStats.value?.avg_rssi ?? 0);
   const averageSNR = computed(() => packetStats.value?.avg_snr ?? 0);
@@ -142,6 +147,17 @@ export const usePacketStore = defineStore('packets', () => {
       if (response.success && response.data && response.data.history) {
         noiseFloorHistory.value = response.data.history;
         lastUpdated.value = new Date();
+
+        // Track consecutive bad polls (API returning 0 for noise floor)
+        const validPoints = response.data.history.filter((p) => p.noise_floor_dbm !== 0);
+        if (validPoints.length > 0) {
+          consecutiveBadNoiseFloorPolls.value = 0;
+          const latest = validPoints[validPoints.length - 1].noise_floor_dbm;
+          lastKnownGoodNoiseFloor.value = latest;
+        } else {
+          consecutiveBadNoiseFloorPolls.value++;
+        }
+
         return response.data.history;
       } else {
         throw new Error(response.error || 'Failed to fetch noise floor history');
@@ -180,7 +196,8 @@ export const usePacketStore = defineStore('packets', () => {
       return [];
     }
     return noiseFloorHistory.value
-      .slice(-50) // Keep last 50 points for sparkline
+      .filter((point) => point.noise_floor_dbm !== 0)
+      .slice(-50)
       .map((point) => point.noise_floor_dbm);
   });
 

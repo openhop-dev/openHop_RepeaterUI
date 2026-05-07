@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, watchEffect } from 'vue';
 
 interface TreeNodeData {
   id: number;
@@ -17,7 +17,7 @@ interface Props {
 
 interface Emits {
   (e: 'close'): void;
-  (e: 'save', data: { id: number; name: string; floodPolicy: 'allow' | 'deny' }): void;
+  (e: 'save', data: { id: number; name: string; floodPolicy: 'allow' | 'deny'; transportKey?: string }): void;
   (e: 'request-delete', node: TreeNodeData): void;
 }
 
@@ -27,14 +27,13 @@ const emit = defineEmits<Emits>();
 // Form state
 const keyName = ref('');
 const floodPolicy = ref<'allow' | 'deny'>('allow');
+const entryType = ref<'region' | 'privateKey'>('region');
 
-// Auto-detect if it's a region or private key based on # prefix
-const isRegion = computed(() => keyName.value.startsWith('#'));
+const isRegion = computed(() => entryType.value === 'region');
 
-// Icon and type info
 const keyType = computed(() => ({
   type: isRegion.value ? 'Region' : 'Private Key',
-  description: isRegion.value ? 'Regional organizational key' : 'Individual assigned key',
+  description: isRegion.value ? 'Regional organisational key' : 'Individual assigned key',
 }));
 
 // Watch for node changes to populate form
@@ -42,12 +41,15 @@ watch(
   () => props.node,
   (newNode) => {
     if (newNode) {
-      keyName.value = newNode.name;
+      const nameIsRegion = newNode.name.startsWith('#');
+      entryType.value = nameIsRegion ? 'region' : 'privateKey';
+      // Strip the # prefix so the user sees just the name
+      keyName.value = nameIsRegion ? newNode.name.slice(1) : newNode.name;
       floodPolicy.value = newNode.floodPolicy;
     } else {
-      // Reset form when node is null
       keyName.value = '';
       floodPolicy.value = 'allow';
+      entryType.value = 'region';
     }
   },
   { immediate: true },
@@ -56,6 +58,42 @@ watch(
 // Form validation
 const isValid = computed(() => {
   return keyName.value.trim().length > 0 && props.node;
+});
+
+const liveDisplayName = computed(() => {
+  const name = keyName.value.trim();
+  if (!name) return props.node?.name || '';
+  return isRegion.value ? `#${name}` : name;
+});
+
+const originalKeyName = computed(() => {
+  if (!props.node) return '';
+  return props.node.name.startsWith('#') ? props.node.name.slice(1) : props.node.name;
+});
+
+const nameChanged = computed(() => keyName.value.trim() !== originalKeyName.value);
+
+// Derive transport key client-side: SHA-256(#name)[:16] → base64
+// Matches pymc_core get_auto_key_for algorithm
+async function deriveTransportKey(name: string): Promise<string> {
+  const fullName = name.startsWith('#') ? name : `#${name}`;
+  const data = new TextEncoder().encode(fullName);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(hashBuffer).slice(0, 16);
+  let binary = '';
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+
+const liveTransportKey = ref<string | null>(null);
+
+watchEffect(async () => {
+  const name = keyName.value.trim();
+  if (!isRegion.value || !name) {
+    liveTransportKey.value = null;
+    return;
+  }
+  liveTransportKey.value = await deriveTransportKey(name);
 });
 
 // Format time ago function
@@ -86,13 +124,19 @@ const copyToClipboard = (text: string) => {
 };
 
 // Handle form submission
-const handleSave = () => {
+const handleSave = async () => {
   if (!isValid.value || !props.node) return;
+
+  const finalName = isRegion.value ? `#${keyName.value.trim()}` : keyName.value.trim();
+  const transportKey = isRegion.value && nameChanged.value
+    ? (liveTransportKey.value ?? await deriveTransportKey(keyName.value.trim()))
+    : undefined;
 
   emit('save', {
     id: props.node.id,
-    name: keyName.value.trim(),
+    name: finalName,
     floodPolicy: floodPolicy.value,
+    transportKey,
   });
 
   handleCancel();
@@ -145,7 +189,7 @@ const handleBackdropClick = (event: MouseEvent) => {
             Edit Entry
           </h3>
           <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
-            Modify <span class="text-primary font-mono">{{ node?.name }}</span>
+            Modify <span class="text-primary font-mono">{{ liveDisplayName }}</span>
           </p>
         </div>
         <button @click="handleCancel" class="text-white/60 hover:text-white transition-colors">
@@ -161,294 +205,146 @@ const handleBackdropClick = (event: MouseEvent) => {
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleSave" class="space-y-4">
+      <form @submit.prevent="handleSave" class="space-y-5">
+        <!-- Entry Type Toggle -->
+        <div class="pb-2">
+          <label class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2">
+            Entry Type
+          </label>
+          <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <button
+              type="button"
+              @click="entryType = 'region'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                entryType === 'region'
+                  ? 'bg-secondary/20 text-secondary border border-secondary/50'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              REGION
+            </button>
+            <button
+              type="button"
+              @click="entryType = 'privateKey'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                entryType === 'privateKey'
+                  ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              PRIVATE KEY
+            </button>
+          </div>
+        </div>
+
         <!-- Key Name Input -->
         <div>
           <label
             for="keyName"
-            class="block text-sm font-medium text-content-secondary dark:text-content-primary mb-2"
+            class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2"
           >
-            <div class="flex items-center gap-2">
-              <!-- Dynamic Icon -->
-              <svg
-                v-if="isRegion"
-                class="w-4 h-4 text-secondary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-4 h-4 text-accent-green"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"
-                />
-              </svg>
-              Region/Key Name
-            </div>
+            {{ keyType.type }} Name
           </label>
-          <input
-            id="keyName"
-            v-model="keyName"
-            type="text"
-            placeholder="Enter name (prefix with # for regions)"
-            class="w-full px-4 py-3 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-            autocomplete="off"
-          />
-        </div>
-
-        <!-- Type Indicator -->
-        <div
-          class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4"
-        >
-          <div class="flex items-center gap-3 mb-2">
-            <div class="flex items-center gap-2">
-              <!-- Type Icon -->
-              <svg
-                v-if="isRegion"
-                class="w-5 h-5 text-secondary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-accent-green"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"
-                />
-              </svg>
-              <span :class="isRegion ? 'text-secondary' : 'text-accent-green'" class="font-medium">
-                {{ keyType.type }}
-              </span>
-            </div>
-            <div
-              class="flex-1 h-px"
-              :class="isRegion ? 'bg-secondary/20' : 'bg-accent-green/20'"
-            ></div>
+          <div class="flex items-center">
+            <span v-if="isRegion" class="px-3 py-3 bg-secondary/10 border border-r-0 border-secondary/30 rounded-l-lg text-secondary text-sm font-mono">#</span>
+            <input
+              id="keyName"
+              v-model="keyName"
+              type="text"
+              :placeholder="isRegion ? 'e.g., uk, au, us' : 'Enter key name'"
+              :class="[
+                'flex-1 px-4 py-3 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
+                isRegion ? 'rounded-r-lg' : 'rounded-lg',
+              ]"
+              autocomplete="off"
+            />
           </div>
-          <p class="text-content-secondary dark:text-content-muted text-sm">
-            {{ keyType.description }}
+          <p v-if="isRegion" class="text-content-muted dark:text-content-muted text-xs mt-1">
+            The # prefix is added automatically for regions.
           </p>
-        </div>
-
-        <!-- Key Information -->
-        <div v-if="node" class="space-y-4">
-          <!-- Transport Key -->
+          <!-- Transport key inline, only when editing a region -->
           <div
-            v-if="node.transport_key"
-            class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4"
+            v-if="isRegion && node?.transport_key"
+            class="mt-3 bg-background-mute dark:bg-black/20 border border-stroke-subtle dark:border-stroke/10 rounded-md p-3"
           >
-            <div class="flex items-center gap-2 mb-3">
-              <svg
-                class="w-4 h-4 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-              <span class="text-sm font-medium text-content-primary dark:text-content-primary"
-                >Transport Key</span
-              >
-            </div>
-            <div
-              class="bg-background-mute dark:bg-black/20 border border-stroke-subtle dark:border-stroke/10 rounded-md p-3"
-            >
-              <div
-                class="text-xs font-mono text-content-primary dark:text-content-primary/80 break-all"
-              >
-                {{ node.transport_key }}
-              </div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-medium text-content-secondary dark:text-content-muted">Transport Key</span>
               <button
+                v-if="!nameChanged"
+                type="button"
                 @click="copyToClipboard(node.transport_key || '')"
-                class="mt-2 text-xs text-accent-green hover:text-accent-green/80 flex items-center gap-1"
+                class="text-xs text-accent-green hover:text-accent-green/80 flex items-center gap-1"
                 title="Copy to clipboard"
               >
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy Key
+                Copy
               </button>
             </div>
-          </div>
-
-          <!-- Last Used -->
-          <div
-            v-if="node.last_used"
-            class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4"
-          >
-            <div class="flex items-center gap-2 mb-3">
-              <svg
-                class="w-4 h-4 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span class="text-sm font-medium text-content-primary dark:text-content-primary"
-                >Last Used</span
-              >
+            <div class="text-xs font-mono text-content-primary dark:text-content-primary/80 break-all">
+              {{ liveTransportKey ?? node.transport_key }}
             </div>
-            <div class="flex items-center justify-between">
+            <div v-if="nameChanged" class="text-xs text-amber-500 dark:text-amber-400 mt-1">
+              Updated for "{{ liveDisplayName }}"
+            </div>
+          </div>
+        </div>
+
+        <!-- Last Used (if present) -->
+        <div
+          v-if="node?.last_used"
+          class="mt-1 bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-3"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span class="text-sm font-medium text-content-primary dark:text-content-primary">Last Used</span>
+            </div>
+            <div class="text-right">
               <div class="text-sm text-content-secondary dark:text-content-muted">
-                {{ node.last_used.toLocaleDateString() }} at
-                {{ node.last_used.toLocaleTimeString() }}
+                {{ node.last_used.toLocaleDateString() }} at {{ node.last_used.toLocaleTimeString() }}
               </div>
-              <div class="text-xs text-content-muted dark:text-content-muted">
-                {{ formatTimeAgo(node.last_used) }}
-              </div>
+              <div class="text-xs text-content-muted dark:text-content-muted">{{ formatTimeAgo(node.last_used) }}</div>
             </div>
           </div>
         </div>
 
         <!-- Flood Policy -->
-        <div>
-          <label
-            class="block text-sm font-medium text-content-secondary dark:text-content-primary mb-3"
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-4 h-4 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              Flood Policy
-            </div>
+        <div class="pt-1 border-t border-stroke-subtle dark:border-stroke/10">
+          <label class="block text-sm font-medium text-content-primary dark:text-content-primary mb-3 pt-4">
+            Flood Policy
           </label>
 
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Allow Option -->
-            <label class="relative cursor-pointer group">
-              <input type="radio" v-model="floodPolicy" value="allow" class="sr-only" />
-              <div
-                class="flex items-center gap-3 p-3 bg-white/5 border border-white/20 rounded-lg group-has-[:checked]:border-accent-green/50 group-has-[:checked]:bg-accent-green/10 transition-colors"
-              >
-                <div
-                  class="flex items-center justify-center w-4 h-4 border-2 border-white/30 rounded-full group-has-[:checked]:border-accent-green group-has-[:checked]:bg-accent-green transition-all"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-white scale-0 group-has-[:checked]:scale-100 transition-transform"
-                  ></div>
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <svg
-                      class="w-4 h-4 text-accent-green"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span class="font-medium text-accent-green text-sm">Allow</span>
-                  </div>
-                  <p class="text-content-muted dark:text-content-muted text-xs mt-1">
-                    Permit flooding
-                  </p>
-                </div>
-              </div>
-            </label>
-
-            <!-- Deny Option -->
-            <label class="relative cursor-pointer group">
-              <input type="radio" v-model="floodPolicy" value="deny" class="sr-only" />
-              <div
-                class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg group-has-[:checked]:border-accent-red/50 group-has-[:checked]:bg-accent-red/10 transition-colors"
-              >
-                <div
-                  class="flex items-center justify-center w-4 h-4 border-2 border-stroke dark:border-stroke/30 rounded-full group-has-[:checked]:border-accent-red group-has-[:checked]:bg-accent-red transition-all"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-white scale-0 group-has-[:checked]:scale-100 transition-transform"
-                  ></div>
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <svg
-                      class="w-4 h-4 text-accent-red"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                    <span class="font-medium text-accent-red text-sm">Deny</span>
-                  </div>
-                  <p class="text-content-muted dark:text-content-muted text-xs mt-1">
-                    Block flooding
-                  </p>
-                </div>
-              </div>
-            </label>
+          <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <button
+              type="button"
+              @click="floodPolicy = 'allow'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                floodPolicy === 'allow'
+                  ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              ALLOW
+            </button>
+            <button
+              type="button"
+              @click="floodPolicy = 'deny'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                floodPolicy === 'deny'
+                  ? 'bg-accent-red/10 text-accent-red border border-accent-red/20'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              DENY
+            </button>
           </div>
         </div>
 

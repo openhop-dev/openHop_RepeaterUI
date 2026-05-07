@@ -32,4 +32,20 @@
   .bg-mode-segment-no-tx {
     background-color: color-mix(in srgb, var(--color-accent-red) 35%, transparent);
   }
+
+  .cfg-page-heading {
+    @apply pb-2;
+  }
+
+  .cfg-section {
+    @apply bg-background-mute dark:bg-white/5 rounded-lg p-8 border border-stroke-subtle dark:border-white/10;
+  }
+
+  .cfg-btn-primary {
+    @apply px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .cfg-btn-secondary {
+    @apply px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
 }

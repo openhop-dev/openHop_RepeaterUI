@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 
 interface Props {
   show: boolean;
@@ -17,30 +17,15 @@ const emit = defineEmits<Emits>();
 
 // Form state
 const keyName = ref('');
-const notes = ref('');
 const floodPolicy = ref<'allow' | 'deny'>('allow');
+const entryType = ref<'region' | 'privateKey'>('region');
 
-// Auto-detect if it's a region or private key based on # prefix
-const isRegion = computed(() => keyName.value.startsWith('#'));
+const isRegion = computed(() => entryType.value === 'region');
 
-// Icon and type info
 const keyType = computed(() => ({
   type: isRegion.value ? 'Region' : 'Private Key',
-  description: isRegion.value ? 'Regional organizational key' : 'Individual assigned key',
+  description: isRegion.value ? 'Regional organisational key' : 'Individual assigned key',
 }));
-
-// Watch for changes to auto-update notes
-watch(
-  isRegion,
-  (newValue) => {
-    if (newValue) {
-      notes.value = 'This will create a new region for organizing keys';
-    } else {
-      notes.value = 'This will create a new private key entry';
-    }
-  },
-  { immediate: true },
-);
 
 // Form validation
 const isValid = computed(() => {
@@ -51,24 +36,23 @@ const isValid = computed(() => {
 const handleAdd = () => {
   if (!isValid.value) return;
 
+  const finalName = isRegion.value ? `#${keyName.value.trim()}` : keyName.value.trim();
   emit('add', {
-    name: keyName.value.trim(),
+    name: finalName,
     floodPolicy: floodPolicy.value,
     parentId: props.selectedNodeId,
   });
 
-  // Reset form
   keyName.value = '';
-  notes.value = '';
   floodPolicy.value = 'allow';
+  entryType.value = 'region';
 };
 
 // Handle cancel
 const handleCancel = () => {
-  // Reset form
   keyName.value = '';
-  notes.value = '';
   floodPolicy.value = 'allow';
+  entryType.value = 'region';
   emit('close');
 };
 
@@ -126,199 +110,95 @@ const handleBackdropClick = (event: MouseEvent) => {
       </div>
 
       <!-- Form -->
-      <form @submit.prevent="handleAdd" class="space-y-4">
-        <!-- Key Name Input -->
-        <div>
-          <label for="keyName" class="block text-sm font-medium text-white mb-2">
-            <div class="flex items-center gap-2">
-              <!-- Dynamic Icon -->
-              <svg
-                v-if="isRegion"
-                class="w-4 h-4 text-secondary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-4 h-4 text-accent-green"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                />
-              </svg>
-              Region/Key Name
-            </div>
+      <form @submit.prevent="handleAdd" class="space-y-5">
+        <!-- Entry Type Toggle -->
+        <div class="pb-2">
+          <label class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2">
+            Entry Type
           </label>
-          <input
-            id="keyName"
-            v-model="keyName"
-            type="text"
-            placeholder="Enter name (prefix with # for regions)"
-            class="w-full px-4 py-3 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-            autocomplete="off"
-          />
+          <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <button
+              type="button"
+              @click="entryType = 'region'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                entryType === 'region'
+                  ? 'bg-secondary/20 text-secondary border border-secondary/50'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              REGION
+            </button>
+            <button
+              type="button"
+              @click="entryType = 'privateKey'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                entryType === 'privateKey'
+                  ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              PRIVATE KEY
+            </button>
+          </div>
         </div>
 
-        <!-- Type Indicator -->
-        <div
-          class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4"
-        >
-          <div class="flex items-center gap-3 mb-2">
-            <div class="flex items-center gap-2">
-              <!-- Type Icon -->
-              <svg
-                v-if="isRegion"
-                class="w-5 h-5 text-secondary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                />
-              </svg>
-              <svg
-                v-else
-                class="w-5 h-5 text-accent-green"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1221 9z"
-                />
-              </svg>
-              <span :class="isRegion ? 'text-secondary' : 'text-accent-green'" class="font-medium">
-                {{ keyType.type }}
-              </span>
-            </div>
-            <div
-              class="flex-1 h-px"
-              :class="isRegion ? 'bg-secondary/20' : 'bg-accent-green/20'"
-            ></div>
+        <!-- Key Name Input -->
+        <div>
+          <label for="keyName" class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2">
+            {{ keyType.type }} Name
+          </label>
+          <div class="flex items-center">
+            <span v-if="isRegion" class="px-3 py-3 bg-secondary/10 border border-r-0 border-secondary/30 rounded-l-lg text-secondary text-sm font-mono">#</span>
+            <input
+              id="keyName"
+              v-model="keyName"
+              type="text"
+              :placeholder="isRegion ? 'e.g., uk, au, us' : 'Enter key name'"
+              :class="[
+                'flex-1 px-4 py-3 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors',
+                isRegion ? 'rounded-r-lg' : 'rounded-lg',
+              ]"
+              autocomplete="off"
+            />
           </div>
-          <p class="text-content-secondary dark:text-content-muted text-sm">
-            {{ keyType.description }}
+          <p v-if="isRegion" class="text-content-muted dark:text-content-muted text-xs mt-1">
+            The # prefix is added automatically for regions.
           </p>
         </div>
 
         <!-- Flood Policy -->
-        <div>
-          <label
-            class="block text-sm font-medium text-content-primary dark:text-content-primary mb-3"
-          >
-            <div class="flex items-center gap-2">
-              <svg
-                class="w-4 h-4 text-primary"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              Flood Policy
-            </div>
+        <div class="pt-1 border-t border-stroke-subtle dark:border-stroke/10">
+          <label class="block text-sm font-medium text-content-primary dark:text-content-primary mb-3 pt-4">
+            Flood Policy
           </label>
 
-          <div class="grid grid-cols-2 gap-3">
-            <!-- Allow Option -->
-            <label class="relative cursor-pointer group">
-              <input type="radio" v-model="floodPolicy" value="allow" class="sr-only" />
-              <div
-                class="flex items-center gap-3 p-3 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg group-has-[:checked]:border-accent-green/50 group-has-[:checked]:bg-accent-green/10 transition-colors"
-              >
-                <div
-                  class="flex items-center justify-center w-4 h-4 border-2 border-stroke dark:border-stroke/30 rounded-full group-has-[:checked]:border-accent-green group-has-[:checked]:bg-accent-green transition-all"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-white scale-0 group-has-[:checked]:scale-100 transition-transform"
-                  ></div>
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <svg
-                      class="w-4 h-4 text-accent-green"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    <span class="font-medium text-accent-green text-sm">Allow</span>
-                  </div>
-                  <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                    Permit flooding
-                  </p>
-                </div>
-              </div>
-            </label>
-
-            <!-- Deny Option -->
-            <label class="relative cursor-pointer group">
-              <input type="radio" v-model="floodPolicy" value="deny" class="sr-only" />
-              <div
-                class="flex items-center gap-3 p-3 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg group-has-[:checked]:border-accent-red/50 group-has-[:checked]:bg-accent-red/10 transition-colors"
-              >
-                <div
-                  class="flex items-center justify-center w-4 h-4 border-2 border-stroke dark:border-stroke/30 rounded-full group-has-[:checked]:border-accent-red group-has-[:checked]:bg-accent-red transition-all"
-                >
-                  <div
-                    class="w-2 h-2 rounded-full bg-white scale-0 group-has-[:checked]:scale-100 transition-transform"
-                  ></div>
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center gap-2">
-                    <svg
-                      class="w-4 h-4 text-accent-red"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                    <span class="font-medium text-accent-red text-sm">Deny</span>
-                  </div>
-                  <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                    Block flooding
-                  </p>
-                </div>
-              </div>
-            </label>
+          <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <button
+              type="button"
+              @click="floodPolicy = 'allow'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                floodPolicy === 'allow'
+                  ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              ALLOW
+            </button>
+            <button
+              type="button"
+              @click="floodPolicy = 'deny'"
+              :class="[
+                'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
+                floodPolicy === 'deny'
+                  ? 'bg-accent-red/10 text-accent-red border border-accent-red/20'
+                  : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
+              ]"
+            >
+              DENY
+            </button>
           </div>
         </div>
 

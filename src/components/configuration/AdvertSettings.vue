@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, nextTick } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { authClient } from '@/utils/api';
 
@@ -100,8 +100,20 @@ watch(
   { immediate: true },
 );
 
+const rootEl = ref<HTMLElement | null>(null);
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
 onMounted(() => {
   fetchStats();
+  refreshTimer = setInterval(() => {
+    if (rootEl.value && rootEl.value.offsetParent !== null) {
+      fetchStats();
+    }
+  }, 10000);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) clearInterval(refreshTimer);
 });
 
 const reloadFormValues = () => {
@@ -229,7 +241,54 @@ const tierBadgeClass = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div ref="rootEl" class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Advert Limits</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure advertisement rate limiting and adaptive controls</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          @click="showHelp = true"
+          class="self-stretch flex items-center justify-center px-3 text-xs bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-500/50 transition-colors"
+          title="How rate limiting works"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </button>
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
@@ -244,62 +303,9 @@ const tierBadgeClass = computed(() => {
       {{ errorMessage }}
     </div>
 
-    <!-- Action Buttons -->
-    <div class="flex justify-between items-center">
-      <div class="flex gap-2">
-        <button
-          @click="fetchStats"
-          :disabled="statsLoading"
-          class="px-3 py-1.5 text-xs bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-secondary dark:text-content-muted rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors disabled:opacity-50"
-        >
-          {{ statsLoading ? 'Loading...' : 'Refresh Stats' }}
-        </button>
-        <button
-          @click="showHelp = true"
-          class="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-500/50 transition-colors"
-          title="How rate limiting works"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <div class="flex gap-2">
-        <button
-          v-if="!isEditing"
-          @click="startEditing"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveChanges"
-            :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
-      </div>
-    </div>
-
     <!-- Current Status Card -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <h3 class="text-sm font-medium text-content-primary dark:text-content-primary">
+    <div class="cfg-section space-y-3">
+      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
         Current Status
       </h3>
 
@@ -386,12 +392,54 @@ const tierBadgeClass = computed(() => {
           </div>
         </div>
       </template>
+
+      <!-- How the three systems work together -->
+      <div
+        class="mt-3 p-3 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 rounded-lg"
+      >
+        <p class="text-xs text-cyan-700 dark:text-cyan-300 leading-relaxed">
+          <strong>There are three layers of advert rate limit control:</strong> Each layer can be enabled/disabled
+          independently and the others will still function.
+        </p>
+        <ul class="text-xs text-cyan-700 dark:text-cyan-300 mt-2 space-y-1 ml-4 list-disc">
+          <li>
+            <strong>Rate Limiting OFF:</strong> All limiting disabled — adverts pass through freely
+          </li>
+          <li>
+            <strong>Adaptive OFF:</strong> Token bucket uses fixed limits (no tier scaling), penalty
+            box still works
+          </li>
+          <li>
+            <strong>Penalty Box OFF:</strong> Token bucket still applies, but no escalating
+            cooldowns for repeat offenders
+          </li>
+        </ul>
+        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-2">
+          <strong>Decision flow when all enabled:</strong> Adaptive tier check → Penalty box check →
+          Token bucket check → Violation recording (triggers penalty box)
+        </p>
+        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-1">
+          <strong>Activity tiers:</strong>
+          <span class="text-green-600 dark:text-green-400 font-medium">Quiet</span> (bypass
+          limiting) →
+          <span class="text-blue-600 dark:text-blue-400 font-medium">Normal</span> (lighter: 0.5x
+          intervals) →
+          <span class="text-yellow-600 dark:text-yellow-400 font-medium">Busy</span> (base: 1.0x
+          intervals) →
+          <span class="text-red-600 dark:text-red-400 font-medium">Congested</span> (stricter: 2.0x
+          intervals)
+        </p>
+        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-1">
+          <strong>Note:</strong> Adaptive mode scales refill/min-interval timing; bucket capacity
+          stays at the configured base value.
+        </p>
+      </div>
     </div>
 
     <!-- Rate Limit Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section space-y-3">
       <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -516,9 +564,9 @@ const tierBadgeClass = computed(() => {
     </div>
 
     <!-- Penalty Box Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section space-y-3">
       <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -670,9 +718,9 @@ const tierBadgeClass = computed(() => {
     </div>
 
     <!-- Adaptive Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section space-y-3">
       <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -684,48 +732,6 @@ const tierBadgeClass = computed(() => {
         </svg>
         Adaptive Rate Limiting
       </h3>
-
-      <!-- Info box explaining how it works -->
-      <div
-        class="p-3 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 rounded-lg"
-      >
-        <p class="text-xs text-cyan-700 dark:text-cyan-300 leading-relaxed">
-          <strong>How the three systems work together:</strong> Each layer can be enabled/disabled
-          independently and the others will still function.
-        </p>
-        <ul class="text-xs text-cyan-700 dark:text-cyan-300 mt-2 space-y-1 ml-4 list-disc">
-          <li>
-            <strong>Rate Limiting OFF:</strong> All limiting disabled — adverts pass through freely
-          </li>
-          <li>
-            <strong>Adaptive OFF:</strong> Token bucket uses fixed limits (no tier scaling), penalty
-            box still works
-          </li>
-          <li>
-            <strong>Penalty Box OFF:</strong> Token bucket still applies, but no escalating
-            cooldowns for repeat offenders
-          </li>
-        </ul>
-        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-2">
-          <strong>Decision flow when all enabled:</strong> Adaptive tier check → Penalty box check →
-          Token bucket check → Violation recording (triggers penalty box)
-        </p>
-        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-1">
-          <strong>Activity tiers:</strong>
-          <span class="text-green-600 dark:text-green-400 font-medium">Quiet</span> (bypass
-          limiting) →
-          <span class="text-blue-600 dark:text-blue-400 font-medium">Normal</span> (lighter: 0.5x
-          intervals) →
-          <span class="text-yellow-600 dark:text-yellow-400 font-medium">Busy</span> (base: 1.0x
-          intervals) →
-          <span class="text-red-600 dark:text-red-400 font-medium">Congested</span> (stricter: 2.0x
-          intervals)
-        </p>
-        <p class="text-xs text-cyan-700 dark:text-cyan-300 mt-1">
-          <strong>Note:</strong> Adaptive mode scales refill/min-interval timing; bucket capacity
-          stays at the configured base value.
-        </p>
-      </div>
 
       <!-- Enabled Toggle -->
       <div

@@ -33,3 +33,6 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# Local session notes (not for repo)
+UI_CHANGES.local.md

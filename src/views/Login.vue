@@ -272,29 +272,29 @@ const handlePasswordChangeClose = () => {
 </script>
 
 <style scoped>
-/* Background gradient colors for light and dark modes */
+/* Background gradient colors — match app primary teal (#0d7377 light / #aae8e8 dark) */
 .bg-gradient-light {
-  background: linear-gradient(to bottom, rgba(14, 165, 233, 0.4), rgba(6, 182, 212, 0.3));
+  background: linear-gradient(to bottom, rgba(13, 115, 119, 0.3), rgba(170, 232, 232, 0.2));
 }
 
 .bg-gradient-dark {
-  background: linear-gradient(to bottom, rgba(103, 232, 249, 0.3), rgba(165, 243, 252, 0.15));
+  background: linear-gradient(to bottom, rgba(170, 232, 232, 0.18), rgba(13, 115, 119, 0.1));
 }
 
 /* Enhanced glass morphism effect */
 .login-card {
-  background: rgba(17, 25, 28, 0.4);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
 }
 
 /* Light mode card */
 .login-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.85);
 }
 
+/* Dark mode card — surface-elevated (#1a1e1f) with slight transparency */
 .dark .login-card {
-  background: rgba(17, 25, 28, 0.4);
+  background: rgba(26, 30, 31, 0.8);
 }
 
 /* Glass inputs */

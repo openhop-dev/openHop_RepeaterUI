@@ -1,5 +1,13 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Backup &amp; Restore</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Export, import, and restore your repeater configuration</p>
+      </div>
+    </div>
+
     <!-- HTTP Security Warning -->
     <div
       v-if="isInsecure"
@@ -33,7 +41,7 @@
     </div>
 
     <!-- Export Settings (Redacted) -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -49,7 +57,7 @@
       <button
         @click="exportConfig"
         :disabled="exporting"
-        class="px-4 py-2 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-white rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        class="cfg-btn-primary"
       >
         <span v-if="exporting" class="flex items-center gap-2">
           <span
@@ -78,7 +86,7 @@
     </div>
 
     <!-- Full Backup (with secrets) -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -177,7 +185,7 @@
     </div>
 
     <!-- Import Config -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -332,7 +340,7 @@
     </div>
 
     <!-- Export Identity Key -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">

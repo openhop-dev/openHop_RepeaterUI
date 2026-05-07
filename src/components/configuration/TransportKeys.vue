@@ -24,6 +24,9 @@ interface TreeNodeData {
 const treeStore = useTreeStateStore();
 const systemStore = useSystemStore();
 
+// Unlock state
+const isUnlocked = ref(false);
+
 // Modal state
 const showAddModal = ref(false);
 const showEditModal = ref(false);
@@ -135,23 +138,19 @@ function addNode() {
   showAddModal.value = true;
 }
 
-function deleteNode() {
-  if (treeStore.selectedNodeId.value) {
-    const node = findNodeById(transportKeysData.value, treeStore.selectedNodeId.value);
-    if (node) {
-      deletingNode.value = node;
-      showDeleteModal.value = true;
-    }
+function editNodeById(nodeId: number) {
+  const node = findNodeById(transportKeysData.value, nodeId);
+  if (node) {
+    editingNode.value = node;
+    showEditModal.value = true;
   }
 }
 
-function editNode() {
-  if (treeStore.selectedNodeId.value) {
-    const node = findNodeById(transportKeysData.value, treeStore.selectedNodeId.value);
-    if (node) {
-      editingNode.value = node;
-      showEditModal.value = true;
-    }
+function deleteNodeById(nodeId: number) {
+  const node = findNodeById(transportKeysData.value, nodeId);
+  if (node) {
+    deletingNode.value = node;
+    showDeleteModal.value = true;
   }
 }
 
@@ -217,9 +216,14 @@ function handleCloseEditModal() {
 }
 
 // Handle save from edit modal
-async function handleSaveEdit(data: { id: number; name: string; floodPolicy: 'allow' | 'deny' }) {
+async function handleSaveEdit(data: { id: number; name: string; floodPolicy: 'allow' | 'deny'; transportKey?: string }) {
   try {
-    const response = await ApiService.updateTransportKey(data.id, data.name, data.floodPolicy);
+    const response = await ApiService.updateTransportKey(
+      data.id,
+      data.name,
+      data.floodPolicy,
+      data.transportKey,
+    );
 
     if (response.success) {
       // Reload the tree data to reflect changes
@@ -300,14 +304,14 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-6">
+  <div class="space-y-12">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
       <div>
         <h3
           class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2"
         >
-          Regions/Keys
+          Region Configuration
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
           Manage regional key hierarchy
@@ -315,59 +319,25 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-shrink-0">
         <button
+          v-if="isUnlocked"
           @click="addNode"
-          class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border transition-colors text-xs sm:text-sm bg-accent-green/10 hover:bg-accent-green/20 text-accent-green border-accent-green/30"
+          class="cfg-btn-secondary flex items-center gap-1.5"
         >
-          <svg
-            class="w-3.5 h-3.5 sm:w-4 sm:h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
-          Add
+          Add Region
         </button>
-
-        <button
-          @click="editNode"
-          :disabled="!treeStore.selectedNodeId.value"
-          :class="[
-            'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg border transition-colors text-xs sm:text-sm',
-            !treeStore.selectedNodeId.value
-              ? 'bg-background-mute dark:bg-stroke/10 text-content-muted dark:text-content-muted/70 border-stroke-subtle dark:border-stroke/20 cursor-not-allowed'
-              : 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border-accent-green/50',
-          ]"
-        >
-          Edit
-        </button>
-
-        <button
-          @click="deleteNode"
-          :disabled="!treeStore.selectedNodeId.value"
-          :class="[
-            'px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg border transition-colors text-xs sm:text-sm',
-            !treeStore.selectedNodeId.value
-              ? 'bg-background-mute dark:bg-stroke/10 text-content-muted dark:text-content-muted/70 border-stroke-subtle dark:border-stroke/20 cursor-not-allowed'
-              : 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border-accent-red/50',
-          ]"
-        >
-          Delete
+        <button @click="isUnlocked = !isUnlocked" class="cfg-btn-primary">
+          {{ isUnlocked ? 'Lock Settings' : 'Unlock Settings' }}
         </button>
       </div>
     </div>
 
     <!-- Unscoped Flood Control -->
-    <div
-      class="glass-card rounded-[15px] p-3 sm:p-4 border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5"
-    >
+    <div class="cfg-section">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h4
@@ -382,10 +352,13 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
         <div class="flex items-center gap-2 sm:gap-3">
           <!-- Unscoped Policy Toggle -->
           <div
-            class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5 sm:p-1"
+            :class="[
+              'flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5 sm:p-1',
+              !isUnlocked ? 'opacity-50 pointer-events-none' : '',
+            ]"
           >
             <button
-              @click="handleUnscopedFloodPolicyChange('deny')"
+              @click="isUnlocked && handleUnscopedFloodPolicyChange('deny')"
               :class="[
                 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
                 unscopedFloodPolicy === 'deny'
@@ -396,7 +369,7 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
               DENY
             </button>
             <button
-              @click="handleUnscopedFloodPolicyChange('allow')"
+              @click="isUnlocked && handleUnscopedFloodPolicyChange('allow')"
               :class="[
                 'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
                 unscopedFloodPolicy === 'allow'
@@ -412,20 +385,23 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
     </div>
 
     <!-- Tree Viewer -->
-    <div
-      class="glass-card rounded-[15px] p-3 sm:p-6 border border-stroke-subtle dark:border-stroke/10"
-    >
+    <div class="cfg-section space-y-4" @click="isUnlocked && treeStore.setSelectedNode(null)">
+      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">Regions</h3>
+      <p v-if="isUnlocked" class="text-xs text-content-muted dark:text-content-muted pb-1">
+        To add a child region, click on a region to select it, then click "Add Region".
+      </p>
+
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-8">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-accent-green"></div>
         <span class="ml-2 text-content-secondary dark:text-content-muted"
-          >Loading transport keys...</span
+          >Loading regions...</span
         >
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="text-center py-8">
-        <div class="text-accent-red mb-2">⚠️ Error loading transport keys</div>
+        <div class="text-accent-red mb-2">⚠️ Error loading regions</div>
         <div class="text-content-secondary dark:text-content-muted text-sm">{{ error }}</div>
         <button
           @click="loadTransportKeys"
@@ -437,11 +413,9 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
 
       <!-- Empty State -->
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
-        <div class="text-content-muted dark:text-content-muted mb-2">
-          📝 No transport keys found
-        </div>
+        <div class="text-content-muted dark:text-content-muted mb-2">No regions found</div>
         <div class="text-content-muted dark:text-content-muted/60 text-sm">
-          Add your first transport key to get started
+          Unlock settings and add your first region to get started
         </div>
       </div>
 
@@ -453,7 +427,10 @@ async function handleMoveChildren(data: { nodeId: number; targetParentId: number
           :node="node"
           :selected-node-id="treeStore.selectedNodeId.value"
           :level="0"
+          :unlocked="isUnlocked"
           @select="selectNode"
+          @edit="editNodeById"
+          @delete="deleteNodeById"
         />
       </div>
     </div>

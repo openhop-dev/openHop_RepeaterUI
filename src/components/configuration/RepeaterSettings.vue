@@ -265,7 +265,40 @@ const applyGeneratedKey = async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure repeater identity, location, and network settings</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- Success Message -->
     <div
       v-if="successMessage"
@@ -282,35 +315,8 @@ const applyGeneratedKey = async () => {
       <p class="text-red-700 dark:text-red-400 text-sm">{{ error }}</p>
     </div>
 
-    <!-- Edit/Save/Cancel Buttons -->
-    <div class="flex justify-end gap-2">
-      <button
-        v-if="!isEditing"
-        @click="startEditing"
-        class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-      >
-        Edit Settings
-      </button>
-      <template v-else>
-        <button
-          @click="cancelEditing"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          @click="saveChanges"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
-        </button>
-      </template>
-    </div>
-
     <!-- Repeater Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section space-y-3">
       <!-- Node Name -->
       <div
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
@@ -348,20 +354,21 @@ const applyGeneratedKey = async () => {
 
       <!-- Public Key (Read-only) -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-start py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
       >
         <span
           class="text-content-secondary dark:text-content-muted text-xs sm:text-sm flex-shrink-0"
           >Public Key</span
         >
-        <div class="flex flex-col items-end gap-1">
+        <div class="flex items-center gap-2 min-w-0 sm:justify-end">
           <span
-            class="text-content-primary dark:text-content-primary font-mono text-xs break-all sm:text-right sm:max-w-xs"
+            class="text-content-primary dark:text-content-primary font-mono text-xs break-all sm:text-right min-w-0"
             >{{ publicKey }}</span
           >
           <button
+            v-if="isEditing"
             @click="openKeygenDialog"
-            class="px-2 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-content-secondary dark:text-content-muted rounded border border-primary/30 transition-colors"
+            class="flex-shrink-0 px-2 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-content-secondary dark:text-content-muted rounded border border-primary/30 transition-colors whitespace-nowrap"
           >
             Generate New Key
           </button>

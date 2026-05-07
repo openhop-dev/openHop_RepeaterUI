@@ -1,7 +1,15 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Web Options</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure CORS policy and web frontend selection</p>
+      </div>
+    </div>
+
     <!-- CORS Settings -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -47,7 +55,7 @@
     </div>
 
     <!-- Web Frontend Selection -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">

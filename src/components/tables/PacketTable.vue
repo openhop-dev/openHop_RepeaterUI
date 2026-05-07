@@ -677,7 +677,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.rssi != null ? packet.rssi.toFixed(0) : 'N/A' }}
+              {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
             </div>
             <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
               {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}

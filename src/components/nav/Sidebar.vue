@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import { useWebSocketStore } from '@/stores/websocket';
+import { usePacketStore } from '@/stores/packets';
 import ApiService from '@/utils/api';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import GitHubIcon from '../icons/github.vue';
@@ -30,6 +31,7 @@ const router = useRouter();
 const route = useRoute();
 const systemStore = useSystemStore();
 const wsStore = useWebSocketStore();
+const packetStore = usePacketStore();
 
 // Loading states for buttons
 const sendingAdvert = ref(false);
@@ -225,13 +227,13 @@ const handleToggleDutyCycle = async () => {
   }
 };
 
-// Computed values
-const currentTime = ref(new Date().toLocaleTimeString());
-
-// Update time every second
-setInterval(() => {
-  currentTime.value = new Date().toLocaleTimeString();
-}, 1000);
+// Most recent fetch across all stores
+const currentTime = computed(() => {
+  const times = [systemStore.lastUpdated, packetStore.lastUpdated].filter(Boolean) as Date[];
+  if (times.length === 0) return 'Never';
+  const latest = times.reduce((a, b) => (a > b ? a : b));
+  return latest.toLocaleTimeString();
+});
 
 // Computed duty cycle bar width and color
 const dutyCycleBarStyle = computed(() => {

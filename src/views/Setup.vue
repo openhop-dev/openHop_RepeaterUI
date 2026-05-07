@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
 import { useSetupStore } from '@/stores/setup';
-import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 
 const setupStore = useSetupStore();
-const router = useRouter();
 
 defineOptions({ name: 'SetupView' });
 
 const showDialog = ref(false);
 const dialogTitle = ref('');
 const dialogMessage = ref('');
-const dialogType = ref<'success' | 'error'>('success');
+const dialogType = ref<'error'>('error');
+const showRestarting = ref(false);
 let redirectTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Map preset titles to flag emojis
@@ -43,14 +42,8 @@ async function handleNext() {
     // Complete setup
     const result = await setupStore.completeSetup();
     if (result.success) {
-      // Show success dialog
-      dialogType.value = 'success';
-      dialogTitle.value = 'Setup Complete!';
-      dialogMessage.value =
-        'Your repeater has been configured successfully. The service is restarting now...';
-      showDialog.value = true;
-
-      // Wait for backend to come back, then redirect
+      // Show restarting overlay and poll until backend is back
+      showRestarting.value = true;
       redirectToLogin();
     } else {
       // Show error dialog
@@ -70,27 +63,20 @@ function handleBack() {
 
 function closeDialog() {
   showDialog.value = false;
-  if (dialogType.value === 'success') {
-    // Timer already handles redirect — only navigate if it already cleared
-    if (!redirectTimer) {
-      router.push('/login');
-    }
-  }
 }
 
-/** Poll the backend until it responds, then navigate to login. */
+/** Poll the backend until it responds, then reload so the login page shows. */
 function redirectToLogin() {
   let attempts = 0;
-  const maxAttempts = 30; // ~30 seconds
+  const maxAttempts = 90; // ~90 seconds
 
   function tryRedirect() {
     attempts++;
-    fetch('/api/status', { method: 'GET' })
+    fetch('/api/needs_setup', { method: 'GET' })
       .then((res) => {
         if (res.ok) {
           redirectTimer = null;
-          showDialog.value = false;
-          router.push('/login');
+          window.location.reload();
         } else {
           scheduleRetry();
         }
@@ -104,15 +90,14 @@ function redirectToLogin() {
     if (attempts < maxAttempts) {
       redirectTimer = setTimeout(tryRedirect, 1000);
     } else {
-      // Give up waiting — redirect anyway and let the login page handle it
+      // Give up — reload anyway and let the login page handle it
       redirectTimer = null;
-      showDialog.value = false;
-      router.push('/login');
+      window.location.reload();
     }
   }
 
-  // Initial delay to give the service time to begin restarting
-  redirectTimer = setTimeout(tryRedirect, 2000);
+  // Initial delay to give the service time to begin restarting before we poll
+  redirectTimer = setTimeout(tryRedirect, 3000);
 }
 
 onBeforeUnmount(() => {
@@ -667,7 +652,7 @@ const stepTitles = [
       </div>
     </div>
 
-    <!-- Success/Error Dialog -->
+    <!-- Error Dialog -->
     <Transition name="modal">
       <div
         v-if="showDialog"
@@ -678,28 +663,8 @@ const stepTitles = [
           class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
           @click.stop
         >
-          <!-- Icon -->
           <div class="flex justify-center mb-6">
             <div
-              v-if="dialogType === 'success'"
-              class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center"
-            >
-              <svg
-                class="w-8 h-8 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div
-              v-else
               class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center"
             >
               <svg
@@ -717,31 +682,57 @@ const stepTitles = [
               </svg>
             </div>
           </div>
-
-          <!-- Title -->
           <h3
             class="text-2xl font-bold text-content-primary dark:text-content-primary text-center mb-4"
           >
             {{ dialogTitle }}
           </h3>
-
-          <!-- Message -->
           <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
             {{ dialogMessage }}
           </p>
-
-          <!-- Button -->
           <button
             @click="closeDialog"
-            class="w-full px-6 py-3 rounded-lg font-medium transition-all"
-            :class="
-              dialogType === 'success'
-                ? 'bg-primary hover:bg-primary/90 text-white'
-                : 'bg-accent-red hover:bg-accent-red/90 text-white'
-            "
+            class="w-full px-6 py-3 rounded-lg font-medium transition-all bg-accent-red hover:bg-accent-red/90 text-white"
           >
-            {{ dialogType === 'success' ? 'Continue to Login' : 'Close' }}
+            Close
           </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Restarting Overlay (non-dismissible) -->
+    <Transition name="modal">
+      <div
+        v-if="showRestarting"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+      >
+        <div
+          class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-sm w-full p-10 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_48px_0_rgba(0,0,0,0.5)] flex flex-col items-center gap-6"
+        >
+          <!-- Circular bar spinner -->
+          <svg class="spinner-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect
+              v-for="i in 8"
+              :key="i"
+              x="47.5"
+              y="14"
+              width="5"
+              height="18"
+              rx="2.5"
+              class="spinner-bar"
+              :transform="`rotate(${(i - 1) * 45}, 50, 50)`"
+              :style="`animation-delay: ${((i - 1) * 125)}ms`"
+            />
+          </svg>
+
+          <div class="text-center">
+            <h3 class="text-xl font-bold text-content-primary dark:text-content-primary mb-2">
+              Restarting&hellip;
+            </h3>
+            <p class="text-sm text-content-secondary dark:text-content-primary/60">
+              Please wait while the service restarts. This may take up to a minute.
+            </p>
+          </div>
         </div>
       </div>
     </Transition>
@@ -842,5 +833,29 @@ const stepTitles = [
 .animate-pulse-slowest {
   animation: float-slowest 20s ease-in-out infinite;
   will-change: transform, opacity;
+}
+
+/* Circular bar spinner */
+.spinner-svg {
+  width: 72px;
+  height: 72px;
+}
+
+.spinner-bar {
+  fill: transparent;
+  stroke: rgb(34 197 94);
+  stroke-width: 0.5;
+  animation: bar-fill 1s ease-in-out infinite;
+}
+
+@keyframes bar-fill {
+  0%, 100% {
+    fill: transparent;
+    opacity: 0.2;
+  }
+  40%, 60% {
+    fill: rgb(34 197 94);
+    opacity: 1;
+  }
 }
 </style>

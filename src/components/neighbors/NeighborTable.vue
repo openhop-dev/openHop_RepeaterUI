@@ -114,13 +114,13 @@ const getRouteTypeBadge = (routeType?: number | null) => {
 };
 
 const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
+  if (rssi === null || rssi === undefined) return 'N/A';
   return `${rssi} dBm`;
 };
 
 const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr} dB`;
+  if (snr === null || snr === undefined) return 'N/A';
+  return `${snr.toFixed(1)} dB`;
 };
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
@@ -136,6 +136,8 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
+
+const formatDistance = (km: number): string => `${km.toFixed(1)} km`;
 
 const getDistanceFromBase = (advert: Advert) => {
   if (
@@ -153,7 +155,7 @@ const getDistanceFromBase = (advert: Advert) => {
     advert.latitude,
     advert.longitude,
   );
-  return `${distance.toFixed(1)} km`;
+  return formatDistance(distance);
 };
 
 // Copy to clipboard utility
@@ -617,11 +619,12 @@ const sortedAdverts = computed(() => {
           <tr
             v-for="advert in sortedAdverts"
             :key="advert.id"
-            class="hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors"
+            class="hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             @mouseenter="handleHighlight(advert.pubkey)"
             @mouseleave="handleUnhighlight(advert.pubkey)"
+            @click="handleMenuShowDetails(advert)"
           >
-            <td :class="getCellPadding()">
+            <td :class="getCellPadding()" @click.stop>
               <NeighborMenu
                 :neighbor="advert"
                 @ping="handleMenuPing"
@@ -638,7 +641,7 @@ const sortedAdverts = computed(() => {
               :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm font-mono`"
             >
               <button
-                @click="copyPubkey(advert.pubkey)"
+                @click.stop="copyPubkey(advert.pubkey)"
                 :class="[
                   'text-content-primary dark:text-content-primary hover:text-primary-light transition-colors cursor-pointer underline underline-offset-2 decoration-gray-400 dark:decoration-white/30 hover:decoration-primary-light/60',
                   copiedPubkey === advert.pubkey
@@ -665,7 +668,7 @@ const sortedAdverts = computed(() => {
                 >
                 <div class="flex gap-1">
                   <button
-                    @click="copyCoordinates(advert.latitude!, advert.longitude!)"
+                    @click.stop="copyCoordinates(advert.latitude!, advert.longitude!)"
                     class="text-content-muted dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors cursor-pointer"
                     title="Copy coordinates to clipboard"
                   >
@@ -695,7 +698,7 @@ const sortedAdverts = computed(() => {
                     </svg>
                   </button>
                   <button
-                    @click="openInMaps(advert.latitude!, advert.longitude!)"
+                    @click.stop="openInMaps(advert.latitude!, advert.longitude!)"
                     class="text-white/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
                     title="Open in Google Maps"
                   >

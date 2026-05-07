@@ -27,7 +27,7 @@ export interface SignalQuality {
   bars: number; // 0-5 signal bars
   color: string; // Tailwind color class
   snr: number; // Calculated SNR
-  quality: 'excellent' | 'good' | 'fair' | 'poor' | 'none'; // Text label
+  quality: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'None'; // Text label
 }
 
 /**
@@ -57,7 +57,7 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
       bars,
       color: 'text-red-600 dark:text-red-400',
       snr,
-      quality: bars === 0 ? 'none' : 'poor',
+      quality: bars === 0 ? 'None' : 'Poor',
     };
   }
 
@@ -73,7 +73,7 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
           ? 'text-orange-600 dark:text-orange-400'
           : 'text-yellow-600 dark:text-yellow-400',
       snr,
-      quality: 'fair',
+      quality: 'Fair',
     };
   }
 
@@ -85,7 +85,7 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
     bars,
     color: bars === 5 ? 'text-green-600 dark:text-green-400' : 'text-green-600 dark:text-green-300',
     snr,
-    quality: bars === 5 ? 'excellent' : 'good',
+    quality: bars === 5 ? 'Excellent' : 'Good',
   };
 }
 
@@ -119,7 +119,7 @@ export function useSignalQuality() {
         bars: 0,
         color: 'text-gray-400 dark:text-gray-500',
         snr: -999,
-        quality: 'none',
+        quality: 'None',
       };
     }
 
