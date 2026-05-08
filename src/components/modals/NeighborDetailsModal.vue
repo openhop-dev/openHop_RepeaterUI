@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -48,25 +49,6 @@ const emit = defineEmits<{
 const mapContainer = ref<HTMLDivElement>();
 let map: L.Map | null = null;
 
-// Format functions
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString();
-};
-
-const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
-  return `${rssi} dBm`;
-};
-
-const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr.toFixed(1)} dB`;
-};
-
-const formatRouteType = (routeType?: number | null) => {
-  const routes = { 0: 'Transport Flood', 1: 'Flood', 2: 'Direct', 3: 'Transport Direct' };
-  return routes[(routeType as keyof typeof routes) || 0] || 'Unknown';
-};
 
 const formatContactType = (contactType: string) => {
   const types: Record<string, string> = {
@@ -277,7 +259,7 @@ watch(
 
 // Get signal quality
 const signalQuality = computed(() => {
-  if (!props.neighbor?.rssi) return null;
+  if (!props.neighbor) return null;
   return getSignalQuality(props.neighbor.rssi);
 });
 </script>
@@ -434,17 +416,20 @@ const signalQuality = computed(() => {
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex gap-0.5">
-                        <div
-                          v-for="i in 4"
-                          :key="i"
-                          class="w-1 h-3 rounded-sm"
-                          :class="
-                            i <= signalQuality.bars
-                              ? signalQuality.color
-                              : 'bg-gray-300 dark:bg-gray-700'
-                          "
-                        ></div>
+                      <div class="flex items-end gap-0.5">
+                        <template v-for="i in 5" :key="i">
+                          <div
+                            :class="[
+                              'w-1 transition-colors',
+                              i <= signalQuality.bars
+                                ? signalQuality.color
+                                : 'text-gray-600 dark:text-gray-700',
+                            ]"
+                            :style="{ height: `${4 + i * 2}px` }"
+                          >
+                            <div class="w-full h-full bg-current rounded-sm"></div>
+                          </div>
+                        </template>
                       </div>
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
@@ -527,7 +512,7 @@ const signalQuality = computed(() => {
                       v-if="distance !== null"
                       class="text-content-primary dark:text-content-primary font-medium"
                     >
-                      {{ distance.toFixed(2) }} km
+                      {{ `${distance.toFixed(2)} km` }}
                     </div>
                     <button
                       v-else

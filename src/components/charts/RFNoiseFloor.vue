@@ -101,15 +101,8 @@ onBeforeUnmount(() => {
   stopPolling();
 });
 
-// Get current noise level from store stats - use most recent history value instead of average
-const noiseLevel = computed(() => {
-  const historyData = store.noiseFloorSparklineData;
-  if (historyData && historyData.length > 0) {
-    return historyData[historyData.length - 1];
-  }
-  // Fallback to average if no history data
-  return store.noiseFloorStats?.avg_noise_floor ?? -116.0;
-});
+// Returns the most recent valid noise floor, or null when unknown
+const noiseLevel = computed<number | null>(() => store.currentNoiseFloor);
 
 // Get sparkline data from store
 const dataPoints = computed(() => {
@@ -150,9 +143,9 @@ const dataPoints = computed(() => {
     </p>
     <div class="flex items-baseline gap-2 mb-4">
       <span class="text-content-primary dark:text-content-primary text-2xl font-medium">{{
-        noiseLevel
+        noiseLevel !== null ? noiseLevel : 'Unknown'
       }}</span>
-      <span class="text-content-secondary dark:text-content-muted text-xs uppercase">dBm</span>
+      <span v-if="noiseLevel !== null" class="text-content-secondary dark:text-content-muted text-xs uppercase">dBm</span>
     </div>
 
     <!-- Scatter chart -->

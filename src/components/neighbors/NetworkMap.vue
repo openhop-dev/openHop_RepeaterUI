@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Supercluster from 'supercluster';
+import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 
 // Prevent chrome detection errors
 if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).chrome) {
@@ -109,25 +110,6 @@ const hasValidCoordinates = computed(
     Math.abs(props.baseLongitude) <= 180,
 );
 
-// Utility functions
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString();
-};
-
-const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
-  return `${rssi} dBm`;
-};
-
-const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr} dB`;
-};
-
-const formatRouteType = (routeType?: number | null) => {
-  const routes = { 0: 'Transport Flood', 1: 'Flood', 2: 'Direct', 3: 'Transport Direct' };
-  return routes[(routeType as keyof typeof routes) || 0] || 'Unknown';
-};
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in kilometers

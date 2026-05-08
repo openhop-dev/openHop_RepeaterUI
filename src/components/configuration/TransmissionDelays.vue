@@ -8,18 +8,17 @@ const systemStore = useSystemStore();
 const delaysConfig = computed(() => systemStore.stats?.config?.delays || {});
 
 const floodTxDelayFactor = computed(() => {
-  const factor = delaysConfig.value.tx_delay_factor;
-  if (factor && typeof factor === 'object' && factor !== null && 'parsedValue' in factor) {
+  const factor: unknown = delaysConfig.value.tx_delay_factor;
+  if (typeof factor === 'number') return factor.toFixed(2) + 'x';
+  if (factor && typeof factor === 'object' && 'parsedValue' in factor) {
     const value = (factor as { parsedValue?: number }).parsedValue;
-    if (typeof value === 'number') {
-      return value.toFixed(2) + 'x';
-    }
+    if (typeof value === 'number') return value.toFixed(2) + 'x';
   }
   return 'Not set';
 });
 
 const directTxDelayFactor = computed(() => {
-  const factor = delaysConfig.value.direct_tx_delay_factor;
+  const factor: unknown = delaysConfig.value.direct_tx_delay_factor;
   return typeof factor === 'number' ? factor.toFixed(2) + 's' : 'Not set';
 });
 
@@ -35,7 +34,7 @@ const directTxDelayInput = ref(0);
 
 const startEditing = () => {
   // Parse current values
-  const floodFactor = delaysConfig.value.tx_delay_factor;
+  const floodFactor: unknown = delaysConfig.value.tx_delay_factor;
   if (floodFactor && typeof floodFactor === 'object' && 'parsedValue' in floodFactor) {
     floodTxDelayInput.value = (floodFactor as { parsedValue?: number }).parsedValue || 1.0;
   } else if (typeof floodFactor === 'number') {
@@ -44,7 +43,7 @@ const startEditing = () => {
     floodTxDelayInput.value = 1.0;
   }
 
-  const directFactor = delaysConfig.value.direct_tx_delay_factor;
+  const directFactor: unknown = delaysConfig.value.direct_tx_delay_factor;
   directTxDelayInput.value = typeof directFactor === 'number' ? directFactor : 0.5;
 
   isEditing.value = true;
@@ -70,8 +69,9 @@ const saveChanges = async () => {
     });
 
     const data = response.data;
-    if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
+    const inner = data?.data ?? data;
+    if (data.success || inner.persisted || inner.message) {
+      successMessage.value = inner.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
@@ -94,7 +94,40 @@ const saveChanges = async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">TX Delays</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure transmission delay factors for flood and direct packets</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
@@ -109,85 +142,50 @@ const saveChanges = async () => {
       {{ errorMessage }}
     </div>
 
-    <!-- Action Buttons -->
-    <div class="flex justify-end gap-2">
-      <button
-        v-if="!isEditing"
-        @click="startEditing"
-        class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-      >
-        Edit Settings
-      </button>
-      <template v-else>
-        <button
-          @click="cancelEditing"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          @click="saveChanges"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
-        </button>
-      </template>
-    </div>
-
     <!-- Transmission Delays Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <div class="flex flex-col py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Flood TX Delay Factor</span
-          >
-          <div
-            v-if="!isEditing"
-            class="text-content-primary dark:text-content-primary font-mono text-sm sm:ml-4"
-          >
-            {{ floodTxDelayFactor }}
-          </div>
-          <input
-            v-else
-            v-model.number="floodTxDelayInput"
-            type="number"
-            step="0.1"
-            min="0"
-            max="5"
-            class="w-full sm:w-32 px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
+    <div class="cfg-section space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Flood TX Delay Factor</span>
+          <span class="text-content-muted dark:text-content-muted text-xs">Scales the airtime-based random transmit window for flood packets. Higher values increase delay spread for collision avoidance.</span>
         </div>
-        <span class="text-content-muted dark:text-content-muted text-xs"
-          >Multiplier for flood packet transmission delays (collision avoidance)</span
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm flex-shrink-0"
         >
+          {{ floodTxDelayFactor }}
+        </div>
+        <input
+          v-else
+          v-model.number="floodTxDelayInput"
+          type="number"
+          step="0.1"
+          min="0"
+          max="5"
+          class="cfg-input w-full sm:w-32 flex-shrink-0"
+        />
       </div>
 
-      <div class="flex flex-col py-2 gap-2">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Direct TX Delay Factor</span
-          >
-          <div
-            v-if="!isEditing"
-            class="text-content-primary dark:text-content-primary font-mono text-sm sm:ml-4"
-          >
-            {{ directTxDelayFactor }}
-          </div>
-          <input
-            v-else
-            v-model.number="directTxDelayInput"
-            type="number"
-            step="0.1"
-            min="0"
-            max="5"
-            class="w-full sm:w-32 px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-3">
+        <div class="flex flex-col gap-1">
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Direct TX Delay Factor</span>
+          <span class="text-content-muted dark:text-content-muted text-xs">Fixed delay in seconds before transmitting direct-routed packets. Applied as-is with no randomisation.</span>
         </div>
-        <span class="text-content-muted dark:text-content-muted text-xs"
-          >Base delay for direct-routed packet transmission (seconds)</span
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm flex-shrink-0"
         >
+          {{ directTxDelayFactor }}
+        </div>
+        <input
+          v-else
+          v-model.number="directTxDelayInput"
+          type="number"
+          step="0.1"
+          min="0"
+          max="5"
+          class="cfg-input w-full sm:w-32 flex-shrink-0"
+        />
       </div>
     </div>
   </div>

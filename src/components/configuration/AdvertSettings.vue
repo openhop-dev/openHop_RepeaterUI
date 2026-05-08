@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, nextTick } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { authClient } from '@/utils/api';
 
@@ -100,8 +100,20 @@ watch(
   { immediate: true },
 );
 
+const rootEl = ref<HTMLElement | null>(null);
+let refreshTimer: ReturnType<typeof setInterval> | null = null;
+
 onMounted(() => {
   fetchStats();
+  refreshTimer = setInterval(() => {
+    if (rootEl.value && rootEl.value.offsetParent !== null) {
+      fetchStats();
+    }
+  }, 10000);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) clearInterval(refreshTimer);
 });
 
 const reloadFormValues = () => {
@@ -229,7 +241,54 @@ const tierBadgeClass = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div ref="rootEl" class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Advert Limits</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure advertisement rate limiting and adaptive controls</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          @click="showHelp = true"
+          class="self-stretch flex items-center justify-center px-3 text-xs bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-500/50 transition-colors"
+          title="How rate limiting works"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </button>
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
@@ -244,62 +303,9 @@ const tierBadgeClass = computed(() => {
       {{ errorMessage }}
     </div>
 
-    <!-- Action Buttons -->
-    <div class="flex justify-between items-center">
-      <div class="flex gap-2">
-        <button
-          @click="fetchStats"
-          :disabled="statsLoading"
-          class="px-3 py-1.5 text-xs bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-secondary dark:text-content-muted rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors disabled:opacity-50"
-        >
-          {{ statsLoading ? 'Loading...' : 'Refresh Stats' }}
-        </button>
-        <button
-          @click="showHelp = true"
-          class="px-3 py-1.5 text-xs bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-400 rounded-lg border border-blue-500/50 transition-colors"
-          title="How rate limiting works"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <div class="flex gap-2">
-        <button
-          v-if="!isEditing"
-          @click="startEditing"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveChanges"
-            :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
-      </div>
-    </div>
-
     <!-- Current Status Card -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <h3 class="text-sm font-medium text-content-primary dark:text-content-primary">
+    <div class="cfg-section space-y-3">
+      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
         Current Status
       </h3>
 
@@ -321,7 +327,7 @@ const tierBadgeClass = computed(() => {
       <!-- Stats Grid -->
       <template v-else>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Mesh Tier</div>
             <div
               :class="[
@@ -332,19 +338,19 @@ const tierBadgeClass = computed(() => {
               {{ currentTier.toUpperCase() }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Adverts/min</div>
             <div class="text-lg font-mono text-content-primary dark:text-content-primary">
               {{ rateLimitStats.metrics?.adverts_per_min_ewma?.toFixed(2) || '0.00' }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Allowed</div>
             <div class="text-lg font-mono text-green-600 dark:text-green-400">
               {{ rateLimitStats.stats?.adverts_allowed || 0 }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Dropped</div>
             <div class="text-lg font-mono text-red-600 dark:text-red-400">
               {{ rateLimitStats.stats?.adverts_dropped || 0 }}
@@ -386,311 +392,13 @@ const tierBadgeClass = computed(() => {
           </div>
         </div>
       </template>
-    </div>
 
-    <!-- Rate Limit Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        Token Bucket Rate Limiting
-      </h3>
-      <p class="text-xs text-content-muted dark:text-content-muted">
-        Controls how many adverts each pubkey can send in a given time period.
-      </p>
-
-      <!-- Enabled Toggle -->
+      <!-- How the three systems work together -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-          >Rate Limiting</span
-        >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ rateLimitEnabled ? 'Enabled' : 'Disabled' }}
-        </div>
-        <select
-          v-else
-          v-model="rateLimitEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        >
-          <option :value="true">Enabled</option>
-          <option :value="false">Disabled</option>
-        </select>
-      </div>
-
-      <!-- Bucket Capacity -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Bucket Capacity</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">Max burst size (adverts)</p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ bucketCapacity }}
-        </div>
-        <input
-          v-else
-          v-model.number="bucketCapacity"
-          type="number"
-          min="1"
-          max="10"
-          class="w-full sm:w-24 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      <!-- Refill Interval -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Refill Interval</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">
-            Time between token refills
-          </p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ refillIntervalHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model.number="refillIntervalHours"
-            type="number"
-            min="1"
-            max="48"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
-          <span class="text-content-muted text-sm">hours</span>
-        </div>
-      </div>
-
-      <!-- Min Interval -->
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Minimum Interval</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">
-            Hard minimum between adverts
-          </p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ minIntervalMinutes }} min
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model.number="minIntervalMinutes"
-            type="number"
-            min="0"
-            max="1440"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
-          <span class="text-content-muted text-sm">min</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Penalty Box Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-          />
-        </svg>
-        Penalty Box (Repeat Offenders)
-      </h3>
-      <p class="text-xs text-content-muted dark:text-content-muted">
-        Applies escalating cooldowns to pubkeys that repeatedly violate limits.
-      </p>
-
-      <!-- Enabled Toggle -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-          >Penalty Box</span
-        >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ penaltyEnabled ? 'Enabled' : 'Disabled' }}
-        </div>
-        <select
-          v-else
-          v-model="penaltyEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        >
-          <option :value="true">Enabled</option>
-          <option :value="false">Disabled</option>
-        </select>
-      </div>
-
-      <!-- Violation Threshold -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Violation Threshold</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">
-            Violations before penalty
-          </p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ violationThreshold }}
-        </div>
-        <input
-          v-else
-          v-model.number="violationThreshold"
-          type="number"
-          min="1"
-          max="10"
-          class="w-full sm:w-24 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      <!-- Base Penalty -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Base Penalty Duration</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">First penalty duration</p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ basePenaltyHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model.number="basePenaltyHours"
-            type="number"
-            min="1"
-            max="48"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
-          <span class="text-content-muted text-sm">hours</span>
-        </div>
-      </div>
-
-      <!-- Penalty Multiplier -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Penalty Multiplier</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">Escalation factor</p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ penaltyMultiplier }}x
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model.number="penaltyMultiplier"
-            type="number"
-            min="1"
-            max="5"
-            step="0.5"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
-          <span class="text-content-muted text-sm">x</span>
-        </div>
-      </div>
-
-      <!-- Max Penalty -->
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
-        <div>
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-            >Max Penalty Duration</span
-          >
-          <p class="text-xs text-content-muted dark:text-content-muted">Maximum cooldown cap</p>
-        </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ maxPenaltyHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <input
-            v-model.number="maxPenaltyHours"
-            type="number"
-            min="1"
-            max="168"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-          />
-          <span class="text-content-muted text-sm">hours</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Adaptive Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
-      <h3
-        class="text-sm font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-        Adaptive Rate Limiting
-      </h3>
-
-      <!-- Info box explaining how it works -->
-      <div
-        class="p-3 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 rounded-lg"
+        class="mt-3 p-3 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 rounded-lg"
       >
         <p class="text-xs text-cyan-700 dark:text-cyan-300 leading-relaxed">
-          <strong>How the three systems work together:</strong> Each layer can be enabled/disabled
+          <strong>There are three layers of advert rate limit control:</strong> Each layer can be enabled/disabled
           independently and the others will still function.
         </p>
         <ul class="text-xs text-cyan-700 dark:text-cyan-300 mt-2 space-y-1 ml-4 list-disc">
@@ -726,6 +434,304 @@ const tierBadgeClass = computed(() => {
           stays at the configured base value.
         </p>
       </div>
+    </div>
+
+    <!-- Rate Limit Settings -->
+    <div class="cfg-section space-y-3">
+      <h3
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        Token Bucket Rate Limiting
+      </h3>
+      <p class="text-xs text-content-muted dark:text-content-muted">
+        Controls how many adverts each pubkey can send in a given time period.
+      </p>
+
+      <!-- Enabled Toggle -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+          >Rate Limiting</span
+        >
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ rateLimitEnabled ? 'Enabled' : 'Disabled' }}
+        </div>
+        <select
+          v-else
+          v-model="rateLimitEnabled"
+          class="cfg-select w-full sm:w-32"
+        >
+          <option :value="true">Enabled</option>
+          <option :value="false">Disabled</option>
+        </select>
+      </div>
+
+      <!-- Bucket Capacity -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Bucket Capacity</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">Max burst size (adverts)</p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ bucketCapacity }}
+        </div>
+        <input
+          v-else
+          v-model.number="bucketCapacity"
+          type="number"
+          min="1"
+          max="10"
+          class="cfg-input w-full sm:w-24"
+        />
+      </div>
+
+      <!-- Refill Interval -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Refill Interval</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">
+            Time between token refills
+          </p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ refillIntervalHours }} hours
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <input
+            v-model.number="refillIntervalHours"
+            type="number"
+            min="1"
+            max="48"
+            class="cfg-input w-20"
+          />
+          <span class="text-content-muted text-sm">hours</span>
+        </div>
+      </div>
+
+      <!-- Min Interval -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Minimum Interval</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">
+            Hard minimum between adverts
+          </p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ minIntervalMinutes }} min
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <input
+            v-model.number="minIntervalMinutes"
+            type="number"
+            min="0"
+            max="1440"
+            class="cfg-input w-20"
+          />
+          <span class="text-content-muted text-sm">min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Penalty Box Settings -->
+    <div class="cfg-section space-y-3">
+      <h3
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+          />
+        </svg>
+        Penalty Box (Repeat Offenders)
+      </h3>
+      <p class="text-xs text-content-muted dark:text-content-muted">
+        Applies escalating cooldowns to pubkeys that repeatedly violate limits.
+      </p>
+
+      <!-- Enabled Toggle -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+          >Penalty Box</span
+        >
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ penaltyEnabled ? 'Enabled' : 'Disabled' }}
+        </div>
+        <select
+          v-else
+          v-model="penaltyEnabled"
+          class="cfg-select w-full sm:w-32"
+        >
+          <option :value="true">Enabled</option>
+          <option :value="false">Disabled</option>
+        </select>
+      </div>
+
+      <!-- Violation Threshold -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Violation Threshold</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">
+            Violations before penalty
+          </p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ violationThreshold }}
+        </div>
+        <input
+          v-else
+          v-model.number="violationThreshold"
+          type="number"
+          min="1"
+          max="10"
+          class="cfg-input w-full sm:w-24"
+        />
+      </div>
+
+      <!-- Base Penalty -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Base Penalty Duration</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">First penalty duration</p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ basePenaltyHours }} hours
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <input
+            v-model.number="basePenaltyHours"
+            type="number"
+            min="1"
+            max="48"
+            class="cfg-input w-20"
+          />
+          <span class="text-content-muted text-sm">hours</span>
+        </div>
+      </div>
+
+      <!-- Penalty Multiplier -->
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+      >
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Penalty Multiplier</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">Escalation factor</p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ penaltyMultiplier }}x
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <input
+            v-model.number="penaltyMultiplier"
+            type="number"
+            min="1"
+            max="5"
+            step="0.5"
+            class="cfg-input w-20"
+          />
+          <span class="text-content-muted text-sm">x</span>
+        </div>
+      </div>
+
+      <!-- Max Penalty -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
+        <div>
+          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
+            >Max Penalty Duration</span
+          >
+          <p class="text-xs text-content-muted dark:text-content-muted">Maximum cooldown cap</p>
+        </div>
+        <div
+          v-if="!isEditing"
+          class="text-content-primary dark:text-content-primary font-mono text-sm"
+        >
+          {{ maxPenaltyHours }} hours
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <input
+            v-model.number="maxPenaltyHours"
+            type="number"
+            min="1"
+            max="168"
+            class="cfg-input w-20"
+          />
+          <span class="text-content-muted text-sm">hours</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adaptive Settings -->
+    <div class="cfg-section space-y-3">
+      <h3
+        class="text-lg font-semibold text-content-primary dark:text-content-primary flex items-center gap-2"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+          />
+        </svg>
+        Adaptive Rate Limiting
+      </h3>
 
       <!-- Enabled Toggle -->
       <div
@@ -743,7 +749,7 @@ const tierBadgeClass = computed(() => {
         <select
           v-else
           v-model="adaptiveEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>
@@ -772,7 +778,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="0"
             max="60"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">min</span>
         </div>
@@ -784,7 +790,7 @@ const tierBadgeClass = computed(() => {
           >Activity Tier Thresholds (adverts/min)</span
         >
         <div class="grid grid-cols-3 gap-2 mt-2">
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-green-600 dark:text-green-400 mb-1">Quiet Max</div>
             <div
               v-if="!isEditing"
@@ -799,10 +805,10 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="1"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">Normal Max</div>
             <div
               v-if="!isEditing"
@@ -817,10 +823,10 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="5"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-yellow-600 dark:text-yellow-400 mb-1">Busy Max</div>
             <div
               v-if="!isEditing"
@@ -835,7 +841,7 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="10"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
         </div>

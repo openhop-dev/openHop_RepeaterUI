@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, type ComponentPublicInstance } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
 import RepeaterSettings from '@/components/configuration/RepeaterSettings.vue';
@@ -21,6 +21,7 @@ const systemStore = useSystemStore();
 const activeTab = ref(getPreference('configuration_activeTab', 'radio'));
 const initialLoadComplete = ref(false);
 const tabsContainer = ref<HTMLElement | null>(null);
+const letsMeshRef = ref<(ComponentPublicInstance & { requestLeave: (cb: () => void) => void; isGlobalEditing: boolean }) | null>(null);
 const showRightFade = ref(false);
 const showLeftFade = ref(false);
 
@@ -45,7 +46,7 @@ const tabs = [
   { id: 'advert', label: 'Advert Limits', icon: 'advert' },
   { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
   { id: 'delays', label: 'TX Delays', icon: 'delays' },
-  { id: 'transport', label: 'Regions/Keys', icon: 'keys' },
+  { id: 'transport', label: 'Region Configuration', icon: 'keys' },
   { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
   { id: 'web', label: 'Web Options', icon: 'web' },
   { id: 'observer', label: 'Observer', icon: 'observer' },
@@ -67,6 +68,10 @@ onMounted(async () => {
 });
 
 function setActiveTab(tabId: string) {
+  if (activeTab.value === 'observer' && tabId !== 'observer' && letsMeshRef.value?.isGlobalEditing) {
+    letsMeshRef.value.requestLeave(() => { activeTab.value = tabId; });
+    return;
+  }
   activeTab.value = tabId;
 }
 </script>
@@ -74,37 +79,34 @@ function setActiveTab(tabId: string) {
 <template>
   <div class="p-3 sm:p-6 space-y-4 sm:space-y-6">
     <!-- Header -->
-    <div>
-      <h1 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
-        Configuration
-      </h1>
-      <p class="text-content-secondary dark:text-content-muted mt-1 sm:mt-2 text-sm sm:text-base">
-        System configuration and settings
-      </p>
-    </div>
-
-    <!-- Info Box -->
-
-    <!-- CAD Calibration Tool Banner -->
-    <div
-      class="glass-card rounded-[15px] z-10 p-3 sm:p-4 border border-cyan-400 dark:border-primary/30 bg-cyan-500/10 dark:bg-primary/10"
-    >
-      <div class="text-cyan-700 dark:text-primary text-sm sm:text-base">
-        <strong>CAD Calibration Tool Available</strong>
-        <p class="mt-1 sm:mt-2 text-cyan-600 dark:text-primary/80">
-          Optimize your Channel Activity Detection settings.
-          <router-link
-            to="/cad-calibration"
-            class="underline hover:text-cyan-800 dark:hover:text-primary transition-colors"
-          >
-            Launch CAD Calibration Tool →
-          </router-link>
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
+          Configuration
+        </h1>
+        <p class="text-content-secondary dark:text-content-muted mt-1 sm:mt-2 text-sm sm:text-base">
+          System configuration and settings
         </p>
       </div>
+
+      <!-- CAD Calibration Tool Banner — shown only when no calibration is saved yet -->
+      <router-link
+        v-if="initialLoadComplete && !(systemStore.stats?.config?.radio as any)?.cad?.peak_threshold"
+        to="/cad-calibration"
+        class="flex-shrink-0 flex items-center gap-4 px-5 py-3 min-w-[280px] rounded-xl border border-cyan-400 dark:border-primary/30 bg-cyan-500/10 dark:bg-primary/10 text-cyan-700 dark:text-primary hover:bg-cyan-500/20 dark:hover:bg-primary/20 transition-colors"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <div>
+          <div class="text-sm font-semibold">CAD Calibration Available</div>
+          <div class="text-xs text-cyan-600 dark:text-primary/70">Optimise CAD settings →</div>
+        </div>
+      </router-link>
     </div>
 
     <!-- Configuration Tabs -->
-    <div class="glass-card rounded-[15px] p-3 sm:p-6">
+    <div class="glass-card rounded-[15px] p-3 sm:p-6 mt-4 sm:mt-6">
       <!-- Tab Navigation -->
       <div class="relative -mx-3 sm:mx-0 mb-4 sm:mb-6">
         <!-- Left scroll fade + button (mobile only) -->
@@ -156,7 +158,7 @@ function setActiveTab(tabId: string) {
         <div
           ref="tabsContainer"
           @scroll="updateFades"
-          class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke/10 px-3 sm:px-0 scrollbar-hide"
+          class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke px-3 sm:px-0 scrollbar-hide"
         >
           <button
             v-for="tab in tabs"
@@ -408,7 +410,7 @@ function setActiveTab(tabId: string) {
             <WebSettings key="web-settings" />
           </div>
           <div v-show="activeTab === 'observer'">
-            <LetsMeshSettings key="letsmesh-settings" />
+            <LetsMeshSettings ref="letsMeshRef" key="letsmesh-settings" />
           </div>
           <div v-show="activeTab === 'backup'">
             <BackupRestore key="backup-restore" />

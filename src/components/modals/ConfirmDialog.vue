@@ -22,12 +22,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    emit('close');
-  }
-};
-
 const variantColors = {
   danger: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
   warning:
@@ -43,24 +37,16 @@ const buttonColors = {
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="props.show"
-    @click="handleBackdropClick"
-    class="fixed inset-0 bg-black/40 backdrop-blur-lg z-[99999] flex items-center justify-center p-4"
-    style="
-      backdrop-filter: blur(8px) saturate(180%);
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-    "
+    @click.self="emit('close')"
+    class="modal-backdrop"
   >
     <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full max-w-md border border-stroke-subtle dark:border-white/10"
-      @click.stop
+      class="modal-card max-w-md"
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
@@ -150,4 +136,5 @@ const buttonColors = {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

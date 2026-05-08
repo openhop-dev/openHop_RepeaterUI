@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-
-interface TreeNodeData {
-  id: number;
-  name: string;
-  children: TreeNodeData[];
-  floodPolicy: 'allow' | 'deny';
-}
+import type { TreeNodeData } from '@/types/tree';
 
 interface Props {
   show: boolean;
@@ -103,33 +97,19 @@ const handleClose = () => {
   emit('close');
 };
 
-// Handle backdrop click
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    handleClose();
-  }
-};
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="show && node"
-    @click="handleBackdropClick"
-    class="fixed inset-0 bg-black/80 backdrop-blur-lg z-[99999] flex items-center justify-center p-4"
-    style="
-      backdrop-filter: blur(8px) saturate(180%);
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-    "
+    @click.self="handleClose()"
+    class="modal-backdrop-heavy"
   >
     <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full max-w-lg border border-stroke-subtle dark:border-white/10"
-      @click.stop
+      class="modal-card max-w-lg"
     >
       <!-- Header -->
       <div class="flex items-center gap-3 mb-6">
@@ -366,4 +346,5 @@ const handleBackdropClick = (event: MouseEvent) => {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

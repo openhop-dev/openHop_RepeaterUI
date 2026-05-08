@@ -1,7 +1,20 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Database</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">View database statistics and perform maintenance</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button @click="isUnlocked = !isUnlocked" class="cfg-btn-primary">
+          {{ isUnlocked ? 'Lock' : 'Unlock' }}
+        </button>
+      </div>
+    </div>
+
     <!-- Database Overview -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -14,7 +27,7 @@
         <button
           @click="loadStats"
           :disabled="loading"
-          class="px-3 py-1.5 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-white rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors text-sm disabled:opacity-50"
+          class="cfg-btn-secondary"
         >
           <span v-if="loading" class="flex items-center gap-1.5">
             <span
@@ -129,8 +142,8 @@
                     v-if="table.has_timestamp && table.row_count > 0"
                     class="text-xs text-content-muted"
                   >
-                    {{ formatTimestamp(table.oldest_timestamp) }} —
-                    {{ formatTimestamp(table.newest_timestamp) }}
+                    {{ formatDateShort(table.oldest_timestamp) }} —
+                    {{ formatDateShort(table.newest_timestamp) }}
                     <span class="text-content-muted/60 ml-1"
                       >({{ dateDays(table.oldest_timestamp, table.newest_timestamp) }}d)</span
                     >
@@ -142,7 +155,7 @@
                 </td>
                 <td class="py-2.5 text-right">
                   <button
-                    v-if="isPurgeable(table.name) && table.row_count > 0"
+                    v-if="isUnlocked && isPurgeable(table.name) && table.row_count > 0"
                     @click="confirmPurge(table.name, table.row_count)"
                     :disabled="purging[table.name]"
                     class="px-2.5 py-1 bg-red-500/10 dark:bg-red-400/10 hover:bg-red-500/20 dark:hover:bg-red-400/20 text-red-700 dark:text-red-400 rounded border border-red-500/30 dark:border-red-400/20 transition-colors text-xs disabled:opacity-50"
@@ -167,68 +180,58 @@
     </div>
 
     <!-- Purge Confirmation Modal -->
-    <div
-      v-if="purgeConfirm"
-      class="glass-card rounded-lg border-2 border-red-500/50 dark:border-red-400/40 bg-red-50 dark:bg-red-500/10 p-6"
-    >
-      <div class="flex items-start gap-3">
-        <svg
-          class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+    <Teleport to="body">
+      <div
+        v-if="purgeConfirm"
+        class="modal-backdrop-heavy"
+        @click.self="!purgeConfirm.executing && (purgeConfirm = null)"
+      >
+        <div
+          class="modal-card max-w-lg"
+          @click.stop
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-          />
-        </svg>
-        <div class="flex-1">
-          <h4 class="text-sm font-semibold text-red-700 dark:text-red-400">
-            {{
-              purgeConfirm.table === 'all'
-                ? 'Confirm Purge All Tables'
-                : `Confirm Purge "${purgeConfirm.table}"`
-            }}
-          </h4>
-          <p class="text-xs text-red-600 dark:text-red-400/80 mt-1">
-            <template v-if="purgeConfirm.table === 'all'">
-              This will permanently delete <strong>all data</strong> from every data table ({{
-                totalRows.toLocaleString()
-              }}
-              rows total). This cannot be undone.
-            </template>
-            <template v-else>
-              This will permanently delete
-              <strong>{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from
-              <strong>{{ purgeConfirm.table }}</strong
-              >. This cannot be undone.
-            </template>
-          </p>
-          <div class="flex gap-2 mt-3">
-            <button
-              @click="executePurge"
-              :disabled="purgeConfirm.executing"
-              class="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors text-sm disabled:opacity-50"
-            >
-              {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
-            </button>
+          <div class="flex items-start gap-3 mb-5">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+                {{ purgeConfirm.table === 'all' ? 'Purge All Tables' : `Purge "${purgeConfirm.table}"` }}
+              </h3>
+              <p class="text-sm text-content-secondary dark:text-content-muted mt-1">
+                <template v-if="purgeConfirm.table === 'all'">
+                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">all data</strong> from every data table ({{ totalRows.toLocaleString() }} rows total). This cannot be undone.
+                </template>
+                <template v-else>
+                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from <strong class="text-content-primary dark:text-content-primary font-mono">{{ purgeConfirm.table }}</strong>. This cannot be undone.
+                </template>
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-3">
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors text-sm"
+              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
             >
               Cancel
+            </button>
+            <button
+              @click="executePurge"
+              :disabled="purgeConfirm.executing"
+              class="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-600 dark:text-red-400 rounded-lg transition-colors font-medium disabled:opacity-50"
+            >
+              {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Bulk Actions -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4">
         Maintenance
       </h3>
@@ -236,7 +239,7 @@
         <!-- Purge All -->
         <button
           @click="confirmPurge('all', totalRows)"
-          :disabled="!stats || totalRows === 0"
+          :disabled="!stats || totalRows === 0 || !isUnlocked"
           class="px-4 py-2 bg-red-500/20 dark:bg-red-400/20 hover:bg-red-500/30 dark:hover:bg-red-400/30 text-red-900 dark:text-red-200 rounded-lg border border-red-500/50 dark:border-red-400/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="flex items-center gap-2">
@@ -256,7 +259,7 @@
         <button
           @click="runVacuum"
           :disabled="vacuuming || !stats"
-          class="px-4 py-2 bg-amber-500/20 dark:bg-amber-400/20 hover:bg-amber-500/30 dark:hover:bg-amber-400/30 text-amber-900 dark:text-amber-200 rounded-lg border border-amber-500/50 dark:border-amber-400/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="cfg-btn-primary"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,6 +288,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import ApiService from '@/utils/api';
+import { formatBytes, formatDateShort } from '@/utils/formatters';
 
 interface TableInfo {
   name: string;
@@ -313,6 +317,7 @@ const PURGEABLE_TABLES = new Set([
   'companion_prefs',
 ]);
 
+const isUnlocked = ref(false);
 const loading = ref(false);
 const error = ref('');
 const stats = ref<DbStats | null>(null);
@@ -329,23 +334,6 @@ const totalRows = computed(() => {
 
 function isPurgeable(name: string) {
   return PURGEABLE_TABLES.has(name);
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-  const value = bytes / Math.pow(1024, i);
-  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`;
-}
-
-function formatTimestamp(ts?: number): string {
-  if (!ts) return '—';
-  return new Date(ts * 1000).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function dateDays(oldest?: number, newest?: number): number {

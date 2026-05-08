@@ -157,19 +157,21 @@ const iconComponents = {
 
 type IconKey = keyof typeof iconComponents;
 
-const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string }> = [
-  { name: 'Dashboard', icon: 'dashboard', route: '/' },
-  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors' },
-  { name: 'Statistics', icon: 'statistics', route: '/statistics' },
-  { name: 'GPS', icon: 'gps', route: '/gps' },
-  { name: 'System Stats', icon: 'system-stats', route: '/system-stats' },
-  { name: 'Sessions', icon: 'sessions', route: '/sessions' },
-  { name: 'Configuration', icon: 'configuration', route: '/configuration' },
-  { name: 'Terminal', icon: 'terminal', route: '/terminal' },
-  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers' },
-  { name: 'Companions', icon: 'companions', route: '/companions' },
-  { name: 'Logs', icon: 'logs', route: '/logs' },
-  { name: 'Help', icon: 'help', route: '/help' },
+type NavGroup = 'monitoring' | 'system' | 'room' | 'other';
+
+const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string; group: NavGroup }> = [
+  { name: 'Dashboard', icon: 'dashboard', route: '/', group: 'monitoring' },
+  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors', group: 'monitoring' },
+  { name: 'Statistics', icon: 'statistics', route: '/statistics', group: 'monitoring' },
+  { name: 'GPS', icon: 'gps', route: '/gps', group: 'monitoring' },
+  { name: 'System Stats', icon: 'system-stats', route: '/system-stats', group: 'monitoring' },
+  { name: 'Sessions', icon: 'sessions', route: '/sessions', group: 'system' },
+  { name: 'Configuration', icon: 'configuration', route: '/configuration', group: 'system' },
+  { name: 'Terminal', icon: 'terminal', route: '/terminal', group: 'system' },
+  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers', group: 'room' },
+  { name: 'Companions', icon: 'companions', route: '/companions', group: 'room' },
+  { name: 'Logs', icon: 'logs', route: '/logs', group: 'other' },
+  { name: 'Help', icon: 'help', route: '/help', group: 'other' },
 ];
 
 const isGpsEnabled = computed(() => {
@@ -180,6 +182,11 @@ const isGpsEnabled = computed(() => {
 const sidebarItems = computed(() =>
   baseSidebarItems.filter((item) => item.route !== '/gps' || isGpsEnabled.value),
 );
+
+const navMonitoring = computed(() => sidebarItems.value.filter((i) => i.group === 'monitoring'));
+const navSystem = computed(() => sidebarItems.value.filter((i) => i.group === 'system'));
+const navRoom = computed(() => sidebarItems.value.filter((i) => i.group === 'room'));
+const navOther = computed(() => sidebarItems.value.filter((i) => i.group === 'other'));
 
 const modeOptions = [
   {
@@ -416,7 +423,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Monitoring</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(0, 4)"
+              v-for="item in navMonitoring"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -436,7 +443,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">System</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(4, 8)"
+              v-for="item in navSystem"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -456,7 +463,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Room Servers &amp; Companions</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(8, 10)"
+              v-for="item in navRoom"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -476,7 +483,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Other</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(10)"
+              v-for="item in navOther"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="

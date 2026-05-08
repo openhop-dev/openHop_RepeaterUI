@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import apiClient from '@/utils/api';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
+const router = useRouter();
 const systemStore = useSystemStore();
 
 const radioConfig = computed(() => systemStore.stats?.config?.radio || {});
+const cadConfig = computed(() => (systemStore.stats?.config?.radio as any)?.cad ?? {});
 
 // Editable form values
 const isEditing = ref(false);
 const isSaving = ref(false);
 const error = ref<string | null>(null);
-const successMessage = ref<string | null>(null);
+const showRestartModal = ref(false);
 
 // Form values (in user-friendly units)
 const frequencyMHz = ref(0);
@@ -84,13 +88,11 @@ const formattedSpreadingFactor = computed(() => {
 const startEditing = () => {
   isEditing.value = true;
   error.value = null;
-  successMessage.value = null;
 };
 
 const cancelEditing = () => {
   isEditing.value = false;
   error.value = null;
-  // Reload values from store
   const config = radioConfig.value;
   frequencyMHz.value = config.frequency ? Number((config.frequency / 1000000).toFixed(3)) : 0;
   spreadingFactor.value = config.spreading_factor ?? 0;
@@ -103,10 +105,8 @@ const cancelEditing = () => {
 const saveChanges = async () => {
   isSaving.value = true;
   error.value = null;
-  successMessage.value = null;
 
   try {
-    // Convert to backend units (Hz for frequency and bandwidth)
     const payload: Record<string, number> = {};
 
     if (frequencyMHz.value) payload.frequency = frequencyMHz.value * 1000000;
@@ -118,19 +118,10 @@ const saveChanges = async () => {
     const response = await apiClient.post('/update_radio_config', payload);
     const data = response.data as any;
 
-    // API returns data directly without success wrapper
-    // Success if we have a message or persisted flag
     if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
       isEditing.value = false;
-
-      // Refresh stats to show updated values
       await systemStore.fetchStats();
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        successMessage.value = null;
-      }, 3000);
+      showRestartModal.value = true;
     } else if (data.error) {
       error.value = data.error;
     } else {
@@ -144,16 +135,48 @@ const saveChanges = async () => {
     isSaving.value = false;
   }
 };
+
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Success Message -->
-    <div
-      v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/20 border border-green-500/50 rounded-lg p-3"
-    >
-      <p class="text-green-600 dark:text-green-400 text-sm">{{ successMessage }}</p>
+  <RestartModal
+    v-model="showRestartModal"
+    title="Radio Settings Changes require a restart."
+    message="Restart Now?"
+  />
+
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Radio Settings</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure LoRa radio parameters and frequency presets</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- Error Message -->
@@ -161,35 +184,8 @@ const saveChanges = async () => {
       <p class="text-red-600 dark:text-red-400 text-sm">{{ error }}</p>
     </div>
 
-    <!-- Edit/Save/Cancel Buttons -->
-    <div class="flex justify-end gap-2">
-      <button
-        v-if="!isEditing"
-        @click="startEditing"
-        class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-      >
-        Edit Settings
-      </button>
-      <template v-else>
-        <button
-          @click="cancelEditing"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          @click="saveChanges"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
-        </button>
-      </template>
-    </div>
-
     <!-- Radio Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section space-y-3">
       <!-- Frequency -->
       <div
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
@@ -210,7 +206,7 @@ const saveChanges = async () => {
             step="0.001"
             min="100"
             max="1000"
-            class="w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-32"
           />
           <span class="text-content-muted dark:text-content-muted text-sm">MHz</span>
         </div>
@@ -232,7 +228,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="spreadingFactor"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option v-for="sf in [5, 6, 7, 8, 9, 10, 11, 12]" :key="sf" :value="sf">
               {{ sf }}
@@ -257,7 +253,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="bandwidthKHz"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option v-for="bw in bandwidthOptions" :key="bw.value" :value="bw.value">
               {{ bw.label }}
@@ -285,7 +281,7 @@ const saveChanges = async () => {
             type="number"
             min="2"
             max="30"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted dark:text-content-muted text-sm">dBm</span>
         </div>
@@ -307,7 +303,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="codingRate"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option :value="5">4/5</option>
             <option :value="6">4/6</option>
@@ -328,15 +324,37 @@ const saveChanges = async () => {
       </div>
     </div>
 
-    <!-- Info Note -->
-    <div
-      v-if="isEditing"
-      class="bg-yellow-500/10 dark:bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
-    >
-      <p class="text-yellow-700 dark:text-yellow-400 text-xs">
-        <strong>Note:</strong> Radio hardware changes (frequency, bandwidth, spreading factor,
-        coding rate) may require a service restart to apply.
-      </p>
+    <!-- CAD Calibration Section -->
+    <div class="cfg-section space-y-3">
+      <!-- Section header -->
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">CAD Calibration</h3>
+          <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Channel Activity Detection: Run Calibration to update</p>
+          <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm mt-1">These settings tune the receivers ability to detect channel status prior to transmission</p>
+        </div>
+        <button @click="router.push('/cad-calibration')" class="cfg-btn-secondary flex-shrink-0">
+          Run Calibration
+        </button>
+      </div>
+
+      <div class="pt-2" />
+
+      <!-- Peak Threshold -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Peak Threshold</span>
+        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+          {{ cadConfig.peak_threshold ?? 'Not calibrated' }}
+        </span>
+      </div>
+
+      <!-- Min Threshold -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Min Threshold</span>
+        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+          {{ cadConfig.min_threshold ?? 'Not calibrated' }}
+        </span>
+      </div>
     </div>
   </div>
 </template>

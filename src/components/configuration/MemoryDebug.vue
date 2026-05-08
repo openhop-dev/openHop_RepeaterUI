@@ -1,6 +1,14 @@
 <template>
-  <div class="space-y-6">
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Memory</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Diagnose memory usage and trace allocations</p>
+      </div>
+    </div>
+
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -15,7 +23,7 @@
             v-if="tracing && hasData"
             @click="fetchStatus"
             :disabled="loading"
-            class="px-3 py-1.5 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-white rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors text-sm disabled:opacity-50"
+            class="cfg-btn-secondary"
           >
             <span v-if="loading" class="flex items-center gap-1.5">
               <span class="animate-spin w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full inline-block"></span>

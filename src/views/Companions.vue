@@ -478,9 +478,11 @@ function onImportDone(imported: number) {
     </div>
 
     <!-- Create Modal -->
+    <Teleport to="body">
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[99999] p-4"
+      @click.self="showCreateModal = false"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -584,11 +586,14 @@ function onImportDone(imported: number) {
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Edit Modal -->
+    <Teleport to="body">
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[99999] p-4"
+      @click.self="closeModals"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -696,6 +701,7 @@ function onImportDone(imported: number) {
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 
   <ImportRepeaterContactsModal

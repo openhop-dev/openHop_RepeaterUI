@@ -2,6 +2,14 @@
 import { ref, computed } from 'vue';
 import NeighborMenu from '@/components/ui/NeighborMenu.vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import {
+  formatRSSI,
+  formatSNR,
+  formatTimestamp,
+  formatPubkey,
+  formatDistance,
+  getRouteTypeBadge,
+} from '@/utils/formatters';
 
 // Reactive state
 const copiedPubkey = ref<string | null>(null);
@@ -64,64 +72,6 @@ const emit = defineEmits<{
   'toggle-view': [];
 }>();
 
-// Utility functions
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString();
-};
-
-const formatPubkey = (pubkey: string) => {
-  return `${pubkey.slice(0, 4)}...${pubkey.slice(-4)}`;
-};
-
-const getRouteTypeBadge = (routeType?: number | null) => {
-  switch (routeType) {
-    case 2: // Direct
-      return {
-        text: 'Direct',
-        bgColor: 'bg-green-100 dark:bg-green-500/20',
-        borderColor: 'border-green-500 dark:border-green-400/30',
-        textColor: 'text-green-600 dark:text-green-400',
-      };
-    case 3: // Transport Direct
-      return {
-        text: 'Transport Direct',
-        bgColor: 'bg-green-100 dark:bg-green-600/20',
-        borderColor: 'border-green-600/40 dark:border-green-500/30',
-        textColor: 'text-green-700 dark:text-green-500',
-      };
-    case 1: // Flood
-      return {
-        text: 'Flood',
-        bgColor: 'bg-yellow-100 dark:bg-yellow-500/20',
-        borderColor: 'border-yellow-500 dark:border-yellow-400/30',
-        textColor: 'text-yellow-600 dark:text-yellow-400',
-      };
-    case 0: // Transport Flood
-      return {
-        text: 'Transport Flood',
-        bgColor: 'bg-orange-100 dark:bg-orange-500/20',
-        borderColor: 'border-orange-500 dark:border-orange-400/30',
-        textColor: 'text-orange-600 dark:text-orange-400',
-      };
-    default:
-      return {
-        text: 'Unknown',
-        bgColor: 'bg-gray-500/20',
-        borderColor: 'border-gray-400/30',
-        textColor: 'text-gray-400',
-      };
-  }
-};
-
-const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
-  return `${rssi} dBm`;
-};
-
-const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr} dB`;
-};
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in kilometers
@@ -153,7 +103,7 @@ const getDistanceFromBase = (advert: Advert) => {
     advert.latitude,
     advert.longitude,
   );
-  return `${distance.toFixed(1)} km`;
+  return formatDistance(distance);
 };
 
 // Copy to clipboard utility
@@ -617,11 +567,12 @@ const sortedAdverts = computed(() => {
           <tr
             v-for="advert in sortedAdverts"
             :key="advert.id"
-            class="hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors"
+            class="hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             @mouseenter="handleHighlight(advert.pubkey)"
             @mouseleave="handleUnhighlight(advert.pubkey)"
+            @click="handleMenuShowDetails(advert)"
           >
-            <td :class="getCellPadding()">
+            <td :class="getCellPadding()" @click.stop>
               <NeighborMenu
                 :neighbor="advert"
                 @ping="handleMenuPing"
@@ -638,7 +589,7 @@ const sortedAdverts = computed(() => {
               :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm font-mono`"
             >
               <button
-                @click="copyPubkey(advert.pubkey)"
+                @click.stop="copyPubkey(advert.pubkey)"
                 :class="[
                   'text-content-primary dark:text-content-primary hover:text-primary-light transition-colors cursor-pointer underline underline-offset-2 decoration-gray-400 dark:decoration-white/30 hover:decoration-primary-light/60',
                   copiedPubkey === advert.pubkey
@@ -665,7 +616,7 @@ const sortedAdverts = computed(() => {
                 >
                 <div class="flex gap-1">
                   <button
-                    @click="copyCoordinates(advert.latitude!, advert.longitude!)"
+                    @click.stop="copyCoordinates(advert.latitude!, advert.longitude!)"
                     class="text-content-muted dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors cursor-pointer"
                     title="Copy coordinates to clipboard"
                   >
@@ -695,7 +646,7 @@ const sortedAdverts = computed(() => {
                     </svg>
                   </button>
                   <button
-                    @click="openInMaps(advert.latitude!, advert.longitude!)"
+                    @click.stop="openInMaps(advert.latitude!, advert.longitude!)"
                     class="text-white/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
                     title="Open in Google Maps"
                   >

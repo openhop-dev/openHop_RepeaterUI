@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, nextTick, markRaw, toRaw } from 'vue';
 import ApiService from '@/utils/api';
+import { formatBytes } from '@/utils/formatters';
 import SparklineChart from '@/components/ui/Sparkline.vue';
 import {
   Chart as ChartJS,
@@ -160,14 +161,6 @@ const sparklineData = computed(() => {
     network: historicalData.value.map((stat) => stat.network.bytes_recv / 1024 / 1024), // MB
   };
 });
-
-// Format helper functions
-const formatBytes = (bytes: number): string => {
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  if (bytes === 0) return '0 B';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + ' ' + sizes[i];
-};
 
 const formatUptime = (seconds: number): string => {
   const days = Math.floor(seconds / 86400);

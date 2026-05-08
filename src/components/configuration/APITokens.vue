@@ -137,9 +137,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-4 sm:space-y-6">
+  <div class="space-y-12">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
         <h2 class="text-lg sm:text-xl font-semibold text-content-primary dark:text-content-primary">
           API Tokens
@@ -150,7 +150,7 @@ onMounted(() => {
       </div>
       <button
         @click="showCreateModal = true"
-        class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+        class="cfg-btn-primary flex items-center justify-center gap-2"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -286,7 +286,7 @@ onMounted(() => {
       </p>
       <button
         @click="showCreateModal = true"
-        class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors"
+        class="cfg-btn-primary"
       >
         Create Your First Token
       </button>
@@ -315,7 +315,7 @@ onMounted(() => {
               v-model="newTokenName"
               type="text"
               placeholder="e.g., Production Server, CI/CD Pipeline"
-              class="w-full px-4 py-2 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
+              class="cfg-input placeholder-gray-400 dark:placeholder-white/40"
               @keydown.enter="createToken"
             />
             <p class="text-xs text-content-muted dark:text-content-muted mt-1">
