@@ -438,9 +438,7 @@ function calculateAndShowResults() {
   }
 }
 
-// Restart modal state
 const showRestartModal = ref(false);
-const isRestarting = ref(false);
 
 // Save calibration settings — shows restart prompt on success
 async function saveSettings() {
@@ -466,30 +464,6 @@ async function saveSettings() {
   }
 }
 
-async function restartService() {
-  isRestarting.value = true;
-  try {
-    const response = await ApiService.post('/restart_service', {});
-    if (response.success) {
-      showRestartModal.value = false;
-      setTimeout(() => { window.location.reload(); }, 2000);
-    } else {
-      statusMessage.value = response.error || 'Failed to restart service';
-      showRestartModal.value = false;
-    }
-  } catch (error: any) {
-    // Network error is expected — service is going down
-    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network error')) {
-      showRestartModal.value = false;
-      setTimeout(() => { window.location.reload(); }, 3000);
-    } else {
-      statusMessage.value = error.message || 'Failed to restart service';
-      showRestartModal.value = false;
-    }
-  } finally {
-    isRestarting.value = false;
-  }
-}
 
 // Lifecycle
 onMounted(() => {
@@ -651,8 +625,6 @@ onUnmounted(() => {
     v-model="showRestartModal"
     title="CAD Calibration Saved: Restart Required"
     message="In order for the CAD Calibration settings to take effect and the noise floor to return to normal, the service needs to be restarted."
-    :is-restarting="isRestarting"
-    @confirm="restartService"
   />
 </template>
 

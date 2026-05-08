@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import apiClient from '@/utils/api';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
 const router = useRouter();
 const systemStore = useSystemStore();
@@ -14,7 +15,7 @@ const cadConfig = computed(() => (systemStore.stats?.config?.radio as any)?.cad 
 const isEditing = ref(false);
 const isSaving = ref(false);
 const error = ref<string | null>(null);
-const successMessage = ref<string | null>(null);
+const showRestartModal = ref(false);
 
 // Form values (in user-friendly units)
 const frequencyMHz = ref(0);
@@ -87,7 +88,6 @@ const formattedSpreadingFactor = computed(() => {
 const startEditing = () => {
   isEditing.value = true;
   error.value = null;
-  successMessage.value = null;
 };
 
 const cancelEditing = () => {
@@ -105,7 +105,6 @@ const cancelEditing = () => {
 const saveChanges = async () => {
   isSaving.value = true;
   error.value = null;
-  successMessage.value = null;
 
   try {
     const payload: Record<string, number> = {};
@@ -120,10 +119,9 @@ const saveChanges = async () => {
     const data = response.data as any;
 
     if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
       isEditing.value = false;
       await systemStore.fetchStats();
-      setTimeout(() => { successMessage.value = null; }, 3000);
+      showRestartModal.value = true;
     } else if (data.error) {
       error.value = data.error;
     } else {
@@ -137,9 +135,16 @@ const saveChanges = async () => {
     isSaving.value = false;
   }
 };
+
 </script>
 
 <template>
+  <RestartModal
+    v-model="showRestartModal"
+    title="Radio Settings Changes require a restart."
+    message="Restart Now?"
+  />
+
   <div class="space-y-12">
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -174,14 +179,6 @@ const saveChanges = async () => {
       </div>
     </div>
 
-    <!-- Success Message -->
-    <div
-      v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/20 border border-green-500/50 rounded-lg p-3"
-    >
-      <p class="text-green-600 dark:text-green-400 text-sm">{{ successMessage }}</p>
-    </div>
-
     <!-- Error Message -->
     <div v-if="error" class="bg-red-100 dark:bg-red-500/20 border border-red-500/50 rounded-lg p-3">
       <p class="text-red-600 dark:text-red-400 text-sm">{{ error }}</p>
@@ -209,7 +206,7 @@ const saveChanges = async () => {
             step="0.001"
             min="100"
             max="1000"
-            class="w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-32"
           />
           <span class="text-content-muted dark:text-content-muted text-sm">MHz</span>
         </div>
@@ -231,7 +228,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="spreadingFactor"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option v-for="sf in [5, 6, 7, 8, 9, 10, 11, 12]" :key="sf" :value="sf">
               {{ sf }}
@@ -256,7 +253,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="bandwidthKHz"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option v-for="bw in bandwidthOptions" :key="bw.value" :value="bw.value">
               {{ bw.label }}
@@ -284,7 +281,7 @@ const saveChanges = async () => {
             type="number"
             min="2"
             max="30"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted dark:text-content-muted text-sm">dBm</span>
         </div>
@@ -306,7 +303,7 @@ const saveChanges = async () => {
         <div v-else>
           <select
             v-model.number="codingRate"
-            class="px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-select"
           >
             <option :value="5">4/5</option>
             <option :value="6">4/6</option>
@@ -325,17 +322,6 @@ const saveChanges = async () => {
           formattedPreambleLength
         }}</span>
       </div>
-    </div>
-
-    <!-- Info Note -->
-    <div
-      v-if="isEditing"
-      class="bg-yellow-500/10 dark:bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3"
-    >
-      <p class="text-yellow-700 dark:text-yellow-400 text-xs">
-        <strong>Note:</strong> Radio hardware changes (frequency, bandwidth, spreading factor,
-        coding rate) may require a service restart to apply.
-      </p>
     </div>
 
     <!-- CAD Calibration Section -->

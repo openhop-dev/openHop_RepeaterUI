@@ -95,9 +95,9 @@ function copyToClipboard(event: Event) {
         'flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 rounded-lg border transition-colors duration-150',
         props.disabled ? 'opacity-50' : '',
         props.unlocked && selectedNodeId === node.id
-          ? 'bg-primary/10 border-primary/30 text-white'
-          : 'border-white/8 text-white/80',
-        props.unlocked && selectedNodeId !== node.id ? 'hover:bg-white/5 hover:border-white/15' : '',
+          ? 'bg-primary/10 border-primary/30 text-content-primary dark:text-white'
+          : 'border-stroke-subtle dark:border-white/8 text-content-primary dark:text-white/80',
+        props.unlocked && selectedNodeId !== node.id ? 'hover:bg-stroke-subtle/40 dark:hover:bg-white/5 hover:border-stroke dark:hover:border-white/15' : '',
         hasChildren && !props.disabled ? 'cursor-pointer' : '',
         `ml-${level * 4}`,
       ]"
@@ -172,11 +172,11 @@ function copyToClipboard(event: Event) {
           <!-- Key Icon with tooltip -->
           <button
             @click="toggleShowFullKey"
-            class="p-1 rounded hover:bg-white/10 transition-colors"
+            class="p-1 rounded hover:bg-stroke-subtle dark:hover:bg-white/10 transition-colors"
             :title="showFullKey ? 'Hide full key' : 'Show full key'"
           >
             <svg
-              class="w-3 h-3 text-white/60 hover:text-white/80"
+              class="w-3 h-3 text-content-muted dark:text-white/60 hover:text-content-secondary dark:hover:text-white/80"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -199,7 +199,7 @@ function copyToClipboard(event: Event) {
           <!-- Truncated key display -->
           <span
             v-if="!showFullKey"
-            class="text-xs font-mono text-white/50 bg-white/5 px-1.5 py-0.5 rounded border border-white/10"
+            class="text-xs font-mono text-content-secondary dark:text-white/50 bg-stroke-subtle/40 dark:bg-white/5 px-1.5 py-0.5 rounded border border-stroke-subtle dark:border-white/10"
           >
             {{ getTruncatedKey(node.transport_key) }}
           </span>
@@ -263,14 +263,14 @@ function copyToClipboard(event: Event) {
       <div class="flex items-center gap-2 sm:gap-3 ml-auto flex-shrink-0">
         <!-- Last Heard -->
         <div v-if="node.last_used" class="hidden sm:flex items-center gap-1">
-          <span class="text-xs text-white/40">Last Heard:</span>
-          <span class="text-xs text-white/50" :title="node.last_used.toLocaleString()">
+          <span class="text-xs text-content-muted dark:text-white/40">Last Heard:</span>
+          <span class="text-xs text-content-secondary dark:text-white/50" :title="node.last_used.toLocaleString()">
             {{ formatTimeAgo(node.last_used) }}
           </span>
         </div>
         <div v-else class="hidden sm:flex items-center gap-1">
-          <span class="text-xs text-white/30">Last Heard:</span>
-          <span class="text-xs text-white/30 italic">Never</span>
+          <span class="text-xs text-content-muted dark:text-white/30">Last Heard:</span>
+          <span class="text-xs text-content-muted dark:text-white/30 italic">Never</span>
         </div>
 
         <!-- Flood Policy -->
@@ -305,7 +305,7 @@ function copyToClipboard(event: Event) {
         <!-- Children Count Badge -->
         <span
           v-if="hasChildren && !props.unlocked"
-          class="hidden sm:inline-block px-2 py-1 bg-white/10 text-white/60 text-xs rounded-full ml-1"
+          class="hidden sm:inline-block px-2 py-1 bg-stroke-subtle dark:bg-white/10 text-content-secondary dark:text-white/60 text-xs rounded-full ml-1"
         >
           {{ node.children.length }}
         </span>

@@ -56,25 +56,19 @@ const handleCancel = () => {
   emit('close');
 };
 
-// Handle backdrop click
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    handleCancel();
-  }
-};
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="show"
-    @click="handleBackdropClick"
+    @click.self="handleCancel()"
     class="modal-backdrop"
   >
     <!-- Modal Content -->
     <div
       class="modal-card max-w-md"
-      @click.stop
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -219,4 +213,5 @@ const handleBackdropClick = (event: MouseEvent) => {
       </form>
     </div>
   </div>
+  </Teleport>
 </template>

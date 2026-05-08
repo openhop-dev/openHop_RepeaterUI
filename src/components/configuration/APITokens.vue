@@ -315,7 +315,7 @@ onMounted(() => {
               v-model="newTokenName"
               type="text"
               placeholder="e.g., Production Server, CI/CD Pipeline"
-              class="w-full px-4 py-2 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-400 dark:placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
+              class="cfg-input placeholder-gray-400 dark:placeholder-white/40"
               @keydown.enter="createToken"
             />
             <p class="text-xs text-content-muted dark:text-content-muted mt-1">

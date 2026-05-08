@@ -1,19 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import { authClient } from '@/utils/api';
-import ApiService from '@/utils/api';
 import brokerTemplatesData from '@/assets/broker-templates.json';
 import RestartModal from '@/components/modals/RestartModal.vue';
+import BrokerEditModal from '@/components/modals/BrokerEditModal.vue';
 
 const systemStore = useSystemStore();
 const mqttConfig = computed(() => systemStore.stats?.config?.mqtt_brokers || {});
-
-const ALL_PACKET_TYPES = [
-  'REQ', 'RESPONSE', 'TXT_MSG', 'ACK', 'ADVERT', 'GRP_TXT',
-  'GRP_DATA', 'ANON_REQ', 'PATH', 'TRACE', 'RAW_CUSTOM',
-];
 
 interface BrokerTemplate {
   name: string;
@@ -50,7 +45,6 @@ const isSaving = ref(false);
 const errorMsg = ref('');
 const showRestartModal = ref(false);
 const showUnsavedModal = ref(false);
-const isRestarting = ref(false);
 const pendingNavFn = ref<(() => void) | null>(null);
 
 interface Snapshot {
@@ -95,6 +89,7 @@ const status = ref<{
 const loadingStatus = ref(false);
 
 async function fetchStatus() {
+  if (loadingStatus.value) return;
   loadingStatus.value = true;
   try {
     const res = await authClient.get('/api/mqtt_status');
@@ -272,6 +267,11 @@ function commitBrokerDraft() {
   originalBrokerDraft.value = null;
 }
 
+function handleModalDone(data: CustomBroker) {
+  brokerDraft.value = data;
+  commitBrokerDraft();
+}
+
 function removeBrokerLocal(id: number) {
   customBrokers.value = customBrokers.value.filter(b => b._id !== id);
   if (editingBrokerId.value === id) {
@@ -287,18 +287,6 @@ function addFromTemplate(tpl: BrokerTemplate) {
   tpl.brokers.forEach(b => customBrokers.value.push(mkBroker(b)));
 }
 
-function onHostChange() {
-  const d = brokerDraft.value;
-  if (!d.audience || d.audience === d.host) d.audience = d.host;
-}
-
-function toggleDisallowed(broker: CustomBroker, type: string) {
-  if (!broker.disallowedInput) broker.disallowedInput = [];
-  const idx = broker.disallowedInput.indexOf(type);
-  if (idx === -1) broker.disallowedInput.push(type);
-  else broker.disallowedInput.splice(idx, 1);
-}
-
 const draftIsValid = computed(() => {
   const d = brokerDraft.value;
   return d.name.trim() !== '' && d.host.trim() !== '' &&
@@ -306,16 +294,6 @@ const draftIsValid = computed(() => {
     (!d.use_jwt_auth || (d.audience?.trim() ?? '') !== '');
 });
 
-// ── Restart service ───────────────────────────────────────────────────────
-async function restartService() {
-  isRestarting.value = true;
-  try {
-    await ApiService.post('/restart_service', {});
-  } catch { /* network drop on restart is expected */ } finally {
-    isRestarting.value = false;
-  }
-  showRestartModal.value = false;
-}
 
 // ── Navigation guard ──────────────────────────────────────────────────────
 onBeforeRouteLeave((to, from, next) => {
@@ -349,10 +327,8 @@ async function handleSaveAndApply() {
     isGlobalEditing.value = false;
     globalSnapshot.value = null;
     showUnsavedModal.value = false;
-    const nav = pendingNavFn.value;
     pendingNavFn.value = null;
-    restartService();
-    if (nav) nav();
+    showRestartModal.value = true;
   }
 }
 
@@ -374,7 +350,16 @@ function requestLeave(callback: () => void) {
 
 defineExpose({ requestLeave, isGlobalEditing });
 
-onMounted(fetchStatus);
+let _statusTimer: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  fetchStatus();
+  _statusTimer = setInterval(fetchStatus, 5000);
+});
+
+onUnmounted(() => {
+  if (_statusTimer) clearInterval(_statusTimer);
+});
 </script>
 
 <template>
@@ -382,8 +367,15 @@ onMounted(fetchStatus);
   <RestartModal
     v-model="showRestartModal"
     message="Broker settings have been saved. A service restart is required for the changes to take effect."
-    :is-restarting="isRestarting"
-    @confirm="restartService"
+  />
+
+  <!-- ── Broker Edit Modal ──────────────────────────────────────────────── -->
+  <BrokerEditModal
+    :show="editingBrokerId !== null"
+    :broker="editingBrokerId !== null ? brokerDraft : null"
+    :is-new="isNewBroker"
+    @done="handleModalDone"
+    @cancel="cancelBrokerEdit"
   />
 
   <!-- ── Unsaved Changes Modal ──────────────────────────────────────────── -->
@@ -452,14 +444,6 @@ onMounted(fetchStatus);
         </p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
-        <button
-          v-if="!isGlobalEditing"
-          @click="fetchStatus"
-          :disabled="loadingStatus"
-          class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ loadingStatus ? 'Refreshing…' : '↻ Refresh' }}
-        </button>
         <template v-if="!isGlobalEditing">
           <button
             @click="startGlobalEditing"
@@ -526,34 +510,16 @@ onMounted(fetchStatus);
       </div>
     </div>
 
-    <!-- ── Observer Configuration ─────────────────────────────────────── -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
-      <div class="flex items-start justify-between mb-4">
-        <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Observer Configuration</h3>
-          <p class="text-sm text-content-secondary dark:text-content-muted">IATA code, status interval, and owner details</p>
-        </div>
-        <div v-if="isGlobalEditing" class="flex-shrink-0 ml-4">
-          <button
-            v-if="!isEditingObserver"
-            @click="isEditingObserver = true"
-            class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-          >
-            Edit
-          </button>
-          <button
-            v-else
-            @click="doneEditingObserver"
-            class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-          >
-            Done
-          </button>
-        </div>
+    <!-- ── Observer Setup ────────────────────────────────────────────── -->
+    <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6 bg-transparent dark:bg-white/5">
+      <div class="mb-4">
+        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Observer Setup</h3>
+        <p class="text-sm text-content-secondary dark:text-content-muted">IATA code, status interval, and owner details</p>
       </div>
 
       <div>
         <!-- View mode -->
-        <div v-if="!isEditingObserver" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+        <div v-if="!isGlobalEditing" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/10">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IATA Code</span>
             <span class="text-content-primary dark:text-content-primary font-mono text-sm mt-0.5">{{ mqttConfig.iata_code || '—' }}</span>
@@ -573,31 +539,31 @@ onMounted(fetchStatus);
         </div>
 
         <!-- Edit mode -->
-        <div v-else class="space-y-3">
+        <div v-if="isGlobalEditing" class="space-y-3">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
                 IATA Code <span class="text-content-muted dark:text-content-muted/60 text-xs">(e.g. SFO, LHR)</span>
               </label>
               <input v-model="iataCodeInput" type="text" maxlength="10" placeholder="TEST"
-                class="w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary font-mono" />
+                class="cfg-input font-mono" />
             </div>
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
                 Status Interval <span class="text-content-muted dark:text-content-muted/60 text-xs">(seconds, min 60)</span>
               </label>
               <input v-model.number="statusIntervalInput" type="number" min="60" max="3600"
-                class="w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary font-mono" />
+                class="cfg-input font-mono" />
             </div>
             <div>
-              <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">Owner / Callsign</label>
+              <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">Companion Pubkey / Owner / Callsign</label>
               <input v-model="ownerInput" type="text" placeholder="Optional"
-                class="w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary" />
+                class="cfg-input" />
             </div>
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">Email</label>
               <input v-model="emailInput" type="email" placeholder="Optional"
-                class="w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary" />
+                class="cfg-input" />
             </div>
           </div>
         </div>
@@ -605,7 +571,7 @@ onMounted(fetchStatus);
     </div>
 
     <!-- ── Broker Settings ────────────────────────────────────────────── -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6 bg-transparent dark:bg-white/5">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Broker Settings</h3>
@@ -684,7 +650,7 @@ onMounted(fetchStatus);
         <div
           v-for="broker in customBrokers"
           :key="broker._id"
-          class="rounded-lg border border-stroke-subtle dark:border-stroke/10 overflow-hidden bg-background-mute dark:bg-white/5"
+          class="rounded-lg border border-stroke-subtle dark:border-stroke/10 overflow-hidden bg-transparent dark:bg-white/5"
         >
           <!-- Summary row — always visible, Edit button changes to Done when expanded -->
           <div class="flex items-center gap-3 px-4 py-2.5">
@@ -698,161 +664,23 @@ onMounted(fetchStatus);
             </div>
             <div v-if="isGlobalEditing" class="flex items-center gap-1.5 flex-shrink-0">
               <button
-                @click="editingBrokerId === broker._id ? commitBrokerDraft() : openBrokerEdit(broker)"
-                :disabled="editingBrokerId === broker._id && !draftIsValid"
-                class="px-2.5 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded border border-primary/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                @click="openBrokerEdit(broker)"
+                class="px-2.5 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded border border-primary/50 transition-colors"
               >
-                {{ editingBrokerId === broker._id ? 'Done' : 'Edit' }}
+                Edit
               </button>
               <button
-                @click="editingBrokerId === broker._id ? cancelBrokerEdit() : removeBrokerLocal(broker._id)"
-                :title="editingBrokerId === broker._id ? 'Cancel edit' : 'Remove'"
+                @click="removeBrokerLocal(broker._id)"
+                title="Remove"
                 class="p-1.5 rounded hover:bg-red-500/10 dark:hover:bg-red-900/20 text-content-secondary dark:text-content-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
               >
-                <svg v-if="editingBrokerId !== broker._id" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
 
-          <!-- Expanded edit form -->
-          <div v-if="editingBrokerId === broker._id" class="border-t border-stroke-subtle dark:border-stroke/10 p-4 space-y-3 bg-background-mute/40 dark:bg-white/3">
-
-            <!-- Name at top (full width) -->
-            <div>
-              <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">Name <span class="text-red-500">*</span></label>
-              <input v-model="brokerDraft.name" type="text" placeholder="Broker Name"
-                class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary placeholder-content-muted dark:placeholder-content-muted/50 focus:outline-none focus:border-primary" />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <!-- Enabled -->
-              <div class="flex items-center gap-2">
-                <input v-model="brokerDraft.enabled" type="checkbox" id="broker-enabled"
-                  class="w-4 h-4 text-primary bg-background-mute border-stroke-subtle dark:border-stroke/10 focus:ring-primary/30" />
-                <label for="broker-enabled" class="text-xs font-medium text-content-secondary dark:text-content-muted">Enabled</label>
-              </div>
-              <!-- Retain Status -->
-              <div class="flex items-center gap-2">
-                <input v-model="brokerDraft.retain_status" type="checkbox" id="broker-retain"
-                  class="w-4 h-4 text-primary bg-background-mute border-stroke-subtle dark:border-stroke/10 focus:ring-primary/30" />
-                <label for="broker-retain" class="text-xs font-medium text-content-secondary dark:text-content-muted">
-                  Retain Status
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(MQTT retained messages)</span>
-                </label>
-              </div>
-              <!-- Transport -->
-              <div>
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">Transport <span class="text-red-500">*</span></label>
-                <select v-model="brokerDraft.transport"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary">
-                  <option value="websockets">Websockets</option>
-                  <option value="tcp">TCP</option>
-                </select>
-              </div>
-              <!-- Host -->
-              <div>
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">Host <span class="text-red-500">*</span></label>
-                <input v-model="brokerDraft.host" type="text" placeholder="mqtt.myserver.com" @blur="onHostChange"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary placeholder-content-muted dark:placeholder-content-muted/50 focus:outline-none focus:border-primary font-mono" />
-              </div>
-              <!-- Port -->
-              <div>
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">
-                  Port <span class="text-red-500">*</span>
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(443 WS, 1883 TCP)</span>
-                </label>
-                <input v-model.number="brokerDraft.port" type="number" min="0" max="65535"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary font-mono" />
-              </div>
-              <!-- TLS -->
-              <div class="flex items-end gap-4">
-                <div class="flex items-center gap-2">
-                  <input v-model="brokerDraft.tls.enabled" type="checkbox" id="broker-tls"
-                    class="w-4 h-4 text-primary bg-background-mute border-stroke-subtle dark:border-stroke/10 focus:ring-primary/30" />
-                  <label for="broker-tls" class="text-xs font-medium text-content-secondary dark:text-content-muted">TLS</label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input v-model="brokerDraft.tls.insecure" type="checkbox" id="broker-tls-insecure"
-                    class="w-4 h-4 text-primary bg-background-mute border-stroke-subtle dark:border-stroke/10 focus:ring-primary/30" />
-                  <label for="broker-tls-insecure" class="text-xs font-medium text-content-secondary dark:text-content-muted">Insecure</label>
-                </div>
-              </div>
-              <!-- JWT Auth toggle -->
-              <div class="flex items-center gap-2">
-                <input v-model="brokerDraft.use_jwt_auth" type="checkbox" id="broker-jwt"
-                  class="w-4 h-4 text-primary bg-background-mute border-stroke-subtle dark:border-stroke/10 focus:ring-primary/30" />
-                <label for="broker-jwt" class="text-xs font-medium text-content-secondary dark:text-content-muted">Use JWT Auth</label>
-              </div>
-              <!-- JWT Audience or User/Pass -->
-              <div v-if="brokerDraft.use_jwt_auth">
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">
-                  Audience <span class="text-red-500">*</span>
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(usually same as host)</span>
-                </label>
-                <input v-model="brokerDraft.audience" type="text" placeholder="mqtt.myserver.com"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary font-mono" />
-              </div>
-              <div v-else class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input type="text" autocomplete="username" style="display:none" />
-                <input type="password" autocomplete="current-password" style="display:none" />
-                <div>
-                  <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">
-                    Username <span class="font-normal text-content-muted dark:text-content-muted/60">(blank = anonymous)</span>
-                  </label>
-                  <input autocomplete="username" v-model="brokerDraft.username" type="text" placeholder="username"
-                    class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary" />
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">Password</label>
-                  <input autocomplete="new-password" v-model="brokerDraft.password" type="password"
-                    readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', true);"
-                    class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary" />
-                </div>
-              </div>
-              <!-- Format -->
-              <div>
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">Format <span class="text-red-500">*</span></label>
-                <select v-model="brokerDraft.format"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary">
-                  <option value="letsmesh">LetsMesh MQTT format</option>
-                  <option value="mqtt">pyMC MQTT format</option>
-                </select>
-              </div>
-              <div v-if="brokerDraft.format === 'mqtt'">
-                <label class="block text-xs font-medium text-content-secondary dark:text-content-muted mb-1">
-                  MQTT Base Topic
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(e.g. meshcore/repeater)</span>
-                </label>
-                <input v-model="brokerDraft.base_topic" placeholder="meshcore/repeater"
-                  class="w-full px-3 py-1.5 text-sm rounded-md bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary" />
-              </div>
-              <!-- Block Packet Types -->
-              <div class="col-span-full">
-                <label class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2">
-                  Block Packet Types
-                  <span class="text-content-secondary dark:text-content-muted font-normal text-xs ml-1">(prevent publishing to broker)</span>
-                </label>
-                <div class="flex flex-wrap gap-2">
-                  <button
-                    v-for="type in ALL_PACKET_TYPES"
-                    :key="type"
-                    @click="toggleDisallowed(brokerDraft, type)"
-                    :class="['px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors', brokerDraft.disallowedInput?.includes(type) ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400' : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 text-content-secondary dark:text-content-muted hover:border-primary/40']"
-                  >
-                    {{ type }}
-                  </button>
-                </div>
-                <p class="mt-1.5 text-xs text-content-secondary dark:text-content-muted">
-                  <span class="text-red-600 dark:text-red-400 font-medium">Red = blocked.</span> Leave all unselected to publish all packet types.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

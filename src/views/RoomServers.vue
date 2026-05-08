@@ -4,6 +4,7 @@ import ApiService from '@/utils/api';
 import { getPreference, setPreference } from '@/utils/preferences';
 import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
 import MessageDialog from '@/components/modals/MessageDialog.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
 defineOptions({ name: 'RoomServersView' });
 
@@ -13,6 +14,7 @@ const error = ref<string | null>(null);
 const identities = ref<any>(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showRestartModal = ref(false);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const editingIdentity = ref<any>(null);
 const showKeyInCreate = ref(false);
@@ -90,9 +92,7 @@ async function createIdentity() {
       showCreateModal.value = false;
       resetForm();
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity created successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to create identity: ${response.error}`, 'error');
     }
@@ -109,9 +109,7 @@ async function updateIdentity() {
       showEditModal.value = false;
       editingIdentity.value = null;
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity updated successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to update identity: ${response.error}`, 'error');
     }
@@ -848,9 +846,11 @@ async function removeClient(publicKey: string, identityHash?: string) {
     </div>
 
     <!-- Create Modal -->
+    <Teleport to="body">
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[99999] p-4"
+      @click.self="showCreateModal = false"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -984,11 +984,14 @@ async function removeClient(publicKey: string, identityHash?: string) {
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Edit Modal -->
+    <Teleport to="body">
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[99999] p-4"
+      @click.self="showEditModal = false"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -1133,6 +1136,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 
   <!-- Confirm Delete Dialog -->
@@ -1155,10 +1159,18 @@ async function removeClient(publicKey: string, identityHash?: string) {
     @close="showMessageDialog = false"
   />
 
+  <!-- Restart Modal -->
+  <RestartModal
+    v-model="showRestartModal"
+    message="Room server settings have been saved. A service restart is required for the changes to take effect."
+  />
+
   <!-- Room Messages Dialog -->
+  <Teleport to="body">
   <div
     v-if="showMessagesDialog"
-    class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-[99999] p-4"
+    @click.self="showMessagesDialog = false"
   >
     <div
       class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[20px] p-6 max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl"
@@ -1522,6 +1534,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
       </div>
     </div>
   </div>
+  </Teleport>
 
   <!-- Sessions Dialog -->
   <div

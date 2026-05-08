@@ -159,7 +159,7 @@ const saveChanges = async () => {
           step="0.1"
           min="0.1"
           max="100"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-32"
         />
       </div>
 
@@ -176,7 +176,7 @@ const saveChanges = async () => {
         <select
           v-else
           v-model="enforcementInput"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>

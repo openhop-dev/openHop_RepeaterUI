@@ -47,25 +47,19 @@ const handleClose = () => {
   emit('close');
 };
 
-// Handle backdrop click
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    handleClose();
-  }
-};
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="show && neighbor"
-    @click="handleBackdropClick"
+    @click.self="handleClose()"
     class="modal-backdrop-heavy"
   >
     <!-- Modal Content -->
     <div
       class="modal-card max-w-md"
-      @click.stop
     >
       <!-- Header -->
       <div class="flex items-center gap-3 mb-6">
@@ -154,4 +148,5 @@ const handleBackdropClick = (event: MouseEvent) => {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

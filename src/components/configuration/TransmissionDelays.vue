@@ -162,7 +162,7 @@ const saveChanges = async () => {
           step="0.1"
           min="0"
           max="5"
-          class="w-full sm:w-32 flex-shrink-0 px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-32 flex-shrink-0"
         />
       </div>
 
@@ -184,7 +184,7 @@ const saveChanges = async () => {
           step="0.1"
           min="0"
           max="5"
-          class="w-full sm:w-32 flex-shrink-0 px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-32 flex-shrink-0"
         />
       </div>
     </div>

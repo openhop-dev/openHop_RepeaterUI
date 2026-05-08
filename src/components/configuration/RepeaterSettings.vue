@@ -315,8 +315,10 @@ const applyGeneratedKey = async () => {
       <p class="text-red-700 dark:text-red-400 text-sm">{{ error }}</p>
     </div>
 
-    <!-- Repeater Settings -->
+    <!-- General Settings -->
     <div class="cfg-section space-y-3">
+      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary pb-2">General Settings</h3>
+
       <!-- Node Name -->
       <div
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
@@ -335,7 +337,7 @@ const applyGeneratedKey = async () => {
           v-model="nodeNameInput"
           type="text"
           maxlength="50"
-          class="w-full sm:w-64 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-64"
           placeholder="Enter node name"
         />
       </div>
@@ -375,79 +377,6 @@ const applyGeneratedKey = async () => {
         </div>
       </div>
 
-      <!-- Manual Latitude -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-          >Manual Latitude</span
-        >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ latitude }}
-        </div>
-        <input
-          v-else
-          v-model.number="latitudeInput"
-          type="number"
-          step="0.000001"
-          min="-90"
-          max="90"
-          class="w-full sm:w-48 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      <!-- Manual Longitude -->
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
-      >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
-          >Manual Longitude</span
-        >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
-        >
-          {{ longitude }}
-        </div>
-        <input
-          v-else
-          v-model.number="longitudeInput"
-          type="number"
-          step="0.000001"
-          min="-180"
-          max="180"
-          class="w-full sm:w-48 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
-        />
-      </div>
-
-      <!-- Map Picker Button -->
-      <div v-if="isEditing" class="flex justify-end">
-        <button
-          @click="openMapPicker"
-          class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm flex items-center gap-2"
-          title="Pick location on map"
-        >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-            />
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          Pick Location on Map
-        </button>
-      </div>
-
       <!-- Mode (Read-only) -->
       <div
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
@@ -474,7 +403,7 @@ const applyGeneratedKey = async () => {
         <select
           v-else
           v-model.number="pathHashModeInput"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="1">1 byte</option>
           <option :value="2">2 bytes</option>
@@ -500,7 +429,7 @@ const applyGeneratedKey = async () => {
               type="number"
               min="0"
               max="48"
-              class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+              class="cfg-input w-20"
             />
             <span class="text-content-muted dark:text-content-muted text-sm">hours</span>
           </div>
@@ -508,6 +437,59 @@ const applyGeneratedKey = async () => {
         <span class="text-content-muted dark:text-content-muted text-xs"
           >How often the repeater sends an advertisement packet (0 = disabled, 3-48 hours)</span
         >
+      </div>
+    </div>
+
+    <!-- Location Settings -->
+    <div class="cfg-section space-y-3">
+      <div class="pb-2">
+        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-3">Location Settings</h3>
+        <button
+          v-if="isEditing"
+          @click="openMapPicker"
+          class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm flex items-center gap-2"
+          title="Pick location on map"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Pick Location on Map
+        </button>
+      </div>
+
+      <!-- Manual Latitude -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Latitude</span>
+        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+          {{ latitude }}
+        </div>
+        <input
+          v-else
+          v-model.number="latitudeInput"
+          type="number"
+          step="0.000001"
+          min="-90"
+          max="90"
+          class="cfg-input w-full sm:w-48"
+        />
+      </div>
+
+      <!-- Manual Longitude -->
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
+        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Longitude</span>
+        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+          {{ longitude }}
+        </div>
+        <input
+          v-else
+          v-model.number="longitudeInput"
+          type="number"
+          step="0.000001"
+          min="-180"
+          max="180"
+          class="cfg-input w-full sm:w-48"
+        />
       </div>
     </div>
 
@@ -550,7 +532,7 @@ const applyGeneratedKey = async () => {
               :maxlength="maxPrefixLength"
               placeholder="e.g. F8A1"
               :disabled="keygenGenerating"
-              class="w-full px-4 py-2 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-400 dark:placeholder-white/40 font-mono text-sm uppercase focus:outline-none focus:border-primary transition-colors disabled:opacity-50"
+              class="cfg-input py-2 placeholder-gray-400 dark:placeholder-white/40 font-mono uppercase disabled:opacity-50"
             />
             <p v-if="keygenPrefix && !isValidPrefix" class="text-red-500 text-xs mt-1">
               Enter 1-{{ maxPrefixLength }} valid hex characters (0-9, A-F)

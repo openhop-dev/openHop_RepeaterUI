@@ -327,7 +327,7 @@ const tierBadgeClass = computed(() => {
       <!-- Stats Grid -->
       <template v-else>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Mesh Tier</div>
             <div
               :class="[
@@ -338,19 +338,19 @@ const tierBadgeClass = computed(() => {
               {{ currentTier.toUpperCase() }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Adverts/min</div>
             <div class="text-lg font-mono text-content-primary dark:text-content-primary">
               {{ rateLimitStats.metrics?.adverts_per_min_ewma?.toFixed(2) || '0.00' }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Allowed</div>
             <div class="text-lg font-mono text-green-600 dark:text-green-400">
               {{ rateLimitStats.stats?.adverts_allowed || 0 }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-content-muted dark:text-content-muted">Dropped</div>
             <div class="text-lg font-mono text-red-600 dark:text-red-400">
               {{ rateLimitStats.stats?.adverts_dropped || 0 }}
@@ -471,7 +471,7 @@ const tierBadgeClass = computed(() => {
         <select
           v-else
           v-model="rateLimitEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>
@@ -500,7 +500,7 @@ const tierBadgeClass = computed(() => {
           type="number"
           min="1"
           max="10"
-          class="w-full sm:w-24 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-24"
         />
       </div>
 
@@ -528,7 +528,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="1"
             max="48"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">hours</span>
         </div>
@@ -556,7 +556,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="0"
             max="1440"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">min</span>
         </div>
@@ -598,7 +598,7 @@ const tierBadgeClass = computed(() => {
         <select
           v-else
           v-model="penaltyEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>
@@ -629,7 +629,7 @@ const tierBadgeClass = computed(() => {
           type="number"
           min="1"
           max="10"
-          class="w-full sm:w-24 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-24"
         />
       </div>
 
@@ -655,7 +655,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="1"
             max="48"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">hours</span>
         </div>
@@ -684,7 +684,7 @@ const tierBadgeClass = computed(() => {
             min="1"
             max="5"
             step="0.5"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">x</span>
         </div>
@@ -710,7 +710,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="1"
             max="168"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">hours</span>
         </div>
@@ -749,7 +749,7 @@ const tierBadgeClass = computed(() => {
         <select
           v-else
           v-model="adaptiveEnabled"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>
@@ -778,7 +778,7 @@ const tierBadgeClass = computed(() => {
             type="number"
             min="0"
             max="60"
-            class="w-20 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+            class="cfg-input w-20"
           />
           <span class="text-content-muted text-sm">min</span>
         </div>
@@ -790,7 +790,7 @@ const tierBadgeClass = computed(() => {
           >Activity Tier Thresholds (adverts/min)</span
         >
         <div class="grid grid-cols-3 gap-2 mt-2">
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-green-600 dark:text-green-400 mb-1">Quiet Max</div>
             <div
               v-if="!isEditing"
@@ -805,10 +805,10 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="1"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">Normal Max</div>
             <div
               v-if="!isEditing"
@@ -823,10 +823,10 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="5"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg">
+          <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
             <div class="text-xs text-yellow-600 dark:text-yellow-400 mb-1">Busy Max</div>
             <div
               v-if="!isEditing"
@@ -841,7 +841,7 @@ const tierBadgeClass = computed(() => {
               min="0"
               max="10"
               step="0.01"
-              class="w-full px-2 py-1 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded text-content-primary dark:text-content-primary text-sm text-center focus:outline-none focus:border-primary"
+              class="cfg-input w-full py-1 text-center"
             />
           </div>
         </div>

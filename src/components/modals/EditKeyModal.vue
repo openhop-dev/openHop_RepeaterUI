@@ -11,7 +11,6 @@ interface Props {
 interface Emits {
   (e: 'close'): void;
   (e: 'save', data: { id: number; name: string; floodPolicy: 'allow' | 'deny'; transportKey?: string }): void;
-  (e: 'request-delete', node: TreeNodeData): void;
 }
 
 const props = defineProps<Props>();
@@ -115,37 +114,24 @@ const handleSave = async () => {
   handleCancel();
 };
 
-// Handle delete
-const handleDelete = () => {
-  if (!props.node) return;
-  emit('request-delete', props.node);
-  handleCancel();
-};
-
 // Handle cancel
 const handleCancel = () => {
   emit('close');
 };
 
-// Handle backdrop click
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    handleCancel();
-  }
-};
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="show"
-    @click="handleBackdropClick"
+    @click.self="handleCancel()"
     class="modal-backdrop"
   >
     <!-- Modal Content -->
     <div
       class="modal-card max-w-lg"
-      @click.stop
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
@@ -317,13 +303,6 @@ const handleBackdropClick = (event: MouseEvent) => {
         <div class="flex gap-3 pt-4">
           <button
             type="button"
-            @click="handleDelete"
-            class="px-4 py-3 bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red rounded-lg transition-colors"
-          >
-            Delete
-          </button>
-          <button
-            type="button"
             @click="handleCancel"
             class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
           >
@@ -339,10 +318,11 @@ const handleBackdropClick = (event: MouseEvent) => {
                 : 'bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 text-content-muted dark:text-content-muted/70 cursor-not-allowed',
             ]"
           >
-            Save Changes
+            Done
           </button>
         </div>
       </form>
     </div>
   </div>
+  </Teleport>
 </template>
