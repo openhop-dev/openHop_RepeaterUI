@@ -21,7 +21,11 @@ const isRestarting = ref(false);
 const hasFailed = ref(false);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let pollAttempts = 0;
-const MAX_ATTEMPTS = 20; // 10s initial delay + 20×1s = 30s total
+let stableCount = 0;
+// 10s initial delay + up to 25×1s polling = 35s total
+// 5 consecutive successes required before reload — needs headroom above STABLE_REQUIRED
+const MAX_ATTEMPTS = 25;
+const STABLE_REQUIRED = 5;
 
 function close() {
   if (isRestarting.value && !hasFailed.value) return;
@@ -29,6 +33,7 @@ function close() {
   hasFailed.value = false;
   if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   pollAttempts = 0;
+  stableCount = 0;
   emit('update:modelValue', false);
 }
 
@@ -39,6 +44,7 @@ async function handleRestart() {
     await apiClient.post('/restart_service', {});
   } catch { /* network drop on restart is expected */ }
   pollAttempts = 0;
+  stableCount = 0;
   pollTimer = setTimeout(poll, 10000);
 }
 
@@ -47,12 +53,23 @@ function poll() {
   fetch('/api/needs_setup', { method: 'GET' })
     .then(res => {
       if (res.ok) {
-        window.location.reload();
+        stableCount++;
+        if (stableCount >= STABLE_REQUIRED) {
+          window.location.reload();
+        } else {
+          // API responded but we need sustained stability before reloading —
+          // keep polling without counting this as a failure attempt
+          pollTimer = setTimeout(poll, 1000);
+        }
       } else {
+        stableCount = 0;
         schedulePoll();
       }
     })
-    .catch(() => schedulePoll());
+    .catch(() => {
+      stableCount = 0;
+      schedulePoll();
+    });
 }
 
 function schedulePoll() {
@@ -70,6 +87,7 @@ watch(() => props.modelValue, (val) => {
     hasFailed.value = false;
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
     pollAttempts = 0;
+    stableCount = 0;
   }
 });
 
@@ -120,7 +138,7 @@ onBeforeUnmount(() => {
                   Service Did Not Restart
                 </h3>
                 <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
-                  The service did not respond after 30 seconds. Please log into the device and check the system logs.
+                  The service did not respond after 35 seconds. Please log into the device and check the system logs.
                 </p>
               </div>
             </div>
