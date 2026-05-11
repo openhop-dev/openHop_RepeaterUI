@@ -52,3 +52,34 @@ Defined in `src/assets/main.css` — see [z-index Layering](z-index-layering.md)
 **Form spacing:** use `<form class="modal-form">` on every modal form. `modal-form` uses `flex flex-col gap-8` (not `space-y-*`) — flex gap is applied by the container and is immune to margin-collapse. `modal-field-label` carries only a small `mt-2` for within-section breathing room; the 32 px section-to-section gap comes entirely from the flex container.
 
 See `BrokerEditModal.vue` for the canonical example of a fully-styled modal using all of the above.
+
+---
+
+## Configuration card utilities
+
+Defined in `src/assets/main.css`. Use these instead of repeating the card/border Tailwind strings inline.
+
+| Class | Purpose |
+|---|---|
+| `cfg-section` | Standard muted card with 32 px padding — the main content pane inside every config tab |
+| `cfg-card` | Same visual style as `cfg-section` but **no built-in padding** — use when you need to control padding or overflow yourself (e.g. a table, a tree list, a scrollable region) |
+| `cfg-page-heading` | Spacing class for the top-of-tab heading block (`pb-2`) |
+| `cfg-btn-primary` | Primary action button (config save, generate, etc.) |
+| `cfg-btn-secondary` | Secondary/cancel action button |
+| `cfg-input` | Full-width text/number input for config forms |
+| `cfg-select` | Full-width `<select>` for config forms |
+
+```vue
+<!-- Standard padded section -->
+<div class="cfg-section">…</div>
+
+<!-- Table or tree with its own overflow/padding -->
+<div class="cfg-card overflow-hidden">
+  <table>…</table>
+</div>
+
+<!-- Card with explicit padding (e.g. 24 px) -->
+<div class="cfg-card p-6">…</div>
+```
+
+**Do not** write the raw Tailwind string `bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-stroke/10` in templates — use `cfg-card` or `cfg-section` so visual changes propagate from one place.

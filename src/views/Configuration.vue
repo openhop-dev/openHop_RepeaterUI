@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, type ComponentPublicInstance } from 'vue';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
 import RepeaterSettings from '@/components/configuration/RepeaterSettings.vue';
 import DutyCycle from '@/components/configuration/DutyCycle.vue';
@@ -18,6 +19,7 @@ import { getPreference, setPreference } from '@/utils/preferences';
 defineOptions({ name: 'ConfigurationView' });
 
 const systemStore = useSystemStore();
+const dataService = useDataService();
 const activeTab = ref(getPreference('configuration_activeTab', 'radio'));
 const initialLoadComplete = ref(false);
 const tabsContainer = ref<HTMLElement | null>(null);
@@ -56,13 +58,19 @@ const tabs = [
 ];
 
 onMounted(async () => {
-  // Fetch system stats to populate configuration data
-  try {
-    await systemStore.fetchStats();
+  if (systemStore.stats) {
+    // Stats already in store (normal path after bootstrap) — no fetch needed.
+    // DataService polls freshness in the background; the page reacts to store changes.
     initialLoadComplete.value = true;
-  } catch (error) {
-    console.error('Failed to load configuration data:', error);
-    initialLoadComplete.value = true; // Still mark as complete to show error state
+  } else {
+    // Bootstrap failed to load stats — try once before showing the page.
+    try {
+      await dataService.ensure('stats');
+    } catch (error) {
+      console.error('Failed to load configuration data:', error);
+    } finally {
+      initialLoadComplete.value = true;
+    }
   }
   nextTick(() => updateFades());
 });
@@ -366,7 +374,7 @@ function setActiveTab(tabId: string) {
 
         <!-- Error State -->
         <div
-          v-else-if="systemStore.error && !initialLoadComplete"
+          v-else-if="initialLoadComplete && !systemStore.stats"
           class="flex items-center justify-center py-12"
         >
           <div class="text-center">

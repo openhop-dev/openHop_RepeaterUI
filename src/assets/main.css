@@ -38,7 +38,12 @@
   }
 
   .cfg-section {
-    @apply bg-transparent dark:bg-white/5 rounded-lg p-8 border border-stroke-subtle dark:border-white/10;
+    @apply bg-transparent dark:bg-white/5 rounded-lg p-8 border border-stroke-subtle dark:border-stroke/10;
+  }
+
+  /* Padding-free variant — use when the caller controls padding/overflow */
+  .cfg-card {
+    @apply bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-stroke/10;
   }
 
   .cfg-btn-primary {

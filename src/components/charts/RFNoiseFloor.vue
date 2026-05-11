@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { usePacketStore } from '@/stores/packets';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
 
 // Props
 interface Props {
@@ -15,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 // Use packet store for real API data
 const store = usePacketStore();
 const systemStore = useSystemStore();
-const updateInterval = ref<number | null>(null);
+const dataService = useDataService();
 
 // Chart dimensions
 const chartWidth = 200;
@@ -61,48 +62,17 @@ const scatterPoints = computed(() => {
   });
 });
 
-// Fetch noise floor data
-const fetchNoiseFloorData = async () => {
-  try {
-    const fetchParams: { hours: number; limit?: number } = { hours: 1 };
-    if (props.limit) {
-      fetchParams.limit = props.limit;
-    }
-
-    await Promise.all([
-      store.fetchNoiseFloorHistory(fetchParams),
-      store.fetchNoiseFloorStats({ hours: 1 }),
-    ]);
-  } catch (error) {
-    console.error('Error fetching noise floor data:', error);
-  }
-};
-
-const startPolling = () => {
-  if (updateInterval.value) return;
-  updateInterval.value = window.setInterval(fetchNoiseFloorData, 5000);
-};
-
-const stopPolling = () => {
-  if (updateInterval.value) {
-    clearInterval(updateInterval.value);
-    updateInterval.value = null;
-  }
-};
-
-// Start fetching data on mount and set up auto-refresh
+// DataService polls noiseFloor every 60s. Ensure data is present on mount
+// (safety net if bootstrap somehow skipped it).
 onMounted(() => {
-  fetchNoiseFloorData();
-
-  startPolling();
+  void dataService.ensure('noiseFloor');
 });
 
-onBeforeUnmount(() => {
-  stopPolling();
-});
-
-// Returns the most recent valid noise floor, or null when unknown
-const noiseLevel = computed<number | null>(() => store.currentNoiseFloor);
+// Prefer the WS-pushed value from systemStore (updates without any HTTP poll),
+// fall back to the last point in the HTTP history if stats haven't arrived yet.
+const noiseLevel = computed<number | null>(
+  () => systemStore.noiseFloorDbm ?? store.currentNoiseFloor,
+);
 
 // Get sparkline data from store
 const dataPoints = computed(() => {
@@ -111,7 +81,7 @@ const dataPoints = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-5 relative overflow-hidden">
+  <div class="bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10 p-5 relative overflow-hidden">
     <!-- CAD Calibration Overlay -->
     <div
       v-if="systemStore.cadCalibrationRunning"
@@ -173,7 +143,7 @@ const dataPoints = computed(() => {
         :key="'point-' + index"
         :cx="point.x"
         :cy="point.y"
-        r="2.5"
+        r="1.5"
         fill="rgba(245, 158, 11, 0.8)"
         class="transition-all duration-300"
       />

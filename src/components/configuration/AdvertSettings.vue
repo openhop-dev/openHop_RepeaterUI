@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { computed, ref, watch, onMounted, nextTick } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { authClient } from '@/utils/api';
 
@@ -100,20 +100,8 @@ watch(
   { immediate: true },
 );
 
-const rootEl = ref<HTMLElement | null>(null);
-let refreshTimer: ReturnType<typeof setInterval> | null = null;
-
 onMounted(() => {
   fetchStats();
-  refreshTimer = setInterval(() => {
-    if (rootEl.value && rootEl.value.offsetParent !== null) {
-      fetchStats();
-    }
-  }, 10000);
-});
-
-onBeforeUnmount(() => {
-  if (refreshTimer) clearInterval(refreshTimer);
 });
 
 const reloadFormValues = () => {

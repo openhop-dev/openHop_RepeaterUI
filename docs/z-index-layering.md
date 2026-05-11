@@ -14,7 +14,7 @@ All fixed, absolute, and modal elements use a standardised z-index scale with **
 | Secondary modals | `z-[350]` | Modals opened *from within* a primary modal: `RoomServers` Sessions dialog, `ImportRepeaterContactsModal` |
 | Pickers | `z-[400]` | `LocationPicker` — can be opened from any modal tier, always sits on top of them |
 | Context menus | `z-[450]` | `NeighborMenu` right-click context menu |
-| System overlays | `z-[500]` | `Setup` "Restarting…" overlay — must cover every other element unconditionally |
+| System overlays | `z-[500]` | `BootstrapModal` (initial load overlay), `Setup` "Restarting…" overlay — must cover every other element unconditionally |
 
 ## Rules
 

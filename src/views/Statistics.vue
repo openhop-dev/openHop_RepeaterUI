@@ -244,11 +244,9 @@ const fetchAllData = async () => {
     isLoading.value = true;
     error.value = null;
 
-    // Only fetch the essential packet stats first - this should be instant
-    await Promise.all([
-      packetStore.fetchPacketStats({ hours: selectedHours.value }),
-      packetStore.fetchSystemStats(),
-    ]);
+    // Fetch packet stats for the selected time range (DataService caches 24h only,
+    // so we need our own fetch here when the user picks a different window).
+    await packetStore.fetchPacketStats({ hours: selectedHours.value });
 
     // Show the basic stats immediately
     isLoading.value = false;

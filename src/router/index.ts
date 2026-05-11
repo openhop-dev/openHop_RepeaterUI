@@ -119,37 +119,22 @@ async function checkSetupStatus() {
 }
 
 // Navigation guard - check setup status and authentication
-router.beforeEach(async (to, from, next) => {
-  const requiresAuth = to.meta.requiresAuth !== false; // Default to true
+router.beforeEach(async (to) => {
+  const requiresAuth = to.meta.requiresAuth !== false;
   const authenticated = isAuthenticated();
 
-  // Check if setup is needed (only if not already on setup page)
   if (to.path !== '/setup') {
     const needsSetup = await checkSetupStatus();
-    if (needsSetup) {
-      next('/setup');
-      return;
-    }
+    if (needsSetup) return '/setup';
   }
 
-  // If on setup page but setup is complete, redirect away
   if (to.path === '/setup') {
     const needsSetup = await checkSetupStatus();
-    if (!needsSetup) {
-      next('/login');
-      return;
-    }
+    if (!needsSetup) return '/login';
   }
 
-  if (requiresAuth && !authenticated) {
-    // Redirect to login if not authenticated
-    next('/login');
-  } else if (to.path === '/login' && authenticated) {
-    // Redirect to dashboard if already logged in
-    next('/');
-  } else {
-    next();
-  }
+  if (requiresAuth && !authenticated) return '/login';
+  if (to.path === '/login' && authenticated) return '/';
 });
 
 export default router;

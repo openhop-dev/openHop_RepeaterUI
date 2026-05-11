@@ -96,7 +96,7 @@ function copyToClipboard(event: Event) {
         props.disabled ? 'opacity-50' : '',
         props.unlocked && selectedNodeId === node.id
           ? 'bg-primary/10 border-primary/30 text-content-primary dark:text-white'
-          : 'border-stroke-subtle dark:border-white/8 text-content-primary dark:text-white/80',
+          : 'cfg-card text-content-primary dark:text-white/80',
         props.unlocked && selectedNodeId !== node.id ? 'hover:bg-stroke-subtle/40 dark:hover:bg-white/5 hover:border-stroke dark:hover:border-white/15' : '',
         hasChildren && !props.disabled ? 'cursor-pointer' : '',
         `ml-${level * 4}`,

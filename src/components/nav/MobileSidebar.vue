@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
-import ApiService from '@/utils/api';
+import { useDataService } from '@/stores/dataService';
 import { clearToken } from '@/utils/auth';
 import AdvertModal from '../modals/AdvertModal.vue';
 import DiscordIcon from '../icons/discord.vue';
@@ -48,6 +48,7 @@ const emit = defineEmits<Emits>();
 const router = useRouter();
 const route = useRoute();
 const systemStore = useSystemStore();
+const dataService = useDataService();
 const { theme } = useTheme();
 const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
 
@@ -77,52 +78,24 @@ const showAdvertModal = ref(false);
 const advertSuccess = ref(false);
 const advertError = ref<string | null>(null);
 
-// Time update interval
 let timeInterval: number | null = null;
-let tierRefreshInterval: number | null = null;
 
-const currentTier = ref('unknown');
-const advertsAllowed = ref(0);
-const advertsDropped = ref(0);
-const activePenalties = ref(0);
+const currentTier = computed(() => dataService.advertTier.currentTier);
+const advertsAllowed = computed(() => dataService.advertTier.advertsAllowed);
+const advertsDropped = computed(() => dataService.advertTier.advertsDropped);
+const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 onMounted(() => {
-  // Update time every second
   timeInterval = window.setInterval(() => {
     currentTime.value = new Date().toLocaleTimeString();
   }, 1000);
-
-  fetchAdaptiveTier();
-  tierRefreshInterval = window.setInterval(() => {
-    fetchAdaptiveTier();
-  }, 30000);
 });
 
 onUnmounted(() => {
   if (timeInterval) {
     clearInterval(timeInterval);
   }
-  if (tierRefreshInterval) {
-    clearInterval(tierRefreshInterval);
-  }
 });
-
-const fetchAdaptiveTier = async () => {
-  try {
-    const response = await ApiService.get('/advert_rate_limit_stats');
-    const data = response?.data as any;
-    currentTier.value =
-      typeof data?.adaptive?.current_tier === 'string' ? data.adaptive.current_tier : 'unknown';
-    advertsAllowed.value = data?.stats?.adverts_allowed || 0;
-    advertsDropped.value = data?.stats?.adverts_dropped || 0;
-    activePenalties.value = Object.keys(data?.active_penalties || {}).length;
-  } catch {
-    currentTier.value = 'unknown';
-    advertsAllowed.value = 0;
-    advertsDropped.value = 0;
-    activePenalties.value = 0;
-  }
-};
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
@@ -325,11 +298,12 @@ const dutyCycleBarStyle = computed(() => {
 
 <template>
   <div
-    class="fixed inset-0 z-[250] lg:hidden transition-opacity duration-300"
-    :class="showMobileSidebar ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
+    class="fixed inset-0 z-[250] lg:hidden"
+    :class="showMobileSidebar ? 'pointer-events-auto' : 'pointer-events-none'"
   >
     <div
-      class="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/30"
+      class="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/30 transition-opacity duration-300 cursor-pointer"
+      :class="showMobileSidebar ? 'opacity-100' : 'opacity-0'"
       @click="closeSidebar"
     ></div>
     <div

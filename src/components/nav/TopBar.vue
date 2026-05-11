@@ -2,6 +2,8 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
+import { useNeighborStore } from '@/stores/neighbors';
+import { CONTACT_TYPE_MAP } from '@/stores/neighbors';
 import { getUsername } from '@/utils/auth';
 import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
@@ -15,17 +17,11 @@ interface Emits {
   (e: 'toggleMobileSidebar'): void;
 }
 
-interface Advert {
-  id: number;
-  contact_type: string;
-  node_name: string | null;
-  last_seen: number;
-}
-
 const emit = defineEmits<Emits>();
 
 const router = useRouter();
 const systemStore = useSystemStore();
+const neighborStore = useNeighborStore();
 const appRuntime = useAppRuntimeStore();
 
 const showNotifications = ref(false);
@@ -56,14 +52,27 @@ const updateInfo = ref<{
   rateLimitUntil: null,
 });
 
-// Node tracking state
-const trackedNodes = ref<Record<string, Advert[]>>({});
-const loading = ref(true);
-const lastUpdateTime = ref<Date | null>(null);
 const username = ref<string>(getUsername() || 'User');
 
-// Track specific contact types
+// Track specific contact types (keys from CONTACT_TYPE_MAP)
 const targetContactTypes = ['Chat Node', 'Repeater', 'Room Server'] as const;
+const _nameToKey: Record<string, string> = Object.fromEntries(
+  Object.entries(CONTACT_TYPE_MAP).map(([k, v]) => [v, k]),
+);
+
+// Derived from neighborStore — keyed by contact type name for template compatibility
+const trackedNodes = computed<Record<string, { id: number; node_name: string | null; last_seen: number }[]>>(() => {
+  const result: Record<string, { id: number; node_name: string | null; last_seen: number }[]> = {};
+  for (const type of targetContactTypes) {
+    const key = _nameToKey[type];
+    result[type] = neighborStore.advertsByType[key] || [];
+  }
+  return result;
+});
+const loading = computed(() => neighborStore.isLoading);
+const lastUpdateTime = computed(() =>
+  neighborStore.lastFetched ? new Date(neighborStore.lastFetched) : null,
+);
 
 function handleDocClick(e: MouseEvent) {
   const target = e.target as Node;
@@ -74,39 +83,6 @@ function handleDocClick(e: MouseEvent) {
     showUserMenu.value = false;
   }
 }
-
-// Fetch tracking data
-const fetchTrackedNodes = async () => {
-  try {
-    loading.value = true;
-    const results: Record<string, Advert[]> = {};
-
-    // Fetch data for each target contact type
-    for (const contactType of targetContactTypes) {
-      try {
-        const response = await ApiService.get(
-          `/adverts_by_contact_type?contact_type=${encodeURIComponent(contactType)}&hours=168`,
-        );
-
-        if (response.success && Array.isArray(response.data)) {
-          results[contactType] = response.data;
-        } else {
-          results[contactType] = [];
-        }
-      } catch (err) {
-        console.error(`Error fetching ${contactType} nodes:`, err);
-        results[contactType] = [];
-      }
-    }
-
-    trackedNodes.value = results;
-    lastUpdateTime.value = new Date();
-  } catch (err) {
-    console.error('Error updating tracked nodes:', err);
-  } finally {
-    loading.value = false;
-  }
-};
 
 // Check for updates via the backend API (server-side GitHub check)
 const checkForUpdates = async (force = false) => {
@@ -289,18 +265,11 @@ const getLatestNodeName = (contactType: string) => {
 
 onMounted(() => {
   document.addEventListener('click', handleDocClick);
-  fetchTrackedNodes();
-  checkForUpdates(); // Check for updates on initial load
+  checkForUpdates();
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocClick);
-});
-
-useManagedPolling(fetchTrackedNodes, {
-  intervalMs: 30000,
-  enabled: true,
-  immediate: false,
 });
 
 useManagedPolling(() => checkForUpdates(), {
@@ -584,7 +553,7 @@ const toggleMobileSidebar = () => {
               </button>
               <span class="text-content-muted text-xs">•</span>
               <button
-                @click="fetchTrackedNodes"
+                @click="() => neighborStore.fetchAll()"
                 :disabled="loading"
                 class="text-xs text-primary hover:text-primary/80 disabled:opacity-50"
               >

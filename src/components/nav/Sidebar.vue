@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
-import { useWebSocketStore } from '@/stores/websocket';
 import { usePacketStore } from '@/stores/packets';
-import ApiService from '@/utils/api';
-import { useManagedPolling } from '@/composables/useManagedPolling';
+import { useDataService } from '@/stores/dataService';
 import GitHubIcon from '../icons/github.vue';
 import DiscordIcon from '../icons/discord.vue';
 import CoffeeIcon from '../icons/coffee.vue';
@@ -33,7 +31,7 @@ defineOptions({ name: 'SidebarNav' });
 const router = useRouter();
 const route = useRoute();
 const systemStore = useSystemStore();
-const wsStore = useWebSocketStore();
+const dataService = useDataService();
 const { theme } = useTheme();
 const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
 const packetStore = usePacketStore();
@@ -48,53 +46,10 @@ const showAdvertModal = ref(false);
 const advertSuccess = ref(false);
 const advertError = ref<string | null>(null);
 
-const currentTier = ref('unknown');
-const advertsAllowed = ref(0);
-const advertsDropped = ref(0);
-const activePenalties = ref(0);
-
-const fetchAdaptiveTier = async () => {
-  try {
-    const response = await ApiService.get('/advert_rate_limit_stats');
-    const data = response?.data as any;
-    currentTier.value =
-      typeof data?.adaptive?.current_tier === 'string' ? data.adaptive.current_tier : 'unknown';
-    advertsAllowed.value = data?.stats?.adverts_allowed || 0;
-    advertsDropped.value = data?.stats?.adverts_dropped || 0;
-    activePenalties.value = Object.keys(data?.active_penalties || {}).length;
-  } catch {
-    currentTier.value = 'unknown';
-    advertsAllowed.value = 0;
-    advertsDropped.value = 0;
-    activePenalties.value = 0;
-  }
-};
-
-onMounted(async () => {
-  await systemStore.fetchStats();
-  await fetchAdaptiveTier();
-});
-
-watch(
-  () => wsStore.isConnected,
-  (connected) => {
-    if (connected) {
-      void systemStore.fetchStats();
-    }
-  },
-);
-
-useManagedPolling(() => systemStore.fetchStats(), {
-  intervalMs: 5000,
-  enabled: () => !wsStore.isConnected,
-  immediate: false,
-});
-
-useManagedPolling(fetchAdaptiveTier, {
-  intervalMs: 30000,
-  enabled: true,
-  immediate: false,
-});
+const currentTier = computed(() => dataService.advertTier.currentTier);
+const advertsAllowed = computed(() => dataService.advertTier.advertsAllowed);
+const advertsDropped = computed(() => dataService.advertTier.advertsDropped);
+const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {

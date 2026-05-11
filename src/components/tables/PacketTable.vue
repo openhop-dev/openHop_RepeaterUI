@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { usePacketStore } from '@/stores/packets';
-import { useWebSocketStore } from '@/stores/websocket';
-import { useManagedPolling } from '@/composables/useManagedPolling';
+import { useDataService } from '@/stores/dataService';
 import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
@@ -10,7 +9,7 @@ import { getPreference, setPreference } from '@/utils/preferences';
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
-const wsStore = useWebSocketStore();
+const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
@@ -407,15 +406,10 @@ const loadMoreRecords = async () => {
   }
 };
 
-onMounted(async () => {
-  // Initial fetch
-  await fetchData();
-});
-
-useManagedPolling(() => fetchData(), {
-  intervalMs: 10000,
-  enabled: () => !wsStore.isConnected,
-  immediate: false,
+onMounted(() => {
+  // Bootstrap already loaded recentPackets; this is a safety net for edge cases.
+  // WS push handles live updates; no polling needed.
+  void dataService.ensure('recentPackets');
 });
 
 onBeforeUnmount(() => {

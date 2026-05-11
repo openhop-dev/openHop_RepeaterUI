@@ -2,6 +2,9 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
+import { useNeighborStore, CONTACT_TYPE_MAP } from '@/stores/neighbors';
+import type { Advert } from '@/stores/neighbors';
+import { useDataService } from '@/stores/dataService';
 import DeleteNeighborModal from '@/components/modals/DeleteNeighborModal.vue';
 import PingResultModal from '@/components/modals/PingResultModal.vue';
 import NeighborDetailsModal from '@/components/modals/NeighborDetailsModal.vue';
@@ -13,15 +16,10 @@ defineOptions({ name: 'NeighborsView' });
 
 // Get system store for base coordinates
 const systemStore = useSystemStore();
+const neighborStore = useNeighborStore();
+const dataService = useDataService();
 
-// Contact type mapping
-const contactTypes = {
-  0: 'Unknown',
-  1: 'Chat Node',
-  2: 'Repeater',
-  3: 'Room Server',
-  4: 'Hybrid Node',
-} as const;
+const contactTypes = CONTACT_TYPE_MAP;
 
 // Contact type colors for styling
 const contactTypeColors = {
@@ -32,29 +30,23 @@ const contactTypeColors = {
   4: '#f59e0b', // amber-500
 } as const;
 
-interface Advert {
-  id: number;
-  timestamp: number;
-  pubkey: string;
-  node_name: string | null;
-  is_repeater: boolean;
-  route_type: number | null;
-  contact_type: string;
-  latitude: number | null;
-  longitude: number | null;
-  first_seen: number;
-  last_seen: number;
-  rssi: number | null;
-  snr: number | null;
-  advert_count: number;
-  is_new_neighbor: boolean;
-  zero_hop: boolean;
-}
-
-// State
-const advertsByType = ref<Record<string, Advert[]>>({});
-const loading = ref(true);
+// State — backed by neighborStore
+const advertsByType = computed(() => neighborStore.advertsByType);
+const loading = computed(() => neighborStore.isLoading);
 const error = ref<string | null>(null);
+
+// Hours dropdown
+const selectedHours = ref(neighborStore.currentHours);
+const hoursOptions = [
+  { label: '2 Days', value: 48 },
+  { label: '7 Days', value: 168 },
+  { label: '14 Days', value: 336 },
+  { label: '30 Days', value: 720 },
+];
+const changeHours = async (hours: number) => {
+  selectedHours.value = hours;
+  await neighborStore.fetchAll(hours);
+};
 const isCompactView = ref(getPreference('neighbors_compactView', false));
 // Default legend to closed on mobile, open on desktop
 const showMapLegend = ref(
@@ -132,6 +124,7 @@ const neighborForModal = computed(() => {
 // Base coordinates from system store
 const baseLatitude = computed(() => systemStore.stats?.config?.repeater?.latitude);
 const baseLongitude = computed(() => systemStore.stats?.config?.repeater?.longitude);
+const statsLoading = computed(() => systemStore.stats === null && systemStore.isLoading);
 
 // Computed properties
 // Global filter functions
@@ -221,43 +214,7 @@ const allAdvertsWithLocation = computed(() => {
     });
 });
 
-// API functions
-const fetchAdvertsByContactType = async (contactTypeName: string): Promise<Advert[]> => {
-  try {
-    const response = await ApiService.get(
-      `/adverts_by_contact_type?contact_type=${encodeURIComponent(contactTypeName)}&hours=168`,
-    ); // Last week
-    if (response.success && Array.isArray(response.data)) {
-      return response.data;
-    }
-    return [];
-  } catch (err) {
-    console.error(`Error fetching adverts for contact type ${contactTypeName}:`, err);
-    return [];
-  }
-};
-
-const loadAllAdverts = async () => {
-  loading.value = true;
-  error.value = null;
-
-  try {
-    advertsByType.value = {};
-
-    // Fetch adverts for each contact type
-    for (const [typeKey, typeName] of Object.entries(contactTypes)) {
-      const adverts = await fetchAdvertsByContactType(typeName);
-      if (adverts.length > 0) {
-        advertsByType.value[typeKey] = adverts;
-      }
-    }
-  } catch (err) {
-    console.error('Error loading adverts:', err);
-    error.value = err instanceof Error ? err.message : 'Failed to load neighbor data';
-  } finally {
-    loading.value = false;
-  }
-};
+const loadAllAdverts = () => neighborStore.fetchAll(selectedHours.value);
 
 // Component refs
 const networkMapRef = ref<InstanceType<typeof NetworkMap>>();
@@ -336,17 +293,16 @@ const closeDeleteModal = () => {
 const confirmDelete = async (neighborId: number) => {
   try {
     await ApiService.deleteAdvert(neighborId);
-    // Reload adverts to update the list
-    await loadAllAdverts();
+    await neighborStore.fetchAll(selectedHours.value);
     closeDeleteModal();
   } catch (error) {
     console.error('Error deleting neighbor:', error);
   }
 };
 
-// Lifecycle
-onMounted(async () => {
-  await loadAllAdverts();
+// Lifecycle — DataService bootstrap handles stats; ensure neighbors are fresh
+onMounted(() => {
+  void dataService.ensure('neighbors');
 });
 </script>
 
@@ -396,6 +352,7 @@ onMounted(async () => {
         :adverts="allAdvertsWithLocation"
         :base-latitude="baseLatitude"
         :base-longitude="baseLongitude"
+        :stats-loading="statsLoading"
         :show-legend="showMapLegend"
         @update:show-legend="showMapLegend = $event"
       />
@@ -495,6 +452,20 @@ onMounted(async () => {
                   />
                 </svg>
               </button>
+            </div>
+
+            <!-- Hours Selector -->
+            <div class="flex items-center gap-2">
+              <select
+                :value="selectedHours"
+                @change="changeHours(+($event.target as HTMLSelectElement).value)"
+                :disabled="loading"
+                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/20 focus:outline-none focus:border-primary/50 disabled:opacity-50"
+              >
+                <option v-for="opt in hoursOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
             </div>
 
             <!-- Filter Controls -->

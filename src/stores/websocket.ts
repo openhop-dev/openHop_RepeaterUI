@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { usePacketStore } from './packets';
 import { useSystemStore } from './system';
+import { useDataService } from './dataService';
 import { API_SERVER_URL } from '@/utils/api';
 import { getClientId, getToken, isTokenExpired } from '@/utils/auth';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
@@ -36,6 +37,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   const packetStore = usePacketStore();
   const systemStore = useSystemStore();
   const appRuntime = useAppRuntimeStore();
+  const dataService = useDataService();
 
   const isConnected = computed(() => connectionState.value === 'open');
 
@@ -119,13 +121,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   async function resyncData() {
-    await Promise.allSettled([
-      systemStore.fetchStats(),
-      packetStore.fetchSystemStats(),
-      packetStore.fetchPacketStats({ hours: 24 }),
-      packetStore.fetchRecentPackets({ limit: 100 }),
-      packetStore.initializeSparklineHistory(),
-    ]);
+    await dataService.onReconnect();
   }
 
   function cleanupSocket(removeHandlers = false) {
@@ -213,9 +209,11 @@ export const useWebSocketStore = defineStore('websocket', () => {
         }
       }, 30000);
 
-      void resyncData();
-
+      // On reconnect, refresh critical data after a short delay to avoid competing
+      // with in-flight requests that were running when the link dropped.
+      // First connect is handled by DataService.bootstrap() in useConnectionLifecycle.
       if (wasReconnect) {
+        void dataService.onReconnect();
         showSnackbar('Back online', 'success', 2500);
       } else {
         hideSnackbar();

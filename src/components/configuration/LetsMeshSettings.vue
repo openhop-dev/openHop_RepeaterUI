@@ -511,7 +511,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ── Observer Setup ────────────────────────────────────────────── -->
-    <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6 bg-transparent dark:bg-white/5">
+    <div class="cfg-card p-6">
       <div class="mb-4">
         <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Observer Setup</h3>
         <p class="text-sm text-content-secondary dark:text-content-muted">IATA code, status interval, and owner details</p>
@@ -571,7 +571,7 @@ onUnmounted(() => {
     </div>
 
     <!-- ── Broker Settings ────────────────────────────────────────────── -->
-    <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6 bg-transparent dark:bg-white/5">
+    <div class="cfg-card p-6">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Broker Settings</h3>
@@ -650,7 +650,7 @@ onUnmounted(() => {
         <div
           v-for="broker in customBrokers"
           :key="broker._id"
-          class="rounded-lg border border-stroke-subtle dark:border-stroke/10 overflow-hidden bg-transparent dark:bg-white/5"
+          class="cfg-card overflow-hidden"
         >
           <!-- Summary row — always visible, Edit button changes to Done when expanded -->
           <div class="flex items-center gap-3 px-4 py-2.5">

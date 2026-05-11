@@ -81,6 +81,7 @@ const keyboardHeight = ref(0);
 let term: Terminal | null = null;
 let fitAddon: FitAddon | null = null;
 let searchAddon: SearchAddon | null = null;
+let webglAddon: WebglAddon | null = null;
 let currentLine = '';
 const commandHistory: string[] = [];
 let historyIndex = -1;
@@ -223,7 +224,7 @@ onMounted(() => {
     allowProposedApi: true,
     screenReaderMode: isMobileDevice.value, // Enable for mobile keyboard support
     theme: currentTheme.value === 'dark' ? darkTheme : lightTheme,
-    scrollback: 10000,
+    scrollback: isMobileDevice.value ? 500 : 10000,
     tabStopWidth: 4,
     macOptionIsMeta: true,
   });
@@ -234,10 +235,11 @@ onMounted(() => {
 
   // WebGL renderer for better performance
   try {
-    const webglAddon = new WebglAddon();
+    webglAddon = new WebglAddon();
     term.loadAddon(webglAddon);
   } catch {
     console.warn('WebGL addon failed to load, falling back to canvas renderer');
+    webglAddon = null;
   }
 
   // Make URLs clickable
@@ -322,7 +324,13 @@ onMounted(() => {
   // Cleanup
   onUnmounted(() => {
     resizeObserver.disconnect();
+    // Dispose WebGL context explicitly before terminal disposal —
+    // term.dispose() cascades to addons but the chain can silently fail on iOS Safari,
+    // leaving the context registered against the browser's hard limit.
+    webglAddon?.dispose();
+    webglAddon = null;
     term?.dispose();
+    term = null;
   });
 });
 
