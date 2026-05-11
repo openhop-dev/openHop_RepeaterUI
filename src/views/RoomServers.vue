@@ -863,32 +863,57 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
     <!-- Create Modal -->
     <Teleport to="body">
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+      leave-active-class="transition-opacity duration-200"
+      leave-to-class="opacity-0"
+    >
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
-      @click.self="showCreateModal = false"
+      class="modal-backdrop"
+      @click.self="closeModals"
     >
-      <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
-          Add Room Server
-        </h2>
+      <div class="modal-card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
 
-        <div class="space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-7">
           <div>
-            <label class="modal-field-label">Name *</label>
+            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+              Add Room Server
+            </h3>
+            <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
+              Configure a new room server identity
+            </p>
+          </div>
+          <button
+            @click="closeModals"
+            class="text-content-secondary dark:text-white/60 hover:text-content-primary dark:hover:text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="createIdentity" class="space-y-6">
+
+          <!-- Name -->
+          <div>
+            <label class="modal-field-label">Name <span class="text-red-500">*</span></label>
             <input
               v-model="newIdentity.name"
               type="text"
               placeholder="e.g., MainBBS"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
+          <!-- Identity Key -->
           <div>
-            <div class="flex items-center gap-3 mb-2">
-              <label class="modal-field-label !mb-0">Identity Key (Optional)</label>
+            <div class="flex items-baseline gap-3 mt-4 mb-1">
+              <span class="text-xs font-medium text-content-secondary dark:text-content-muted">Identity Key (Optional)</span>
               <button
                 @click="showKeyInCreate = !showKeyInCreate"
                 type="button"
@@ -902,7 +927,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 v-model="newIdentity.identity_key"
                 type="text"
                 placeholder="Leave empty to auto-generate"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary font-mono text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input font-mono"
               />
               <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
                 Leave empty to automatically generate a secure key
@@ -913,16 +938,18 @@ async function removeClient(publicKey: string, identityHash?: string) {
             </div>
           </div>
 
+          <!-- Node Name -->
           <div>
             <label class="modal-field-label">Node Name</label>
             <input
               v-model="newIdentity.settings.node_name"
               type="text"
               placeholder="Display name for the room server"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
+          <!-- Location -->
           <div>
             <label class="modal-field-label">Location</label>
             <button
@@ -937,14 +964,14 @@ async function removeClient(publicKey: string, identityHash?: string) {
               </svg>
               Pick on Map
             </button>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-5">
               <div>
                 <label class="modal-field-label">Latitude</label>
                 <input
                   v-model.number="newIdentity.settings.latitude"
                   type="number"
                   step="0.000001"
-                  class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+                  class="modal-input"
                 />
               </div>
               <div>
@@ -953,24 +980,23 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   v-model.number="newIdentity.settings.longitude"
                   type="number"
                   step="0.000001"
-                  class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+                  class="modal-input"
                 />
               </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <!-- Passwords -->
+          <div class="grid grid-cols-2 gap-5">
             <div>
               <label class="modal-field-label">Admin Password (Optional)</label>
               <input
                 v-model="newIdentity.settings.admin_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Full access to room server
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Full access to room server</p>
             </div>
             <div>
               <label class="modal-field-label">Guest Password (Optional)</label>
@@ -978,31 +1004,22 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 v-model="newIdentity.settings.guest_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Read-only access
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Read-only access</p>
             </div>
           </div>
-        </div>
 
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="createIdentity"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
-          >
-            Create
-          </button>
-        </div>
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button type="button" @click="closeModals" class="modal-btn-cancel">Cancel</button>
+            <button type="submit" class="modal-btn-primary">Create</button>
+          </div>
+
+        </form>
       </div>
     </div>
+    </Transition>
     </Teleport>
 
     <!-- Location Picker for Create modal -->

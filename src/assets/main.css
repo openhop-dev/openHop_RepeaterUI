@@ -71,13 +71,59 @@
     @apply fixed inset-0 bg-black/80 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
   }
 
-  /* Inner card — combine with max-w-md or max-w-lg in the template */
+  /* Inner card — combine with max-w-md / max-w-lg / max-w-2xl in the template */
   .modal-card {
     @apply bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full border border-stroke-subtle dark:border-white/10;
   }
 
-  /* Field label inside any modal form — use instead of raw Tailwind classes */
+  /* ── Modal form elements ────────────────────────────────────────────────── */
+
+  /* Field label — mt-4 provides breathing room; space-y-6 on the form handles section gaps */
   .modal-field-label {
-    @apply block text-xs font-medium text-content-secondary dark:text-content-muted mb-2;
+    @apply block text-xs font-medium text-content-secondary dark:text-content-muted mt-4 mb-1;
+  }
+
+  /* Text / number / password / mono inputs */
+  .modal-input {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
+           border border-stroke-subtle dark:border-stroke/10
+           text-content-primary dark:text-content-primary
+           placeholder-content-muted dark:placeholder-content-muted/50
+           focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* <select> elements (no placeholder token needed) */
+  .modal-select {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
+           border border-stroke-subtle dark:border-stroke/10
+           text-content-primary dark:text-content-primary
+           focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* ── Modal action row + buttons ─────────────────────────────────────────── */
+
+  /* Wraps the button row at the bottom of a modal form */
+  .modal-actions {
+    @apply flex gap-3 pt-2;
+  }
+
+  /* Cancel / secondary muted action (safe to reuse for "Save Only" in 3-button rows) */
+  .modal-btn-cancel {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors
+           bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10
+           border border-stroke-subtle dark:border-stroke/20
+           text-content-primary dark:text-content-primary;
+  }
+
+  /* Primary positive action */
+  .modal-btn-primary {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
+           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary;
+  }
+
+  /* Destructive action (delete, remove) */
+  .modal-btn-danger {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
+           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red;
   }
 }
