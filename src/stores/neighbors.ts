@@ -34,6 +34,8 @@ export const useNeighborStore = defineStore('neighbors', () => {
   const isLoading = ref(false);
   const lastFetched = ref<number | null>(null);
   const currentHours = ref(48);
+  const pageSize = 500;
+  const maxPagesPerType = 200;
 
   const allAdverts = computed(() => Object.values(advertsByType.value).flat());
   const totalCount = computed(() => allAdverts.value.length);
@@ -52,12 +54,35 @@ export const useNeighborStore = defineStore('neighbors', () => {
     const results = await Promise.allSettled(
       entries.map(async ([typeKey, typeName]) => {
         try {
-          const response = await ApiService.get(
-            `/adverts_by_contact_type?contact_type=${encodeURIComponent(typeName)}&hours=${hours}`,
-          );
+          const adverts: Advert[] = [];
+          let offset = 0;
+          let pageCount = 0;
+
+          while (pageCount < maxPagesPerType) {
+            const response = await ApiService.get(
+              `/adverts_by_contact_type?contact_type=${encodeURIComponent(typeName)}&hours=${hours}&limit=${pageSize}&offset=${offset}`,
+            );
+
+            const page =
+              response.success && Array.isArray(response.data) ? (response.data as Advert[]) : [];
+
+            if (page.length === 0) {
+              break;
+            }
+
+            adverts.push(...page);
+
+            if (page.length < pageSize) {
+              break;
+            }
+
+            offset += pageSize;
+            pageCount += 1;
+          }
+
           return {
             typeKey,
-            adverts: response.success && Array.isArray(response.data) ? (response.data as Advert[]) : [],
+            adverts,
           };
         } catch {
           return { typeKey, adverts: [] as Advert[] };
