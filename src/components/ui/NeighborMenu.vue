@@ -66,6 +66,7 @@ const emit = defineEmits<Emits>();
 
 const showMenu = ref(false);
 const buttonRef = ref<HTMLButtonElement>();
+const menuRef = ref<HTMLDivElement>();
 const menuPosition = ref({ top: 0, left: 0 });
 
 // Menu control functions
@@ -144,6 +145,17 @@ const toggleMenu = async () => {
 
     await nextTick();
 
+    // Flip upward if the menu would overflow the bottom of the viewport
+    if (menuRef.value) {
+      const menuHeight = menuRef.value.offsetHeight;
+      if (rect.bottom + 4 + menuHeight > window.innerHeight - 8) {
+        menuPosition.value = {
+          top: rect.top - menuHeight - 4,
+          left: leftPosition,
+        };
+      }
+    }
+
     // Add event listeners with capture for better handling
     document.addEventListener('click', handleGlobalClick, true);
     document.addEventListener('keydown', handleEscapeKey);
@@ -184,6 +196,7 @@ onUnmounted(() => {
     <Teleport to="body">
       <div
         v-if="showMenu"
+        ref="menuRef"
         class="fixed w-36 bg-white dark:bg-surface-elevated backdrop-blur-lg border border-stroke-subtle dark:border-white/20 rounded-[15px] shadow-2xl z-[450]"
         :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' }"
         data-menu-container
