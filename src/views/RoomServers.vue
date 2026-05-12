@@ -224,14 +224,14 @@ function openCreateModal() {
 }
 
 function handleLocationPickerSelect(location: { latitude: number; longitude: number }) {
-  newIdentity.value.settings.latitude = Math.round(location.latitude * 1e6) / 1e6;
-  newIdentity.value.settings.longitude = Math.round(location.longitude * 1e6) / 1e6;
+  newIdentity.value.settings.latitude = location.latitude;
+  newIdentity.value.settings.longitude = location.longitude;
 }
 
 function handleLocationPickerSelectEdit(location: { latitude: number; longitude: number }) {
   if (editingIdentity.value) {
-    editingIdentity.value.settings.latitude = Math.round(location.latitude * 1e6) / 1e6;
-    editingIdentity.value.settings.longitude = Math.round(location.longitude * 1e6) / 1e6;
+    editingIdentity.value.settings.latitude = location.latitude;
+    editingIdentity.value.settings.longitude = location.longitude;
   }
 }
 

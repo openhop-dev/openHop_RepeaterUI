@@ -131,7 +131,10 @@ watch(
 );
 
 const handleSelect = () => {
-  emit('select', { latitude: selectedLat.value, longitude: selectedLng.value });
+  emit('select', {
+    latitude: Math.round(selectedLat.value * 1e6) / 1e6,
+    longitude: Math.round(selectedLng.value * 1e6) / 1e6,
+  });
   emit('close');
 };
 
