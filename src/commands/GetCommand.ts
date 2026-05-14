@@ -1,6 +1,6 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
-import ApiService from '@/utils/api';
 import type { Terminal } from '@xterm/xterm';
+import { useSystemStore } from '@/stores/system';
 
 export class GetCommand extends BaseCommand {
   name = 'get';
@@ -11,7 +11,7 @@ export class GetCommand extends BaseCommand {
     return lower === 'get' || lower.startsWith('get ');
   }
 
-  async execute({ term, args, writePrompt }: CommandContext): Promise<void> {
+  execute({ term, args, writePrompt }: CommandContext): void {
     const param = args[0]?.toLowerCase();
 
     if (!param) {
@@ -45,13 +45,15 @@ export class GetCommand extends BaseCommand {
       return;
     }
 
-    const stopLoading = this.startLoading(term, 'Fetching configuration...');
+    const stats = useSystemStore().stats;
+    if (!stats) {
+      this.writeError(term, 'System stats not available');
+      writePrompt();
+      return;
+    }
 
-    try {
-      const response = await ApiService.get<Record<string, unknown>>('/stats');
-      stopLoading();
-
-      const data = (response.data || response) as Record<string, unknown>;
+    {
+      const data = stats as Record<string, unknown>;
       const config = (data.config || {}) as Record<string, unknown>;
       const radio = (config.radio || {}) as Record<string, unknown>;
       const repeater = (config.repeater || {}) as Record<string, unknown>;
@@ -218,9 +220,6 @@ export class GetCommand extends BaseCommand {
       }
 
       this.writeSuccess(term, result);
-    } catch (error) {
-      stopLoading();
-      this.writeError(term, `Failed to get ${param}: ${error}`);
     }
 
     writePrompt();

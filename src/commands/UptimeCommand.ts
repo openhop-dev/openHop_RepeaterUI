@@ -1,28 +1,14 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
-import ApiService from '@/utils/api';
+import { useSystemStore } from '@/stores/system';
 
 export class UptimeCommand extends BaseCommand {
   name = 'uptime';
   description = 'Show system uptime';
 
-  async execute({ term, writePrompt }: CommandContext): Promise<void> {
-    const stopLoading = this.startLoading(term, 'Fetching uptime...');
-
-    try {
-      const response = await ApiService.get<any>('/stats');
-      stopLoading();
-
-      const data = response.data || response;
-
-      const seconds = data.uptime_seconds || 0;
-      const uptime = this.formatUptime(seconds);
-
-      this.writeSuccess(term, uptime);
-    } catch (error) {
-      stopLoading();
-      this.writeError(term, `Failed to get uptime: ${error}`);
-    }
-
+  execute({ term, writePrompt }: CommandContext): void {
+    const stats = useSystemStore().stats;
+    const seconds = stats?.uptime_seconds || 0;
+    this.writeSuccess(term, this.formatUptime(seconds));
     writePrompt();
   }
 

@@ -3,6 +3,22 @@ import { computed, onMounted } from 'vue';
 import { usePacketStore } from '@/stores/packets';
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
+import { useTheme } from '@/composables/useTheme';
+
+// Chart palette — fixed vibrant colour, same in both light and dark mode.
+const CHART_COLORS = {
+  noiseFloorDot: 'rgba(245, 158, 11, 0.8)', // amber — scatter dot fill
+} as const;
+
+// Theme-aware chrome colours (grid lines). Re-evaluated when theme changes.
+const { theme } = useTheme();
+const gridLineColor = computed(() => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+  theme.value; // subscribe to reactive theme changes
+  return document.documentElement.classList.contains('dark')
+    ? 'rgba(255, 255, 255, 0.1)'
+    : 'rgba(0, 0, 0, 0.1)';
+});
 
 // Props
 interface Props {
@@ -133,7 +149,7 @@ const dataPoints = computed(() => {
         :y1="(i * chartHeight) / 4"
         :x2="chartWidth"
         :y2="(i * chartHeight) / 4"
-        stroke="rgba(255, 255, 255, 0.1)"
+        :stroke="gridLineColor"
         stroke-width="1"
       />
 
@@ -144,7 +160,7 @@ const dataPoints = computed(() => {
         :cx="point.x"
         :cy="point.y"
         r="1.5"
-        fill="rgba(245, 158, 11, 0.8)"
+        :fill="CHART_COLORS.noiseFloorDot"
         class="transition-all duration-300"
       />
     </svg>

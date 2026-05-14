@@ -318,7 +318,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import ApiService from '@/utils/api';
+import { useSystemStore } from '@/stores/system';
 
 defineOptions({ name: 'WebSettings' });
 
@@ -326,6 +328,8 @@ interface WebConfig {
   cors_enabled: boolean;
   use_default_frontend: boolean;
 }
+
+const { stats } = storeToRefs(useSystemStore());
 
 const saving = ref(false);
 const saveMessage = ref('');
@@ -362,42 +366,11 @@ async function checkPymcConsole() {
   }
 }
 
-async function loadSettings() {
-  try {
-    const response = await ApiService.get('/stats');
-    console.log('WebSettings: Full response:', response);
-
-    // Handle both wrapped and direct response formats
-    let statsData = null;
-    if (response.success && response.data) {
-      statsData = response.data;
-    } else if (response && 'version' in response) {
-      // Direct stats response without wrapper
-      statsData = response;
-    }
-
-    if (statsData) {
-      const webConfig = (statsData as any).config?.web || {};
-      console.log('WebSettings: webConfig:', webConfig);
-
-      // Explicitly check for boolean value
-      localConfig.cors_enabled = webConfig.cors_enabled === true;
-      console.log('WebSettings: Set cors_enabled to:', localConfig.cors_enabled);
-
-      // If web_path is null/empty/undefined, it's using default frontend
-      const webPath = webConfig.web_path;
-      localConfig.use_default_frontend = !webPath || webPath === '';
-      console.log(
-        'WebSettings: Set use_default_frontend to:',
-        localConfig.use_default_frontend,
-        'from web_path:',
-        webPath,
-      );
-    }
-  } catch (error) {
-    console.error('Failed to load web settings:', error);
-    showMessage('Failed to load settings', false);
-  }
+function loadSettings() {
+  const webConfig = (stats.value?.config as any)?.web || {};
+  localConfig.cors_enabled = webConfig.cors_enabled === true;
+  const webPath = webConfig.web_path;
+  localConfig.use_default_frontend = !webPath || webPath === '';
 }
 
 async function saveSettings() {

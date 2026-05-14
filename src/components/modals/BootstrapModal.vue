@@ -34,21 +34,30 @@ const httpSteps = [
   { key: 'neighbors',    label: 'Mesh neighbours' },
 ] as const;
 
-// Move to 'connecting' when DataService bootstrap finishes
+// Move to 'connecting' when DataService bootstrap finishes.
+// If WS already opened during bootstrap, skip straight to 'connected'.
 watch(
   () => dataService.isBootstrapping,
   (loading) => {
     if (!loading && phase.value === 'loading') {
-      phase.value = 'connecting';
+      if (wsStore.isConnected) {
+        phase.value = 'connected';
+        closeTimer = window.setTimeout(() => {
+          phase.value = 'closed';
+        }, 2000);
+      } else {
+        phase.value = 'connecting';
+      }
     }
   },
 );
 
-// Move to 'connected' when WS opens, then close after 2 s
+// Move to 'connected' when WS opens — only once bootstrap is done (phase === 'connecting').
+// If WS opens while still bootstrapping, the bootstrap watcher above handles it.
 watch(
   () => wsStore.connectionState,
   (state) => {
-    if (state === 'open' && (phase.value === 'connecting' || phase.value === 'loading')) {
+    if (state === 'open' && phase.value === 'connecting') {
       phase.value = 'connected';
       closeTimer = window.setTimeout(() => {
         phase.value = 'closed';

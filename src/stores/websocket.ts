@@ -232,11 +232,17 @@ export const useWebSocketStore = defineStore('websocket', () => {
           }
           if (message.data?.system_stats) {
             systemStore.updateRealtimeStats(message.data.system_stats);
+            if (message.data.system_stats?.noise_floor_dbm) {
+              packetStore.appendNoiseFloorSample(message.data.system_stats.noise_floor_dbm);
+            }
           }
         } else if (message.type === 'packet_stats') {
           packetStore.updateRealtimeStats(message.data);
         } else if (message.type === 'system_stats') {
           systemStore.updateRealtimeStats(message.data);
+          if (message.data?.noise_floor_dbm) {
+            packetStore.appendNoiseFloorSample(message.data.noise_floor_dbm);
+          }
         } else if (message.type === 'pong' || message.type === 'ping') {
           lastPongTime.value = Date.now();
 

@@ -342,7 +342,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
 
       <div class="mb-8">
         <p class="text-content-muted dark:text-content-muted text-xs uppercase mb-4">Monitoring</p>
-        <div class="space-y-2">
+        <TransitionGroup tag="div" class="space-y-2" name="sidebar-item">
           <button
             v-for="item in navMonitoring"
             :key="item.name"
@@ -364,7 +364,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
             />
             {{ item.name }}
           </button>
-        </div>
+        </TransitionGroup>
       </div>
 
       <div class="mb-8">
@@ -754,3 +754,13 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
     @send="handleAdvertModalSend"
   />
 </template>
+
+<style scoped>
+.sidebar-item-enter-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.sidebar-item-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

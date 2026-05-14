@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, markRaw, toRaw } from 'vue';
-import ApiService from '@/utils/api';
+import { ref, onMounted, onBeforeUnmount, computed, nextTick, markRaw, toRaw, watch } from 'vue';
+import { streamingGet } from '@/utils/streamingFetch';
 import { formatBytes } from '@/utils/formatters';
 import SparklineChart from '@/components/ui/Sparkline.vue';
-import Spinner from '@/components/ui/Spinner.vue';
+import ChartCard from '@/components/ui/ChartCard.vue';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -22,6 +22,8 @@ import {
   TimeScale,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import { useManagedPolling } from '@/composables/useManagedPolling';
+import { useTheme } from '@/composables/useTheme';
 
 defineOptions({ name: 'SystemStatsView' });
 
@@ -94,9 +96,26 @@ interface ProcessesResponse {
   total_processes: number;
 }
 
-const updateInterval = ref<number | null>(null);
-const isLoading = ref(true);
-const error = ref<string | null>(null);
+const { theme } = useTheme();
+
+// Theme-aware chrome colours (axis labels, legend text). Re-evaluated at chart creation/rebuild time.
+const getChartChrome = () => {
+  const isDark = document.documentElement.classList.contains('dark');
+  return {
+    labelColor: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+    textColor:  isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+  };
+};
+
+// Chart palette — fixed vibrant colours, same in both light and dark mode.
+// Matches the pattern used in Statistics.vue and StatsCards.vue.
+const CHART_COLORS = {
+  cpu:    '#FFC246',
+  memory: '#A5E5B6',
+  disk:   '#FB787B', // matches "Dropped" in Dashboard StatsCards
+  free:   '#A5E5B6',
+  uptime: '#EBA0FC',
+} as const;
 
 // Hardware stats data
 const hardwareStats = ref<HardwareStats | null>(null);
@@ -112,9 +131,11 @@ const chartLoadingStates = ref({
   processChart: true,
 });
 
-// Chart error states
-const cpuChartError = ref(false);
-const memoryChartError = ref(false);
+// Per-chart error and status states
+const cpuChartError = ref<string | null>(null);
+const memoryChartError = ref<string | null>(null);
+const cpuChartStatus = ref('Connecting...');
+const memoryChartStatus = ref('Connecting...');
 
 // Chart instances
 const cpuChart = ref<ChartJS | null>(null);
@@ -163,6 +184,13 @@ const sparklineData = computed(() => {
   };
 });
 
+const windowLabel = computed(() => {
+  const n = historicalData.value.length;
+  if (n < 2) return '';
+  const seconds = n * 5;
+  return seconds < 120 ? `last ${seconds}s` : `last ${Math.round(seconds / 60)}m`;
+});
+
 const formatUptime = (seconds: number): string => {
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
@@ -179,49 +207,57 @@ const formatUptime = (seconds: number): string => {
 
 // Fetch hardware stats
 const fetchHardwareStats = async () => {
+  cpuChartStatus.value = 'Connecting...';
+  memoryChartStatus.value = 'Connecting...';
   try {
-    const response = await ApiService.get('/hardware_stats');
+    const response = await streamingGet('/hardware_stats', undefined, {
+      onPhaseChange: (phase) => {
+        const status = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+        cpuChartStatus.value = status;
+        memoryChartStatus.value = status;
+      },
+    });
 
     if (response?.success && response.data) {
       const newStats = response.data as HardwareStats;
       hardwareStats.value = newStats;
 
-      // If this is the first data point, seed historical data so charts
-      // render a line instead of a single dot. We clone the object to
-      // avoid mutating the same reference.
-      if (historicalData.value.length === 0) {
-        const seedCount = 12;
-        for (let i = 0; i < seedCount; i++) {
-          // shallow-deep clone via JSON to keep it simple and safe
-          historicalData.value.push(JSON.parse(JSON.stringify(newStats)));
-        }
-      } else {
-        // Add to historical data (keep last 20 entries for sparklines)
-        historicalData.value.push(newStats);
-        if (historicalData.value.length > 20) {
-          historicalData.value.shift();
-        }
+      historicalData.value.push(newStats);
+      if (historicalData.value.length > 20) {
+        historicalData.value.shift();
       }
+
+      cpuChartError.value = null;
+      memoryChartError.value = null;
+      await nextTick();
+      updateCharts();
+    } else {
+      cpuChartError.value = 'No data in server response';
+      memoryChartError.value = 'No data in server response';
     }
   } catch (err) {
-    console.error('Failed to fetch hardware stats:', err);
-    error.value = 'Failed to fetch hardware stats';
+    const msg = err instanceof Error ? err.message : 'Failed to load data';
+    cpuChartError.value = msg;
+    memoryChartError.value = msg;
+  } finally {
+    chartLoadingStates.value.cpuChart = false;
+    chartLoadingStates.value.memoryChart = false;
   }
 };
 
 // Fetch process data
 const fetchProcessStats = async () => {
   try {
-    const response = await ApiService.get('/hardware_processes');
+    const response = await streamingGet('/hardware_processes');
 
     if (response?.success && response.data) {
-      // Store previous data for comparison
       previousProcessesData.value = processesData.value;
       processesData.value = response.data as ProcessesResponse;
     }
   } catch (err) {
     console.error('Failed to fetch process stats:', err);
-    // Don't set error for process stats as it's not critical
+  } finally {
+    chartLoadingStates.value.processChart = false;
   }
 };
 
@@ -235,24 +271,10 @@ const hasProcessValueChanged = (process: ProcessInfo, field: keyof ProcessInfo):
   return prevProcess[field] !== process[field];
 };
 
-// Fetch all data
-const fetchAllData = async () => {
-  try {
-    isLoading.value = true;
-    error.value = null;
-
-    // Fetch both hardware stats and processes
-    await Promise.all([fetchHardwareStats(), fetchProcessStats()]);
-
-    isLoading.value = false;
-
-    // Update charts after data is loaded
-    await nextTick();
-    updateCharts();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch system data';
-    isLoading.value = false;
-  }
+// Fire both fetches independently — no Promise.all bottleneck
+const fetchAllData = () => {
+  void fetchHardwareStats();
+  void fetchProcessStats();
 };
 
 // Update all charts
@@ -280,11 +302,10 @@ const updateCpuChart = () => {
   const currentUsage = hardwareStats.value.cpu.usage_percent;
   const remaining = 100 - currentUsage;
 
-  // Update existing chart instead of destroying it
   if (cpuChart.value) {
     try {
       cpuChart.value.data.datasets[0].data = [currentUsage, remaining];
-      cpuChart.value.update('none'); // Update without animation to prevent flashing
+      cpuChart.value.update('none');
       return;
     } catch (error) {
       console.warn('Failed to update CPU chart, recreating...', error);
@@ -293,13 +314,12 @@ const updateCpuChart = () => {
     }
   }
 
-  // Theme-aware colors
-  const isDarkMode = document.documentElement.classList.contains('dark');
-  const availableBgColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-  const availableBorderColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-  const labelColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+  const cpuColor = CHART_COLORS.cpu;
+  const chrome = getChartChrome();
+  const isDark = document.documentElement.classList.contains('dark');
+  const availableBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+  const availableBorder = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 
-  // Create new chart only if one doesn't exist
   try {
     const chartInstance = new ChartJS(ctx, {
       type: 'doughnut',
@@ -308,8 +328,8 @@ const updateCpuChart = () => {
         datasets: [
           {
             data: [currentUsage, remaining],
-            backgroundColor: ['#FFC246', availableBgColor],
-            borderColor: ['#FFC246', availableBorderColor],
+            backgroundColor: [cpuColor, availableBg],
+            borderColor: [cpuColor, availableBorder],
             borderWidth: 2,
           },
         ],
@@ -343,17 +363,17 @@ const updateCpuChart = () => {
             const ctx = chart.ctx;
             ctx.save();
 
-            // Draw percentage in center
+            const liveUsage = chart.data.datasets[0].data[0] as number;
             const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
             const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#FFC246';
+            ctx.fillStyle = cpuColor;
             ctx.font = 'bold 18px sans-serif';
-            ctx.fillText(`${currentUsage.toFixed(1)}%`, centerX, centerY - 5);
+            ctx.fillText(`${liveUsage.toFixed(1)}%`, centerX, centerY - 5);
 
-            ctx.fillStyle = labelColor;
+            ctx.fillStyle = chrome.labelColor;
             ctx.font = '10px sans-serif';
             ctx.fillText('CPU', centerX, centerY + 12);
 
@@ -364,11 +384,11 @@ const updateCpuChart = () => {
     });
 
     cpuChart.value = markRaw(chartInstance);
-    cpuChartError.value = false;
+    cpuChartError.value = null;
     chartLoadingStates.value.cpuChart = false;
   } catch (error) {
     console.error('Error creating CPU chart:', error);
-    cpuChartError.value = true;
+    cpuChartError.value = 'Failed to create CPU chart';
     chartLoadingStates.value.cpuChart = false;
   }
 };
@@ -389,11 +409,10 @@ const updateMemoryChart = () => {
   const currentUsage = hardwareStats.value.memory.usage_percent;
   const remaining = 100 - currentUsage;
 
-  // Update existing chart instead of destroying it
   if (memoryChart.value) {
     try {
       memoryChart.value.data.datasets[0].data = [currentUsage, remaining];
-      memoryChart.value.update('none'); // Update without animation to prevent flashing
+      memoryChart.value.update('none');
       return;
     } catch (error) {
       console.warn('Failed to update Memory chart, recreating...', error);
@@ -402,13 +421,12 @@ const updateMemoryChart = () => {
     }
   }
 
-  // Theme-aware colors
-  const isDarkMode = document.documentElement.classList.contains('dark');
-  const availableBgColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-  const availableBorderColor = isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
-  const labelColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+  const memoryColor = CHART_COLORS.memory;
+  const chrome = getChartChrome();
+  const isDark = document.documentElement.classList.contains('dark');
+  const availableBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+  const availableBorder = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
 
-  // Create new chart only if one doesn't exist
   try {
     const chartInstance = new ChartJS(ctx, {
       type: 'doughnut',
@@ -417,8 +435,8 @@ const updateMemoryChart = () => {
         datasets: [
           {
             data: [currentUsage, remaining],
-            backgroundColor: ['#A5E5B6', availableBgColor],
-            borderColor: ['#A5E5B6', availableBorderColor],
+            backgroundColor: [memoryColor, availableBg],
+            borderColor: [memoryColor, availableBorder],
             borderWidth: 2,
           },
         ],
@@ -452,17 +470,17 @@ const updateMemoryChart = () => {
             const ctx = chart.ctx;
             ctx.save();
 
-            // Draw percentage in center
+            const liveUsage = chart.data.datasets[0].data[0] as number;
             const centerX = (chart.chartArea.left + chart.chartArea.right) / 2;
             const centerY = (chart.chartArea.top + chart.chartArea.bottom) / 2;
 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#A5E5B6';
+            ctx.fillStyle = memoryColor;
             ctx.font = 'bold 18px sans-serif';
-            ctx.fillText(`${currentUsage.toFixed(1)}%`, centerX, centerY - 5);
+            ctx.fillText(`${liveUsage.toFixed(1)}%`, centerX, centerY - 5);
 
-            ctx.fillStyle = labelColor;
+            ctx.fillStyle = chrome.labelColor;
             ctx.font = '10px sans-serif';
             ctx.fillText('Memory', centerX, centerY + 12);
 
@@ -473,27 +491,24 @@ const updateMemoryChart = () => {
     });
 
     memoryChart.value = markRaw(chartInstance);
-    memoryChartError.value = false;
+    memoryChartError.value = null;
     chartLoadingStates.value.memoryChart = false;
   } catch (error) {
     console.error('Error creating Memory chart:', error);
-    memoryChartError.value = true;
+    memoryChartError.value = 'Failed to create Memory chart';
     chartLoadingStates.value.memoryChart = false;
   }
 };
 
-// Disk Chart (using a doughnut chart)
+// Disk Chart (Plotly)
 const updateDiskChart = () => {
   if (!diskCanvasRef.value || !hardwareStats.value) {
     return;
   }
 
-  // Theme-aware colors
-  const isDarkMode = document.documentElement.classList.contains('dark');
-  const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)';
+  const textColor = getChartChrome().textColor;
 
   try {
-    // Import Plotly dynamically for disk usage pie chart
     import('plotly.js-dist-min').then((PlotlyModule: { default?: any } | any) => {
       const Plotly = PlotlyModule.default || PlotlyModule;
       const disk = hardwareStats.value!.disk;
@@ -504,7 +519,7 @@ const updateDiskChart = () => {
           labels: ['Used', 'Free'],
           values: [disk.used, disk.free],
           marker: {
-            colors: ['#FB787B', '#A5E5B6'],
+            colors: [CHART_COLORS.disk, CHART_COLORS.free],
           },
           hovertemplate:
             '<b>%{label}</b><br>Size: %{value}<br>Percentage: %{percent}<extra></extra>',
@@ -563,7 +578,6 @@ const destroyAllCharts = () => {
       memoryChart.value = null;
     }
     if (diskCanvasRef.value) {
-      // Clear Plotly chart if it exists
       try {
         import('plotly.js-dist-min')
           .then((PlotlyModule: { default?: unknown } | unknown) => {
@@ -572,9 +586,7 @@ const destroyAllCharts = () => {
               Plotly.purge(diskCanvasRef.value!);
             }
           })
-          .catch(() => {
-            // Ignore errors during cleanup
-          });
+          .catch(() => {});
       } catch {
         // Ignore errors during cleanup
       }
@@ -584,69 +596,45 @@ const destroyAllCharts = () => {
   }
 };
 
-// Watch for theme changes and rebuild charts
-const themeObserver = new MutationObserver((mutations) => {
-  mutations.forEach((mutation) => {
-    if (mutation.attributeName === 'class') {
-      // Theme changed, rebuild all charts
-      destroyAllCharts();
-      nextTick(() => {
-        updateCharts();
-      });
-    }
-  });
+// Rebuild charts when theme changes
+watch(theme, () => {
+  destroyAllCharts();
+  nextTick(() => updateCharts());
 });
+
+// Stored resize handler — named reference required for removeEventListener to work
+const handleResize = () => {
+  setTimeout(() => {
+    toRaw(cpuChart.value)?.resize();
+    toRaw(memoryChart.value)?.resize();
+
+    try {
+      import('plotly.js-dist-min')
+        .then((PlotlyModule: { default?: unknown } | unknown) => {
+          const Plotly = (PlotlyModule as { default?: unknown })?.default || PlotlyModule;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if ((Plotly as any)?.Plots) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (Plotly as any).Plots.resize(diskCanvasRef.value!);
+          }
+        })
+        .catch(() => {});
+    } catch {
+      // Ignore resize errors
+    }
+  }, 100);
+};
+
+useManagedPolling(fetchAllData, { intervalMs: 5000, immediate: true });
 
 onMounted(async () => {
   await nextTick();
-  fetchAllData();
-
-  // Update every 5 seconds
-  updateInterval.value = window.setInterval(fetchAllData, 5000);
-
-  // Watch for theme changes on the document element
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
-
-  // Add resize listener
-  window.addEventListener('resize', () => {
-    setTimeout(() => {
-      toRaw(cpuChart.value)?.resize();
-      toRaw(memoryChart.value)?.resize();
-
-      // Resize Plotly chart if it exists
-      try {
-        import('plotly.js-dist-min')
-          .then((PlotlyModule: { default?: unknown } | unknown) => {
-            const Plotly = (PlotlyModule as { default?: unknown })?.default || PlotlyModule;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if ((Plotly as any)?.Plots) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (Plotly as any).Plots.resize(diskCanvasRef.value!);
-            }
-          })
-          .catch(() => {
-            // Ignore resize errors
-          });
-      } catch {
-        // Ignore resize errors
-      }
-    }, 100);
-  });
+  window.addEventListener('resize', handleResize);
 });
 
 onBeforeUnmount(() => {
-  if (updateInterval.value) {
-    clearInterval(updateInterval.value);
-  }
-
-  // Disconnect theme observer
-  themeObserver.disconnect();
-
+  window.removeEventListener('resize', handleResize);
   destroyAllCharts();
-  window.removeEventListener('resize', () => {});
 });
 </script>
 
@@ -668,32 +656,42 @@ onBeforeUnmount(() => {
       <SparklineChart
         title="CPU Usage"
         :value="`${systemStats.cpuUsage.toFixed(1)}%`"
-        color="#FFC246"
+        :color="CHART_COLORS.cpu"
         :data="sparklineData.cpu"
+        :min-y="0"
+        :max-y="100"
+        :subtitle="windowLabel"
       />
 
       <!-- Memory Usage -->
       <SparklineChart
         title="Memory Usage"
         :value="`${systemStats.memoryUsage.toFixed(1)}%`"
-        color="#A5E5B6"
+        :color="CHART_COLORS.memory"
         :data="sparklineData.memory"
+        :min-y="0"
+        :max-y="100"
+        :subtitle="windowLabel"
       />
 
       <!-- Disk Usage -->
       <SparklineChart
         title="Disk Usage"
         :value="`${systemStats.diskUsage.toFixed(1)}%`"
-        color="#FB787B"
+        :color="CHART_COLORS.disk"
         :data="sparklineData.disk"
+        :min-y="0"
+        :max-y="100"
+        :subtitle="windowLabel"
       />
 
       <!-- System Uptime -->
       <SparklineChart
         title="Uptime"
         :value="formatUptime(systemStats.uptime)"
-        color="#EBA0FC"
-        :data="sparklineData.network"
+        :color="CHART_COLORS.uptime"
+        :data="[]"
+        :show-chart="false"
       />
     </div>
 
@@ -706,37 +704,15 @@ onBeforeUnmount(() => {
         </h3>
 
         <!-- CPU Chart -->
-        <div
-          class="relative h-32 bg-gray-100/50 dark:bg-white/5 rounded-lg p-4 mb-4 chart-container"
+        <ChartCard
+          class="h-32 mb-4"
+          :is-loading="chartLoadingStates.cpuChart"
+          :error="cpuChartError"
+          :status="cpuChartStatus"
+          @retry="fetchHardwareStats"
         >
-          <canvas ref="cpuCanvasRef" class="w-full h-full relative z-10"></canvas>
-
-          <!-- Loading Spinner -->
-          <div
-            v-if="chartLoadingStates.cpuChart"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 backdrop-blur-sm z-20"
-          >
-            <div class="text-center">
-              <Spinner class="mx-auto mb-2" />
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Loading CPU data...
-              </div>
-            </div>
-          </div>
-
-          <!-- Error overlay -->
-          <div
-            v-if="cpuChartError && !chartLoadingStates.cpuChart"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 z-20"
-          >
-            <div class="text-center">
-              <div class="text-red-500 dark:text-red-400 text-sm mb-1">No Data Available</div>
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                CPU data not found
-              </div>
-            </div>
-          </div>
-        </div>
+          <canvas ref="cpuCanvasRef" class="w-full h-full"></canvas>
+        </ChartCard>
 
         <!-- CPU Stats -->
         <div v-if="hardwareStats" class="grid grid-cols-2 gap-4 text-sm">
@@ -774,37 +750,15 @@ onBeforeUnmount(() => {
         </h3>
 
         <!-- Memory Chart -->
-        <div
-          class="relative h-32 bg-gray-100/50 dark:bg-white/5 rounded-lg p-4 mb-4 chart-container"
+        <ChartCard
+          class="h-32 mb-4"
+          :is-loading="chartLoadingStates.memoryChart"
+          :error="memoryChartError"
+          :status="memoryChartStatus"
+          @retry="fetchHardwareStats"
         >
-          <canvas ref="memoryCanvasRef" class="w-full h-full relative z-10"></canvas>
-
-          <!-- Loading Spinner -->
-          <div
-            v-if="chartLoadingStates.memoryChart"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 backdrop-blur-sm z-20"
-          >
-            <div class="text-center">
-              <Spinner class="mx-auto mb-2" />
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Loading memory data...
-              </div>
-            </div>
-          </div>
-
-          <!-- Error overlay -->
-          <div
-            v-if="memoryChartError && !chartLoadingStates.memoryChart"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 z-20"
-          >
-            <div class="text-center">
-              <div class="text-red-500 dark:text-red-400 text-sm mb-1">No Data Available</div>
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Memory data not found
-              </div>
-            </div>
-          </div>
-        </div>
+          <canvas ref="memoryCanvasRef" class="w-full h-full"></canvas>
+        </ChartCard>
 
         <!-- Memory Stats -->
         <div v-if="hardwareStats" class="grid grid-cols-2 gap-4 text-sm">
@@ -859,13 +813,13 @@ onBeforeUnmount(() => {
           </div>
           <div class="text-center">
             <div class="text-content-secondary dark:text-content-muted">Used</div>
-            <div class="font-semibold text-red-500 dark:text-red-400">
+            <div class="font-semibold text-accent-red">
               {{ formatBytes(hardwareStats.disk.used) }}
             </div>
           </div>
           <div class="text-center">
             <div class="text-content-secondary dark:text-content-muted">Free</div>
-            <div class="font-semibold text-green-700 dark:text-green-400">
+            <div class="font-semibold text-accent-green">
               {{ formatBytes(hardwareStats.disk.free) }}
             </div>
           </div>
@@ -966,7 +920,7 @@ onBeforeUnmount(() => {
                 {{ process.name }}
               </td>
               <td
-                class="text-center text-orange-500 dark:text-orange-400 py-2 transition-all duration-300"
+                class="text-center text-secondary py-2 transition-all duration-300"
               >
                 <span
                   class="cpu-value"
@@ -976,7 +930,7 @@ onBeforeUnmount(() => {
                 </span>
               </td>
               <td
-                class="text-center text-green-700 dark:text-green-400 py-2 transition-all duration-300"
+                class="text-center text-accent-green py-2 transition-all duration-300"
               >
                 <span
                   class="memory-value"
@@ -1005,49 +959,16 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-else-if="!isLoading"
+        v-else-if="!chartLoadingStates.processChart"
         class="text-center text-content-secondary dark:text-content-muted py-8"
       >
         No process data available
       </div>
     </div>
-
-    <!-- Loading/Error States -->
-    <div v-if="isLoading" class="glass-card rounded-[15px] p-8 text-center">
-      <div class="text-content-secondary dark:text-content-muted mb-2">
-        Loading system statistics...
-      </div>
-      <Spinner class="mx-auto" />
-    </div>
-
-    <div v-if="error" class="glass-card rounded-[15px] p-8 text-center">
-      <div class="text-red-500 dark:text-red-400 mb-2">Failed to load system statistics</div>
-      <p class="text-content-secondary dark:text-content-muted text-sm">{{ error }}</p>
-      <button
-        @click="fetchAllData"
-        class="mt-4 px-4 py-2 bg-purple-500/20 dark:bg-accent-purple/20 hover:bg-purple-500/30 dark:hover:bg-accent-purple/30 text-content-primary dark:text-content-primary rounded-lg border border-purple-500/50 dark:border-accent-purple/50 transition-colors"
-      >
-        Retry
-      </button>
-    </div>
   </div>
 </template>
 
 <style scoped>
-/* Additional styling for system stats specific elements */
-.glass-card {
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.dark .glass-card {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
-}
-
 /* Subtle pulse animation for chart containers */
 .chart-updating {
   animation: subtle-pulse 0.8s ease-in-out;
@@ -1063,20 +984,6 @@ onBeforeUnmount(() => {
   100% {
     transform: scale(1);
   }
-}
-
-/* Enhanced chart container styling */
-.chart-container {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.chart-container:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.dark .chart-container:hover {
-  background: rgba(255, 255, 255, 0.08);
 }
 
 /* Process table animations */

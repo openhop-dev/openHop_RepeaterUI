@@ -7,6 +7,16 @@ import { useDataService } from '@/stores/dataService';
 
 defineOptions({ name: 'StatsCards' });
 
+// Chart palette — fixed vibrant colours, same in both light and dark mode.
+const CHART_COLORS = {
+  uptime:    '#EBA0FC', // lavender
+  rx:        '#AAE8E8', // teal
+  forward:   '#FFC246', // bright amber
+  dropped:   '#FB787B', // coral
+  crcErrors: '#F59E0B', // amber
+  hashCache: '#9F7AEA', // purple
+} as const;
+
 const packetStore = usePacketStore();
 const systemStore = useSystemStore();
 const dataService = useDataService();
@@ -32,6 +42,7 @@ const stats = computed(() => {
     uptimeFormatted: formatUptime(uptimeSeconds),
     droppedPackets: dropped,
     crcErrorCount: packetStore.crcErrorCount,
+    hashCacheSize: packetStore.systemStats?.duplicate_cache_size ?? 0,
   };
 });
 
@@ -45,13 +56,13 @@ onMounted(() => {
 
 <template>
   <div
-    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-5 stats-cards-container"
+    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4 mb-5 stats-cards-container"
   >
     <!-- Up Time -->
     <ChartSparkline
       title="Up Time"
       :value="stats.uptimeFormatted"
-      color="#EBA0FC"
+      :color="CHART_COLORS.uptime"
       :data="[]"
       :showChart="false"
       class="stat-card"
@@ -61,7 +72,7 @@ onMounted(() => {
     <ChartSparkline
       title="RX Packets"
       :value="stats.packetsReceived"
-      color="#AAE8E8"
+      :color="CHART_COLORS.rx"
       :data="sparklineData.totalPackets"
       class="stat-card"
     />
@@ -70,7 +81,7 @@ onMounted(() => {
     <ChartSparkline
       title="Forward"
       :value="stats.packetsForwarded"
-      color="#FFC246"
+      :color="CHART_COLORS.forward"
       :data="sparklineData.transmittedPackets"
       class="stat-card"
     />
@@ -79,7 +90,7 @@ onMounted(() => {
     <ChartSparkline
       title="Dropped"
       :value="stats.droppedPackets"
-      color="#FB787B"
+      :color="CHART_COLORS.dropped"
       :data="sparklineData.droppedPackets"
       class="stat-card"
     />
@@ -88,8 +99,17 @@ onMounted(() => {
     <ChartSparkline
       title="CRC Errors"
       :value="stats.crcErrorCount"
-      color="#F59E0B"
+      :color="CHART_COLORS.crcErrors"
       :data="sparklineData.crcErrors"
+      class="stat-card"
+    />
+
+    <!-- Hash Cache -->
+    <ChartSparkline
+      title="Hash Cache"
+      :value="stats.hashCacheSize"
+      :color="CHART_COLORS.hashCache"
+      :showChart="false"
       class="stat-card"
     />
   </div>

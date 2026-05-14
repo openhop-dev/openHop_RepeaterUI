@@ -32,6 +32,18 @@ These override Claude's default tendencies. They apply to every action in this r
 - Do not add comments explaining what code does unless asked.
 - Do not delete code that appears unused unless removal was explicitly requested.
 
+### Summarise before acting on investigation tasks
+
+- When asked to investigate, diagnose, or check something ("what are we doing", "why is X slow", "check if"), **summarise your findings first** before writing any code.
+- State what you found, what the root cause is, and what you propose to change. Wait for the user to approve before touching any files.
+- This applies even when the fix is obvious — the user may have context that changes the approach.
+
+### Never assume the cause of a symptom
+
+- When the user reports unexpected behaviour (wrong values, missing data, visual glitch), **read the code and identify the actual cause**. Do not invent an explanation based on what seems plausible.
+- Do not dismiss a reported bug with an assumed explanation ("the device must only have X hours of data", "the network is probably slow"). If you cannot reproduce or trace the cause in code, say so explicitly and ask for more information.
+- A wrong assumption stated confidently wastes the user's time and erodes trust. If you are not certain, say you are not certain.
+
 ---
 
 ## Read documentation before making any changes

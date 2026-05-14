@@ -104,8 +104,13 @@ const router = createRouter({
   ],
 });
 
-// Check if setup is needed
+// Cached result: once the device confirms setup is complete we skip the HTTP
+// check on every subsequent navigation. Resets on page reload (intentional —
+// the user may have factory-reset the device).
+let _setupComplete = false;
+
 async function checkSetupStatus() {
+  if (_setupComplete) return false;
   try {
     const response = await fetch('/api/needs_setup', {
       headers: {
@@ -117,7 +122,9 @@ async function checkSetupStatus() {
       return false;
     }
     const data = await response.json();
-    return data.needs_setup === true;
+    const needsSetup = data.needs_setup === true;
+    if (!needsSetup) _setupComplete = true;
+    return needsSetup;
   } catch (error) {
     console.error('Error checking setup status:', error);
     return false;

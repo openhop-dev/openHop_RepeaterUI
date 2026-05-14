@@ -48,6 +48,24 @@ export const usePacketStore = defineStore('packets', () => {
   const interpolatedRates = ref({ rx: 0, tx: 0, drop: 0 });
   const targetRates = ref({ rx: 0, tx: 0, drop: 0 });
 
+  // Real-time noise floor ring buffer — populated by WebSocket system_stats messages.
+  // Capped at 2880 entries (24 h at one sample per 30 s ≈ 92 KB) to stay mobile-safe.
+  // Lets the Statistics page render noise floor data immediately without an API call.
+  const NOISE_FLOOR_MAX_POINTS = 2880;
+  const noiseFloorTimeSeries = ref<Array<{ timestamp: number; noise_floor_dbm: number }>>([]);
+  let _lastNoiseFloorAppendMs = 0;
+
+  function appendNoiseFloorSample(value: number) {
+    if (!value || value === 0) return;
+    const now = Date.now();
+    if (now - _lastNoiseFloorAppendMs < 25_000) return; // rate-limit to ~1 per 30 s
+    _lastNoiseFloorAppendMs = now;
+    noiseFloorTimeSeries.value.push({ timestamp: now / 1000, noise_floor_dbm: value });
+    if (noiseFloorTimeSeries.value.length > NOISE_FLOOR_MAX_POINTS) {
+      noiseFloorTimeSeries.value.splice(0, noiseFloorTimeSeries.value.length - NOISE_FLOOR_MAX_POINTS);
+    }
+  }
+
   // Computed
   const hasPacketStats = computed(() => packetStats.value !== null);
   const hasSystemStats = computed(() => systemStats.value !== null);
@@ -449,6 +467,8 @@ export const usePacketStore = defineStore('packets', () => {
     recentPackets.value = [];
     noiseFloorHistory.value = [];
     noiseFloorStats.value = null;
+    noiseFloorTimeSeries.value = [];
+    _lastNoiseFloorAppendMs = 0;
     packetStatsHistory.value = [];
     systemStatsHistory.value = [];
     metricsGraphData.value = null;
@@ -538,6 +558,8 @@ export const usePacketStore = defineStore('packets', () => {
     legacySparklineData,
     noiseFloorSparklineData,
     crcErrorCount,
+    crcErrorHistory,
+    metricsGraphData,
     interpolatedRates,
 
     // Actions
@@ -555,5 +577,7 @@ export const usePacketStore = defineStore('packets', () => {
     reset,
     addRealtimePacket,
     updateRealtimeStats,
+    noiseFloorTimeSeries,
+    appendNoiseFloorSample,
   };
 });
