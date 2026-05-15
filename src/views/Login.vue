@@ -186,8 +186,8 @@ import GitHubIcon from '@/components/icons/github.vue';
 import CoffeeIcon from '@/components/icons/coffee.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { useTheme } from '@/composables/useTheme';
-import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_440-Dark.png';
-import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_440-Light.png';
+import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
+import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
 // Define component name for linting
 defineOptions({
