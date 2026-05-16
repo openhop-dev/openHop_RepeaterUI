@@ -462,13 +462,19 @@ export const usePacketStore = defineStore('packets', () => {
   }
 
   function addRealtimePacket(packet: RecentPacket) {
-    // Add to beginning of array
     recentPackets.value.unshift(packet);
-
-    // Keep max 1000 packets to prevent memory issues
     if (recentPackets.value.length > 1000) {
       recentPackets.value = recentPackets.value.slice(0, 1000);
     }
+  }
+
+  function mergeRecentPackets(incoming: RecentPacket[]): void {
+    const existing = new Set(recentPackets.value.map((p) => p.packet_hash));
+    const novel = incoming.filter((p) => !existing.has(p.packet_hash));
+    if (novel.length === 0) return;
+    const merged = [...novel, ...recentPackets.value];
+    merged.sort((a, b) => b.timestamp - a.timestamp);
+    recentPackets.value = merged.slice(0, 1000);
   }
 
   function updateRealtimeStats(stats: { packet_stats?: PacketStats; system_stats?: SystemStats }) {
@@ -556,6 +562,7 @@ export const usePacketStore = defineStore('packets', () => {
     interpolateRates,
     reset,
     addRealtimePacket,
+    mergeRecentPackets,
     updateRealtimeStats,
   };
 });

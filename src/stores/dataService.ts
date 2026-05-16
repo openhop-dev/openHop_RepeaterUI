@@ -4,6 +4,7 @@ import { useSystemStore } from './system';
 import { usePacketStore } from './packets';
 import { useNeighborStore } from './neighbors';
 import ApiService from '@/utils/api';
+import type { RecentPacket } from '@/types/api';
 
 type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors';
 export type StepStatus = 'pending' | 'loading' | 'done' | 'error';
@@ -47,6 +48,7 @@ export const useDataService = defineStore('dataService', () => {
   const _inFlight = new Map<DataKey, Promise<void>>();
   let _pollHandles: number[] = [];
   let _bootstrapped = false;
+  let _disconnectTime: number | null = null;
 
   async function _withRetry<T>(fn: () => Promise<T>, attempts = 2): Promise<T> {
     for (let i = 0; i < attempts; i++) {
@@ -187,12 +189,34 @@ export const useDataService = defineStore('dataService', () => {
     );
   }
 
+  function noteDisconnect(): void {
+    _disconnectTime = Math.floor(Date.now() / 1000);
+  }
+
+  async function _recoverPackets(since: number): Promise<void> {
+    try {
+      const response = await ApiService.get<RecentPacket[]>('/filtered_packets', {
+        start_timestamp: since,
+        limit: 1000,
+      });
+      if (response.success && response.data) {
+        packetStore.mergeRecentPackets(response.data);
+        _lastFetch.set('recentPackets', Date.now());
+      }
+    } catch {
+      // Non-fatal — store keeps whatever WS delivered before disconnect
+    }
+  }
+
   async function onReconnect(): Promise<void> {
     await new Promise((r) => setTimeout(r, 3000));
+    const tenMinutesAgo = Math.floor(Date.now() / 1000) - 600;
+    const since = _disconnectTime !== null ? Math.max(_disconnectTime, tenMinutesAgo) : tenMinutesAgo;
+    _disconnectTime = null;
     await Promise.allSettled([
       ensure('stats'),
       ensure('packetStats'),
-      ensure('recentPackets'),
+      _recoverPackets(since),
     ]);
   }
 
@@ -225,6 +249,7 @@ export const useDataService = defineStore('dataService', () => {
     loadProgress,
     bootstrap,
     ensure,
+    noteDisconnect,
     onReconnect,
     stopPolling,
     reset,

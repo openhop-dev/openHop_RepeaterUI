@@ -271,6 +271,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
         return;
       }
 
+      dataService.noteDisconnect();
       scheduleReconnect();
     };
   }

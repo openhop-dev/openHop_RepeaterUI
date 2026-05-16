@@ -537,7 +537,7 @@ const toggleMobileSidebar = () => {
         <div
           v-if="showNotifications"
           ref="notifRef"
-          class="fixed right-6 top-14 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
+          class="fixed right-6 top-16 sm:top-24 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
           @click.stop
         >
           <div class="flex items-center justify-between mb-3">
