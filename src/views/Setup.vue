@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import { Cpu, Usb, Wifi } from '@lucide/vue';
 import { useSetupStore } from '@/stores/setup';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
 const setupStore = useSetupStore();
 
@@ -13,8 +14,7 @@ const showDialog = ref(false);
 const dialogTitle = ref('');
 const dialogMessage = ref('');
 const dialogType = ref<'error'>('error');
-const showRestarting = ref(false);
-let redirectTimer: ReturnType<typeof setTimeout> | null = null;
+const showRestartModal = ref(false);
 
 // Map preset titles to flag emojis
 const getFlagEmoji = (title: string): string => {
@@ -99,9 +99,7 @@ async function handleNext() {
     // Complete setup
     const result = await setupStore.completeSetup();
     if (result.success) {
-      // Show restarting overlay and poll until backend is back
-      showRestarting.value = true;
-      redirectToLogin();
+      showRestartModal.value = true;
     } else {
       // Show error dialog
       dialogType.value = 'error';
@@ -122,47 +120,6 @@ function closeDialog() {
   showDialog.value = false;
 }
 
-/** Poll the backend until it responds, then reload so the login page shows. */
-function redirectToLogin() {
-  let attempts = 0;
-  const maxAttempts = 90; // ~90 seconds
-
-  function tryRedirect() {
-    attempts++;
-    fetch('/api/needs_setup', { method: 'GET' })
-      .then((res) => {
-        if (res.ok) {
-          redirectTimer = null;
-          window.location.reload();
-        } else {
-          scheduleRetry();
-        }
-      })
-      .catch(() => {
-        scheduleRetry();
-      });
-  }
-
-  function scheduleRetry() {
-    if (attempts < maxAttempts) {
-      redirectTimer = setTimeout(tryRedirect, 1000);
-    } else {
-      // Give up — reload anyway and let the login page handle it
-      redirectTimer = null;
-      window.location.reload();
-    }
-  }
-
-  // Initial delay to give the service time to begin restarting before we poll
-  redirectTimer = setTimeout(tryRedirect, 3000);
-}
-
-onBeforeUnmount(() => {
-  if (redirectTimer) {
-    clearTimeout(redirectTimer);
-    redirectTimer = null;
-  }
-});
 
 const stepTitles = [
   'Welcome',
@@ -800,28 +757,11 @@ const stepTitles = [
       </div>
     </Transition>
 
-    <!-- Restarting Overlay (non-dismissible) -->
-    <Transition name="modal">
-      <div
-        v-if="showRestarting"
-        class="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
-      >
-        <div
-          class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-sm w-full p-10 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_48px_0_rgba(0,0,0,0.5)] flex flex-col items-center gap-6"
-        >
-          <Spinner size="lg" />
-
-          <div class="text-center">
-            <h3 class="text-xl font-bold text-content-primary dark:text-content-primary mb-2">
-              Restarting&hellip;
-            </h3>
-            <p class="text-sm text-content-secondary dark:text-content-primary/60">
-              Please wait while the service restarts. This may take up to a minute.
-            </p>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <RestartModal
+      v-model="showRestartModal"
+      :start-immediately="true"
+      message="Setup complete. The service is restarting. This may take up to a minute."
+    />
   </div>
 </template>
 

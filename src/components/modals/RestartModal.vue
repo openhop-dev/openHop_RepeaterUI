@@ -7,10 +7,12 @@ interface Props {
   modelValue: boolean;
   message: string;
   title?: string;
+  startImmediately?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: 'Service Restart Required',
+  startImmediately: false,
 });
 
 const emit = defineEmits<{
@@ -43,6 +45,14 @@ async function handleRestart() {
   try {
     await apiClient.post('/restart_service', {});
   } catch { /* network drop on restart is expected */ }
+  pollAttempts = 0;
+  stableCount = 0;
+  pollTimer = setTimeout(poll, 10000);
+}
+
+function startPolling() {
+  isRestarting.value = true;
+  hasFailed.value = false;
   pollAttempts = 0;
   stableCount = 0;
   pollTimer = setTimeout(poll, 10000);
@@ -88,6 +98,8 @@ watch(() => props.modelValue, (val) => {
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
     pollAttempts = 0;
     stableCount = 0;
+  } else if (props.startImmediately) {
+    startPolling();
   }
 });
 
