@@ -1,5 +1,11 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
 import ApiService from '@/utils/api';
+import {
+  RESTART_POLL_ENDPOINT,
+  RESTART_INITIAL_DELAY_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_MAX_ATTEMPTS,
+} from '@/utils/constants';
 
 interface RestartResponse {
   success?: boolean;
@@ -105,9 +111,9 @@ export class RestartCommand extends BaseCommand {
   }
 
   private async waitForServiceRestart(term: any, writePrompt: () => void): Promise<void> {
-    const initialDelay = 4; // Wait 4 seconds before checking (service reboots in ~4s)
-    const maxWaitTime = 20; // seconds total
-    const checkInterval = 1; // check every second
+    const initialDelay = RESTART_INITIAL_DELAY_MS / 1000;
+    const maxWaitTime = (RESTART_MAX_ATTEMPTS * RESTART_POLL_INTERVAL_MS) / 1000 + initialDelay;
+    const checkInterval = RESTART_POLL_INTERVAL_MS / 1000;
 
     this.writeInfo(term, 'Service restart initiated...');
     this.writeLine(term, '');
@@ -133,7 +139,7 @@ export class RestartCommand extends BaseCommand {
       try {
         // Use a direct axios call with timeout config instead of ApiService.get
         const response = await fetch(
-          `${window.location.protocol}//${window.location.host}/api/stats`,
+          `${window.location.protocol}//${window.location.host}${RESTART_POLL_ENDPOINT}`,
           {
             signal: AbortSignal.timeout(3000),
           },

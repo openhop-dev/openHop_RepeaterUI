@@ -2,6 +2,13 @@
 import { ref, watch, onBeforeUnmount } from 'vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import apiClient from '@/utils/api';
+import {
+  RESTART_POLL_ENDPOINT,
+  RESTART_INITIAL_DELAY_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_STABLE_REQUIRED,
+  RESTART_MAX_ATTEMPTS,
+} from '@/utils/constants';
 
 interface Props {
   modelValue: boolean;
@@ -24,10 +31,8 @@ const hasFailed = ref(false);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let pollAttempts = 0;
 let stableCount = 0;
-// 10s initial delay + up to 50×1s polling = 60s total
-// 5 consecutive successes required before reload — needs headroom above STABLE_REQUIRED
-const MAX_ATTEMPTS = 50;
-const STABLE_REQUIRED = 5;
+const MAX_ATTEMPTS = RESTART_MAX_ATTEMPTS;
+const STABLE_REQUIRED = RESTART_STABLE_REQUIRED;
 
 function close() {
   if (isRestarting.value && !hasFailed.value) return;
@@ -47,7 +52,7 @@ async function handleRestart() {
   } catch { /* network drop on restart is expected */ }
   pollAttempts = 0;
   stableCount = 0;
-  pollTimer = setTimeout(poll, 10000);
+  pollTimer = setTimeout(poll, RESTART_INITIAL_DELAY_MS);
 }
 
 function startPolling() {
@@ -55,12 +60,12 @@ function startPolling() {
   hasFailed.value = false;
   pollAttempts = 0;
   stableCount = 0;
-  pollTimer = setTimeout(poll, 10000);
+  pollTimer = setTimeout(poll, RESTART_INITIAL_DELAY_MS);
 }
 
 function poll() {
   pollAttempts++;
-  fetch('/api/needs_setup', { method: 'GET' })
+  fetch(RESTART_POLL_ENDPOINT, { method: 'GET' })
     .then(res => {
       if (res.ok) {
         stableCount++;
@@ -69,7 +74,7 @@ function poll() {
         } else {
           // API responded but we need sustained stability before reloading —
           // keep polling without counting this as a failure attempt
-          pollTimer = setTimeout(poll, 1000);
+          pollTimer = setTimeout(poll, RESTART_POLL_INTERVAL_MS);
         }
       } else {
         stableCount = 0;
@@ -84,7 +89,7 @@ function poll() {
 
 function schedulePoll() {
   if (pollAttempts < MAX_ATTEMPTS) {
-    pollTimer = setTimeout(poll, 1000);
+    pollTimer = setTimeout(poll, RESTART_POLL_INTERVAL_MS);
   } else {
     isRestarting.value = false;
     hasFailed.value = true;

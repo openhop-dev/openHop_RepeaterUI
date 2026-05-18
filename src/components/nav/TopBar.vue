@@ -8,6 +8,7 @@ import { getUsername } from '@/utils/auth';
 import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import UpdateModal from '@/components/modals/UpdateModal.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import Spinner from '@/components/ui/Spinner.vue';
@@ -30,9 +31,7 @@ const notifRef = ref<HTMLElement | null>(null);
 const showUpdateModal = ref(false);
 const showUserMenu = ref(false);
 const userMenuRef = ref<HTMLElement | null>(null);
-const restarting = ref(false);
-const restartMessage = ref('');
-const restartFailed = ref(false);
+const showRestartModal = ref(false);
 
 // Update checking state
 const updateInfo = ref<{
@@ -146,77 +145,6 @@ const handleLogout = () => {
   void appRuntime.stopSession('logout');
 };
 
-const waitForService = async (maxAttempts = 20, interval = 2000) => {
-  // Use raw fetch to bypass axios interceptors (401 redirect, token refresh)
-  // Any HTTP response (even 401) means the service is back — only network
-  // errors or 5xx mean it's still restarting
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const res = await fetch('/api/stats', { signal: AbortSignal.timeout(3000) });
-      if (res.status < 500) return true;
-    } catch {
-      // network error — still down
-    }
-    await new Promise((r) => setTimeout(r, interval));
-  }
-  return false;
-};
-
-const handleRestartService = async () => {
-  if (restarting.value) return;
-  restarting.value = true;
-  restartFailed.value = false;
-  restartMessage.value = 'Sending restart request...';
-  showUserMenu.value = false;
-  try {
-    const response = await ApiService.post('/restart_service', {});
-    if (response.success) {
-      restartMessage.value = 'Service restarting, waiting for it to come back...';
-      const up = await waitForService();
-      if (up) {
-        restartMessage.value = 'Service is back! Reloading...';
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        restartMessage.value = 'Service did not respond in time. Try reloading manually.';
-        restartFailed.value = true;
-      }
-    } else {
-      restartMessage.value = response.error || 'Restart request failed';
-      restartFailed.value = true;
-    }
-  } catch (error: any) {
-    // 500, network errors, etc. are all expected — the service is going down
-    const isRestartExpected =
-      error.code === 'ERR_NETWORK' ||
-      error.message?.includes('Network error') ||
-      error.response?.status === 500 ||
-      error.message?.includes('500');
-    if (isRestartExpected) {
-      restartMessage.value = 'Service restarting, waiting for it to come back...';
-      const up = await waitForService();
-      if (up) {
-        restartMessage.value = 'Service is back! Reloading...';
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        restartMessage.value = 'Service did not respond in time. Try reloading manually.';
-        restartFailed.value = true;
-      }
-    } else {
-      restartMessage.value = error.message || 'Restart request failed';
-      restartFailed.value = true;
-    }
-  }
-};
-
-const dismissRestart = () => {
-  restarting.value = false;
-  restartMessage.value = '';
-  restartFailed.value = false;
-};
 
 const reloadPage = () => {
   window.location.reload();
@@ -476,7 +404,6 @@ const toggleMobileSidebar = () => {
           <button
             @click="showUserMenu = !showUserMenu"
             class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
-            :class="{ 'animate-pulse': restarting }"
             title="User menu"
           >
             <svg
@@ -499,12 +426,10 @@ const toggleMobileSidebar = () => {
             class="absolute right-0 top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
           >
             <button
-              @click="handleRestartService"
-              :disabled="restarting"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors disabled:opacity-50"
+              @click="showRestartModal = true; showUserMenu = false"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
             >
               <svg
-                v-if="!restarting"
                 class="w-4 h-4 text-content-secondary"
                 viewBox="0 0 20 20"
                 fill="none"
@@ -519,8 +444,7 @@ const toggleMobileSidebar = () => {
                   stroke-linejoin="round"
                 />
               </svg>
-              <Spinner v-else size="sm" />
-              {{ restarting ? 'Restarting...' : 'Restart Service' }}
+              Restart Service
             </button>
             <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
             <button
@@ -827,54 +751,11 @@ const toggleMobileSidebar = () => {
       </div>
     </div>
   </div>
-  <!-- Restart Overlay -->
-  <Teleport to="body">
-    <div
-      v-if="restarting"
-      class="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center"
-    >
-      <div
-        class="bg-surface dark:bg-surface-elevated rounded-2xl p-8 shadow-2xl max-w-sm w-full mx-4 text-center border border-stroke-subtle dark:border-stroke/20"
-      >
-        <div v-if="!restartFailed" class="mb-4">
-          <Spinner size="lg" class="mx-auto" />
-        </div>
-        <div v-else class="mb-4">
-          <svg
-            class="w-10 h-10 mx-auto text-accent-red"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-            />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-2">
-          Restarting Service
-        </h3>
-        <p class="text-sm text-content-secondary dark:text-content-muted">{{ restartMessage }}</p>
-        <div v-if="restartFailed" class="mt-4 flex items-center justify-center gap-3">
-          <button
-            @click="reloadPage"
-            class="btn-primary"
-          >
-            Reload Page
-          </button>
-          <button
-            @click="dismissRestart"
-            class="text-sm text-content-muted hover:text-content-secondary transition-colors"
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <RestartModal
+    v-model="showRestartModal"
+    title="Restart Service"
+    message="The service will restart. You will be automatically returned to the dashboard when it comes back online."
+  />
 
   <!-- Update Modal -->
   <UpdateModal
