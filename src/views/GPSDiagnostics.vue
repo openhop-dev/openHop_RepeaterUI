@@ -210,7 +210,7 @@ const formatCoordinate = (latitude?: number | null, longitude?: number | null): 
   return `${compactNumber(latitude)}, ${compactNumber(longitude)}`;
 };
 
-const stateLabel = computed(() => (status.value.state ?? 'unknown').replaceAll('_', ' '));
+const stateLabel = computed(() => (status.value.state ?? 'unknown').split('_').join(' '));
 
 const stateToneClass = computed(() => {
   switch (status.value.state) {
