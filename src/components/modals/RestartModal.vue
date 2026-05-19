@@ -28,6 +28,7 @@ const emit = defineEmits<{
 
 const isRestarting = ref(false);
 const hasFailed = ref(false);
+const failureMessage = ref('');
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let pollAttempts = 0;
 let stableCount = 0;
@@ -38,6 +39,7 @@ function close() {
   if (isRestarting.value && !hasFailed.value) return;
   isRestarting.value = false;
   hasFailed.value = false;
+  failureMessage.value = '';
   if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   pollAttempts = 0;
   stableCount = 0;
@@ -47,9 +49,25 @@ function close() {
 async function handleRestart() {
   isRestarting.value = true;
   hasFailed.value = false;
+  failureMessage.value = '';
   try {
     await apiClient.post('/restart_service', {});
-  } catch { /* network drop on restart is expected */ }
+  } catch (err) {
+    const e = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
+    if (e.response) {
+      isRestarting.value = false;
+      hasFailed.value = true;
+      const status = e.response.status;
+      const detail = e.response.data?.error || e.response.data?.message;
+      if (status === 403 || status === 401) {
+        failureMessage.value = 'Permission denied. The service could not be restarted. Check polkit configuration.';
+      } else {
+        failureMessage.value = detail ? `Restart failed: ${detail}` : `Restart failed (HTTP ${status}).`;
+      }
+      return;
+    }
+    /* network drop on restart is expected — fall through to polling */
+  }
   pollAttempts = 0;
   stableCount = 0;
   pollTimer = setTimeout(poll, RESTART_INITIAL_DELAY_MS);
@@ -100,6 +118,7 @@ watch(() => props.modelValue, (val) => {
   if (!val) {
     isRestarting.value = false;
     hasFailed.value = false;
+    failureMessage.value = '';
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
     pollAttempts = 0;
     stableCount = 0;
@@ -155,7 +174,7 @@ onBeforeUnmount(() => {
                   Service Did Not Restart
                 </h3>
                 <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
-                  The service did not respond after 60 seconds. Please log into the device and check the system logs.
+                  {{ failureMessage || 'The service did not respond after 60 seconds. Please log into the device and check the system logs.' }}
                 </p>
               </div>
             </div>

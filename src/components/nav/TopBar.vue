@@ -257,7 +257,7 @@ const toggleMobileSidebar = () => {
           <!-- <p class="text-white text-xl font-semibold">Repeater Dashboard</p> -->
         </div>
       </div>
-      <div class="flex items-center gap-3 sm:gap-4">
+      <div class="flex items-center gap-3 sm:gap-4 relative">
         <div class="text-right" style="min-width: 180px">
           <div v-if="loading" class="flex items-center gap-2 justify-end">
             <Spinner size="xs" />
@@ -365,8 +365,9 @@ const toggleMobileSidebar = () => {
             <path d="M11 3L9 17" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
+        <div ref="notifRef" @click.stop>
         <button
-          @click.stop="showNotifications = !showNotifications"
+          @click="showNotifications = !showNotifications"
           class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors relative"
         >
           <svg
@@ -396,86 +397,9 @@ const toggleMobileSidebar = () => {
             "
           ></span>
         </button>
-
-        <!-- Theme Toggle -->
-        <ThemeToggle />
-
-        <div class="relative hidden sm:block" ref="userMenuRef" @click.stop>
-          <button
-            @click="showUserMenu = !showUserMenu"
-            class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
-            title="User menu"
-          >
-            <svg
-              class="w-5 h-5 text-content-secondary dark:text-content-primary"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-          <div
-            v-if="showUserMenu"
-            class="absolute right-0 top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
-          >
-            <button
-              @click="showRestartModal = true; showUserMenu = false"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
-            >
-              <svg
-                class="w-4 h-4 text-content-secondary"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M3.5 2.5V7H8" stroke-linecap="round" stroke-linejoin="round" />
-                <path
-                  d="M4.5 12.5A6.5 6.5 0 1 0 5 6L3.5 7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Restart Service
-            </button>
-            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
-            <button
-              @click="handleLogout"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-red hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
-            >
-              <svg
-                class="w-4 h-4"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <Teleport to="body">
         <div
           v-if="showNotifications"
-          ref="notifRef"
-          class="fixed right-6 top-16 sm:top-24 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
-          @click.stop
+          class="absolute right-[5px] top-10 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
         >
           <div class="flex items-center justify-between mb-3">
             <p class="text-content-primary dark:text-content-primary font-semibold">
@@ -722,7 +646,80 @@ const toggleMobileSidebar = () => {
             </div>
           </div>
         </div>
-        </Teleport>
+        </div>
+
+        <!-- Theme Toggle -->
+        <ThemeToggle />
+
+        <div class="hidden sm:block" ref="userMenuRef" @click.stop>
+          <button
+            @click="showUserMenu = !showUserMenu"
+            class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
+            title="User menu"
+          >
+            <svg
+              class="w-5 h-5 text-content-secondary dark:text-content-primary"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <div
+            v-if="showUserMenu"
+            class="absolute right-[5px] top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
+          >
+            <button
+              @click="showRestartModal = true; showUserMenu = false"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+            >
+              <svg
+                class="w-4 h-4 text-content-secondary"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M3.5 2.5V7H8" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M4.5 12.5A6.5 6.5 0 1 0 5 6L3.5 7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Restart Service
+            </button>
+            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
+            <button
+              @click="handleLogout"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-red hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+            >
+              <svg
+                class="w-4 h-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
