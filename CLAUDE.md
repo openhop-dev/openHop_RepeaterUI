@@ -8,6 +8,14 @@ This file is read automatically by Claude Code at the start of every session. Fo
 
 These override Claude's default tendencies. They apply to every action in this repository.
 
+### Tests are mandatory for all code changes
+
+- **Every code change must be accompanied by a passing test before the change is considered complete.**
+- Tests live in the flat `tests/` directory at the project root. Run them with `npm run test:unit`.
+- Write the test first or alongside the change — never defer it to a follow-up.
+- If a code change touches logic that is already tested, update the relevant test(s) to cover the new behaviour.
+- Do not mark a task complete until `npm run test:unit` passes with tests covering the changed code.
+
 ### Only do what was asked
 
 - **Do exactly what the user asked. Nothing more.**

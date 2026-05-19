@@ -2,15 +2,24 @@
 import { ref, watch, onBeforeUnmount } from 'vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import apiClient from '@/utils/api';
+import {
+  RESTART_POLL_ENDPOINT,
+  RESTART_INITIAL_DELAY_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_STABLE_REQUIRED,
+  RESTART_MAX_ATTEMPTS,
+} from '@/utils/constants';
 
 interface Props {
   modelValue: boolean;
   message: string;
   title?: string;
+  startImmediately?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   title: 'Service Restart Required',
+  startImmediately: false,
 });
 
 const emit = defineEmits<{
@@ -19,18 +28,18 @@ const emit = defineEmits<{
 
 const isRestarting = ref(false);
 const hasFailed = ref(false);
+const failureMessage = ref('');
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let pollAttempts = 0;
 let stableCount = 0;
-// 10s initial delay + up to 50×1s polling = 60s total
-// 5 consecutive successes required before reload — needs headroom above STABLE_REQUIRED
-const MAX_ATTEMPTS = 50;
-const STABLE_REQUIRED = 5;
+const MAX_ATTEMPTS = RESTART_MAX_ATTEMPTS;
+const STABLE_REQUIRED = RESTART_STABLE_REQUIRED;
 
 function close() {
   if (isRestarting.value && !hasFailed.value) return;
   isRestarting.value = false;
   hasFailed.value = false;
+  failureMessage.value = '';
   if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   pollAttempts = 0;
   stableCount = 0;
@@ -40,17 +49,47 @@ function close() {
 async function handleRestart() {
   isRestarting.value = true;
   hasFailed.value = false;
+  failureMessage.value = '';
   try {
-    await apiClient.post('/restart_service', {});
-  } catch { /* network drop on restart is expected */ }
+    const response = await apiClient.post('/restart_service', {});
+    if (!response.success) {
+      isRestarting.value = false;
+      hasFailed.value = true;
+      failureMessage.value = response.error ? `Restart failed: ${response.error}` : 'Restart failed.';
+      return;
+    }
+  } catch (err) {
+    const e = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
+    if (e.response) {
+      isRestarting.value = false;
+      hasFailed.value = true;
+      const status = e.response.status;
+      const detail = e.response.data?.error || e.response.data?.message;
+      if (status === 403 || status === 401) {
+        failureMessage.value = 'Permission denied. The service could not be restarted. Check polkit configuration.';
+      } else {
+        failureMessage.value = detail ? `Restart failed: ${detail}` : `Restart failed (HTTP ${status}).`;
+      }
+      return;
+    }
+    /* network drop on restart is expected — fall through to polling */
+  }
   pollAttempts = 0;
   stableCount = 0;
-  pollTimer = setTimeout(poll, 10000);
+  pollTimer = setTimeout(poll, RESTART_INITIAL_DELAY_MS);
+}
+
+function startPolling() {
+  isRestarting.value = true;
+  hasFailed.value = false;
+  pollAttempts = 0;
+  stableCount = 0;
+  pollTimer = setTimeout(poll, RESTART_INITIAL_DELAY_MS);
 }
 
 function poll() {
   pollAttempts++;
-  fetch('/api/needs_setup', { method: 'GET' })
+  fetch(RESTART_POLL_ENDPOINT, { method: 'GET' })
     .then(res => {
       if (res.ok) {
         stableCount++;
@@ -59,7 +98,7 @@ function poll() {
         } else {
           // API responded but we need sustained stability before reloading —
           // keep polling without counting this as a failure attempt
-          pollTimer = setTimeout(poll, 1000);
+          pollTimer = setTimeout(poll, RESTART_POLL_INTERVAL_MS);
         }
       } else {
         stableCount = 0;
@@ -74,7 +113,7 @@ function poll() {
 
 function schedulePoll() {
   if (pollAttempts < MAX_ATTEMPTS) {
-    pollTimer = setTimeout(poll, 1000);
+    pollTimer = setTimeout(poll, RESTART_POLL_INTERVAL_MS);
   } else {
     isRestarting.value = false;
     hasFailed.value = true;
@@ -85,9 +124,12 @@ watch(() => props.modelValue, (val) => {
   if (!val) {
     isRestarting.value = false;
     hasFailed.value = false;
+    failureMessage.value = '';
     if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
     pollAttempts = 0;
     stableCount = 0;
+  } else if (props.startImmediately) {
+    startPolling();
   }
 });
 
@@ -138,7 +180,7 @@ onBeforeUnmount(() => {
                   Service Did Not Restart
                 </h3>
                 <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
-                  The service did not respond after 60 seconds. Please log into the device and check the system logs.
+                  {{ failureMessage || 'The service did not respond after 60 seconds. Please log into the device and check the system logs.' }}
                 </p>
               </div>
             </div>

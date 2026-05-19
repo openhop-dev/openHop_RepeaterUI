@@ -1,5 +1,12 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
 import ApiService from '@/utils/api';
+import {
+  RESTART_POLL_ENDPOINT,
+  RESTART_INITIAL_DELAY_MS,
+  RESTART_POLL_INTERVAL_MS,
+  RESTART_MAX_ATTEMPTS,
+  RESTART_STABLE_REQUIRED,
+} from '@/utils/constants';
 
 interface RestartResponse {
   success?: boolean;
@@ -38,12 +45,10 @@ export class RestartCommand extends BaseCommand {
 
       if (response.success) {
         this.writeLine(term, '');
-        this.writeSuccess(term, response.message || 'Service restart initiated');
+        this.writeSuccess(term, 'Service restart initiated');
         this.writeLine(term, '');
-        this.writeInfo(
-          term,
-          'The service will restart momentarily. You may need to refresh this page.',
-        );
+        await this.waitForServiceRestart(term, writePrompt);
+        return;
       } else {
         this.writeLine(term, '');
         this.writeError(
@@ -76,10 +81,10 @@ export class RestartCommand extends BaseCommand {
         await this.waitForServiceRestart(term, writePrompt);
         return;
       } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
-        // Timeout might mean service is restarting
-        this.writeLine(term, '\x1b[33m⚠️  Request timed out - service may be restarting\x1b[0m');
+        this.writeSuccess(term, 'Service restart initiated successfully');
         this.writeLine(term, '');
-        this.writeInfo(term, 'Refresh the page in a few seconds to reconnect.');
+        await this.waitForServiceRestart(term, writePrompt);
+        return;
       } else if (err.response?.status === 403 || err.response?.status === 401) {
         this.writeError(term, 'Permission denied. Polkit rules may need configuration.');
         this.writeLine(term, '');
@@ -105,9 +110,9 @@ export class RestartCommand extends BaseCommand {
   }
 
   private async waitForServiceRestart(term: any, writePrompt: () => void): Promise<void> {
-    const initialDelay = 4; // Wait 4 seconds before checking (service reboots in ~4s)
-    const maxWaitTime = 20; // seconds total
-    const checkInterval = 1; // check every second
+    const initialDelay = RESTART_INITIAL_DELAY_MS / 1000;
+    const maxWaitTime = (RESTART_MAX_ATTEMPTS * RESTART_POLL_INTERVAL_MS) / 1000 + initialDelay;
+    const checkInterval = RESTART_POLL_INTERVAL_MS / 1000;
 
     this.writeInfo(term, 'Service restart initiated...');
     this.writeLine(term, '');
@@ -121,6 +126,7 @@ export class RestartCommand extends BaseCommand {
 
     let elapsed = initialDelay;
     let checkCount = 0;
+    let stableCount = 0;
 
     // Show countdown while checking
     const countdownLine = '\r\x1b[36m⏳\x1b[0m Verifying restart (attempt ';
@@ -133,25 +139,28 @@ export class RestartCommand extends BaseCommand {
       try {
         // Use a direct axios call with timeout config instead of ApiService.get
         const response = await fetch(
-          `${window.location.protocol}//${window.location.host}/api/stats`,
+          `${window.location.protocol}//${window.location.host}${RESTART_POLL_ENDPOINT}`,
           {
             signal: AbortSignal.timeout(3000),
           },
         );
 
         if (response.ok) {
-          // Success! Service is back up
-          term.write('\r\x1b[K'); // Clear the countdown line
-          this.writeLine(term, '');
-          this.writeSuccess(term, `Service is back online! (took ~${elapsed}s)`);
-          this.writeLine(term, '');
-          writePrompt();
-          return;
+          stableCount++;
+          if (stableCount >= RESTART_STABLE_REQUIRED) {
+            term.write('\r\x1b[K');
+            this.writeLine(term, '');
+            this.writeSuccess(term, `Service is back online! (took ~${elapsed}s)`);
+            this.writeLine(term, '');
+            writePrompt();
+            return;
+          }
+        } else {
+          stableCount = 0;
         }
       } catch (e: unknown) {
-        // Still down, keep waiting
+        stableCount = 0;
         const error = e as { code?: string; message?: string };
-        // Only show error if it's not a network/timeout issue
         if (error.code && !['ERR_NETWORK', 'ECONNREFUSED', 'ECONNRESET'].includes(error.code)) {
           term.write(`[${error.code}] `);
         }
@@ -164,7 +173,7 @@ export class RestartCommand extends BaseCommand {
     // Timeout - service didn't come back
     term.write('\r\x1b[K'); // Clear the countdown line
     this.writeLine(term, '');
-    this.writeLine(term, '\x1b[33m⚠️  Service did not respond within 20 seconds\x1b[0m');
+    this.writeLine(term, '\x1b[33m⚠️  Service did not respond within 60 seconds\x1b[0m');
     this.writeLine(term, '');
     this.writeInfo(term, 'The service may still be starting. Try: status');
     this.writeLine(term, '');
