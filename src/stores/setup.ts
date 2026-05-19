@@ -36,6 +36,12 @@ export const useSetupStore = defineStore('setup', () => {
   const adminPassword = ref('');
   const confirmPassword = ref('');
 
+  // USB / TCP modem extra config
+  const usbPort = ref('/dev/ttyACM0');
+  const tcpHost = ref('');
+  const tcpPort = ref(5055);
+  const tcpToken = ref('');
+
   // Custom radio settings
   const useCustomRadio = ref(false);
   const customRadio = ref({
@@ -63,8 +69,13 @@ export const useSetupStore = defineStore('setup', () => {
         return nodeName.value.trim().length > 0;
       case 3:
         return selectedHardwareConnection.value !== null;
-      case 4:
-        return selectedHardware.value !== null;
+      case 4: {
+        if (!selectedHardware.value) return false;
+        const k = selectedHardware.value.key.toLowerCase();
+        if (k === 'kiss' || k === 'pymc_usb') return usbPort.value.trim().length > 0;
+        if (k === 'pymc_tcp') return tcpHost.value.trim().length > 0;
+        return true;
+      }
       case 5:
         return useCustomRadio.value
           ? customRadio.value.frequency &&
@@ -182,6 +193,29 @@ export const useSetupStore = defineStore('setup', () => {
           hardware_key: selectedHardware.value?.key,
           radio_preset: radioConfig,
           admin_password: adminPassword.value,
+          ...(selectedHardware.value && (() => {
+            const k = selectedHardware.value!.key.toLowerCase();
+            if (k === 'kiss') {
+              return {
+                kiss_port: usbPort.value.trim() || '/dev/ttyUSB0',
+                kiss_baud_rate: 115200,
+              };
+            }
+            if (k === 'pymc_usb') {
+              return {
+                pymc_usb_port: usbPort.value.trim() || '/dev/ttyACM0',
+                pymc_usb_baudrate: 921600,
+              };
+            }
+            if (k === 'pymc_tcp') {
+              return {
+                pymc_tcp_host: tcpHost.value.trim(),
+                pymc_tcp_port: tcpPort.value,
+                pymc_tcp_token: tcpToken.value.trim(),
+              };
+            }
+            return {};
+          })()),
         }),
       });
 
@@ -236,6 +270,10 @@ export const useSetupStore = defineStore('setup', () => {
     };
     adminPassword.value = '';
     confirmPassword.value = '';
+    usbPort.value = '/dev/ttyACM0';
+    tcpHost.value = '';
+    tcpPort.value = 5055;
+    tcpToken.value = '';
     error.value = null;
   }
 
@@ -248,6 +286,10 @@ export const useSetupStore = defineStore('setup', () => {
     selectedHardwareConnection,
     selectedRadioPreset,
     useCustomRadio,
+    usbPort,
+    tcpHost,
+    tcpPort,
+    tcpToken,
     customRadio,
     adminPassword,
     confirmPassword,

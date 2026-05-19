@@ -125,7 +125,7 @@ const stepTitles = [
   'Welcome',
   'Repeater Name',
   'Connection Type',
-  'Hardware Selection',
+  'Hardware & Connection',
   'Radio Configuration',
   'Security Setup',
 ];
@@ -362,10 +362,7 @@ const stepTitles = [
           </div>
 
           <!-- Hardware Selection Step -->
-          <div v-else-if="setupStore.currentStep === 4" class="space-y-6 mt-8">
-            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
-              Select your hardware board type
-            </p>
+          <div v-else-if="setupStore.currentStep === 4" class="mt-8">
             <div
               v-if="setupStore.isLoading"
               class="text-center text-content-secondary dark:text-content-muted"
@@ -384,25 +381,156 @@ const stepTitles = [
             >
               No hardware options available for this connection type
             </div>
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-              <button
-                v-for="hardware in filteredHardwareOptions"
-                :key="hardware.key"
-                @click="setupStore.selectedHardware = hardware"
-                :class="[
-                  'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
-                  setupStore.selectedHardware?.key === hardware.key
-                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
-                    : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
-                ]"
-              >
-                <div class="font-medium text-content-primary dark:text-content-primary mb-1">
-                  {{ hardware.name }}
+            <div v-else class="max-w-3xl mx-auto space-y-8">
+
+              <!-- Phase 1: Hardware picker -->
+              <div>
+                <div class="flex items-center gap-3 mb-4">
+                  <div
+                    :class="[
+                      'w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-all',
+                      setupStore.selectedHardware
+                        ? 'bg-primary text-white'
+                        : 'bg-primary text-white',
+                    ]"
+                  >
+                    <svg v-if="setupStore.selectedHardware" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span v-else>1</span>
+                  </div>
+                  <h3 class="font-semibold text-content-primary dark:text-content-primary">Select your hardware board</h3>
                 </div>
-                <div class="text-sm text-content-secondary dark:text-content-muted">
-                  {{ hardware.description || hardware.key }}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">
+                  <button
+                    v-for="hardware in filteredHardwareOptions"
+                    :key="hardware.key"
+                    @click="setupStore.selectedHardware = hardware"
+                    :class="[
+                      'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
+                      setupStore.selectedHardware?.key === hardware.key
+                        ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
+                        : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                    ]"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div>
+                        <div class="font-medium text-content-primary dark:text-content-primary mb-1">
+                          {{ hardware.name }}
+                        </div>
+                        <div class="text-sm text-content-secondary dark:text-content-muted">
+                          {{ hardware.description || hardware.key }}
+                        </div>
+                      </div>
+                      <div v-if="setupStore.selectedHardware?.key === hardware.key" class="text-primary flex-shrink-0 mt-0.5">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
                 </div>
-              </button>
+              </div>
+
+              <!-- Phase 2: Connection details (USB or TCP only) -->
+              <Transition name="slide">
+                <div
+                  v-if="
+                    setupStore.selectedHardware &&
+                    (setupStore.selectedHardware.key.toLowerCase() === 'kiss' ||
+                      setupStore.selectedHardware.key.toLowerCase() === 'pymc_usb' ||
+                      setupStore.selectedHardware.key.toLowerCase() === 'pymc_tcp')
+                  "
+                >
+                  <!-- Step divider -->
+                  <div class="flex items-center gap-3 mb-4">
+                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                      2
+                    </div>
+                    <h3 class="font-semibold text-content-primary dark:text-content-primary">
+                      Configure the connection to your modem
+                    </h3>
+                  </div>
+
+                  <!-- USB fields -->
+                  <div
+                    v-if="
+                      setupStore.selectedHardware.key.toLowerCase() === 'kiss' ||
+                      setupStore.selectedHardware.key.toLowerCase() === 'pymc_usb'
+                    "
+                    class="pl-10"
+                  >
+                    <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
+                      <div>
+                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          Serial Port
+                        </label>
+                        <input
+                          v-model="setupStore.usbPort"
+                          type="text"
+                          class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                          placeholder="/dev/ttyACM0"
+                        />
+                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
+                          The USB-CDC device path for your modem. If you have the pyMC udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- TCP fields -->
+                  <div
+                    v-else-if="setupStore.selectedHardware.key.toLowerCase() === 'pymc_tcp'"
+                    class="pl-10"
+                  >
+                    <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
+                      <div>
+                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          Modem Hostname or IP Address <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                          v-model="setupStore.tcpHost"
+                          type="text"
+                          class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                          placeholder="pymc-3e2834.local"
+                        />
+                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
+                          mDNS hostname, LAN IP, or domain name of the pyMC Wi-Fi modem.
+                        </p>
+                      </div>
+                      <div class="grid grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                            Port
+                          </label>
+                          <input
+                            v-model.number="setupStore.tcpPort"
+                            type="number"
+                            min="1"
+                            max="65535"
+                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                            placeholder="5055"
+                          />
+                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Default is 5055.</p>
+                        </div>
+                        <div>
+                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                            Auth Token
+                            <span class="font-normal text-content-muted ml-1">(optional)</span>
+                          </label>
+                          <input
+                            v-model="setupStore.tcpToken"
+                            type="password"
+                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                            placeholder="Leave blank if none"
+                          />
+                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
             </div>
           </div>
 
