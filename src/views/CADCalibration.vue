@@ -85,7 +85,7 @@ const showBestResult = ref(false);
 const showNoResults = ref(false);
 
 // Timer for elapsed time
-let elapsedTimer: number | null = null;
+let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 
 // Plotly chart configuration
 const plotlyConfig = {

@@ -322,7 +322,7 @@ export const useSystemStore = defineStore('system', () => {
     }
 
     // Set up interval for continuous updates (only if websockets not connected)
-    let intervalId: number | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     if (!wsConnected) {
       intervalId = setInterval(async () => {
         try {
