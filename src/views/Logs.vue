@@ -22,7 +22,7 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 
 // Auto-refresh interval
-let refreshInterval: number | null = null;
+let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
 // Extract logger name from log message
 const extractLoggerName = (message: string): string => {

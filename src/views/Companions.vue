@@ -92,7 +92,13 @@ async function createIdentity() {
 }
 
 async function updateIdentity() {
-  const payload: Record<string, unknown> = {
+  const payload: {
+    name: string;
+    new_name?: string;
+    identity_key?: string;
+    type?: 'room_server' | 'companion';
+    settings?: Record<string, unknown>;
+  } = {
     name: editOriginalName.value,
     identity_key: editingIdentity.value.identity_key,
     type: 'companion',
