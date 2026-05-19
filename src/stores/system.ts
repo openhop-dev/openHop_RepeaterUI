@@ -1,11 +1,40 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import ApiService from '@/utils/api';
+import ApiService, { apiClient } from '@/utils/api';
 import type { SystemStats } from '@/types/api';
+import { usePacketStore } from './packets';
+
+const CONFIG_CACHE_KEY = 'pymc_config_cache';
+
+function loadConfigCache(): SystemStats['config'] | null {
+  try {
+    const raw = sessionStorage.getItem(CONFIG_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as SystemStats['config']) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveConfigCache(config: SystemStats['config']) {
+  if (!config) return;
+  try {
+    sessionStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(config));
+  } catch {}
+}
+
+function clearConfigCache() {
+  try {
+    sessionStorage.removeItem(CONFIG_CACHE_KEY);
+  } catch {}
+}
 
 export const useSystemStore = defineStore('system', () => {
-  // State
-  const stats = ref<SystemStats | null>(null);
+  // Seed stats with cached config so map coordinates are available immediately,
+  // before the first /stats fetch completes
+  const _cachedConfig = loadConfigCache();
+  const stats = ref<SystemStats | null>(
+    _cachedConfig ? ({ config: _cachedConfig } as SystemStats) : null,
+  );
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const lastUpdated = ref<Date | null>(null);
@@ -84,40 +113,81 @@ export const useSystemStore = defineStore('system', () => {
   };
 
   // Actions
-  async function fetchStats() {
-    try {
-      isLoading.value = true;
-      error.value = null;
+  let _fetchPromise: Promise<SystemStats> | null = null;
 
-      const response = await ApiService.get<SystemStats>('/stats');
+  async function fetchStats(options?: { onFirstByte?: () => void }): Promise<SystemStats> {
+    // Deduplicate: if a fetch is already in flight return the same promise
+    if (_fetchPromise !== null) return _fetchPromise;
 
-      if (response.success && response.data) {
-        stats.value = response.data;
+    _fetchPromise = (async (): Promise<SystemStats> => {
+      try {
+        isLoading.value = true;
+        error.value = null;
+
+        // /stats is slow on embedded hardware (SPI reads, config parsing) and the
+        // response body is large. A total-elapsed timeout abandons slow-but-active
+        // transfers. Instead use an idle timeout: reset the clock on every incoming
+        // chunk so we only abort if the connection actually goes silent.
+        const controller = new AbortController();
+        const IDLE_MS = 15_000;
+        let idleTimer = window.setTimeout(() => controller.abort(), IDLE_MS);
+        let firstByteReceived = false;
+        const resetIdle = () => {
+          if (!firstByteReceived) {
+            firstByteReceived = true;
+            options?.onFirstByte?.();
+          }
+          clearTimeout(idleTimer);
+          idleTimer = window.setTimeout(() => controller.abort(), IDLE_MS);
+        };
+
+        let rawResponse;
+        try {
+          rawResponse = await apiClient.get('/stats', {
+            signal: controller.signal,
+            onDownloadProgress: resetIdle,
+            timeout: 0, // disable instance-level timeout; idle timer via AbortController handles it
+          });
+        } finally {
+          clearTimeout(idleTimer);
+        }
+
+        // apiClient returns the axios response directly; unwrap to match ApiResponse shape
+        const response = rawResponse.data as import('@/utils/api').ApiResponse<SystemStats>;
+
+        let statsData: SystemStats;
+        if (response.success && response.data) {
+          statsData = response.data;
+        } else if (response && 'version' in response) {
+          // Handle case where API returns stats directly without wrapping
+          statsData = response as unknown as SystemStats;
+        } else {
+          throw new Error(response.error || 'Failed to fetch stats');
+        }
+
+        stats.value = statsData;
         lastUpdated.value = new Date();
+        updateControlStatesFromStats(statsData);
+        saveConfigCache(statsData.config);
+        // Keep packetStore.systemStats in sync — avoids a redundant /stats fetch
+        usePacketStore().systemStats = statsData;
 
-        // Update control states from config if available
-        updateControlStatesFromStats(response.data);
-
-        return response.data;
-      } else if (response && 'version' in response) {
-        // Handle case where API returns stats directly without wrapping
-        const directStats = response as unknown as SystemStats;
-        stats.value = directStats;
-        lastUpdated.value = new Date();
-
-        updateControlStatesFromStats(directStats);
-
-        return directStats;
-      } else {
-        throw new Error(response.error || 'Failed to fetch stats');
+        return statsData;
+      } catch (err) {
+        error.value = err instanceof Error ? err.message : 'Unknown error occurred';
+        console.error('Error fetching stats:', err);
+        throw err;
+      } finally {
+        isLoading.value = false;
       }
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Unknown error occurred';
-      console.error('Error fetching stats:', err);
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
+    })();
+
+    // Clear dedup ref when the fetch settles (success or failure)
+    void _fetchPromise.finally(() => {
+      _fetchPromise = null;
+    });
+
+    return _fetchPromise;
   }
 
   function updateControlStatesFromStats(statsData: SystemStats) {
@@ -278,6 +348,7 @@ export const useSystemStore = defineStore('system', () => {
     dutyCycleEnabled.value = true;
     dutyCycleUtilization.value = 0;
     dutyCycleMax.value = 10;
+    clearConfigCache();
   }
 
   return {

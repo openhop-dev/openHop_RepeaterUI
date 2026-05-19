@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -48,25 +49,6 @@ const emit = defineEmits<{
 const mapContainer = ref<HTMLDivElement>();
 let map: L.Map | null = null;
 
-// Format functions
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString();
-};
-
-const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
-  return `${rssi} dBm`;
-};
-
-const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr.toFixed(1)} dB`;
-};
-
-const formatRouteType = (routeType?: number | null) => {
-  const routes = { 0: 'Transport Flood', 1: 'Flood', 2: 'Direct', 3: 'Transport Direct' };
-  return routes[(routeType as keyof typeof routes) || 0] || 'Unknown';
-};
 
 const formatContactType = (contactType: string) => {
   const types: Record<string, string> = {
@@ -277,9 +259,14 @@ watch(
 
 // Get signal quality
 const signalQuality = computed(() => {
-  if (!props.neighbor?.rssi) return null;
+  if (!props.neighbor) return null;
   return getSignalQuality(props.neighbor.rssi);
 });
+
+// Signal bar height lookup — i is 1-based (v-for="i in 5")
+// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
+// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
+const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 </script>
 
 <template>
@@ -434,17 +421,20 @@ const signalQuality = computed(() => {
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex gap-0.5">
-                        <div
-                          v-for="i in 4"
-                          :key="i"
-                          class="w-1 h-3 rounded-sm"
-                          :class="
-                            i <= signalQuality.bars
-                              ? signalQuality.color
-                              : 'bg-gray-300 dark:bg-gray-700'
-                          "
-                        ></div>
+                      <div class="flex items-end gap-0.5">
+                        <template v-for="i in 5" :key="i">
+                          <div
+                            :class="[
+                              'w-1 transition-colors',
+                              BAR_HEIGHTS_SM[i - 1],
+                              i <= signalQuality.bars
+                                ? signalQuality.color
+                                : 'text-gray-600 dark:text-gray-700',
+                            ]"
+                          >
+                            <div class="w-full h-full bg-current rounded-sm"></div>
+                          </div>
+                        </template>
                       </div>
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
@@ -527,12 +517,12 @@ const signalQuality = computed(() => {
                       v-if="distance !== null"
                       class="text-content-primary dark:text-content-primary font-medium"
                     >
-                      {{ distance.toFixed(2) }} km
+                      {{ `${distance.toFixed(2)} km` }}
                     </div>
                     <button
                       v-else
                       @click="copyCoordinates"
-                      class="w-full px-3 py-1.5 bg-primary hover:bg-primary/90 dark:bg-gray-700 dark:hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                      class="w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -559,7 +549,7 @@ const signalQuality = computed(() => {
             <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/10 flex-shrink-0">
               <button
                 @click="emit('close')"
-                class="w-full px-4 py-2.5 bg-primary hover:bg-primary/90 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
               >
                 Close
               </button>

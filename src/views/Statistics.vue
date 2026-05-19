@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, nextTick, toRaw, watch, markRaw } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed, nextTick, toRaw, markRaw } from 'vue';
 import { usePacketStore } from '@/stores/packets';
-import { useWebSocketStore } from '@/stores/websocket';
-import ApiService from '@/utils/api';
+import { streamingGet } from '@/utils/streamingFetch';
 import SparklineChart from '@/components/ui/Sparkline.vue';
-import { getPreference, setPreference } from '@/utils/preferences';
+import ChartCard from '@/components/ui/ChartCard.vue';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -24,9 +24,8 @@ import {
   TimeScale,
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
-// Import Plotly.js for 3D pie chart
-import Plotly from 'plotly.js-dist-min';
-import { useManagedPolling } from '@/composables/useManagedPolling';
+
+
 
 defineOptions({ name: 'StatisticsView' });
 
@@ -57,11 +56,6 @@ interface MetricsData {
   }>;
 }
 
-interface PacketTypeSeries {
-  name: string;
-  type: string;
-  data: Array<[number, number]>;
-}
 
 interface NoiseFloorData {
   chart_data: Array<{
@@ -98,22 +92,61 @@ interface SignalMetrics {
 }
 
 const packetStore = usePacketStore();
-const websocketStore = useWebSocketStore();
-const isUpdatingCharts = ref(false);
 
-// Helper function to get theme-aware colors
+// Returns Chart.js time-axis unit and display format appropriate for the selected range.
+// ≤ 24 h → hour ticks with HH:mm; 24–48 h → include day name; > 48 h → day ticks with date.
+const getChartTimeConfig = (hours: number) =>
+  hours > 48
+    ? ({ unit: 'day' as const, displayFormats: { day: 'EEE MMM d' } })
+    : hours > 24
+    ? ({ unit: 'hour' as const, displayFormats: { hour: 'EEE HH:mm' } })
+    : ({ unit: 'hour' as const, displayFormats: { hour: 'HH:mm' } });
+
+// Per-chart loading status text driven by streamingGet phase callbacks
+const chartStatus = reactive<Record<string, string>>({
+  packetRate: 'Connecting...',
+  noiseFloor: 'Connecting...',
+  routePie: 'Connecting...',
+});
+
+// Helper function to get theme-aware chrome colors (grid lines, ticks, labels)
 const getThemeColors = () => {
   const isDark = document.documentElement.classList.contains('dark');
   return {
-    gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    tickColor: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
+    gridColor:   isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    tickColor:   isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
     legendColor: isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-    titleColor: isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+    titleColor:  isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
   };
 };
 
+// Physical upper bound for packet rate data from the backend.
+// The API returns rates in packets/second (RRD DERIVE: count / step_s, where step = 60s).
+// ~100ms on-air time is an estimate based on observed averages at the most common MeshCore
+// settings — actual airtime varies with SF/BW/payload. This gives ~10 pkts/s; guard is set
+// at 2× to provide headroom while still rejecting the corrupt RRD spikes (6M–110M pkts/s).
+const PACKET_RATE_GUARD = 20; // pkts/s — hard cap applied before bucketing/sparklines
+
+// Chart palette — fixed vibrant colours, same in both light and dark mode.
+// Matches the pattern used in SystemStats.vue and StatsCards.vue.
+const CHART_COLORS = {
+  tx:             '#F59E0B',              // amber — TX/hr series, CRC errors sparkline
+  rx:             '#C084FC',              // violet — RX/hr series
+  noiseFloor:     '#F59E0B',              // amber — noise floor axis ticks
+  noiseFloorFill: 'rgba(245, 158, 11, 0.8)', // amber at 80% — scatter dot fill
+  noiseFloorGrid: 'rgba(245, 158, 11, 0.2)', // amber at 20% — y-axis grid tint
+  totalRx:        '#AAE8E8',              // teal   — Total RX sparkline
+  totalTx:        '#FFC246',              // bright amber — Total TX sparkline
+  crcErrors:      '#F59E0B',              // amber — CRC errors sparkline
+  packetTypes: [
+    '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F87171',
+    '#06B6D4', '#84CC16', '#F472B6', '#10B981',
+  ],
+  routes: ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA', '#F87171'],
+} as const;
+
 // Time period selection
-const selectedHours = ref(getPreference('statistics_selectedHours', 24));
+const selectedHours = ref(24);
 const timeOptions = [
   { value: 1, label: '1 Hour' },
   { value: 6, label: '6 Hours' },
@@ -124,12 +157,10 @@ const timeOptions = [
 ];
 
 // Watch for changes and persist to localStorage
-watch(selectedHours, (value) => setPreference('statistics_selectedHours', value));
 
 // State for different metrics
 const metricsData = ref<MetricsData | null>(null);
 const noiseFloorData = ref<NoiseFloorData | null>(null);
-const packetTypeData = ref<PacketTypeSeries[]>([]);
 const routeStatsData = ref<RouteStatsData | null>(null);
 const signalMetricsHistory = ref<SignalMetrics[]>([]);
 const crcErrorData = ref<Array<{ timestamp: number; count: number }>>([]);
@@ -139,41 +170,33 @@ const error = ref<string | null>(null);
 // Chart loading states
 const chartLoadingStates = ref({
   packetRate: true,
-  packetType: true,
-  noiseFloor: false, // This loads fast
+  noiseFloor: false,
   routePie: true,
-  sparklines: true,
+  sparklineMetrics: true,
+  sparklineCrc: true,
 });
 
-// Chart error states
-const packetRateChartError = ref(false);
-const packetTypeChartError = ref(false);
-const routePieChartError = ref(false);
+// Chart error states (null = no error, string = error message shown in ChartCard overlay)
+const packetRateChartError = ref<string | null>(null);
+const routePieChartError = ref<string | null>(null);
+const noiseFloorChartError = ref<string | null>(null);
+const crcDataError = ref<string | null>(null);
 
 // Chart instances
 const packetRateChart = ref<ChartJS | null>(null);
-const packetTypeChart = ref<ChartJS | null>(null);
 const signalMetricsChart = ref<ChartJS | null>(null);
 
 // Canvas refs
 const packetRateCanvasRef = ref<HTMLCanvasElement | null>(null);
-const packetTypeCanvasRef = ref<HTMLCanvasElement | null>(null);
 const signalMetricsCanvasRef = ref<HTMLCanvasElement | null>(null);
-// 3D Pie chart div ref for Plotly
-const signalPie3DRef = ref<HTMLDivElement | null>(null);
 
-// Top stats computed
-const topStats = computed(() => {
-  const stats = packetStore.packetStats;
-  if (!stats) {
-    return { totalRx: 0, totalTx: 0 };
-  }
-
-  return {
-    totalRx: stats.total_packets || 0,
-    totalTx: stats.transmitted_packets || 0,
-  };
-});
+// This is a historical reporting page — data loads on mount and on explicit time-range
+// changes only. Prior to this revision the page polled every 30s and read reactive store
+// refs, but the data resolution meant those updates carried no meaningful change; all
+// live packet data is on the Dashboard. topStats is a local snapshot rather than a
+// computed on packetStore.packetStats so that WebSocket pushes cannot overwrite the
+// time-scoped result between user interactions.
+const topStats = ref({ totalRx: 0, totalTx: 0 });
 
 // Aggregate data into buckets - ~72 buckets regardless of time range
 const aggregateToBuckets = (data: Array<[number, number]>, hours: number) => {
@@ -216,10 +239,16 @@ const sparklineData = computed(() => {
     const txSeries = metricsData.value.series.find((s) => s.type === 'tx_count');
 
     if (rxSeries?.data) {
-      rxSparkline = aggregateToBuckets(rxSeries.data, selectedHours.value);
+      rxSparkline = aggregateToBuckets(
+        rxSeries.data.map(([ts, v]): [number, number] => [ts, v > PACKET_RATE_GUARD ? 0 : v]),
+        selectedHours.value,
+      );
     }
     if (txSeries?.data) {
-      txSparkline = aggregateToBuckets(txSeries.data, selectedHours.value);
+      txSparkline = aggregateToBuckets(
+        txSeries.data.map(([ts, v]): [number, number] => [ts, v > PACKET_RATE_GUARD ? 0 : v]),
+        selectedHours.value,
+      );
     }
   }
 
@@ -244,21 +273,23 @@ const fetchAllData = async () => {
     isLoading.value = true;
     error.value = null;
 
-    // Only fetch the essential packet stats first - this should be instant
-    await Promise.all([
-      packetStore.fetchPacketStats({ hours: selectedHours.value }),
-      packetStore.fetchSystemStats(),
-    ]);
+    const statsResponse = await streamingGet<{ total_packets?: number; transmitted_packets?: number }>(
+      '/packet_stats',
+      { hours: selectedHours.value },
+    );
+    topStats.value = {
+      totalRx: statsResponse.data?.total_packets || 0,
+      totalTx: statsResponse.data?.transmitted_packets || 0,
+    };
 
-    // Show the basic stats immediately
     isLoading.value = false;
-
-    // Start loading charts immediately in parallel
-    loadChartData();
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch data';
     isLoading.value = false;
   }
+
+  // Load charts in parallel without blocking the totals display
+  loadChartData();
 };
 
 // Load chart data without blocking UI
@@ -266,103 +297,117 @@ const loadChartData = async () => {
   // Reset chart loading states - all true for synchronized loading
   chartLoadingStates.value = {
     packetRate: true,
-    packetType: true,
     noiseFloor: true,
     routePie: true,
-    sparklines: true,
+    sparklineMetrics: true,
+    sparklineCrc: true,
   };
 
-  // Load all chart data in parallel immediately
-  const promises = [
-    loadMetricsData(),
-    loadPacketTypeData(),
-    loadRouteStatsData(),
-    loadNoiseFloorData(),
-    loadCrcErrorData(),
-  ];
-
-  // Wait for all data to load, then update charts ONCE
-  try {
-    await Promise.allSettled(promises);
-
-    // Use nextTick to ensure Vue has fully rendered everything and canvas refs are available
-    await nextTick();
-
-    // If refs still aren't available, wait a bit more
-    if (!packetRateCanvasRef.value || !packetTypeCanvasRef.value) {
-      setTimeout(() => {
-        createOrUpdateCharts();
-      }, 100);
-    } else {
-      createOrUpdateCharts();
-    }
-  } catch (error) {
-    console.error('Error loading chart data:', error);
+  // Pre-populate from store caches so the chart render after Promise.allSettled
+  // has data immediately even if an individual API call is slow or fails.
+  if (packetStore.metricsGraphData) {
+    metricsData.value = packetStore.metricsGraphData as MetricsData;
   }
+  if (packetStore.crcErrorHistory.length > 0) {
+    crcErrorData.value = [...packetStore.crcErrorHistory];
+  }
+  if (packetStore.noiseFloorHistory.length > 0) {
+    noiseFloorData.value = {
+      chart_data: packetStore.noiseFloorHistory.map((p) => ({
+        timestamp: p.timestamp,
+        noise_floor_dbm: p.noise_floor_dbm,
+      })),
+    };
+    generateSignalMetricsHistory();
+  }
+
+  // Fire all fetches in parallel — each loader renders its own chart when data arrives
+  void loadMetricsData();
+  void loadRouteStatsData();
+  void loadNoiseFloorData();
+  void loadCrcErrorData();
 };
 
 const loadMetricsData = async () => {
+  chartStatus.packetRate = 'Connecting...';
+  packetRateChartError.value = null;
   try {
-    const response = await ApiService.get('/metrics_graph_data', {
+    const response = await streamingGet('/metrics_graph_data', {
       hours: selectedHours.value,
       resolution: 'average',
       metrics: 'rx_count,tx_count',
+    }, {
+      onPhaseChange: (phase) => {
+        chartStatus.packetRate = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+      },
     });
 
     if (response?.success) {
       metricsData.value = response.data as MetricsData;
     }
-  } catch {
+  } catch (err) {
+    packetRateChartError.value = err instanceof Error ? err.message : 'Failed to load';
     metricsData.value = null;
-  }
-};
-
-const loadPacketTypeData = async () => {
-  try {
-    const response = await ApiService.get('/packet_type_graph_data', {
-      hours: selectedHours.value,
-      resolution: 'average',
-      types: 'all',
-    });
-
-    if (response?.success && response.data) {
-      const data = response.data as { series: PacketTypeSeries[] };
-      packetTypeData.value = data.series || [];
+  } finally {
+    chartLoadingStates.value.packetRate = false;
+    chartLoadingStates.value.sparklineMetrics = false;
+    if (!packetRateChartError.value) {
+      await nextTick();
+      createOrUpdatePacketRateChart();
     }
-  } catch {
-    packetTypeData.value = [];
   }
 };
 
 const loadRouteStatsData = async () => {
+  chartStatus.routePie = 'Connecting...';
+  routePieChartError.value = null;
   try {
-    const response = await ApiService.get('/route_stats', { hours: selectedHours.value });
+    const response = await streamingGet('/route_stats', { hours: selectedHours.value }, {
+      onPhaseChange: (phase) => {
+        chartStatus.routePie = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+      },
+    });
 
     if (response?.success && response.data) {
       routeStatsData.value = response.data as RouteStatsData;
     }
-  } catch {
+  } catch (err) {
     routeStatsData.value = null;
+    routePieChartError.value = err instanceof Error ? err.message : 'Failed to load';
+  } finally {
+    chartLoadingStates.value.routePie = false;
   }
 };
 
 const loadNoiseFloorData = async () => {
+  chartStatus.noiseFloor = 'Connecting...';
+  noiseFloorChartError.value = null;
   try {
-    // Noise floor is recorded every 30 seconds
-    // For the selected time range, fetch all available data
-    // The backend efficiently handles the query and Chart.js can render large datasets
+    // Request exactly as many samples as the selected window can hold at 30 s/sample.
+    // No artificial cap — the server returns the right amount of data for the period.
+    // Client-side step-filter below thins for display only.
+    const limit = selectedHours.value * 120;
+    const params = { hours: selectedHours.value, limit };
 
-    const params: { hours: number; limit?: number } = { hours: selectedHours.value };
-    // No limit - fetch all data for accurate representation
-
-    const response = await ApiService.get('/noise_floor_history', params);
+    const response = await streamingGet('/noise_floor_history', params, {
+      idleTimeoutMs: 30_000,
+      onPhaseChange: (phase) => {
+        chartStatus.noiseFloor = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+      },
+    });
 
     if (response.success && response.data) {
       const responseData = response.data as NoiseFloorApiResponse;
       const historyData = responseData.history || [];
       if (Array.isArray(historyData) && historyData.length > 0) {
+        // Thin to at most 1500 evenly distributed points for rendering.
+        let display = historyData;
+        if (historyData.length > 1500) {
+          const step = Math.ceil(historyData.length / 1500);
+          display = historyData.filter((_, i) => i % step === 0);
+        }
         noiseFloorData.value = {
-          chart_data: historyData.map((item: NoiseFloorHistoryItem) => ({
+          chart_data: display.map((item: NoiseFloorHistoryItem) => ({
             timestamp: item.timestamp || Date.now() / 1000,
             noise_floor_dbm: item.noise_floor_dbm || item.noise_floor || -120,
           })),
@@ -370,14 +415,22 @@ const loadNoiseFloorData = async () => {
         generateSignalMetricsHistory();
       }
     }
-  } catch {
+  } catch (err) {
     noiseFloorData.value = { chart_data: [] };
+    noiseFloorChartError.value = err instanceof Error ? err.message : 'Failed to load';
+  } finally {
+    chartLoadingStates.value.noiseFloor = false;
+    if (!noiseFloorChartError.value) {
+      await nextTick();
+      createOrUpdateSignalMetricsChart();
+    }
   }
 };
 
 const loadCrcErrorData = async () => {
+  crcDataError.value = null;
   try {
-    const response = await ApiService.get('/crc_error_history', {
+    const response = await streamingGet('/crc_error_history', {
       hours: selectedHours.value,
     });
 
@@ -385,8 +438,11 @@ const loadCrcErrorData = async () => {
       const data = response.data as { history: Array<{ timestamp: number; count: number }> };
       crcErrorData.value = data.history || [];
     }
-  } catch {
+  } catch (err) {
     crcErrorData.value = [];
+    crcDataError.value = err instanceof Error ? err.message : 'Failed to load';
+  } finally {
+    chartLoadingStates.value.sparklineCrc = false;
   }
 };
 
@@ -395,17 +451,17 @@ const onTimeRangeChange = () => {
   // Immediately show loading state for ALL charts
   chartLoadingStates.value = {
     packetRate: true,
-    packetType: true,
     noiseFloor: true,
     routePie: true,
-    sparklines: true,
+    sparklineMetrics: true,
+    sparklineCrc: true,
   };
   // Destroy existing charts first to prevent memory leaks
   destroyAllCharts();
   // Reset error states
-  packetRateChartError.value = false;
-  packetTypeChartError.value = false;
-  routePieChartError.value = false;
+  packetRateChartError.value = null;
+  routePieChartError.value = null;
+  noiseFloorChartError.value = null;
   // Fetch new data
   fetchAllData();
 };
@@ -427,56 +483,6 @@ const generateSignalMetricsHistory = () => {
   }
 };
 
-// Chart creation and update functions
-const createOrUpdateCharts = () => {
-  if (isUpdatingCharts.value) {
-    return;
-  }
-
-  isUpdatingCharts.value = true;
-
-  try {
-    createOrUpdatePacketRateChart();
-    createOrUpdatePacketTypeChart();
-    createOrUpdateSignalMetricsChart();
-    createOrUpdateSignalPieChart();
-
-    // Clear ALL loading states together after charts are created
-    setTimeout(() => {
-      // Clear all loading states at once for synchronized reveal
-      chartLoadingStates.value = {
-        packetRate: false,
-        packetType: false,
-        noiseFloor: false,
-        routePie: false,
-        sparklines: false,
-      };
-
-      // Force a DOM update to ensure charts are visible
-      setTimeout(() => {
-        const rawPacketRateChart = toRaw(packetRateChart.value);
-        const rawPacketTypeChart = toRaw(packetTypeChart.value);
-        const rawSignalMetricsChart = toRaw(signalMetricsChart.value);
-
-        if (rawPacketRateChart) {
-          rawPacketRateChart.update('none');
-        }
-        if (rawPacketTypeChart) {
-          rawPacketTypeChart.update('none');
-        }
-        if (rawSignalMetricsChart) {
-          rawSignalMetricsChart.update('none');
-        }
-      }, 50);
-    }, 100);
-  } catch (error) {
-    console.error('Error creating/updating charts:', error);
-    // Reset chart instances on error to prevent memory leaks
-    destroyAllCharts();
-  } finally {
-    isUpdatingCharts.value = false;
-  }
-};
 
 // Safely destroy all charts to prevent memory leaks
 const destroyAllCharts = () => {
@@ -485,17 +491,9 @@ const destroyAllCharts = () => {
       packetRateChart.value.destroy();
       packetRateChart.value = null;
     }
-    if (packetTypeChart.value) {
-      packetTypeChart.value.destroy();
-      packetTypeChart.value = null;
-    }
     if (signalMetricsChart.value) {
       signalMetricsChart.value.destroy();
       signalMetricsChart.value = null;
-    }
-    // Clear Plotly 3D chart
-    if (signalPie3DRef.value) {
-      Plotly.purge(signalPie3DRef.value);
     }
   } catch (e) {
     console.error('Error destroying charts:', e);
@@ -518,55 +516,43 @@ const createOrUpdatePacketRateChart = () => {
 
     if (rxSeries?.data) {
       rxData = rxSeries.data.map(([timestamp, value]) => {
-        // Your timestamps appear to be in microseconds (1762811880000000)
-        // Need to convert to milliseconds for Chart.js
         let normalizedTimestamp = timestamp;
         if (timestamp > 1e15) {
-          // Timestamp is in microseconds, divide by 1000 to get milliseconds
           normalizedTimestamp = timestamp / 1000;
         } else if (timestamp > 1e12) {
-          // Timestamp is already in milliseconds
           normalizedTimestamp = timestamp;
         } else if (timestamp > 1e9) {
-          // Timestamp is in seconds, multiply by 1000 to get milliseconds
           normalizedTimestamp = timestamp * 1000;
         } else {
-          // Timestamp is too small, probably invalid
           normalizedTimestamp = Date.now();
         }
-        return { x: normalizedTimestamp, y: value };
+        return { x: normalizedTimestamp, y: value > PACKET_RATE_GUARD ? 0 : value * 3600 };
       });
     }
     if (txSeries?.data) {
       txData = txSeries.data.map(([timestamp, value]) => {
-        // Your timestamps appear to be in microseconds (1762811880000000)
-        // Need to convert to milliseconds for Chart.js
         let normalizedTimestamp = timestamp;
         if (timestamp > 1e15) {
-          // Timestamp is in microseconds, divide by 1000 to get milliseconds
           normalizedTimestamp = timestamp / 1000;
         } else if (timestamp > 1e12) {
-          // Timestamp is already in milliseconds
           normalizedTimestamp = timestamp;
         } else if (timestamp > 1e9) {
-          // Timestamp is in seconds, multiply by 1000 to get milliseconds
           normalizedTimestamp = timestamp * 1000;
         } else {
-          // Timestamp is too small, probably invalid
           normalizedTimestamp = Date.now();
         }
-        return { x: normalizedTimestamp, y: value };
+        return { x: normalizedTimestamp, y: value > PACKET_RATE_GUARD ? 0 : value * 3600 };
       });
     }
   }
 
   // Check if we have data
   if (rxData.length === 0 && txData.length === 0) {
-    packetRateChartError.value = true;
+    packetRateChartError.value = 'No data available for the selected time range';
     return;
   }
 
-  packetRateChartError.value = false;
+  packetRateChartError.value = null;
 
   // Always destroy and recreate the chart to prevent memory leaks
   if (packetRateChart.value) {
@@ -644,8 +630,8 @@ const createOrUpdatePacketRateChart = () => {
           {
             label: 'TX/hr',
             data: plainTxData,
-            borderColor: '#F59E0B',
-            backgroundColor: '#F59E0B',
+            borderColor: CHART_COLORS.tx,
+            backgroundColor: CHART_COLORS.tx,
             borderWidth: 2,
             fill: 'origin',
             tension: 0.4,
@@ -656,8 +642,8 @@ const createOrUpdatePacketRateChart = () => {
           {
             label: 'RX/hr',
             data: plainRxData,
-            borderColor: '#C084FC',
-            backgroundColor: '#C084FC',
+            borderColor: CHART_COLORS.rx,
+            backgroundColor: CHART_COLORS.rx,
             borderWidth: 2,
             fill: 'origin',
             tension: 0.4,
@@ -704,7 +690,7 @@ const createOrUpdatePacketRateChart = () => {
                 const label = context.dataset?.label || '';
                 const y = context.parsed?.y;
                 if (y == null) return label;
-                return `${label}: ${y.toFixed(3)}`;
+                return `${label}: ${y.toFixed(1)}`;
               },
             },
           },
@@ -712,12 +698,7 @@ const createOrUpdatePacketRateChart = () => {
         scales: {
           x: {
             type: 'time',
-            time: {
-              unit: 'hour',
-              displayFormats: {
-                hour: 'HH:mm',
-              },
-            },
+            time: getChartTimeConfig(selectedHours.value),
             // Set explicit time bounds to show full requested range
             min: Date.now() - selectedHours.value * 3600 * 1000,
             max: Date.now(),
@@ -731,13 +712,18 @@ const createOrUpdatePacketRateChart = () => {
           },
           y: {
             beginAtZero: false,
+            title: {
+              display: true,
+              text: 'Packets / Hour',
+              color: getThemeColors().tickColor,
+            },
             grid: {
               color: getThemeColors().gridColor,
             },
             ticks: {
               color: getThemeColors().tickColor,
               callback: function (value) {
-                return typeof value === 'number' ? value.toFixed(3) : value;
+                return typeof value === 'number' ? value.toFixed(1) : value;
               },
             },
             min: yMin,
@@ -751,115 +737,10 @@ const createOrUpdatePacketRateChart = () => {
     packetRateChart.value = markRaw(chartInstance);
   } catch (error) {
     console.error('Error creating packet rate chart:', error);
-    packetRateChartError.value = true;
+    packetRateChartError.value = 'Failed to render chart';
   }
 };
 
-const createOrUpdatePacketTypeChart = () => {
-  if (!packetTypeCanvasRef.value) return;
-
-  const ctx = packetTypeCanvasRef.value.getContext('2d');
-  if (!ctx) return;
-
-  // Process packet type data
-  const labels: string[] = [];
-  const data: number[] = [];
-  const colors = [
-    '#60A5FA',
-    '#34D399',
-    '#FBBF24',
-    '#A78BFA',
-    '#F87171',
-    '#06B6D4',
-    '#84CC16',
-    '#F472B6',
-    '#10B981',
-  ];
-
-  if (packetTypeData.value.length > 0) {
-    packetTypeData.value.forEach((series) => {
-      const total = series.data ? series.data.reduce((sum, point) => sum + point[1], 0) : 0;
-      if (total > 0) {
-        labels.push(series.name.replace(/\([^)]*\)/g, '').trim());
-        data.push(total);
-      }
-    });
-  } else {
-    // No real data available
-    packetTypeChartError.value = true;
-    return;
-  }
-
-  packetTypeChartError.value = false;
-
-  // Always destroy and recreate the chart to prevent memory leaks
-  if (packetTypeChart.value) {
-    packetTypeChart.value.destroy();
-    packetTypeChart.value = null;
-  }
-
-  try {
-    // Convert Vue reactive data to plain objects to avoid Chart.js recursion issues
-    const plainLabels = JSON.parse(JSON.stringify(labels));
-    const plainData = JSON.parse(JSON.stringify(data));
-
-    // Create chart instance and immediately convert to raw to prevent Vue reactivity
-    const chartInstance = new ChartJS(ctx, {
-      type: 'bar',
-      data: {
-        labels: plainLabels,
-        datasets: [
-          {
-            data: plainData,
-            backgroundColor: colors.slice(0, plainData.length),
-            borderRadius: 8,
-            borderSkipped: false,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 0, // Disable animations for smoother updates
-        },
-        plugins: {
-          legend: {
-            display: false,
-          },
-        },
-        scales: {
-          x: {
-            grid: {
-              display: false,
-            },
-            ticks: {
-              color: 'rgba(255, 255, 255, 0.7)',
-              font: {
-                size: 10,
-              },
-            },
-          },
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(255, 255, 255, 0.1)',
-            },
-            ticks: {
-              color: 'rgba(255, 255, 255, 0.7)',
-            },
-          },
-        },
-      },
-    });
-
-    // Store as raw (non-reactive) using markRaw to prevent Vue proxy recursion issues
-    packetTypeChart.value = markRaw(chartInstance);
-  } catch (error) {
-    console.error('Error creating packet type chart:', error);
-    packetTypeChartError.value = true;
-  }
-};
 
 const createOrUpdateSignalMetricsChart = () => {
   if (!signalMetricsCanvasRef.value) return;
@@ -891,13 +772,22 @@ const createOrUpdateSignalMetricsChart = () => {
       const plainNoiseData = JSON.parse(JSON.stringify(noiseData));
       if (chart.data.datasets[0]) chart.data.datasets[0].data = plainNoiseData;
 
-      // Update X-axis bounds to show full requested time range
+      // Update X-axis bounds and time unit for the selected range
       if (chart.options?.scales?.x) {
         chart.options.scales.x.min = Date.now() - selectedHours.value * 3600 * 1000;
         chart.options.scales.x.max = Date.now();
+        (chart.options.scales.x as any).time = getChartTimeConfig(selectedHours.value);
       }
 
-      chart.update('active');
+      // Refresh theme-aware colours on existing chart
+      if (chart.options?.scales?.y?.ticks) {
+        (chart.options.scales.y.ticks as any).color = getThemeColors().tickColor;
+      }
+      if (chart.options?.plugins?.legend?.labels) {
+        (chart.options.plugins.legend.labels as any).color = getThemeColors().legendColor;
+      }
+
+      chart.update();
       return;
     } catch {
       signalMetricsChart.value.destroy();
@@ -917,7 +807,7 @@ const createOrUpdateSignalMetricsChart = () => {
           label: 'Noise Floor (dBm)',
           data: plainNoiseData,
           borderWidth: 0,
-          backgroundColor: 'rgba(245, 158, 11, 0.8)',
+          backgroundColor: CHART_COLORS.noiseFloorFill,
           pointRadius: 3,
           pointHoverRadius: 5,
           pointStyle: 'circle',
@@ -972,14 +862,8 @@ const createOrUpdateSignalMetricsChart = () => {
       scales: {
         x: {
           type: 'time',
-          time: {
-            unit: 'hour',
-            displayFormats: {
-              hour: 'HH:mm',
-            },
-          },
+          time: getChartTimeConfig(selectedHours.value),
           // Set explicit time bounds to show full requested range
-          // even when data is limited to most recent 2000 points
           min: Date.now() - selectedHours.value * 3600 * 1000,
           max: Date.now(),
           grid: {
@@ -999,10 +883,10 @@ const createOrUpdateSignalMetricsChart = () => {
             color: getThemeColors().titleColor,
           },
           grid: {
-            color: 'rgba(245, 158, 11, 0.2)',
+            color: CHART_COLORS.noiseFloorGrid,
           },
           ticks: {
-            color: '#F59E0B',
+            color: getThemeColors().tickColor,
             callback: function (value) {
               return typeof value === 'number' ? value.toFixed(1) : value;
             },
@@ -1018,102 +902,6 @@ const createOrUpdateSignalMetricsChart = () => {
   signalMetricsChart.value = markRaw(chartInstance);
 };
 
-const createOrUpdateSignalPieChart = () => {
-  if (!signalPie3DRef.value) return;
-
-  // Check if we have real route data
-  if (!routeStatsData.value || !routeStatsData.value.route_totals) {
-    routePieChartError.value = true;
-    return;
-  }
-
-  routePieChartError.value = false;
-
-  // Prepare data from real route statistics
-  const routeTotals = routeStatsData.value.route_totals;
-  const labels = Object.keys(routeTotals);
-  const values = Object.values(routeTotals) as number[];
-
-  // Color scheme for different route types
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA', '#F87171'];
-
-  try {
-    // Convert Vue reactive data to plain objects
-    const plainLabels = JSON.parse(JSON.stringify(labels));
-    const plainValues = JSON.parse(JSON.stringify(values));
-    const total = plainValues.reduce((sum: number, v: number) => sum + v, 0);
-
-    // Calculate percentages
-    const percentages = plainValues.map((v: number) => (v / total) * 100);
-
-    // Create horizontal stacked bar chart - better for skewed data
-    const data = plainLabels.map((label: string, i: number) => ({
-      type: 'bar',
-      name: label,
-      x: [percentages[i]],
-      y: [''],
-      orientation: 'h',
-      marker: {
-        color: colors[i % colors.length],
-      },
-      text: percentages[i] >= 5 ? `${label} ${percentages[i].toFixed(0)}%` : '',
-      textposition: 'inside',
-      textfont: {
-        color: 'white',
-        size: 11,
-      },
-      hoverinfo: 'none',
-      insidetextanchor: 'middle',
-    }));
-
-    const layout = {
-      paper_bgcolor: 'rgba(0,0,0,0)',
-      plot_bgcolor: 'rgba(0,0,0,0)',
-      font: {
-        color: 'rgba(255, 255, 255, 0.8)',
-        size: 11,
-      },
-      margin: { t: 10, b: 60, l: 10, r: 10 },
-      barmode: 'stack',
-      showlegend: true,
-      legend: {
-        orientation: 'h',
-        x: 0,
-        y: -0.3,
-        xanchor: 'left',
-        font: {
-          color: 'rgba(255, 255, 255, 0.8)',
-          size: 10,
-        },
-      },
-      xaxis: {
-        showgrid: false,
-        showticklabels: false,
-        zeroline: false,
-        range: [0, 100],
-      },
-      yaxis: {
-        showgrid: false,
-        showticklabels: false,
-        zeroline: false,
-      },
-      hovermode: false,
-      bargap: 0,
-    };
-
-    const config = {
-      responsive: true,
-      displayModeBar: false,
-      staticPlot: true,
-    };
-
-    // Create the Plotly stacked bar chart
-    Plotly.newPlot(signalPie3DRef.value, data, layout, config);
-  } catch (error) {
-    console.error('Error creating route treemap chart:', error);
-    routePieChartError.value = true;
-  }
-};
 
 onMounted(async () => {
   // Use Vue's nextTick to ensure DOM and refs are fully ready
@@ -1126,35 +914,18 @@ onMounted(async () => {
   window.addEventListener('resize', () => {
     setTimeout(() => {
       toRaw(packetRateChart.value)?.resize();
-      toRaw(packetTypeChart.value)?.resize();
       toRaw(signalMetricsChart.value)?.resize();
-      // Resize Plotly 3D chart
-      if (signalPie3DRef.value && Plotly.Plots) {
-        Plotly.Plots.resize(signalPie3DRef.value);
-      }
     }, 100);
   });
 });
 
 onBeforeUnmount(() => {
-  // Destroy charts
   packetRateChart.value?.destroy();
-  packetTypeChart.value?.destroy();
   signalMetricsChart.value?.destroy();
-  // Clean up Plotly chart
-  if (signalPie3DRef.value) {
-    Plotly.purge(signalPie3DRef.value);
-  }
-
-  // Remove resize listener
   window.removeEventListener('resize', () => {});
 });
 
-useManagedPolling(fetchAllData, {
-  intervalMs: 30000,
-  enabled: () => !websocketStore.isConnected,
-  immediate: false,
-});
+
 </script>
 
 <template>
@@ -1179,7 +950,7 @@ useManagedPolling(fetchAllData, {
             v-for="option in timeOptions"
             :key="option.value"
             :value="option.value"
-            class="bg-white dark:bg-gray-800 text-content-primary dark:text-content-primary"
+            class="bg-surface text-content-primary"
           >
             {{ option.label }}
           </option>
@@ -1188,51 +959,43 @@ useManagedPolling(fetchAllData, {
     </div>
 
     <!-- Top Stats Cards with Sparklines -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <!-- Total RX -->
       <SparklineChart
         title="Total RX"
         :value="topStats.totalRx"
-        color="#AAE8E8"
+        :color="CHART_COLORS.totalRx"
         :data="sparklineData.totalPackets"
-        :loading="chartLoadingStates.sparklines"
+        :loading="chartLoadingStates.sparklineMetrics"
+        :error="packetRateChartError"
         variant="classic"
+        @retry="() => { chartLoadingStates.sparklineMetrics = true; chartLoadingStates.packetRate = true; packetRateChartError = null; void loadMetricsData(); }"
       />
 
       <!-- Total TX -->
       <SparklineChart
         title="Total TX"
         :value="topStats.totalTx"
-        color="#FFC246"
+        :color="CHART_COLORS.totalTx"
         :data="sparklineData.transmittedPackets"
-        :loading="chartLoadingStates.sparklines"
+        :loading="chartLoadingStates.sparklineMetrics"
+        :error="packetRateChartError"
         variant="classic"
+        @retry="() => { chartLoadingStates.sparklineMetrics = true; chartLoadingStates.packetRate = true; packetRateChartError = null; void loadMetricsData(); }"
       />
 
       <!-- CRC Errors -->
       <SparklineChart
         title="CRC Errors"
         :value="crcErrorData.reduce((sum, d) => sum + d.count, 0)"
-        color="#F59E0B"
+        :color="CHART_COLORS.crcErrors"
         :data="sparklineData.crcErrors"
-        :loading="chartLoadingStates.sparklines"
+        :loading="chartLoadingStates.sparklineCrc"
+        :error="crcDataError"
         variant="classic"
+        @retry="() => { chartLoadingStates.sparklineCrc = true; crcDataError = null; void loadCrcErrorData(); }"
       />
 
-      <!-- Packet Hash Cache Size -->
-      <SparklineChart
-        title="Packet Hash Cache"
-        :value="packetStore.systemStats?.duplicate_cache_size ?? 0"
-        color="#9F7AEA"
-        :data="[]"
-        :loading="false"
-        variant="smooth"
-        :subtitle="`Entries expire after ${(() => {
-          const ttl = packetStore.systemStats?.cache_ttl ?? 3600;
-          const minutes = Math.floor(ttl / 60);
-          return minutes >= 60 ? `${Math.floor(minutes / 60)}h` : `${minutes}m`;
-        })()}`"
-      />
     </div>
 
     <!-- Performance Metrics Section -->
@@ -1252,48 +1015,23 @@ useManagedPolling(fetchAllData, {
         </p>
         <div class="flex items-center gap-3 sm:gap-6 mb-3 sm:mb-4">
           <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-purple-400"></div>
+            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: CHART_COLORS.rx }"></div>
             <span class="text-content-secondary dark:text-content-muted text-sm">RX/hr</span>
           </div>
           <div class="flex items-center gap-2">
-            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
+            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: CHART_COLORS.tx }"></div>
             <span class="text-content-secondary dark:text-content-muted text-sm">TX/hr</span>
           </div>
         </div>
-        <div class="relative h-40 sm:h-48 rounded-lg p-2 sm:p-4">
-          <!-- Canvas always present, overlays control visibility -->
+        <ChartCard
+          class="h-40 sm:h-48 rounded-lg p-2 sm:p-4"
+          :is-loading="chartLoadingStates.packetRate"
+          :error="packetRateChartError"
+          :status="chartStatus.packetRate"
+          @retry="() => { chartLoadingStates.packetRate = true; packetRateChartError = null; void loadMetricsData(); }"
+        >
           <canvas ref="packetRateCanvasRef" class="w-full h-full relative z-10"></canvas>
-
-          <!-- Loading Spinner for Packet Rate Chart -->
-          <div
-            v-if="chartLoadingStates.packetRate"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 backdrop-blur-xs z-20"
-          >
-            <div class="text-center">
-              <div
-                class="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-purple-600 dark:border-t-purple-400 rounded-full mx-auto mb-2"
-              ></div>
-              <div class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
-                Loading packet rate data...
-              </div>
-            </div>
-          </div>
-
-          <!-- Error overlay -->
-          <div
-            v-if="packetRateChartError && !chartLoadingStates.packetRate"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 z-20"
-          >
-            <div class="text-center">
-              <div class="text-red-700 dark:text-red-400 text-sm font-semibold mb-1">
-                No Data Available
-              </div>
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Packet rate data not found
-              </div>
-            </div>
-          </div>
-        </div>
+        </ChartCard>
       </div>
     </div>
 
@@ -1306,24 +1044,15 @@ useManagedPolling(fetchAllData, {
         >
           Noise Floor Over Time
         </h3>
-        <div class="relative flex-1 min-h-[12rem] sm:min-h-[16rem] rounded-lg">
-          <canvas ref="signalMetricsCanvasRef" class="w-full h-full"></canvas>
-
-          <!-- Loading Spinner for Noise Floor Chart -->
-          <div
-            v-if="chartLoadingStates.noiseFloor"
-            class="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-white/5 backdrop-blur-xs z-20"
-          >
-            <div class="text-center">
-              <div
-                class="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-amber-600 dark:border-t-amber-400 rounded-full mx-auto mb-2"
-              ></div>
-              <div class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
-                Loading noise floor data...
-              </div>
-            </div>
-          </div>
-        </div>
+        <ChartCard
+          class="flex-1 min-h-[12rem] sm:min-h-[16rem] rounded-lg"
+          :is-loading="chartLoadingStates.noiseFloor"
+          :error="noiseFloorChartError"
+          :status="chartStatus.noiseFloor"
+          @retry="() => { chartLoadingStates.noiseFloor = true; noiseFloorChartError = null; void loadNoiseFloorData(); }"
+        >
+          <canvas ref="signalMetricsCanvasRef" class="absolute inset-0 w-full h-full"></canvas>
+        </ChartCard>
       </div>
 
       <!-- Route Distribution -->
@@ -1333,33 +1062,14 @@ useManagedPolling(fetchAllData, {
         >
           Route Distribution
         </h3>
-        <div class="flex-1 flex flex-col justify-evenly">
-          <!-- Loading state -->
-          <div v-if="chartLoadingStates.routePie" class="flex items-center justify-center flex-1">
-            <div class="text-center">
-              <div
-                class="animate-spin w-6 h-6 border-2 border-stroke-subtle dark:border-stroke/20 border-t-green-600 dark:border-t-green-400 rounded-full mx-auto mb-2"
-              ></div>
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Loading route data...
-              </div>
-            </div>
-          </div>
-
-          <!-- Error state -->
-          <div v-else-if="routePieChartError" class="flex items-center justify-center flex-1">
-            <div class="text-center">
-              <div class="text-red-700 dark:text-red-400 text-sm font-semibold mb-1">
-                No Data Available
-              </div>
-              <div class="text-content-secondary dark:text-content-muted text-xs">
-                Route statistics not found
-              </div>
-            </div>
-          </div>
-
-          <!-- Route bars -->
-          <template v-else-if="routeStatsData?.route_totals">
+        <ChartCard
+          class="flex-1 flex flex-col justify-evenly min-h-[8rem]"
+          :is-loading="chartLoadingStates.routePie"
+          :error="routePieChartError"
+          :status="chartStatus.routePie"
+          @retry="() => { chartLoadingStates.routePie = true; routePieChartError = null; void loadRouteStatsData(); }"
+        >
+          <template v-if="routeStatsData?.route_totals">
             <div
               v-for="(count, route, index) in routeStatsData.route_totals"
               :key="route"
@@ -1375,9 +1085,7 @@ useManagedPolling(fetchAllData, {
                   class="h-full rounded transition-all duration-300"
                   :style="{
                     width: `${(count / Math.max(...Object.values(routeStatsData.route_totals))) * 100}%`,
-                    backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA', '#F87171'][
-                      index % 5
-                    ],
+                    backgroundColor: CHART_COLORS.routes[index % CHART_COLORS.routes.length],
                   }"
                 ></div>
               </div>
@@ -1388,38 +1096,12 @@ useManagedPolling(fetchAllData, {
               </div>
             </div>
           </template>
-        </div>
+        </ChartCard>
       </div>
     </div>
 
-    <!-- Loading/Error States -->
-    <div v-if="isLoading" class="glass-card rounded-[15px] p-6 sm:p-8 text-center">
-      <div class="text-content-secondary dark:text-content-muted mb-2 text-sm">
-        Loading statistics...
-      </div>
-      <div
-        class="animate-spin w-6 h-6 sm:w-8 sm:h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-content-primary dark:border-t-white/70 rounded-full mx-auto"
-      ></div>
-    </div>
-
-    <div v-if="error" class="glass-card rounded-[15px] p-6 sm:p-8 text-center">
-      <div class="text-red-700 dark:text-red-400 mb-2 text-sm font-semibold">
-        Failed to load statistics
-      </div>
-      <p class="text-content-secondary dark:text-content-muted text-sm">{{ error }}</p>
-      <button
-        @click="fetchAllData"
-        class="mt-4 px-4 py-2 bg-primary hover:bg-primary/90 dark:bg-primary dark:hover:bg-primary/80 text-white font-medium rounded-lg border border-primary/20 dark:border-primary/30 transition-colors shadow-sm"
-      >
-        Retry
-      </button>
-    </div>
   </div>
 </template>
 
 <style scoped>
-/* Plotly 3D Pie Chart Styling */
-.plotly-chart {
-  background: transparent !important;
-}
 </style>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
+import Spinner from '@/components/ui/Spinner.vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Supercluster from 'supercluster';
+import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 
 // Prevent chrome detection errors
 if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).chrome) {
@@ -51,12 +53,14 @@ interface Props {
   adverts: Advert[];
   baseLatitude?: number | null;
   baseLongitude?: number | null;
+  statsLoading?: boolean;
   showLegend?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   baseLatitude: null,
   baseLongitude: null,
+  statsLoading: false,
   showLegend: true,
 });
 
@@ -109,25 +113,6 @@ const hasValidCoordinates = computed(
     Math.abs(props.baseLongitude) <= 180,
 );
 
-// Utility functions
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp * 1000).toLocaleString();
-};
-
-const formatRSSI = (rssi?: number | null) => {
-  if (!rssi) return 'N/A';
-  return `${rssi} dBm`;
-};
-
-const formatSNR = (snr?: number | null) => {
-  if (!snr) return 'N/A';
-  return `${snr} dB`;
-};
-
-const formatRouteType = (routeType?: number | null) => {
-  const routes = { 0: 'Transport Flood', 1: 'Flood', 2: 'Direct', 3: 'Transport Direct' };
-  return routes[(routeType as keyof typeof routes) || 0] || 'Unknown';
-};
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in kilometers
@@ -790,6 +775,14 @@ watch(
   { immediate: false },
 );
 
+// If base coordinates arrive after mount (slow stats response on marginal links),
+// initialise the map now that we have what we need
+watch(hasValidCoordinates, (isValid) => {
+  if (isValid && props.adverts.length > 0 && !map) {
+    nextTick(() => initializeOpenStreetMap());
+  }
+});
+
 // Lifecycle
 onMounted(() => {
   // Start observing theme changes
@@ -813,12 +806,19 @@ onUnmounted(() => {
 
 <template>
   <div class="map-container">
-    <!-- Loading indicator when coordinates are invalid -->
+    <!-- Placeholder when coordinates are unavailable -->
     <div
       v-if="!hasValidCoordinates"
       class="flex items-center justify-center h-96 glass-card backdrop-blur border border-black/6 dark:border-white/10 rounded-[12px] shadow-sm dark:shadow-none"
     >
-      <div class="text-center text-content-primary dark:text-content-primary">
+      <!-- Stats still in flight — show spinner -->
+      <div v-if="props.statsLoading" class="flex items-center gap-2 text-content-secondary dark:text-content-muted">
+        <Spinner size="xs" />
+        <p class="text-xs sm:text-sm">Fetching base station location…</p>
+      </div>
+
+      <!-- Stats returned but no valid coordinates configured -->
+      <div v-else class="text-center text-content-primary dark:text-content-primary">
         <svg
           class="w-8 h-8 mx-auto mb-2 text-content-muted dark:text-content-muted"
           fill="currentColor"
@@ -849,7 +849,7 @@ onUnmounted(() => {
     <button
       v-if="hasValidCoordinates && adverts.length > 0"
       @click="toggleLegend"
-      class="absolute bottom-3 right-3 z-[1001] flex items-center gap-2 px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-sm backdrop-blur-sm"
+      class="absolute bottom-3 right-3 z-[200] flex items-center gap-2 px-3 py-2 bg-black/40 border border-white/10 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-sm backdrop-blur-sm"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -951,7 +951,7 @@ onUnmounted(() => {
   font-size: 12px;
   color: #ffffff;
   backdrop-filter: blur(20px);
-  z-index: 1000;
+  z-index: 200;
   min-width: 150px;
   max-width: 180px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);

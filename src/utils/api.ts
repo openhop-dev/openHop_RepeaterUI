@@ -84,7 +84,7 @@ async function refreshToken(): Promise<string> {
 // Create axios instance with default configuration
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 5000, // 5 second timeout - much faster than 30 seconds
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -93,7 +93,7 @@ const apiClient: AxiosInstance = axios.create({
 // Create separate axios instance for auth endpoints (not under /api)
 const authClient: AxiosInstance = axios.create({
   baseURL: API_SERVER_URL,
-  timeout: 5000,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -223,9 +223,13 @@ export class ApiService {
   /**
    * Generic GET request
    */
-  static async get<T>(endpoint: string, params?: Record<string, unknown>): Promise<ApiResponse<T>> {
+  static async get<T>(
+    endpoint: string,
+    params?: Record<string, unknown>,
+    config?: AxiosRequestConfig,
+  ): Promise<ApiResponse<T>> {
     try {
-      const response = await apiClient.get(endpoint, { params });
+      const response = await apiClient.get(endpoint, { params, ...config });
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);

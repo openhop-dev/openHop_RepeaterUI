@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { usePacketStore } from '@/stores/packets';
-import { useWebSocketStore } from '@/stores/websocket';
-import { useManagedPolling } from '@/composables/useManagedPolling';
+import { useDataService } from '@/stores/dataService';
 import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
+import Spinner from '@/components/ui/Spinner.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
-const wsStore = useWebSocketStore();
+const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
 
@@ -407,15 +407,10 @@ const loadMoreRecords = async () => {
   }
 };
 
-onMounted(async () => {
-  // Initial fetch
-  await fetchData();
-});
-
-useManagedPolling(() => fetchData(), {
-  intervalMs: 10000,
-  enabled: () => !wsStore.isConnected,
-  immediate: false,
+onMounted(() => {
+  // Bootstrap already loaded recentPackets; this is a safety net for edge cases.
+  // WS push handles live updates; no polling needed.
+  void dataService.ensure('recentPackets');
 });
 
 onBeforeUnmount(() => {
@@ -677,7 +672,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
             <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.rssi != null ? packet.rssi.toFixed(0) : 'N/A' }}
+              {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
             </div>
             <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
               {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
@@ -1068,9 +1063,7 @@ onBeforeUnmount(() => {
       class="flex justify-center mt-6 pt-4 border-t border-stroke-subtle dark:border-stroke"
     >
       <div class="flex items-center gap-2">
-        <div
-          class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"
-        ></div>
+        <Spinner size="sm" />
         <span class="text-primary text-sm">Loading more records...</span>
       </div>
     </div>
@@ -1097,20 +1090,6 @@ onBeforeUnmount(() => {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-10px);
-}
-
-/* Spinner animation optimization */
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-spin {
-  animation: spin 0.8s linear infinite;
 }
 
 /* Packet list animations */

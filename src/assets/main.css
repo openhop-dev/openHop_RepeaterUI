@@ -32,4 +32,163 @@
   .bg-mode-segment-no-tx {
     background-color: color-mix(in srgb, var(--color-accent-red) 35%, transparent);
   }
+
+  .cfg-page-heading {
+    @apply pb-2;
+  }
+
+  .cfg-section {
+    @apply bg-transparent dark:bg-white/5 rounded-lg p-8 border border-stroke-subtle dark:border-stroke/10;
+  }
+
+  /* Padding-free variant — use when the caller controls padding/overflow */
+  .cfg-card {
+    @apply bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-stroke/10;
+  }
+
+  .cfg-btn-primary {
+    @apply px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .cfg-btn-secondary {
+    @apply px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── General-purpose buttons ────────────────────────────────────────────── */
+  /* Use outside modal/config contexts. No flex-1 — add layout classes inline. */
+  /* Never use bg-primary text-white — primary is light teal in dark mode.     */
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
+           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger {
+    @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
+           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success {
+    @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
+           bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg text-sm transition-colors
+           bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10
+           border border-stroke-subtle dark:border-stroke/20
+           text-content-primary dark:text-content-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Compact / pill variants — for inline row actions and small controls */
+
+  .btn-primary-xs {
+    @apply px-3 py-1 rounded text-xs transition-colors
+           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-danger-xs {
+    @apply px-3 py-1 rounded text-xs transition-colors
+           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-success-xs {
+    @apply px-3 py-1 rounded text-xs transition-colors
+           bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── Config form inputs ─────────────────────────────────────────────────── */
+
+  .cfg-input {
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+  }
+
+  .cfg-select {
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* ── Modal utilities ────────────────────────────────────────────────────── */
+
+  /* Standard modal backdrop (confirmations, edit dialogs) — z-[300] per layering scale */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+  }
+
+  /* Heavy backdrop for irreversible / destructive operations */
+  .modal-backdrop-heavy {
+    @apply fixed inset-0 bg-black/80 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+  }
+
+  /* Inner card — combine with max-w-md / max-w-lg / max-w-2xl in the template */
+  .modal-card {
+    @apply bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full border border-stroke-subtle dark:border-white/10;
+  }
+
+  /* ── Modal form elements ────────────────────────────────────────────────── */
+
+  /* Apply to every modal <form> — flex column with gap avoids margin-collapse brittleness */
+  .modal-form {
+    @apply flex flex-col gap-4;
+  }
+
+  /* Field label — mt-2 provides subtle breathing room within a section; gap-4 on modal-form handles section-to-section spacing */
+  .modal-field-label {
+    @apply block text-xs font-medium text-content-secondary dark:text-content-muted mt-2 mb-1;
+  }
+
+  /* Label row — for labels that sit beside an inline action (e.g. Show/Edit toggle) */
+  .modal-field-label-row {
+    @apply flex items-baseline gap-3 mt-2 mb-1;
+  }
+
+  /* Text / number / password / mono inputs */
+  .modal-input {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
+           border border-stroke-subtle dark:border-stroke/10
+           text-content-primary dark:text-content-primary
+           placeholder-content-muted dark:placeholder-content-muted/50
+           focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* <select> elements (no placeholder token needed) */
+  .modal-select {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
+           border border-stroke-subtle dark:border-stroke/10
+           text-content-primary dark:text-content-primary
+           focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* ── Modal action row + buttons ─────────────────────────────────────────── */
+
+  /* Wraps the button row at the bottom of a modal form */
+  .modal-actions {
+    @apply flex gap-3 pt-2;
+  }
+
+  /* Cancel / secondary muted action (safe to reuse for "Save Only" in 3-button rows) */
+  .modal-btn-cancel {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors
+           bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10
+           border border-stroke-subtle dark:border-stroke/20
+           text-content-primary dark:text-content-primary;
+  }
+
+  /* Primary positive action */
+  .modal-btn-primary {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
+           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary;
+  }
+
+  /* Destructive action (delete, remove) */
+  .modal-btn-danger {
+    @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
+           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red;
+  }
 }

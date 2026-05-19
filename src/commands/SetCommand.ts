@@ -1,6 +1,7 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
 import ApiService from '@/utils/api';
 import type { Terminal } from '@xterm/xterm';
+import { useSystemStore } from '@/stores/system';
 
 interface UpdateConfigResponse {
   applied?: string[];
@@ -453,6 +454,9 @@ export class SetCommand extends BaseCommand {
         } else {
           this.writeSuccess(term, 'Configuration updated');
         }
+
+        // Refresh cached stats so GetCommand and the UI reflect the new values immediately
+        void useSystemStore().fetchStats();
 
         // Show restart message only if required
         if (data.restart_required) {

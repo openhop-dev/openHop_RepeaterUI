@@ -2,12 +2,16 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
+import { useNeighborStore } from '@/stores/neighbors';
+import { CONTACT_TYPE_MAP } from '@/stores/neighbors';
 import { getUsername } from '@/utils/auth';
 import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import UpdateModal from '@/components/modals/UpdateModal.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'TopBar' });
 
@@ -15,17 +19,11 @@ interface Emits {
   (e: 'toggleMobileSidebar'): void;
 }
 
-interface Advert {
-  id: number;
-  contact_type: string;
-  node_name: string | null;
-  last_seen: number;
-}
-
 const emit = defineEmits<Emits>();
 
 const router = useRouter();
 const systemStore = useSystemStore();
+const neighborStore = useNeighborStore();
 const appRuntime = useAppRuntimeStore();
 
 const showNotifications = ref(false);
@@ -33,9 +31,7 @@ const notifRef = ref<HTMLElement | null>(null);
 const showUpdateModal = ref(false);
 const showUserMenu = ref(false);
 const userMenuRef = ref<HTMLElement | null>(null);
-const restarting = ref(false);
-const restartMessage = ref('');
-const restartFailed = ref(false);
+const showRestartModal = ref(false);
 
 // Update checking state
 const updateInfo = ref<{
@@ -56,14 +52,27 @@ const updateInfo = ref<{
   rateLimitUntil: null,
 });
 
-// Node tracking state
-const trackedNodes = ref<Record<string, Advert[]>>({});
-const loading = ref(true);
-const lastUpdateTime = ref<Date | null>(null);
 const username = ref<string>(getUsername() || 'User');
 
-// Track specific contact types
+// Track specific contact types (keys from CONTACT_TYPE_MAP)
 const targetContactTypes = ['Chat Node', 'Repeater', 'Room Server'] as const;
+const _nameToKey: Record<string, string> = Object.fromEntries(
+  Object.entries(CONTACT_TYPE_MAP).map(([k, v]) => [v, k]),
+);
+
+// Derived from neighborStore — keyed by contact type name for template compatibility
+const trackedNodes = computed<Record<string, { id: number; node_name: string | null; last_seen: number }[]>>(() => {
+  const result: Record<string, { id: number; node_name: string | null; last_seen: number }[]> = {};
+  for (const type of targetContactTypes) {
+    const key = _nameToKey[type];
+    result[type] = neighborStore.advertsByType[key] || [];
+  }
+  return result;
+});
+const loading = computed(() => neighborStore.isLoading);
+const lastUpdateTime = computed(() =>
+  neighborStore.lastFetched ? new Date(neighborStore.lastFetched) : null,
+);
 
 function handleDocClick(e: MouseEvent) {
   const target = e.target as Node;
@@ -74,39 +83,6 @@ function handleDocClick(e: MouseEvent) {
     showUserMenu.value = false;
   }
 }
-
-// Fetch tracking data
-const fetchTrackedNodes = async () => {
-  try {
-    loading.value = true;
-    const results: Record<string, Advert[]> = {};
-
-    // Fetch data for each target contact type
-    for (const contactType of targetContactTypes) {
-      try {
-        const response = await ApiService.get(
-          `/adverts_by_contact_type?contact_type=${encodeURIComponent(contactType)}&hours=168`,
-        );
-
-        if (response.success && Array.isArray(response.data)) {
-          results[contactType] = response.data;
-        } else {
-          results[contactType] = [];
-        }
-      } catch (err) {
-        console.error(`Error fetching ${contactType} nodes:`, err);
-        results[contactType] = [];
-      }
-    }
-
-    trackedNodes.value = results;
-    lastUpdateTime.value = new Date();
-  } catch (err) {
-    console.error('Error updating tracked nodes:', err);
-  } finally {
-    loading.value = false;
-  }
-};
 
 // Check for updates via the backend API (server-side GitHub check)
 const checkForUpdates = async (force = false) => {
@@ -169,77 +145,6 @@ const handleLogout = () => {
   void appRuntime.stopSession('logout');
 };
 
-const waitForService = async (maxAttempts = 20, interval = 2000) => {
-  // Use raw fetch to bypass axios interceptors (401 redirect, token refresh)
-  // Any HTTP response (even 401) means the service is back — only network
-  // errors or 5xx mean it's still restarting
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const res = await fetch('/api/stats', { signal: AbortSignal.timeout(3000) });
-      if (res.status < 500) return true;
-    } catch {
-      // network error — still down
-    }
-    await new Promise((r) => setTimeout(r, interval));
-  }
-  return false;
-};
-
-const handleRestartService = async () => {
-  if (restarting.value) return;
-  restarting.value = true;
-  restartFailed.value = false;
-  restartMessage.value = 'Sending restart request...';
-  showUserMenu.value = false;
-  try {
-    const response = await ApiService.post('/restart_service', {});
-    if (response.success) {
-      restartMessage.value = 'Service restarting, waiting for it to come back...';
-      const up = await waitForService();
-      if (up) {
-        restartMessage.value = 'Service is back! Reloading...';
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        restartMessage.value = 'Service did not respond in time. Try reloading manually.';
-        restartFailed.value = true;
-      }
-    } else {
-      restartMessage.value = response.error || 'Restart request failed';
-      restartFailed.value = true;
-    }
-  } catch (error: any) {
-    // 500, network errors, etc. are all expected — the service is going down
-    const isRestartExpected =
-      error.code === 'ERR_NETWORK' ||
-      error.message?.includes('Network error') ||
-      error.response?.status === 500 ||
-      error.message?.includes('500');
-    if (isRestartExpected) {
-      restartMessage.value = 'Service restarting, waiting for it to come back...';
-      const up = await waitForService();
-      if (up) {
-        restartMessage.value = 'Service is back! Reloading...';
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        restartMessage.value = 'Service did not respond in time. Try reloading manually.';
-        restartFailed.value = true;
-      }
-    } else {
-      restartMessage.value = error.message || 'Restart request failed';
-      restartFailed.value = true;
-    }
-  }
-};
-
-const dismissRestart = () => {
-  restarting.value = false;
-  restartMessage.value = '';
-  restartFailed.value = false;
-};
 
 const reloadPage = () => {
   window.location.reload();
@@ -265,6 +170,19 @@ const trackedBreakdown = computed(() => {
 // Notification badge logic - always show so users know the bell is interactive
 const showNotificationBadge = computed(() => true);
 
+const radioWarning = computed(() => {
+  const status = String(systemStore.stats?.radio_status ?? '').toLowerCase();
+  if (status !== 'degraded') return null;
+
+  const configuredType = systemStore.stats?.config?.radio_type ?? 'configured radio';
+  const details = systemStore.stats?.radio_error || 'Radio initialization failed';
+
+  return {
+    title: `Radio degraded (${configuredType})`,
+    details,
+  };
+});
+
 // Utility functions
 const getContactTypeColor = (contactType: string) => {
   const colors = {
@@ -289,18 +207,11 @@ const getLatestNodeName = (contactType: string) => {
 
 onMounted(() => {
   document.addEventListener('click', handleDocClick);
-  fetchTrackedNodes();
-  checkForUpdates(); // Check for updates on initial load
+  checkForUpdates();
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocClick);
-});
-
-useManagedPolling(fetchTrackedNodes, {
-  intervalMs: 30000,
-  enabled: true,
-  immediate: false,
 });
 
 useManagedPolling(() => checkForUpdates(), {
@@ -346,10 +257,10 @@ const toggleMobileSidebar = () => {
           <!-- <p class="text-white text-xl font-semibold">Repeater Dashboard</p> -->
         </div>
       </div>
-      <div class="flex items-center gap-3 sm:gap-4">
+      <div class="flex items-center gap-3 sm:gap-4 relative">
         <div class="text-right" style="min-width: 180px">
           <div v-if="loading" class="flex items-center gap-2 justify-end">
-            <div class="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+            <Spinner size="xs" />
             <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
               Loading...
             </p>
@@ -454,8 +365,9 @@ const toggleMobileSidebar = () => {
             <path d="M11 3L9 17" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
+        <div ref="notifRef" @click.stop>
         <button
-          @click.stop="showNotifications = !showNotifications"
+          @click="showNotifications = !showNotifications"
           class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors relative"
         >
           <svg
@@ -478,96 +390,16 @@ const toggleMobileSidebar = () => {
               updateInfo.hasUpdate
                 ? 'bg-accent-red animate-pulse'
                 : updateInfo.isChecking
-                  ? 'bg-yellow-400 animate-pulse'
+                  ? 'bg-secondary animate-pulse'
                   : updateInfo.currentVersion
                     ? 'bg-accent-green'
                     : 'bg-content-muted/50'
             "
           ></span>
         </button>
-
-        <!-- Theme Toggle -->
-        <ThemeToggle />
-
-        <div class="relative hidden sm:block" ref="userMenuRef" @click.stop>
-          <button
-            @click="showUserMenu = !showUserMenu"
-            class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
-            :class="{ 'animate-pulse': restarting }"
-            title="User menu"
-          >
-            <svg
-              class="w-5 h-5 text-content-secondary dark:text-content-primary"
-              viewBox="0 0 20 20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-          <div
-            v-if="showUserMenu"
-            class="absolute right-0 top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
-          >
-            <button
-              @click="handleRestartService"
-              :disabled="restarting"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors disabled:opacity-50"
-            >
-              <svg
-                v-if="!restarting"
-                class="w-4 h-4 text-content-secondary"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M3.5 2.5V7H8" stroke-linecap="round" stroke-linejoin="round" />
-                <path
-                  d="M4.5 12.5A6.5 6.5 0 1 0 5 6L3.5 7"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              {{ restarting ? 'Restarting...' : 'Restart Service' }}
-            </button>
-            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
-            <button
-              @click="handleLogout"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-red hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
-            >
-              <svg
-                class="w-4 h-4"
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              Logout
-            </button>
-          </div>
-        </div>
-
         <div
           v-if="showNotifications"
-          ref="notifRef"
-          class="absolute right-6 top-14 z-[100] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
-          @click.stop
+          class="absolute right-[5px] top-10 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
         >
           <div class="flex items-center justify-between mb-3">
             <p class="text-content-primary dark:text-content-primary font-semibold">
@@ -584,7 +416,7 @@ const toggleMobileSidebar = () => {
               </button>
               <span class="text-content-muted text-xs">•</span>
               <button
-                @click="fetchTrackedNodes"
+                @click="() => neighborStore.fetchAll()"
                 :disabled="loading"
                 class="text-xs text-primary hover:text-primary/80 disabled:opacity-50"
               >
@@ -614,7 +446,7 @@ const toggleMobileSidebar = () => {
                     showUpdateModal = true;
                     showNotifications = false;
                   "
-                  class="text-xs bg-accent-red hover:bg-accent-red/80 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red"
                 >
                   Install Update
                 </button>
@@ -707,7 +539,7 @@ const toggleMobileSidebar = () => {
               class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10"
             >
               <div class="flex items-center justify-center gap-2">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <Spinner size="sm" />
                 <span class="text-content-secondary dark:text-content-secondary"
                   >Checking for updates...</span
                 >
@@ -806,7 +638,7 @@ const toggleMobileSidebar = () => {
               class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-center"
             >
               <div class="flex items-center justify-center gap-2">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                <Spinner size="sm" />
                 <span class="text-content-secondary dark:text-content-secondary"
                   >Scanning mesh network...</span
                 >
@@ -814,57 +646,113 @@ const toggleMobileSidebar = () => {
             </div>
           </div>
         </div>
+        </div>
+
+        <!-- Theme Toggle -->
+        <ThemeToggle />
+
+        <div class="hidden sm:block" ref="userMenuRef" @click.stop>
+          <button
+            @click="showUserMenu = !showUserMenu"
+            class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
+            title="User menu"
+          >
+            <svg
+              class="w-5 h-5 text-content-secondary dark:text-content-primary"
+              viewBox="0 0 20 20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <div
+            v-if="showUserMenu"
+            class="absolute right-[5px] top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
+          >
+            <button
+              @click="showRestartModal = true; showUserMenu = false"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+            >
+              <svg
+                class="w-4 h-4 text-content-secondary"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M3.5 2.5V7H8" stroke-linecap="round" stroke-linejoin="round" />
+                <path
+                  d="M4.5 12.5A6.5 6.5 0 1 0 5 6L3.5 7"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Restart Service
+            </button>
+            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
+            <button
+              @click="handleLogout"
+              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-red hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+            >
+              <svg
+                class="w-4 h-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="radioWarning"
+      class="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-800 dark:text-amber-200"
+      role="alert"
+    >
+      <div class="flex items-start gap-3">
+        <svg
+          class="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-300 shrink-0"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM10 14a1 1 0 100 2 1 1 0 000-2z"
+            clip-rule="evenodd"
+          />
+        </svg>
+        <div>
+          <p class="font-semibold">{{ radioWarning.title }}</p>
+          <p class="text-sm opacity-90">{{ radioWarning.details }}</p>
+        </div>
       </div>
     </div>
   </div>
-  <!-- Restart Overlay -->
-  <Teleport to="body">
-    <div
-      v-if="restarting"
-      class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center"
-    >
-      <div
-        class="bg-surface dark:bg-surface-elevated rounded-2xl p-8 shadow-2xl max-w-sm w-full mx-4 text-center border border-stroke-subtle dark:border-stroke/20"
-      >
-        <div v-if="!restartFailed" class="mb-4">
-          <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto"></div>
-        </div>
-        <div v-else class="mb-4">
-          <svg
-            class="w-10 h-10 mx-auto text-accent-red"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
-            />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-2">
-          Restarting Service
-        </h3>
-        <p class="text-sm text-content-secondary dark:text-content-muted">{{ restartMessage }}</p>
-        <div v-if="restartFailed" class="mt-4 flex items-center justify-center gap-3">
-          <button
-            @click="reloadPage"
-            class="text-sm bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Reload Page
-          </button>
-          <button
-            @click="dismissRestart"
-            class="text-sm text-content-muted hover:text-content-secondary transition-colors"
-          >
-            Dismiss
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <RestartModal
+    v-model="showRestartModal"
+    title="Restart Service"
+    message="The service will restart. You will be automatically returned to the dashboard when it comes back online."
+  />
 
   <!-- Update Modal -->
   <UpdateModal

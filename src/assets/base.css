@@ -161,6 +161,10 @@
   font-weight: normal;
 }
 
+button {
+  cursor: pointer;
+}
+
 body {
   min-height: 100vh;
   color: var(--color-text);

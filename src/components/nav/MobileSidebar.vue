@@ -2,7 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, defineAsyncComponent, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
-import ApiService from '@/utils/api';
+import { useDataService } from '@/stores/dataService';
 import { clearToken } from '@/utils/auth';
 import AdvertModal from '../modals/AdvertModal.vue';
 import DiscordIcon from '../icons/discord.vue';
@@ -27,6 +27,9 @@ import NeighborsIcon from '../icons/neighbors.vue';
 import GpsIcon from '../icons/gps.vue';
 
 import DutycycleIcon from '../icons/dutycycle.vue';
+import { useTheme } from '@/composables/useTheme';
+import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
+import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
 defineOptions({ name: 'MobileSidebar' });
 
@@ -45,6 +48,9 @@ const emit = defineEmits<Emits>();
 const router = useRouter();
 const route = useRoute();
 const systemStore = useSystemStore();
+const dataService = useDataService();
+const { theme } = useTheme();
+const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
 
 // Load chart only after sidebar is visible for smoother opening
 watch(
@@ -72,52 +78,24 @@ const showAdvertModal = ref(false);
 const advertSuccess = ref(false);
 const advertError = ref<string | null>(null);
 
-// Time update interval
 let timeInterval: number | null = null;
-let tierRefreshInterval: number | null = null;
 
-const currentTier = ref('unknown');
-const advertsAllowed = ref(0);
-const advertsDropped = ref(0);
-const activePenalties = ref(0);
+const currentTier = computed(() => dataService.advertTier.currentTier);
+const advertsAllowed = computed(() => dataService.advertTier.advertsAllowed);
+const advertsDropped = computed(() => dataService.advertTier.advertsDropped);
+const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 onMounted(() => {
-  // Update time every second
   timeInterval = window.setInterval(() => {
     currentTime.value = new Date().toLocaleTimeString();
   }, 1000);
-
-  fetchAdaptiveTier();
-  tierRefreshInterval = window.setInterval(() => {
-    fetchAdaptiveTier();
-  }, 30000);
 });
 
 onUnmounted(() => {
   if (timeInterval) {
     clearInterval(timeInterval);
   }
-  if (tierRefreshInterval) {
-    clearInterval(tierRefreshInterval);
-  }
 });
-
-const fetchAdaptiveTier = async () => {
-  try {
-    const response = await ApiService.get('/advert_rate_limit_stats');
-    const data = response?.data as any;
-    currentTier.value =
-      typeof data?.adaptive?.current_tier === 'string' ? data.adaptive.current_tier : 'unknown';
-    advertsAllowed.value = data?.stats?.adverts_allowed || 0;
-    advertsDropped.value = data?.stats?.adverts_dropped || 0;
-    activePenalties.value = Object.keys(data?.active_penalties || {}).length;
-  } catch {
-    currentTier.value = 'unknown';
-    advertsAllowed.value = 0;
-    advertsDropped.value = 0;
-    activePenalties.value = 0;
-  }
-};
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
@@ -140,6 +118,7 @@ const iconComponents = {
   neighbors: NeighborsIcon,
   statistics: StatsIcon,
   gps: GpsIcon,
+  sensors: SystemIcon,
   'system-stats': SystemIcon,
   sessions: SystemIcon, // Reuse SystemIcon for sessions
   configuration: ConfigurationsIcon,
@@ -152,19 +131,22 @@ const iconComponents = {
 
 type IconKey = keyof typeof iconComponents;
 
-const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string }> = [
-  { name: 'Dashboard', icon: 'dashboard', route: '/' },
-  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors' },
-  { name: 'Statistics', icon: 'statistics', route: '/statistics' },
-  { name: 'GPS', icon: 'gps', route: '/gps' },
-  { name: 'System Stats', icon: 'system-stats', route: '/system-stats' },
-  { name: 'Sessions', icon: 'sessions', route: '/sessions' },
-  { name: 'Configuration', icon: 'configuration', route: '/configuration' },
-  { name: 'Terminal', icon: 'terminal', route: '/terminal' },
-  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers' },
-  { name: 'Companions', icon: 'companions', route: '/companions' },
-  { name: 'Logs', icon: 'logs', route: '/logs' },
-  { name: 'Help', icon: 'help', route: '/help' },
+type NavGroup = 'monitoring' | 'system' | 'room' | 'other';
+
+const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string; group: NavGroup }> = [
+  { name: 'Dashboard', icon: 'dashboard', route: '/', group: 'monitoring' },
+  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors', group: 'monitoring' },
+  { name: 'Statistics', icon: 'statistics', route: '/statistics', group: 'monitoring' },
+  { name: 'GPS', icon: 'gps', route: '/gps', group: 'monitoring' },
+  { name: 'Sensors', icon: 'sensors', route: '/sensors', group: 'monitoring' },
+  { name: 'System Stats', icon: 'system-stats', route: '/system-stats', group: 'monitoring' },
+  { name: 'Sessions', icon: 'sessions', route: '/sessions', group: 'system' },
+  { name: 'Configuration', icon: 'configuration', route: '/configuration', group: 'system' },
+  { name: 'Terminal', icon: 'terminal', route: '/terminal', group: 'system' },
+  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers', group: 'room' },
+  { name: 'Companions', icon: 'companions', route: '/companions', group: 'room' },
+  { name: 'Logs', icon: 'logs', route: '/logs', group: 'other' },
+  { name: 'Help', icon: 'help', route: '/help', group: 'other' },
 ];
 
 const isGpsEnabled = computed(() => {
@@ -172,9 +154,26 @@ const isGpsEnabled = computed(() => {
   return stats?.gps?.enabled === true || stats?.config?.gps?.enabled === true;
 });
 
+const isSensorsEnabled = computed(() => {
+  const stats = systemStore.stats as {
+    sensors?: { enabled?: boolean };
+    config?: { sensors?: { enabled?: boolean } };
+  } | null;
+  return stats?.sensors?.enabled === true || stats?.config?.sensors?.enabled === true;
+});
+
 const sidebarItems = computed(() =>
-  baseSidebarItems.filter((item) => item.route !== '/gps' || isGpsEnabled.value),
+  baseSidebarItems.filter(
+    (item) =>
+      (item.route !== '/gps' || isGpsEnabled.value) &&
+      (item.route !== '/sensors' || isSensorsEnabled.value),
+  ),
 );
+
+const navMonitoring = computed(() => sidebarItems.value.filter((i) => i.group === 'monitoring'));
+const navSystem = computed(() => sidebarItems.value.filter((i) => i.group === 'system'));
+const navRoom = computed(() => sidebarItems.value.filter((i) => i.group === 'room'));
+const navOther = computed(() => sidebarItems.value.filter((i) => i.group === 'other'));
 
 const modeOptions = [
   {
@@ -294,14 +293,15 @@ const repeaterVersion = computed(() => parseVersion(systemStore.version));
 const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
 
 // Computed duty cycle bar width and color
+// Width is genuinely dynamic; colour uses CSS custom properties so it adapts to light/dark mode.
 const dutyCycleBarStyle = computed(() => {
   const percentage = systemStore.dutyCyclePercentage;
-  let backgroundColor = '#A5E5B6'; // accent-green
+  let backgroundColor = 'var(--color-accent-green)';
 
   if (percentage > 90) {
-    backgroundColor = '#FB787B'; // accent-red
+    backgroundColor = 'var(--color-accent-red)';
   } else if (percentage > 70) {
-    backgroundColor = '#FFC246'; // secondary (yellow)
+    backgroundColor = 'var(--color-secondary)';
   }
 
   return {
@@ -313,11 +313,12 @@ const dutyCycleBarStyle = computed(() => {
 
 <template>
   <div
-    class="fixed inset-0 z-[1010] lg:hidden transition-opacity duration-300"
-    :class="showMobileSidebar ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
+    class="fixed inset-0 z-[250] lg:hidden"
+    :class="showMobileSidebar ? 'pointer-events-auto' : 'pointer-events-none'"
   >
     <div
-      class="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/30"
+      class="absolute inset-0 bg-black/30 backdrop-blur-sm dark:bg-black/30 transition-opacity duration-300 cursor-pointer"
+      :class="showMobileSidebar ? 'opacity-100' : 'opacity-0'"
       @click="closeSidebar"
     ></div>
     <div
@@ -330,7 +331,7 @@ const dutyCycleBarStyle = computed(() => {
         <div class="mb-6 flex items-center justify-between">
           <div>
             <div class="mb-2">
-              <img src="@/assets/pymclogo.png" alt="pyMC" class="h-[5.2rem]" />
+<img :src="logoSrc" alt="pyMC" class="h-[5.2rem]" />
             </div>
             <p class="text-content-secondary dark:text-[#C3C3C3] text-sm">
               {{ systemStore.nodeName }}
@@ -411,7 +412,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Monitoring</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(0, 4)"
+              v-for="item in navMonitoring"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -431,7 +432,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">System</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(4, 8)"
+              v-for="item in navSystem"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -451,7 +452,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Room Servers &amp; Companions</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(8, 10)"
+              v-for="item in navRoom"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="
@@ -471,7 +472,7 @@ const dutyCycleBarStyle = computed(() => {
           <p class="text-content-muted text-xs uppercase mb-2">Other</p>
           <div class="space-y-2 mb-3">
             <button
-              v-for="item in sidebarItems.slice(10)"
+              v-for="item in navOther"
               :key="item.name"
               @click="navigateToRoute(item.route)"
               :class="

@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { authClient } from '@/utils/api';
+import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
 const systemStore = useSystemStore();
 
@@ -54,6 +56,15 @@ const cancelEditing = () => {
   errorMessage.value = '';
 };
 
+const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
+  isEditing,
+  isSaving,
+  cancelEditing,
+  async () => { await saveChanges(); return !isEditing.value; },
+);
+
+defineExpose({ requestLeave, isEditing });
+
 const saveChanges = async () => {
   isSaving.value = true;
   errorMessage.value = '';
@@ -90,7 +101,49 @@ const saveChanges = async () => {
 </script>
 
 <template>
-  <div class="space-y-4">
+  <UnsavedChangesModal
+    :show="showUnsavedModal"
+    :is-saving="isSaving"
+    label="Duty Cycle settings"
+    @discard="handleDiscard"
+    @save="handleSave"
+    @cancel="handleCancel"
+  />
+
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Duty Cycle</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure duty cycle limits for channel activity</p>
+      </div>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <button
+          v-if="!isEditing"
+          @click="startEditing"
+          class="cfg-btn-primary"
+        >
+          Edit Settings
+        </button>
+        <template v-else>
+          <button
+            @click="cancelEditing"
+            :disabled="isSaving"
+            class="cfg-btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveChanges"
+            :disabled="isSaving"
+            class="cfg-btn-primary"
+          >
+            {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </template>
+      </div>
+    </div>
+
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
@@ -105,35 +158,8 @@ const saveChanges = async () => {
       {{ errorMessage }}
     </div>
 
-    <!-- Action Buttons -->
-    <div class="flex justify-end gap-2">
-      <button
-        v-if="!isEditing"
-        @click="startEditing"
-        class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
-      >
-        Edit Settings
-      </button>
-      <template v-else>
-        <button
-          @click="cancelEditing"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Cancel
-        </button>
-        <button
-          @click="saveChanges"
-          :disabled="isSaving"
-          class="px-3 sm:px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
-        </button>
-      </template>
-    </div>
-
     <!-- Duty Cycle Settings -->
-    <div class="bg-background-mute dark:bg-white/5 rounded-lg p-3 sm:p-4 space-y-3">
+    <div class="cfg-section"><div class="space-y-3">
       <div
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
       >
@@ -153,7 +179,7 @@ const saveChanges = async () => {
           step="0.1"
           min="0.1"
           max="100"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-input w-full sm:w-32"
         />
       </div>
 
@@ -170,12 +196,12 @@ const saveChanges = async () => {
         <select
           v-else
           v-model="enforcementInput"
-          class="w-full sm:w-32 px-3 py-1.5 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary"
+          class="cfg-select w-full sm:w-32"
         >
           <option :value="true">Enabled</option>
           <option :value="false">Disabled</option>
         </select>
       </div>
-    </div>
+    </div></div>
   </div>
 </template>

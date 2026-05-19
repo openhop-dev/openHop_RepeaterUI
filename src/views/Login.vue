@@ -34,9 +34,9 @@
         <div class="text-center mb-6 sm:mb-10">
           <div class="mb-4 sm:mb-6 flex justify-center">
             <img
-              src="@/assets/pymclogo.png"
+              :src="logoSrc"
               alt="pyMC"
-              class="logo-image logo-image-animated h-36 sm:h-40 relative z-10"
+              class="logo-image h-36 sm:h-40 relative z-10"
             />
           </div>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -108,10 +108,7 @@
             :disabled="loading"
             class="button-glass w-full relative overflow-hidden bg-primary/20 hover:bg-primary/30 active:scale-[0.98] text-primary dark:text-white font-semibold py-3 sm:py-4 px-4 rounded-[12px] border border-primary/50 hover:border-primary/60 transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-2.5 group mt-6 sm:mt-8 text-sm sm:text-base backdrop-blur-sm"
           >
-            <div
-              v-if="loading"
-              class="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full animate-spin"
-            ></div>
+            <Spinner v-if="loading" size="sm" color="white" />
             <svg
               v-else
               class="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300"
@@ -178,15 +175,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { setToken, getClientId } from '@/utils/auth';
 import { authClient } from '@/utils/api';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import ChangePasswordModal from '@/components/modals/ChangePasswordModal.vue';
+import Spinner from '@/components/ui/Spinner.vue';
 import GitHubIcon from '@/components/icons/github.vue';
 import CoffeeIcon from '@/components/icons/coffee.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import { useTheme } from '@/composables/useTheme';
+import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
+import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
 // Define component name for linting
 defineOptions({
@@ -203,6 +204,8 @@ interface LoginResponse {
 
 const router = useRouter();
 const appRuntime = useAppRuntimeStore();
+const { theme } = useTheme();
+const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
 
 const username = ref('admin');
 const password = ref('');
@@ -272,29 +275,29 @@ const handlePasswordChangeClose = () => {
 </script>
 
 <style scoped>
-/* Background gradient colors for light and dark modes */
+/* Background gradient colors — match app primary teal (#0d7377 light / #aae8e8 dark) */
 .bg-gradient-light {
-  background: linear-gradient(to bottom, rgba(14, 165, 233, 0.4), rgba(6, 182, 212, 0.3));
+  background: linear-gradient(to bottom, rgba(13, 115, 119, 0.3), rgba(170, 232, 232, 0.2));
 }
 
 .bg-gradient-dark {
-  background: linear-gradient(to bottom, rgba(103, 232, 249, 0.3), rgba(165, 243, 252, 0.15));
+  background: linear-gradient(to bottom, rgba(170, 232, 232, 0.18), rgba(13, 115, 119, 0.1));
 }
 
 /* Enhanced glass morphism effect */
 .login-card {
-  background: rgba(17, 25, 28, 0.4);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
 }
 
 /* Light mode card */
 .login-card {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.85);
 }
 
+/* Dark mode card — surface-elevated (#1a1e1f) with slight transparency */
 .dark .login-card {
-  background: rgba(17, 25, 28, 0.4);
+  background: rgba(26, 30, 31, 0.8);
 }
 
 /* Glass inputs */
@@ -389,25 +392,6 @@ const handlePasswordChangeClose = () => {
     inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-/* Logo shimmer effect on button hover - brightness flash */
-.login-content:has(.button-glass:hover:not(:disabled)) .logo-image {
-  filter: brightness(1.4) drop-shadow(0 0 12px rgba(170, 232, 232, 0.7));
-  transform: scale(1.02);
-}
-
-.login-content:has(.button-glass:hover:not(:disabled)) .logo-glow {
-  opacity: 0.6;
-  transform: scale(1.15);
-}
-
-/* Hide logo glow in light mode to prevent odd appearance */
-.logo-glow {
-  opacity: 0;
-}
-
-.dark .logo-glow {
-  opacity: 1;
-}
 
 /* Floating animation for logo */
 @keyframes float {
@@ -494,27 +478,6 @@ const handlePasswordChangeClose = () => {
   animation: shake 0.5s ease-in-out;
 }
 
-/* Subtle logo aura without circular halo artifact */
-@keyframes logo-aura-cycle {
-  0%,
-  100% {
-    filter: brightness(1) saturate(1) drop-shadow(0 0 7px rgba(56, 189, 248, 0.45));
-  }
-  25% {
-    filter: brightness(1.02) saturate(1.05) drop-shadow(0 0 10px rgba(99, 102, 241, 0.42));
-  }
-  50% {
-    filter: brightness(1) saturate(1.03) drop-shadow(0 0 8px rgba(34, 211, 238, 0.45));
-  }
-  75% {
-    filter: brightness(1.02) saturate(1.05) drop-shadow(0 0 10px rgba(52, 211, 153, 0.42));
-  }
-}
-
-.logo-image-animated {
-  animation: logo-aura-cycle 6s ease-in-out infinite;
-  will-change: filter;
-}
 
 /* Form group hover effect */
 .form-group {

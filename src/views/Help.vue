@@ -35,7 +35,7 @@ defineOptions({ name: 'HelpView' });
           href="https://github.com/rightup/pyMC_Repeater/wiki"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-2 bg-primary hover:bg-primary/80 text-white dark:text-background font-medium py-3 px-6 rounded-xl transition-colors duration-200"
+          class="inline-flex items-center gap-2 font-medium py-3 px-6 rounded-xl transition-colors bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path

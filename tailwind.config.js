@@ -2,6 +2,9 @@
 export default {
   content: ['./index.html', './src/**/*.{vue,js,ts,jsx,tsx}'],
   darkMode: 'class',
+  // safelist: height classes used by BAR_HEIGHTS_SM / BAR_HEIGHTS_MD lookup arrays in
+  // NeighborTable.vue and NeighborDetailsModal.vue — composed dynamically so JIT can't scan them.
+  safelist: ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5', 'h-4'],
   theme: {
     extend: {
       colors: {

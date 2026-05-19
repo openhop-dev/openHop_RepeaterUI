@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import ApiService from '@/utils/api';
 import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
 import MessageDialog from '@/components/modals/MessageDialog.vue';
 import ImportRepeaterContactsModal from '@/components/modals/ImportRepeaterContactsModal.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'CompanionsView' });
 
@@ -13,8 +15,10 @@ const error = ref<string | null>(null);
 const identities = ref<any>(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showRestartModal = ref(false);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const editingIdentity = ref<any>(null);
+const editOriginalName = ref('');
 const showKeyInCreate = ref(false);
 const showKeyInEdit = ref(false);
 const visibleKeys = ref<Set<string>>(new Set());
@@ -88,24 +92,27 @@ async function createIdentity() {
 }
 
 async function updateIdentity() {
+  const payload: Record<string, unknown> = {
+    name: editOriginalName.value,
+    identity_key: editingIdentity.value.identity_key,
+    type: 'companion',
+    settings: {
+      node_name: editingIdentity.value.settings?.node_name,
+      tcp_port: editingIdentity.value.settings?.tcp_port,
+      bind_address: editingIdentity.value.settings?.bind_address,
+    },
+  };
+  if (editingIdentity.value.name !== editOriginalName.value) {
+    payload.new_name = editingIdentity.value.name;
+  }
   try {
-    const response = await ApiService.updateIdentity({
-      name: editingIdentity.value.name,
-      new_name: editingIdentity.value.new_name,
-      identity_key: editingIdentity.value.identity_key,
-      type: 'companion',
-      settings: {
-        node_name: editingIdentity.value.settings?.node_name,
-        tcp_port: editingIdentity.value.settings?.tcp_port,
-        bind_address: editingIdentity.value.settings?.bind_address,
-      },
-    });
+    const response = await ApiService.updateIdentity(payload);
 
     if (response.success) {
       showEditModal.value = false;
       editingIdentity.value = null;
       await fetchIdentities();
-      showMessage(response.message || 'Companion updated successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to update companion: ${response.error}`, 'error');
     }
@@ -146,10 +153,11 @@ function showMessage(message: string, variant: 'success' | 'error' | 'info') {
 
 function openEditModal(identity: unknown) {
   editingIdentity.value = JSON.parse(JSON.stringify(identity));
+  editOriginalName.value = editingIdentity.value.name;
+  delete editingIdentity.value.new_name;
   if (!editingIdentity.value.settings) {
     editingIdentity.value.settings = { node_name: '', tcp_port: 5000, bind_address: '0.0.0.0' };
   }
-  editingIdentity.value.new_name = '';
   showKeyInEdit.value = false;
   showEditModal.value = true;
 }
@@ -187,6 +195,14 @@ function toggleKeyVisibility(identityName: string) {
 
 const configuredCompanions = () => identities.value?.configured_companions ?? [];
 const totalCompanions = () => identities.value?.total_configured_companions ?? 0;
+
+const companionConfiguredCount = computed(() => identities.value?.configured_companions?.length ?? 0);
+const companionRegisteredCount = computed(
+  () => identities.value?.configured_companions?.filter((c: any) => c.registered).length ?? 0,
+);
+const companionsSynced = computed(
+  () => companionRegisteredCount.value === companionConfiguredCount.value,
+);
 
 const DEFAULT_COMPANION_PORT = 5050;
 const MIN_PORT = 1;
@@ -286,20 +302,64 @@ function onImportDone(imported: number) {
     </div>
 
     <!-- Stats -->
-    <div v-if="identities && totalCompanions() > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div
-        class="group relative overflow-hidden glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5"
-      >
-        <div class="relative flex items-center justify-between">
+    <div v-if="identities && companionConfiguredCount > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Total Configured -->
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
           <div>
-            <div
-              class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide"
-            >
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Total Configured
             </div>
-            <div class="text-3xl font-bold text-content-primary dark:text-content-primary">
-              {{ totalCompanions() }}
+            <div class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+              {{ companionConfiguredCount }}
             </div>
+          </div>
+          <div class="bg-background-mute dark:bg-white/10 p-3 rounded-[12px]">
+            <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Currently Registered -->
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
+              Currently Registered
+            </div>
+            <div class="text-3xl font-bold text-primary mb-1">
+              {{ companionRegisteredCount }}
+            </div>
+          </div>
+          <div class="bg-primary/20 p-3 rounded-[12px]">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
+              Status
+            </div>
+            <div class="text-3xl font-bold" :class="companionsSynced ? 'text-accent-green' : 'text-accent-yellow'">
+              {{ companionsSynced ? 'Synced' : 'Out of Sync' }}
+            </div>
+          </div>
+          <div :class="['p-3 rounded-[12px]', companionsSynced ? 'bg-accent-green/20' : 'bg-accent-yellow/20']">
+            <svg v-if="companionsSynced" class="w-6 h-6 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <svg v-else class="w-6 h-6 text-accent-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
         </div>
       </div>
@@ -311,9 +371,7 @@ function onImportDone(imported: number) {
     >
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div
-            class="animate-spin w-8 h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-primary rounded-full mx-auto mb-4"
-          ></div>
+          <Spinner class="mx-auto mb-4" />
           <div class="text-content-secondary dark:text-content-primary/70">
             Loading companions...
           </div>
@@ -326,7 +384,7 @@ function onImportDone(imported: number) {
           <div class="text-content-secondary dark:text-content-muted text-sm mb-4">{{ error }}</div>
           <button
             @click="fetchIdentities"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors"
+            class="btn-primary"
           >
             Retry
           </button>
@@ -338,9 +396,9 @@ function onImportDone(imported: number) {
         <div
           v-for="identity in configuredCompanions()"
           :key="identity.name"
-          class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 transition-all duration-300"
+          class="glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/10"
         >
-          <div class="relative flex items-start justify-between">
+          <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-4">
                 <div class="relative">
@@ -428,19 +486,19 @@ function onImportDone(imported: number) {
             <div class="ml-4 flex flex-wrap gap-2">
               <button
                 @click="openImportModal(identity.name)"
-                class="px-3 py-1 bg-primary/20 hover:bg-primary/30 text-primary rounded text-xs transition-colors"
+                class="btn-primary-xs"
               >
                 Import contacts
               </button>
               <button
                 @click="openEditModal(identity)"
-                class="px-3 py-1 bg-primary/20 hover:bg-primary/30 text-primary rounded text-xs transition-colors"
+                class="btn-primary-xs"
               >
                 Edit
               </button>
               <button
                 @click="promptDeleteIdentity(identity.name)"
-                class="px-3 py-1 bg-accent-red/20 hover:bg-accent-red/30 text-accent-red rounded text-xs transition-colors"
+                class="btn-danger-xs"
               >
                 Delete
               </button>
@@ -470,7 +528,7 @@ function onImportDone(imported: number) {
         </p>
         <button
           @click="openCreateModal"
-          class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
+          class="btn-primary"
         >
           + Add Companion
         </button>
@@ -478,9 +536,11 @@ function onImportDone(imported: number) {
     </div>
 
     <!-- Create Modal -->
+    <Teleport to="body">
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      @click.self="showCreateModal = false"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -577,18 +637,21 @@ function onImportDone(imported: number) {
           </button>
           <button
             @click="createIdentity"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
+            class="btn-primary"
           >
             Create
           </button>
         </div>
       </div>
     </div>
+    </Teleport>
 
     <!-- Edit Modal -->
+    <Teleport to="body">
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      @click.self="closeModals"
     >
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
@@ -600,25 +663,12 @@ function onImportDone(imported: number) {
         <div class="space-y-4">
           <div>
             <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >Current Name</label
+              >Name *</label
             >
             <input
-              :value="editingIdentity.name"
-              disabled
+              v-model="editingIdentity.name"
               type="text"
-              class="w-full bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-muted dark:text-content-muted cursor-not-allowed"
-            />
-          </div>
-
-          <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >New Name (optional)</label
-            >
-            <input
-              v-model="editingIdentity.new_name"
-              type="text"
-              placeholder="Leave empty to keep current name"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
             />
           </div>
 
@@ -689,13 +739,14 @@ function onImportDone(imported: number) {
           </button>
           <button
             @click="updateIdentity"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
+            class="btn-primary"
           >
             Update
           </button>
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 
   <ImportRepeaterContactsModal
@@ -722,4 +773,10 @@ function onImportDone(imported: number) {
     :variant="messageDialogContent.variant"
     @close="showMessageDialog = false"
   />
+
+  <RestartModal
+    v-model="showRestartModal"
+    message="Companion settings have been saved. A service restart is required for the changes to take effect."
+  />
+
 </template>

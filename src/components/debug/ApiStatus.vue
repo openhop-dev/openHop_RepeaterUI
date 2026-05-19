@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { usePacketStore } from '@/stores/packets';
+import { useDataService } from '@/stores/dataService';
 
 defineOptions({ name: 'ApiStatus' });
 
 const packetStore = usePacketStore();
+const dataService = useDataService();
 const directApiTest = ref<{
   success: boolean;
   data?: Record<string, unknown>;
@@ -31,10 +33,10 @@ const testDirectApi = async () => {
   }
 };
 
-// Test system stats via our API service
+// Test system stats via DataService
 const testSystemStats = async () => {
   try {
-    await packetStore.fetchSystemStats();
+    await dataService.ensure('stats');
     systemStatsTest.value = {
       success: true,
       data: packetStore.systemStats || undefined,
@@ -47,11 +49,11 @@ const testSystemStats = async () => {
   }
 };
 
-// Test store-based API calls
+// Test store-based API calls via DataService
 const testStore = async () => {
   try {
-    await packetStore.fetchPacketStats({ hours: 1 });
-    await packetStore.fetchRecentPackets({ limit: 10 });
+    await dataService.ensure('packetStats');
+    await dataService.ensure('recentPackets');
   } catch (error) {
     console.error('Store test error:', error);
   }

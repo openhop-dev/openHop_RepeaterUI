@@ -1,3 +1,14 @@
+<script lang="ts">
+// Module-level cache — survives page navigation, outlives component instances.
+// Keyed on fetch time so stale data is never shown after the TTL expires.
+let _airtimeCache: {
+  data: Array<{ timestamp: number; rxUtil: number; txUtil: number }>;
+  yAxisMax: number;
+  fetchedAt: number;
+} | null = null;
+const AIRTIME_CACHE_TTL_MS = 120_000; // 2 minutes — matches 60-second bucket resolution
+</script>
+
 <script setup lang="ts">
 /**
  * AirtimeUtilizationChart.vue
@@ -11,11 +22,28 @@
  * @see https://www.semtech.com/design-support/lora-calculator
  */
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
-import ApiService from '@/utils/api';
+import { streamingGet } from '@/utils/streamingFetch';
 import { usePacketStore } from '@/stores/packets';
 import { useSystemStore } from '@/stores/system';
+import ChartCard from '@/components/ui/ChartCard.vue';
+import { useManagedPolling } from '@/composables/useManagedPolling';
 
 defineOptions({ name: 'AirtimeUtilizationChart' });
+
+// Chart palette — fixed vibrant colours, same in both light and dark mode.
+const CHART_COLORS = {
+  rx: '#EBA0FC', // lavender — RX utilization line
+  tx: '#FB787B', // coral   — TX utilization line
+} as const;
+
+// Theme-aware chrome colours (grid lines, axis labels).
+const getChartChrome = () => {
+  const isDark = document.documentElement.classList.contains('dark');
+  return {
+    gridLine:  isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+    axisLabel: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+  };
+};
 
 // ============================================================================
 // Stores
@@ -57,8 +85,11 @@ interface RadioConfig {
 
 const chartRef = ref<HTMLCanvasElement | null>(null);
 const chartData = ref<UtilSample[]>([]);
-const isLoading = ref(true);
-const updateInterval = ref<number | null>(null);
+const isLoading = ref(false);
+const isInitialFetch = ref(true);
+const isRefreshing = ref(false);
+const chartError = ref<string | null>(null);
+const chartStatus = ref('Connecting...');
 
 /** Dynamic Y-axis maximum (computed from data with headroom) */
 const yAxisMax = ref(30);
@@ -256,7 +287,9 @@ const uptimeBasedRates = computed(() => {
  * 7. Downsample for efficient rendering
  */
 const fetchChartData = async () => {
-  isLoading.value = true;
+  chartStatus.value = 'Connecting...';
+  chartError.value = null;
+  if (!isInitialFetch.value) isRefreshing.value = true;
 
   try {
     const hours = 24;
@@ -266,30 +299,19 @@ const fetchChartData = async () => {
     const endTime = Math.floor(Date.now() / 1000);
     const startTime = endTime - hours * 3600;
 
-    // Fetch radio config and dropped count from system stats
-    let droppedCount = 0;
-    try {
-      const statsRes = await ApiService.get('/stats');
-      if (statsRes.success && statsRes.data) {
-        const statsData = statsRes.data as Record<string, unknown>;
-        const config = statsData.config as Record<string, unknown> | undefined;
-        if (config?.radio) {
-          const radio = config.radio as Record<string, number>;
-          radioConfig.value = {
-            sf: radio.spreading_factor ?? 9,
-            bwHz: radio.bandwidth ?? 62500,
-            cr: radio.coding_rate ?? 5,
-            preamble: radio.preamble_length ?? 17,
-          };
-        }
-        droppedCount = (statsData.dropped_count as number) ?? 0;
-      }
-    } catch {
-      // Stats fetch failed, use defaults
+    // Read radio config from system store (populated during bootstrap — avoids an extra /stats round-trip)
+    const radio = systemStore.stats?.config?.radio as Record<string, number> | undefined;
+    if (radio) {
+      radioConfig.value = {
+        sf: radio.spreading_factor ?? 9,
+        bwHz: radio.bandwidth ?? 62500,
+        cr: radio.coding_rate ?? 5,
+        preamble: radio.preamble_length ?? 17,
+      };
     }
 
     // Fetch pre-aggregated buckets from server (rx_ms/tx_ms per bucket_seconds interval)
-    const chartRes = await ApiService.get('/airtime_chart_data', {
+    const chartRes = await streamingGet('/airtime_chart_data', {
       start_timestamp: startTime,
       end_timestamp: endTime,
       bucket_seconds: bucketSeconds,
@@ -297,10 +319,16 @@ const fetchChartData = async () => {
       bw_hz: radioConfig.value.bwHz,
       cr: radioConfig.value.cr,
       preamble: radioConfig.value.preamble,
+    }, {
+      onPhaseChange: (phase) => {
+        chartStatus.value = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+      },
     });
     if (!chartRes.success) {
       chartData.value = [];
       isLoading.value = false;
+      isInitialFetch.value = false;
+      isRefreshing.value = false;
       nextTick(() => drawChart());
       return;
     }
@@ -317,7 +345,7 @@ const fetchChartData = async () => {
     localStats.value = {
       totalReceived: payload.rx_total || 0,
       totalTransmitted: payload.tx_total || 0,
-      dropped: droppedCount,
+      dropped: packetStore.packetStats?.dropped_packets ?? 0,
       firstPacketTime: buckets.length > 0 ? buckets[0].timestamp : endTime,
     };
 
@@ -377,12 +405,19 @@ const fetchChartData = async () => {
     const withHeadroom = maxInData * 1.05;
     yAxisMax.value = Math.max(5, Math.ceil(withHeadroom / 5) * 5);
 
+    _airtimeCache = { data: downsampled, yAxisMax: yAxisMax.value, fetchedAt: Date.now() };
     isLoading.value = false;
+    isInitialFetch.value = false;
+    isRefreshing.value = false;
+    chartError.value = null;
     nextTick(() => drawChart());
   } catch (err) {
     console.error('Failed to fetch airtime data:', err);
     chartData.value = [];
     isLoading.value = false;
+    isInitialFetch.value = false;
+    isRefreshing.value = false;
+    chartError.value = err instanceof Error ? err.message : 'Failed to load chart data';
     nextTick(() => drawChart());
   }
 };
@@ -422,7 +457,7 @@ const drawChart = () => {
 
   // Loading state
   if (isLoading.value) {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = getChartChrome().axisLabel;
     ctx.font = '16px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Loading chart data...', width / 2, height / 2);
@@ -431,7 +466,7 @@ const drawChart = () => {
 
   // No data state
   if (chartData.value.length === 0) {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = getChartChrome().axisLabel;
     ctx.font = '16px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('No data available', width / 2, height / 2);
@@ -447,7 +482,8 @@ const drawChart = () => {
   const displayRange = yAxisMax.value;
 
   // Draw grid lines
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  const chrome = getChartChrome();
+  ctx.strokeStyle = chrome.gridLine;
   ctx.lineWidth = 1;
 
   // Horizontal grid lines with Y-axis labels
@@ -462,7 +498,7 @@ const drawChart = () => {
 
     // Y-axis label (percentage)
     const value = displayMax - (i / 5) * displayRange;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillStyle = chrome.axisLabel;
     ctx.fillText(`${value.toFixed(0)}%`, leftMargin - 5, y + 3);
   }
 
@@ -475,9 +511,9 @@ const drawChart = () => {
     ctx.stroke();
   }
 
-  // Draw RX utilization line (purple)
+  // Draw RX utilization line
   if (chartData.value.length > 1) {
-    ctx.strokeStyle = '#EBA0FC';
+    ctx.strokeStyle = CHART_COLORS.rx;
     ctx.lineWidth = 2;
     ctx.beginPath();
 
@@ -496,9 +532,9 @@ const drawChart = () => {
     ctx.stroke();
   }
 
-  // Draw TX utilization line (red)
+  // Draw TX utilization line
   if (chartData.value.length > 1) {
-    ctx.strokeStyle = '#FB787B';
+    ctx.strokeStyle = CHART_COLORS.tx;
     ctx.lineWidth = 2;
     ctx.beginPath();
 
@@ -518,15 +554,22 @@ const drawChart = () => {
   }
 };
 
+// Periodic refresh — 2 minutes matches the 60-second bucket resolution of the API.
+// immediate: false because onMounted handles the first load (cache check + fetch).
+useManagedPolling(fetchChartData, { intervalMs: 120_000, immediate: false });
+
 // ============================================================================
 // Lifecycle
 // ============================================================================
 
 onMounted(() => {
-  fetchChartData();
-
-  // Refresh data every 30 seconds
-  updateInterval.value = window.setInterval(fetchChartData, 30000);
+  if (_airtimeCache && Date.now() - _airtimeCache.fetchedAt < AIRTIME_CACHE_TTL_MS) {
+    chartData.value = _airtimeCache.data;
+    yAxisMax.value = _airtimeCache.yAxisMax;
+    isInitialFetch.value = false;
+  } else {
+    fetchChartData();
+  }
 
   nextTick(() => {
     drawChart();
@@ -537,9 +580,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  if (updateInterval.value) {
-    clearInterval(updateInterval.value);
-  }
   window.removeEventListener('resize', drawChart);
 });
 </script>
@@ -570,9 +610,16 @@ onBeforeUnmount(() => {
         >
       </div>
     </div>
-    <div class="relative h-40 lg:h-48">
+    <ChartCard
+      class="h-40 lg:h-48"
+      :is-loading="isInitialFetch"
+      :is-updating="isRefreshing"
+      :error="chartError"
+      :status="chartStatus"
+      @retry="fetchChartData"
+    >
       <canvas ref="chartRef" class="absolute inset-0 w-full h-full"></canvas>
-    </div>
+    </ChartCard>
 
     <!-- Performance Stats -->
     <div class="mt-3 lg:mt-4 grid grid-cols-2 gap-3 lg:gap-4">
@@ -626,10 +673,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div>
-        <div class="text-xs lg:text-sm font-semibold text-white">
+        <div class="text-xs lg:text-sm font-semibold text-accent-red">
           {{ packetStore.packetStats?.dropped_packets || localStats.dropped }}
         </div>
-        <div class="text-xs text-white/60">Dropped</div>
+        <div class="text-xs text-content-secondary dark:text-content-muted">Dropped</div>
       </div>
     </div>
   </div>

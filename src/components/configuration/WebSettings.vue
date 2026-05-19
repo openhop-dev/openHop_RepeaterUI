@@ -1,7 +1,15 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-12">
+    <!-- Page Heading -->
+    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Web Options</h3>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure CORS policy and web frontend selection</p>
+      </div>
+    </div>
+
     <!-- CORS Settings -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -47,7 +55,7 @@
     </div>
 
     <!-- Web Frontend Selection -->
-    <div class="glass-card rounded-lg border border-stroke-subtle dark:border-stroke/10 p-6">
+    <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
           <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
@@ -310,7 +318,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import ApiService from '@/utils/api';
+import { useSystemStore } from '@/stores/system';
 
 defineOptions({ name: 'WebSettings' });
 
@@ -318,6 +328,8 @@ interface WebConfig {
   cors_enabled: boolean;
   use_default_frontend: boolean;
 }
+
+const { stats } = storeToRefs(useSystemStore());
 
 const saving = ref(false);
 const saveMessage = ref('');
@@ -344,7 +356,6 @@ async function checkPymcConsole() {
     const response = await ApiService.get('/check_pymc_console');
     if (response.success && response.data) {
       pymcConsoleExists.value = (response.data as { exists: boolean }).exists;
-      console.log('PyMC Console exists:', pymcConsoleExists.value);
     }
   } catch (error) {
     console.error('Failed to check PyMC Console:', error);
@@ -354,42 +365,11 @@ async function checkPymcConsole() {
   }
 }
 
-async function loadSettings() {
-  try {
-    const response = await ApiService.get('/stats');
-    console.log('WebSettings: Full response:', response);
-
-    // Handle both wrapped and direct response formats
-    let statsData = null;
-    if (response.success && response.data) {
-      statsData = response.data;
-    } else if (response && 'version' in response) {
-      // Direct stats response without wrapper
-      statsData = response;
-    }
-
-    if (statsData) {
-      const webConfig = (statsData as any).config?.web || {};
-      console.log('WebSettings: webConfig:', webConfig);
-
-      // Explicitly check for boolean value
-      localConfig.cors_enabled = webConfig.cors_enabled === true;
-      console.log('WebSettings: Set cors_enabled to:', localConfig.cors_enabled);
-
-      // If web_path is null/empty/undefined, it's using default frontend
-      const webPath = webConfig.web_path;
-      localConfig.use_default_frontend = !webPath || webPath === '';
-      console.log(
-        'WebSettings: Set use_default_frontend to:',
-        localConfig.use_default_frontend,
-        'from web_path:',
-        webPath,
-      );
-    }
-  } catch (error) {
-    console.error('Failed to load web settings:', error);
-    showMessage('Failed to load settings', false);
-  }
+function loadSettings() {
+  const webConfig = (stats.value?.config as any)?.web || {};
+  localConfig.cors_enabled = webConfig.cors_enabled === true;
+  const webPath = webConfig.web_path;
+  localConfig.use_default_frontend = !webPath || webPath === '';
 }
 
 async function saveSettings() {

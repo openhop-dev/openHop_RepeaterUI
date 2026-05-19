@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, onBeforeUnmount } from 'vue';
+import { onMounted, computed, ref } from 'vue';
+import { Cpu, Usb, Wifi } from '@lucide/vue';
 import { useSetupStore } from '@/stores/setup';
-import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+import Spinner from '@/components/ui/Spinner.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
 const setupStore = useSetupStore();
-const router = useRouter();
 
 defineOptions({ name: 'SetupView' });
 
 const showDialog = ref(false);
 const dialogTitle = ref('');
 const dialogMessage = ref('');
-const dialogType = ref<'success' | 'error'>('success');
-let redirectTimer: ReturnType<typeof setTimeout> | null = null;
+const dialogType = ref<'error'>('error');
+const showRestartModal = ref(false);
 
 // Map preset titles to flag emojis
 const getFlagEmoji = (title: string): string => {
@@ -38,20 +39,67 @@ const progressPercentage = computed(() => {
   return (setupStore.currentStep / setupStore.totalSteps) * 100;
 });
 
+type ConnectionType = 'gpio' | 'usb' | 'network';
+
+const connectionFilters: Array<{ key: ConnectionType; title: string; description: string }> = [
+  {
+    key: 'gpio',
+    title: 'HAT GPIO Based Device',
+    description: 'Direct SPI/GPIO connected HATs and board-integrated radios.',
+  },
+  {
+    key: 'usb',
+    title: 'USB Connection',
+    description: 'USB-attached modems including CH341 and pyMC USB modem.',
+  },
+  {
+    key: 'network',
+    title: 'Network Wi-Fi Based',
+    description: 'Remote modem reached over LAN/Wi-Fi using pyMC TCP.',
+  },
+];
+
+function getHardwareConnectionType(
+  hardware: { key: string; config?: Record<string, unknown> },
+): ConnectionType | null {
+  const key = hardware.key.toLowerCase();
+  if (key === 'kiss') {
+    return 'usb';
+  }
+
+  const configured = String(hardware.config?.connection_type || '').toLowerCase();
+  if (configured === 'usb' || configured === 'network' || configured === 'gpio') {
+    return configured;
+  }
+
+  if (key.includes('ch341') || key === 'pymc_usb') return 'usb';
+  if (key === 'pymc_tcp') return 'network';
+  return 'gpio';
+}
+
+const filteredHardwareOptions = computed(() => {
+  const selected = setupStore.selectedHardwareConnection;
+  if (!selected) return [];
+
+  return setupStore.hardwareOptions.filter((hardware) => getHardwareConnectionType(hardware) === selected);
+});
+
+function selectConnectionFilter(connection: ConnectionType) {
+  setupStore.selectedHardwareConnection = connection;
+  if (
+    setupStore.selectedHardware &&
+    !filteredHardwareOptions.value.some((option) => option.key === setupStore.selectedHardware?.key)
+  ) {
+    setupStore.selectedHardware = null;
+  }
+}
+
 async function handleNext() {
   if (setupStore.isLastStep) {
     // Complete setup
     const result = await setupStore.completeSetup();
     if (result.success) {
-      // Show success dialog
-      dialogType.value = 'success';
-      dialogTitle.value = 'Setup Complete!';
-      dialogMessage.value =
-        'Your repeater has been configured successfully. The service is restarting now...';
-      showDialog.value = true;
-
-      // Wait for backend to come back, then redirect
-      redirectToLogin();
+      showRestartModal.value = true;
     } else {
       // Show error dialog
       dialogType.value = 'error';
@@ -70,61 +118,13 @@ function handleBack() {
 
 function closeDialog() {
   showDialog.value = false;
-  if (dialogType.value === 'success') {
-    // Timer already handles redirect — only navigate if it already cleared
-    if (!redirectTimer) {
-      router.push('/login');
-    }
-  }
 }
 
-/** Poll the backend until it responds, then navigate to login. */
-function redirectToLogin() {
-  let attempts = 0;
-  const maxAttempts = 30; // ~30 seconds
-
-  function tryRedirect() {
-    attempts++;
-    fetch('/api/status', { method: 'GET' })
-      .then((res) => {
-        if (res.ok) {
-          redirectTimer = null;
-          showDialog.value = false;
-          router.push('/login');
-        } else {
-          scheduleRetry();
-        }
-      })
-      .catch(() => {
-        scheduleRetry();
-      });
-  }
-
-  function scheduleRetry() {
-    if (attempts < maxAttempts) {
-      redirectTimer = setTimeout(tryRedirect, 1000);
-    } else {
-      // Give up waiting — redirect anyway and let the login page handle it
-      redirectTimer = null;
-      showDialog.value = false;
-      router.push('/login');
-    }
-  }
-
-  // Initial delay to give the service time to begin restarting
-  redirectTimer = setTimeout(tryRedirect, 2000);
-}
-
-onBeforeUnmount(() => {
-  if (redirectTimer) {
-    clearTimeout(redirectTimer);
-    redirectTimer = null;
-  }
-});
 
 const stepTitles = [
   'Welcome',
   'Repeater Name',
+  'Connection Type',
   'Hardware Selection',
   'Radio Configuration',
   'Security Setup',
@@ -322,8 +322,47 @@ const stepTitles = [
             </div>
           </div>
 
-          <!-- Hardware Selection Step -->
+          <!-- Connection Type Step -->
           <div v-else-if="setupStore.currentStep === 3" class="space-y-6 mt-8">
+            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+              Choose how your radio hardware connects to this repeater.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
+              <button
+                v-for="connection in connectionFilters"
+                :key="connection.key"
+                @click="selectConnectionFilter(connection.key)"
+                :class="[
+                  'p-6 rounded-[16px] border transition-all duration-300 text-left backdrop-blur-sm min-h-[220px] flex flex-col',
+                  setupStore.selectedHardwareConnection === connection.key
+                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
+                    : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                ]"
+              >
+                <div
+                  :class="[
+                    'mb-5 w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-300',
+                    setupStore.selectedHardwareConnection === connection.key
+                      ? 'bg-primary/20 border-primary/40 shadow-md shadow-primary/20'
+                      : 'bg-white/60 dark:bg-white/10 border-stroke-subtle dark:border-stroke/20',
+                  ]"
+                >
+                  <Cpu v-if="connection.key === 'gpio'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
+                  <Usb v-else-if="connection.key === 'usb'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
+                  <Wifi v-else class="w-9 h-9 text-primary" :stroke-width="1.8" />
+                </div>
+                <div class="font-semibold text-lg text-content-primary dark:text-content-primary mb-2">
+                  {{ connection.title }}
+                </div>
+                <div class="text-sm text-content-secondary dark:text-content-muted">
+                  {{ connection.description }}
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Hardware Selection Step -->
+          <div v-else-if="setupStore.currentStep === 4" class="space-y-6 mt-8">
             <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
               Select your hardware board type
             </p>
@@ -334,14 +373,20 @@ const stepTitles = [
               Loading hardware options...
             </div>
             <div
-              v-else-if="setupStore.hardwareOptions.length === 0"
+              v-else-if="!setupStore.selectedHardwareConnection"
               class="text-center text-content-secondary dark:text-content-muted"
             >
-              No hardware options available
+              Choose a connection type first
+            </div>
+            <div
+              v-else-if="filteredHardwareOptions.length === 0"
+              class="text-center text-content-secondary dark:text-content-muted"
+            >
+              No hardware options available for this connection type
             </div>
             <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
               <button
-                v-for="hardware in setupStore.hardwareOptions"
+                v-for="hardware in filteredHardwareOptions"
                 :key="hardware.key"
                 @click="setupStore.selectedHardware = hardware"
                 :class="[
@@ -362,7 +407,7 @@ const stepTitles = [
           </div>
 
           <!-- Radio Preset Step -->
-          <div v-else-if="setupStore.currentStep === 4" class="space-y-6 mt-8">
+          <div v-else-if="setupStore.currentStep === 5" class="space-y-6 mt-8">
             <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
               Choose a radio configuration preset for your region or create a custom configuration
             </p>
@@ -562,7 +607,7 @@ const stepTitles = [
           </div>
 
           <!-- Security Step -->
-          <div v-else-if="setupStore.currentStep === 5" class="space-y-6 mt-8">
+          <div v-else-if="setupStore.currentStep === 6" class="space-y-6 mt-8">
             <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
               Set a secure admin password to protect your repeater
             </p>
@@ -641,10 +686,7 @@ const stepTitles = [
                 : 'bg-background-mute dark:bg-stroke/5 text-content-muted dark:text-content-muted border border-stroke-subtle dark:border-stroke/10'
             "
           >
-            <div
-              v-if="setupStore.isSubmitting"
-              class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-            ></div>
+            <Spinner v-if="setupStore.isSubmitting" size="sm" color="white" />
             <span v-if="setupStore.isSubmitting">Setting up...</span>
             <span v-else-if="setupStore.isLastStep">Complete Setup</span>
             <span v-else>Next</span>
@@ -667,7 +709,7 @@ const stepTitles = [
       </div>
     </div>
 
-    <!-- Success/Error Dialog -->
+    <!-- Error Dialog -->
     <Transition name="modal">
       <div
         v-if="showDialog"
@@ -678,28 +720,8 @@ const stepTitles = [
           class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
           @click.stop
         >
-          <!-- Icon -->
           <div class="flex justify-center mb-6">
             <div
-              v-if="dialogType === 'success'"
-              class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-500/20 flex items-center justify-center"
-            >
-              <svg
-                class="w-8 h-8 text-green-600 dark:text-green-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div
-              v-else
               class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center"
             >
               <svg
@@ -717,34 +739,29 @@ const stepTitles = [
               </svg>
             </div>
           </div>
-
-          <!-- Title -->
           <h3
             class="text-2xl font-bold text-content-primary dark:text-content-primary text-center mb-4"
           >
             {{ dialogTitle }}
           </h3>
-
-          <!-- Message -->
           <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
             {{ dialogMessage }}
           </p>
-
-          <!-- Button -->
           <button
             @click="closeDialog"
-            class="w-full px-6 py-3 rounded-lg font-medium transition-all"
-            :class="
-              dialogType === 'success'
-                ? 'bg-primary hover:bg-primary/90 text-white'
-                : 'bg-accent-red hover:bg-accent-red/90 text-white'
-            "
+            class="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red"
           >
-            {{ dialogType === 'success' ? 'Continue to Login' : 'Close' }}
+            Close
           </button>
         </div>
       </div>
     </Transition>
+
+    <RestartModal
+      v-model="showRestartModal"
+      :start-immediately="true"
+      message="Setup complete. The service is restarting. This may take up to a minute."
+    />
   </div>
 </template>
 

@@ -1,4 +1,5 @@
 <template>
+  <Teleport to="body">
   <div
     v-if="isOpen"
     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -89,23 +90,22 @@
           <button
             type="submit"
             :disabled="loading"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-white rounded-lg border border-primary/50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            class="btn-primary flex items-center gap-2"
           >
-            <div
-              v-if="loading"
-              class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-            ></div>
+            <Spinner v-if="loading" size="sm" color="current" />
             {{ loading ? 'Changing...' : 'Change Password' }}
           </button>
         </div>
       </form>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { authClient } from '@/utils/api';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'ChangePasswordModal' });
 

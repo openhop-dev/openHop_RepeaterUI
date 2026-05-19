@@ -14,6 +14,7 @@
  * - Optional loading spinner and center text display
  */
 import { computed } from 'vue';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'SparklineChart' });
 
@@ -29,8 +30,11 @@ interface Props {
   showChart?: boolean;
   variant?: 'smooth' | 'classic';
   loading?: boolean;
+  error?: string | null;
   centerText?: string;
   subtitle?: string;
+  minY?: number;
+  maxY?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -38,9 +42,14 @@ const props = withDefaults(defineProps<Props>(), {
   showChart: true,
   variant: 'smooth',
   loading: false,
+  error: null,
   centerText: '',
   subtitle: '',
+  minY: undefined,
+  maxY: undefined,
 });
+
+const emit = defineEmits<{ retry: [] }>();
 
 // ============================================================================
 // Constants
@@ -100,8 +109,8 @@ const processedData = computed(() => {
 const createPath = (data: number[]): string => {
   if (data.length < 2) return '';
 
-  const maxVal = Math.max(...data);
-  const minVal = Math.min(...data);
+  const maxVal = props.maxY ?? Math.max(...data);
+  const minVal = props.minY ?? Math.min(...data);
   const range = maxVal - minVal || 1;
   const padding = props.variant === 'classic' ? 4 : 2;
 
@@ -143,18 +152,24 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
     <div class="card-header">
       <div>
         <p class="card-title">{{ title }}</p>
-        <p v-if="subtitle" class="card-subtitle">{{ subtitle }}</p>
+        <p class="card-subtitle">{{ subtitle }}</p>
       </div>
-      <span class="card-value" :style="{ color }">{{
-        typeof value === 'number' ? value.toLocaleString() : value
-      }}</span>
+      <span class="card-value" :style="{ color }">
+        <Spinner v-if="loading" size="sm" color="current" />
+        <template v-else>{{ typeof value === 'number' ? value.toLocaleString() : value }}</template>
+      </span>
     </div>
 
     <!-- Full-width content area -->
     <div v-if="showChart" class="card-chart">
       <!-- Loading -->
       <div v-if="loading && variant === 'classic'" class="chart-loader">
-        <div class="loader-spinner" :style="{ borderTopColor: color }"></div>
+        <Spinner size="sm" />
+      </div>
+
+      <!-- Error with retry -->
+      <div v-else-if="error" class="chart-error">
+        <button class="chart-retry-btn" @click="emit('retry')">↺ Retry</button>
       </div>
 
       <!-- Center text (percentage) -->
@@ -276,12 +291,36 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
   height: 100%;
 }
 
-.loader-spinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.chart-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.chart-retry-btn {
+  font-size: 11px;
+  color: rgba(75, 85, 99, 0.7);
+  background: rgba(75, 85, 99, 0.08);
+  border: 1px solid rgba(75, 85, 99, 0.15);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.chart-retry-btn:hover {
+  background: rgba(75, 85, 99, 0.15);
+}
+
+.dark .chart-retry-btn {
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .chart-retry-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .chart-text {
@@ -302,11 +341,6 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
   transition: d 1s ease-out;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 @media (min-width: 1024px) {
   .sparkline-card {

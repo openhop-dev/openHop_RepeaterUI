@@ -48,6 +48,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/sensors',
+      name: 'sensors',
+      component: () => import('@/views/Sensors.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/configuration',
       name: 'configuration',
       component: () => import('@/views/Configuration.vue'),
@@ -98,8 +104,13 @@ const router = createRouter({
   ],
 });
 
-// Check if setup is needed
+// Cached result: once the device confirms setup is complete we skip the HTTP
+// check on every subsequent navigation. Resets on page reload (intentional —
+// the user may have factory-reset the device).
+let _setupComplete = false;
+
 async function checkSetupStatus() {
+  if (_setupComplete) return false;
   try {
     const response = await fetch('/api/needs_setup', {
       headers: {
@@ -111,7 +122,9 @@ async function checkSetupStatus() {
       return false;
     }
     const data = await response.json();
-    return data.needs_setup === true;
+    const needsSetup = data.needs_setup === true;
+    if (!needsSetup) _setupComplete = true;
+    return needsSetup;
   } catch (error) {
     console.error('Error checking setup status:', error);
     return false;
@@ -119,37 +132,22 @@ async function checkSetupStatus() {
 }
 
 // Navigation guard - check setup status and authentication
-router.beforeEach(async (to, from, next) => {
-  const requiresAuth = to.meta.requiresAuth !== false; // Default to true
+router.beforeEach(async (to) => {
+  const requiresAuth = to.meta.requiresAuth !== false;
   const authenticated = isAuthenticated();
 
-  // Check if setup is needed (only if not already on setup page)
   if (to.path !== '/setup') {
     const needsSetup = await checkSetupStatus();
-    if (needsSetup) {
-      next('/setup');
-      return;
-    }
+    if (needsSetup) return '/setup';
   }
 
-  // If on setup page but setup is complete, redirect away
   if (to.path === '/setup') {
     const needsSetup = await checkSetupStatus();
-    if (!needsSetup) {
-      next('/login');
-      return;
-    }
+    if (!needsSetup) return '/login';
   }
 
-  if (requiresAuth && !authenticated) {
-    // Redirect to login if not authenticated
-    next('/login');
-  } else if (to.path === '/login' && authenticated) {
-    // Redirect to dashboard if already logged in
-    next('/');
-  } else {
-    next();
-  }
+  if (requiresAuth && !authenticated) return '/login';
+  if (to.path === '/login' && authenticated) return '/';
 });
 
 export default router;

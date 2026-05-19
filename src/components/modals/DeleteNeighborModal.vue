@@ -47,33 +47,19 @@ const handleClose = () => {
   emit('close');
 };
 
-// Handle backdrop click
-const handleBackdropClick = (event: MouseEvent) => {
-  if (event.target === event.currentTarget) {
-    handleClose();
-  }
-};
 </script>
 
 <template>
+  <Teleport to="body">
   <!-- Modal Backdrop -->
   <div
     v-if="show && neighbor"
-    @click="handleBackdropClick"
-    class="fixed inset-0 bg-black/80 backdrop-blur-lg z-[99999] flex items-center justify-center p-4"
-    style="
-      backdrop-filter: blur(8px) saturate(180%);
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-    "
+    @click.self="handleClose()"
+    class="modal-backdrop-heavy"
   >
     <!-- Modal Content -->
     <div
-      class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full max-w-md border border-stroke-subtle dark:border-white/10"
-      @click.stop
+      class="modal-card max-w-md"
     >
       <!-- Header -->
       <div class="flex items-center gap-3 mb-6">
@@ -155,11 +141,12 @@ const handleBackdropClick = (event: MouseEvent) => {
 
         <button
           @click="handleDelete"
-          class="flex-1 px-4 py-3 bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red rounded-lg transition-colors font-medium"
+          class="modal-btn-danger"
         >
           Delete
         </button>
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

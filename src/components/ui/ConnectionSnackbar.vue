@@ -25,7 +25,7 @@ const variantClass = {
   >
     <div
       v-if="snackbar.visible"
-      class="fixed bottom-5 right-5 z-[1000] max-w-sm rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-xl"
+      class="fixed bottom-5 right-5 z-[150] max-w-sm rounded-xl border px-4 py-3 shadow-2xl backdrop-blur-xl"
       :class="variantClass[snackbar.variant]"
     >
       <p class="text-sm font-medium">{{ snackbar.message }}</p>
