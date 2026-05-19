@@ -51,7 +51,13 @@ async function handleRestart() {
   hasFailed.value = false;
   failureMessage.value = '';
   try {
-    await apiClient.post('/restart_service', {});
+    const response = await apiClient.post('/restart_service', {});
+    if (!response.success) {
+      isRestarting.value = false;
+      hasFailed.value = true;
+      failureMessage.value = response.error ? `Restart failed: ${response.error}` : 'Restart failed.';
+      return;
+    }
   } catch (err) {
     const e = err as { response?: { status?: number; data?: { error?: string; message?: string } } };
     if (e.response) {
