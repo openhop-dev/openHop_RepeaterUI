@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import ApiService from '@/utils/api';
+import { streamingGet } from '@/utils/streamingFetch';
 import { usePacketStore } from '@/stores/packets';
 import { useWebSocketStore } from '@/stores/websocket';
 import { useManagedPolling } from '@/composables/useManagedPolling';
+import ChartCard from '@/components/ui/ChartCard.vue';
 
 defineOptions({ name: 'PacketTypesChart' });
 
@@ -41,7 +42,9 @@ const rawPacketData = ref<PacketTypeData[]>([]);
 const packetStore = usePacketStore();
 const wsStore = useWebSocketStore();
 const isLoading = ref(true);
+const isRefreshing = ref(false);
 const errorMessage = ref<string | null>(null);
+const chartStatus = ref('Connecting...');
 const hoveredBucket = ref<BucketData | null>(null);
 
 // Semantic bucket definitions with distinct sub-colors
@@ -103,9 +106,15 @@ const totalPackets = computed(() => {
 });
 
 const fetchChartData = async () => {
+  chartStatus.value = 'Connecting...';
+  errorMessage.value = null;
+  if (!isLoading.value) isRefreshing.value = true;
   try {
-    errorMessage.value = null;
-    const response = await ApiService.get('/packet_type_graph_data');
+    const response = await streamingGet('/packet_type_graph_data', undefined, {
+      onPhaseChange: (phase) => {
+        chartStatus.value = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+      },
+    });
 
     if (response?.success && response?.data) {
       const chartDataResponse = response.data as ChartData;
@@ -134,17 +143,21 @@ const fetchChartData = async () => {
 
         rawPacketData.value = processedData;
         isLoading.value = false;
+        isRefreshing.value = false;
       } else {
         errorMessage.value = 'No series data in server response';
         isLoading.value = false;
+        isRefreshing.value = false;
       }
     } else {
       errorMessage.value = 'Invalid response from server';
       isLoading.value = false;
+      isRefreshing.value = false;
     }
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to load data';
     isLoading.value = false;
+    isRefreshing.value = false;
   }
 };
 
@@ -220,17 +233,16 @@ useManagedPolling(fetchChartData, {
       </p>
     </div>
 
-    <div class="h-48 lg:h-56 relative">
-      <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center">
-        <div class="text-content-secondary dark:text-content-primary text-sm lg:text-base">
-          Loading packet types...
-        </div>
-      </div>
-      <div v-else-if="errorMessage" class="absolute inset-0 flex items-center justify-center">
-        <div class="text-red-600 dark:text-red-400 text-sm lg:text-base">{{ errorMessage }}</div>
-      </div>
+    <ChartCard
+      class="h-48 lg:h-56"
+      :is-loading="isLoading"
+      :is-updating="isRefreshing"
+      :error="errorMessage"
+      :status="chartStatus"
+      @retry="fetchChartData"
+    >
       <div
-        v-else-if="buckets.length === 0"
+        v-if="buckets.length === 0 && !isLoading && !errorMessage"
         class="absolute inset-0 flex items-center justify-center"
       >
         <div class="text-content-secondary dark:text-content-primary text-sm lg:text-base">
@@ -239,7 +251,7 @@ useManagedPolling(fetchChartData, {
       </div>
 
       <!-- Stacked Bar Chart -->
-      <div v-else class="h-full flex flex-col">
+      <div v-if="buckets.length > 0" class="h-full flex flex-col">
         <!-- Tooltip -->
         <div
           v-if="hoveredBucket"
@@ -302,7 +314,7 @@ useManagedPolling(fetchChartData, {
           </div>
         </div>
       </div>
-    </div>
+    </ChartCard>
 
     <!-- Grid Legend - buckets as columns, items top to bottom -->
     <div

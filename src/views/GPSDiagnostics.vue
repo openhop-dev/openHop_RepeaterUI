@@ -35,8 +35,11 @@ type StableSatRow = {
   staleTimer: ReturnType<typeof setTimeout> | null;
 };
 
-const EARTH_TEXTURE_URL =
-  'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg';
+// Use the smaller 1024 texture on mobile — the 2048 version expands to ~10 MB of GPU
+// memory (with mipmaps) which contributes to iOS tab kills on memory-constrained devices.
+const EARTH_TEXTURE_URL = window.innerWidth < 1024
+  ? 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_1024.jpg'
+  : 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg';
 
 // ── Page tabs ────────────────────────────────────────────────────────────────
 type PageTab = 'overview' | 'satellites' | 'details';
@@ -532,7 +535,11 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   new THREE.TextureLoader().load(
     EARTH_TEXTURE_URL,
     (texture) => {
-      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      // Cap anisotropy on mobile — getMaxAnisotropy() can return 16 on iOS,
+      // which multiplies texture memory 16×. 2 is imperceptible on a small screen.
+      texture.anisotropy = window.innerWidth < 1024
+        ? Math.min(2, renderer.capabilities.getMaxAnisotropy())
+        : renderer.capabilities.getMaxAnisotropy();
       earthMaterial.map = texture;
       earthMaterial.color.set(0xffffff);
       earthMaterial.roughness = 0.82;
@@ -987,6 +994,10 @@ const createSatelliteGlobe = (): GlobeRenderer => {
       clearGroup(satelliteGroup);
       clearGroup(linkGroup);
       root.traverse(disposeObject);
+      // forceContextLoss is required on iOS Safari — dispose() alone does not release
+      // the WebGL context from the browser's ledger, causing context accumulation and
+      // tab crashes after repeated navigation.
+      renderer.forceContextLoss();
       renderer.dispose();
     },
   };

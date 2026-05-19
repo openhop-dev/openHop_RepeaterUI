@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import ApiService from '@/utils/api';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'SessionsView' });
 
@@ -103,10 +104,10 @@ function isCompanion(identity: { type?: string }): boolean {
 
 function identityTypeBadgeClass(type: string | undefined): string {
   if (type === 'repeater')
-    return 'bg-cyan-500/20 dark:bg-primary/20 text-cyan-700 dark:text-primary';
+    return 'bg-primary/20 text-primary';
   if (type === 'companion')
-    return 'bg-violet-500/20 dark:bg-violet-400/20 text-violet-700 dark:text-violet-300';
-  return 'bg-yellow-100 dark:bg-yellow-500/20 dark:bg-secondary/20 text-yellow-700 dark:text-secondary';
+    return 'bg-accent-purple/20 text-accent-purple';
+  return 'bg-secondary/20 text-secondary';
 }
 
 function formatOptionalAcl(value: unknown): string {
@@ -145,19 +146,19 @@ function formatOptionalAcl(value: unknown): string {
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">
           Authenticated Clients
         </div>
-        <div class="text-2xl font-bold text-cyan-500 dark:text-primary">
+        <div class="text-2xl font-bold text-primary">
           {{ aclStats.total_clients }}
         </div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Admin Clients</div>
-        <div class="text-2xl font-bold text-green-700 dark:text-green-500 dark:text-accent-green">
+        <div class="text-2xl font-bold text-accent-green">
           {{ aclStats.admin_clients }}
         </div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Guest Clients</div>
-        <div class="text-2xl font-bold text-yellow-500 dark:text-secondary">
+        <div class="text-2xl font-bold text-secondary">
           {{ aclStats.guest_clients }}
         </div>
       </div>
@@ -174,7 +175,7 @@ function formatOptionalAcl(value: unknown): string {
           :class="[
             'px-4 py-2 text-sm font-medium transition-colors duration-200 border-b-2 mr-6 mb-2',
             activeTab === tab.id
-              ? 'text-cyan-500 dark:text-primary border-cyan-500 dark:border-primary'
+              ? 'text-primary border-primary'
               : 'text-content-secondary dark:text-content-muted border-transparent hover:text-content-primary dark:hover:text-content-primary hover:border-stroke-subtle dark:hover:border-stroke/30',
           ]"
         >
@@ -231,9 +232,7 @@ function formatOptionalAcl(value: unknown): string {
         <!-- Loading State -->
         <div v-if="loading && !initialLoadComplete" class="flex items-center justify-center py-12">
           <div class="text-center">
-            <div
-              class="animate-spin w-8 h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-cyan-500 dark:border-t-primary rounded-full mx-auto mb-4"
-            ></div>
+            <Spinner class="mx-auto mb-4" />
             <div class="text-content-secondary dark:text-content-muted">Loading ACL data...</div>
           </div>
         </div>
@@ -241,13 +240,13 @@ function formatOptionalAcl(value: unknown): string {
         <!-- Error State -->
         <div v-else-if="error" class="flex items-center justify-center py-12">
           <div class="text-center">
-            <div class="text-red-500 dark:text-red-400 mb-2">Failed to load ACL data</div>
+            <div class="text-accent-red mb-2">Failed to load ACL data</div>
             <div class="text-content-secondary dark:text-content-muted text-sm mb-4">
               {{ error }}
             </div>
             <button
               @click="fetchAllACLData"
-              class="px-4 py-2 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-white rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors"
+              class="btn-primary"
             >
               Retry
             </button>
@@ -266,7 +265,7 @@ function formatOptionalAcl(value: unknown): string {
             <div
               v-for="identity in identityList"
               :key="identity.hash"
-              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-cyan-400 dark:hover:border-primary/30 transition-colors"
+              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 transition-colors"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1 min-w-0">
@@ -353,7 +352,7 @@ function formatOptionalAcl(value: unknown): string {
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Authenticated
                         </div>
-                        <div class="text-cyan-500 dark:text-primary font-medium">
+                        <div class="text-primary font-medium">
                           {{ formatOptionalAcl(identity.authenticated_clients) }}
                         </div>
                       </div>
@@ -364,8 +363,8 @@ function formatOptionalAcl(value: unknown): string {
                         <div
                           :class="
                             identity.has_admin_password
-                              ? 'text-green-700 dark:text-green-500 dark:text-accent-green'
-                              : 'text-red-500 dark:text-accent-red'
+                              ? 'text-accent-green'
+                              : 'text-accent-red'
                           "
                         >
                           {{
@@ -384,8 +383,8 @@ function formatOptionalAcl(value: unknown): string {
                         <div
                           :class="
                             identity.has_guest_password
-                              ? 'text-green-700 dark:text-green-500 dark:text-accent-green'
-                              : 'text-red-500 dark:text-accent-red'
+                              ? 'text-accent-green'
+                              : 'text-accent-red'
                           "
                         >
                           {{
@@ -406,8 +405,8 @@ function formatOptionalAcl(value: unknown): string {
                       <span
                         :class="
                           identity.allow_read_only
-                            ? 'text-green-700 dark:text-green-500 dark:text-accent-green'
-                            : 'text-red-500 dark:text-accent-red'
+                            ? 'text-accent-green'
+                            : 'text-accent-red'
                         "
                       >
                         {{
@@ -499,8 +498,8 @@ function formatOptionalAcl(value: unknown): string {
                       :class="[
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
-                          ? 'bg-green-100 dark:bg-green-500/20 dark:bg-accent-green/20 text-green-700 dark:text-accent-green'
-                          : 'bg-yellow-100 dark:bg-yellow-500/20 dark:bg-secondary/20 text-yellow-700 dark:text-secondary',
+                          ? 'bg-accent-green/20 text-accent-green'
+                          : 'bg-secondary/20 text-secondary',
                       ]"
                     >
                       {{ client.permissions }}
@@ -514,7 +513,7 @@ function formatOptionalAcl(value: unknown): string {
                   <td class="py-3">
                     <button
                       @click="removeClient(client.public_key_full, client.identity_hash)"
-                      class="px-3 py-1 bg-red-100 dark:bg-red-500/20 dark:bg-accent-red/20 hover:bg-red-500/30 dark:hover:bg-accent-red/30 text-red-600 dark:text-accent-red rounded text-xs transition-colors"
+                      class="btn-danger-xs"
                     >
                       Remove
                     </button>
@@ -534,7 +533,7 @@ function formatOptionalAcl(value: unknown): string {
             >
             <select
               v-model="selectedIdentity"
-              class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-cyan-500 dark:focus:border-primary/50 transition-colors"
+              class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
             >
               <option :value="null">All Identities</option>
               <option v-for="identity in identityList" :key="identity.name" :value="identity.name">
@@ -563,8 +562,8 @@ function formatOptionalAcl(value: unknown): string {
                       :class="[
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
-                          ? 'bg-green-100 dark:bg-green-500/20 dark:bg-accent-green/20 text-green-700 dark:text-accent-green'
-                          : 'bg-yellow-100 dark:bg-yellow-500/20 dark:bg-secondary/20 text-yellow-700 dark:text-secondary',
+                          ? 'bg-accent-green/20 text-accent-green'
+                          : 'bg-secondary/20 text-secondary',
                       ]"
                     >
                       {{ client.permissions }}
@@ -609,7 +608,7 @@ function formatOptionalAcl(value: unknown): string {
                 </div>
                 <button
                   @click="removeClient(client.public_key_full, client.identity_hash)"
-                  class="ml-4 px-3 py-1 bg-red-100 dark:bg-red-500/20 dark:bg-accent-red/20 hover:bg-red-500/30 dark:hover:bg-accent-red/30 text-red-600 dark:text-accent-red rounded text-xs transition-colors"
+                  class="ml-4 btn-danger-xs"
                 >
                   Remove
                 </button>
@@ -625,7 +624,7 @@ function formatOptionalAcl(value: unknown): string {
       <button
         @click="fetchAllACLData"
         :disabled="loading"
-        class="px-4 py-2 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-primary rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors disabled:opacity-50"
+        class="btn-primary"
       >
         {{ loading ? 'Refreshing...' : 'Refresh Data' }}
       </button>

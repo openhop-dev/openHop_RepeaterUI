@@ -4,6 +4,7 @@ import { ApiService, API_SERVER_URL } from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
 import { getToken } from '@/utils/auth';
 import Plotly from 'plotly.js-dist-min';
+import RestartModal from '@/components/modals/RestartModal.vue';
 
 defineOptions({ name: 'CADCalibrationView' });
 
@@ -437,7 +438,9 @@ function calculateAndShowResults() {
   }
 }
 
-// Save calibration settings
+const showRestartModal = ref(false);
+
+// Save calibration settings — shows restart prompt on success
 async function saveSettings() {
   if (!bestCalibrationResult.value) {
     statusMessage.value = 'Error: No calibration results to save';
@@ -452,7 +455,7 @@ async function saveSettings() {
     });
 
     if (result.success) {
-      statusMessage.value = `Settings saved! Peak=${bestCalibrationResult.value.det_peak}, Min=${bestCalibrationResult.value.det_min} applied to configuration.`;
+      showRestartModal.value = true;
     } else {
       throw new Error(result.error || 'Failed to save settings');
     }
@@ -460,6 +463,7 @@ async function saveSettings() {
     statusMessage.value = `Error: Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`;
   }
 }
+
 
 // Lifecycle
 onMounted(() => {
@@ -533,26 +537,46 @@ onUnmounted(() => {
 
     <!-- Status and Progress -->
     <div class="glass-card rounded-[15px] p-6 space-y-4">
+      <!-- Status message -->
       <div class="text-content-primary dark:text-content-primary">{{ statusMessage }}</div>
 
-      <!-- Range Info -->
-      <div
-        v-if="showRangeInfo && rangeInfo"
-        class="p-4 bg-primary/10 border border-primary/30 rounded-lg"
-      >
-        <div class="text-content-primary dark:text-primary">
+      <!-- Info row: fixed height, swaps between config and results -->
+      <div class="flex items-center justify-between gap-4 px-4 bg-primary/10 border border-primary/30 rounded-lg h-[52px] overflow-hidden">
+        <!-- Config (before complete) -->
+        <div v-if="!showResults && showRangeInfo && rangeInfo" class="text-content-primary dark:text-primary text-sm">
           <strong>Configuration:</strong>
-          SF{{ rangeInfo.spreading_factor }} | Peak: {{ rangeInfo.peak_min }} -
-          {{ rangeInfo.peak_max }} | Min: {{ rangeInfo.min_min }} - {{ rangeInfo.min_max }} |
-          {{
-            (rangeInfo.peak_max - rangeInfo.peak_min + 1) *
-            (rangeInfo.min_max - rangeInfo.min_min + 1)
-          }}
-          tests
+          SF{{ rangeInfo.spreading_factor }} | Peak: {{ rangeInfo.peak_min }}–{{ rangeInfo.peak_max }} | Min: {{ rangeInfo.min_min }}–{{ rangeInfo.min_max }} |
+          {{ (rangeInfo.peak_max - rangeInfo.peak_min + 1) * (rangeInfo.min_max - rangeInfo.min_min + 1) }} tests
         </div>
+        <!-- Placeholder before calibration starts -->
+        <div v-else-if="!showResults" class="text-content-muted dark:text-content-muted text-sm italic">
+          Awaiting calibration…
+        </div>
+        <!-- Results (when complete) -->
+        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary dark:text-content-primary text-sm">
+          <span class="text-accent-green font-medium">Optimal settings found — </span>
+          Peak: <strong>{{ bestCalibrationResult.det_peak }}</strong>,
+          Min: <strong>{{ bestCalibrationResult.det_min }}</strong>,
+          Rate: <strong>{{ bestCalibrationResult.detection_rate.toFixed(1) }}%</strong>
+        </div>
+        <div v-else-if="showNoResults" class="text-content-secondary dark:text-content-muted text-sm">
+          No optimal settings found. Consider running calibration again.
+        </div>
+
+        <!-- Save Settings button — appears to the right when complete -->
+        <button
+          v-if="showBestResult && bestCalibrationResult"
+          @click="saveSettings"
+          class="btn-primary flex-shrink-0 flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Save Settings
+        </button>
       </div>
 
-      <!-- Progress Bar -->
+      <!-- Progress bar (always present, height never changes) -->
       <div class="space-y-2">
         <div class="w-full bg-white/10 rounded-full h-2">
           <div
@@ -595,47 +619,13 @@ onUnmounted(() => {
       <div id="plotly-chart" class="w-full h-96"></div>
     </div>
 
-    <!-- Results -->
-    <div v-if="showResults" class="glass-card rounded-[15px] p-6 space-y-4">
-      <h3 class="text-xl font-bold text-content-primary dark:text-content-primary">
-        Calibration Results
-      </h3>
-
-      <div
-        v-if="showBestResult && bestCalibrationResult"
-        class="p-4 bg-accent-green/10 border border-accent-green/30 rounded-lg"
-      >
-        <h4 class="font-medium text-accent-green mb-2">Optimal Settings Found:</h4>
-        <p class="text-content-primary dark:text-content-primary mb-4">
-          Peak: <strong>{{ bestCalibrationResult.det_peak }}</strong
-          >, Min: <strong>{{ bestCalibrationResult.det_min }}</strong
-          >, Rate: <strong>{{ bestCalibrationResult.detection_rate.toFixed(1) }}%</strong>
-        </p>
-        <div class="flex justify-center">
-          <button
-            @click="saveSettings"
-            class="flex items-center gap-3 px-6 py-3 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <div class="text-left">
-              <div class="font-medium">Save Settings</div>
-              <div class="text-xs opacity-80">Apply to configuration</div>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div v-if="showNoResults" class="p-4 bg-secondary/20 border border-secondary/40 rounded-lg">
-        <h4 class="font-medium text-secondary mb-2">No Optimal Settings Found</h4>
-        <p class="text-content-secondary dark:text-content-muted">
-          All tested combinations showed low detection rates. Consider running calibration again or
-          adjusting test parameters.
-        </p>
-      </div>
-    </div>
   </div>
+
+  <RestartModal
+    v-model="showRestartModal"
+    title="CAD Calibration Saved: Restart Required"
+    message="In order for the CAD Calibration settings to take effect and the noise floor to return to normal, the service needs to be restarted."
+  />
 </template>
 
 <style scoped>

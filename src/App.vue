@@ -6,6 +6,7 @@ import { isAuthenticated } from '@/utils/auth';
 import { useTheme } from '@/composables/useTheme';
 import { useConnectionLifecycle } from '@/composables/useConnectionLifecycle';
 import ConnectionSnackbar from '@/components/ui/ConnectionSnackbar.vue';
+import BootstrapModal from '@/components/modals/BootstrapModal.vue';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 
 const route = useRoute();
@@ -40,6 +41,7 @@ const showLayout = computed(() => {
   <router-view v-else />
 
   <ConnectionSnackbar />
+  <BootstrapModal v-if="showLayout" />
 </template>
 
 <style>

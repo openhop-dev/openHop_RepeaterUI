@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import ApiService from '@/utils/api';
 import { getPreference, setPreference } from '@/utils/preferences';
+import { useSystemStore } from '@/stores/system';
 import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
 import MessageDialog from '@/components/modals/MessageDialog.vue';
+import RestartModal from '@/components/modals/RestartModal.vue';
+import LocationPicker from '@/components/modals/LocationPicker.vue';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'RoomServersView' });
+
+const systemStore = useSystemStore();
+const repeaterLat = computed(() => systemStore.stats?.config?.repeater?.latitude ?? 0);
+const repeaterLng = computed(() => systemStore.stats?.config?.repeater?.longitude ?? 0);
+
+const showLocationPickerCreate = ref(false);
+const showLocationPickerEdit = ref(false);
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -13,13 +24,26 @@ const error = ref<string | null>(null);
 const identities = ref<any>(null);
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
+const showRestartModal = ref(false);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const editingIdentity = ref<any>(null);
+const editOriginalName = ref('');
 const showKeyInCreate = ref(false);
 const showKeyInEdit = ref(false);
 const visibleKeys = ref<Set<string>>(new Set());
 
 // Dialog states
+// Derived counts scoped to room servers only (total_registered includes companions)
+const roomServerRegisteredCount = computed(
+  () => identities.value?.configured?.filter((i: any) => i.registered).length ?? 0,
+);
+const roomServerConfiguredCount = computed(
+  () => identities.value?.configured?.length ?? 0,
+);
+const roomServersSynced = computed(
+  () => roomServerRegisteredCount.value === roomServerConfiguredCount.value,
+);
+
 const showConfirmDelete = ref(false);
 const deleteTarget = ref<string>('');
 const showMessageDialog = ref(false);
@@ -82,17 +106,20 @@ async function fetchIdentities() {
   }
 }
 
+function roundCoords(settings: { latitude: number; longitude: number }) {
+  settings.latitude = Math.round(settings.latitude * 1e6) / 1e6;
+  settings.longitude = Math.round(settings.longitude * 1e6) / 1e6;
+}
+
 async function createIdentity() {
+  roundCoords(newIdentity.value.settings);
   try {
     const response = await ApiService.createIdentity(newIdentity.value);
 
     if (response.success) {
       showCreateModal.value = false;
-      resetForm();
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity created successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to create identity: ${response.error}`, 'error');
     }
@@ -102,16 +129,22 @@ async function createIdentity() {
 }
 
 async function updateIdentity() {
+  const payload = { ...editingIdentity.value, settings: { ...editingIdentity.value.settings } };
+  roundCoords(payload.settings);
+  if (payload.name !== editOriginalName.value) {
+    payload.new_name = payload.name;
+    payload.name = editOriginalName.value;
+  } else {
+    delete payload.new_name;
+  }
   try {
-    const response = await ApiService.updateIdentity(editingIdentity.value);
+    const response = await ApiService.updateIdentity(payload);
 
     if (response.success) {
       showEditModal.value = false;
       editingIdentity.value = null;
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity updated successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to update identity: ${response.error}`, 'error');
     }
@@ -168,16 +201,15 @@ async function sendRoomServerAdvert(name: string) {
 
 function openEditModal(identity: unknown) {
   editingIdentity.value = JSON.parse(JSON.stringify(identity));
+  editOriginalName.value = editingIdentity.value.name;
+  delete editingIdentity.value.new_name;
   if (!editingIdentity.value.settings) {
     editingIdentity.value.settings = {};
   }
-  // Ensure password fields exist
-  if (!editingIdentity.value.settings.admin_password) {
-    editingIdentity.value.settings.admin_password = '';
-  }
-  if (!editingIdentity.value.settings.guest_password) {
-    editingIdentity.value.settings.guest_password = '';
-  }
+  if (!editingIdentity.value.settings.admin_password) editingIdentity.value.settings.admin_password = '';
+  if (!editingIdentity.value.settings.guest_password) editingIdentity.value.settings.guest_password = '';
+  if (editingIdentity.value.settings.latitude == null) editingIdentity.value.settings.latitude = 0;
+  if (editingIdentity.value.settings.longitude == null) editingIdentity.value.settings.longitude = 0;
   showKeyInEdit.value = false;
   showEditModal.value = true;
 }
@@ -189,13 +221,30 @@ function resetForm() {
     type: 'room_server',
     settings: {
       node_name: '',
-      latitude: 0,
-      longitude: 0,
+      latitude: repeaterLat.value,
+      longitude: repeaterLng.value,
       admin_password: '',
       guest_password: '',
     },
   };
   showKeyInCreate.value = false;
+}
+
+function openCreateModal() {
+  resetForm();
+  showCreateModal.value = true;
+}
+
+function handleLocationPickerSelect(location: { latitude: number; longitude: number }) {
+  newIdentity.value.settings.latitude = location.latitude;
+  newIdentity.value.settings.longitude = location.longitude;
+}
+
+function handleLocationPickerSelectEdit(location: { latitude: number; longitude: number }) {
+  if (editingIdentity.value) {
+    editingIdentity.value.settings.latitude = location.latitude;
+    editingIdentity.value.settings.longitude = location.longitude;
+  }
 }
 
 function closeModals() {
@@ -204,7 +253,6 @@ function closeModals() {
   editingIdentity.value = null;
   showKeyInCreate.value = false;
   showKeyInEdit.value = false;
-  resetForm();
 }
 
 function toggleKeyVisibility(identityName: string) {
@@ -443,7 +491,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           </div>
         </div>
         <button
-          @click="showCreateModal = true"
+          @click="openCreateModal"
           class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary dark:text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
         >
           <span class="flex items-center gap-2">
@@ -467,138 +515,61 @@ async function removeClient(publicKey: string, identityHash?: string) {
       class="grid grid-cols-1 md:grid-cols-3 gap-4"
     >
       <!-- Total Configured -->
-      <div
-        class="group relative overflow-hidden glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-      >
-        <div
-          class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-        ></div>
-        <div class="relative flex items-center justify-between">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
           <div>
-            <div
-              class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide"
-            >
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Total Configured
             </div>
             <div class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
-              {{ identities.total_configured }}
+              {{ roomServerConfiguredCount }}
             </div>
           </div>
-          <div
-            class="bg-background-mute dark:bg-white/10 p-3 rounded-[12px] group-hover:bg-background-mute dark:group-hover:bg-stroke/20 transition-colors"
-          >
-            <svg
-              class="w-6 h-6 text-content-secondary dark:text-content-primary/70"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              ></path>
+          <div class="bg-background-mute dark:bg-white/10 p-3 rounded-[12px]">
+            <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
           </div>
         </div>
       </div>
 
       <!-- Currently Registered -->
-      <div
-        class="group relative overflow-hidden glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-      >
-        <div
-          class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-        ></div>
-        <div class="relative flex items-center justify-between">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
           <div>
-            <div
-              class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide"
-            >
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Currently Registered
             </div>
             <div class="text-3xl font-bold text-primary mb-1">
-              {{ identities.total_registered }}
+              {{ roomServerRegisteredCount }}
             </div>
           </div>
-          <div class="bg-primary/20 p-3 rounded-[12px] group-hover:bg-primary/30 transition-colors">
+          <div class="bg-primary/20 p-3 rounded-[12px]">
             <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 13l4 4L19 7"
-              ></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
           </div>
         </div>
       </div>
 
       <!-- Status -->
-      <div
-        class="group relative overflow-hidden glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5 hover:scale-[1.02] transition-all duration-300 cursor-pointer"
-      >
-        <div
-          class="absolute inset-0 bg-gradient-to-br from-accent-green/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-        ></div>
-        <div class="relative flex items-center justify-between">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+        <div class="flex items-center justify-between">
           <div>
-            <div
-              class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide"
-            >
+            <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Status
             </div>
-            <div
-              class="text-3xl font-bold"
-              :class="
-                identities.total_registered === identities.total_configured
-                  ? 'text-accent-green'
-                  : 'text-accent-yellow'
-              "
-            >
-              {{
-                identities.total_registered === identities.total_configured
-                  ? 'Synced'
-                  : 'Out of Sync'
-              }}
+            <div class="text-3xl font-bold" :class="roomServersSynced ? 'text-accent-green' : 'text-accent-yellow'">
+              {{ roomServersSynced ? 'Synced' : 'Out of Sync' }}
             </div>
           </div>
-          <div
-            :class="[
-              'p-3 rounded-[12px] transition-colors',
-              identities.total_registered === identities.total_configured
-                ? 'bg-accent-green/20 group-hover:bg-accent-green/30'
-                : 'bg-accent-yellow/20 group-hover:bg-accent-yellow/30',
-            ]"
-          >
-            <svg
-              v-if="identities.total_registered === identities.total_configured"
-              class="w-6 h-6 text-accent-green"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
+          <div :class="['p-3 rounded-[12px]', roomServersSynced ? 'bg-accent-green/20' : 'bg-accent-yellow/20']">
+            <svg v-if="roomServersSynced" class="w-6 h-6 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <svg
-              v-else
-              class="w-6 h-6 text-accent-yellow"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
+            <svg v-else class="w-6 h-6 text-accent-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
         </div>
@@ -612,9 +583,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div
-            class="animate-spin w-8 h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-primary rounded-full mx-auto mb-4"
-          ></div>
+          <Spinner class="mx-auto mb-4" />
           <div class="text-content-secondary dark:text-content-primary/70">
             Loading room servers...
           </div>
@@ -628,7 +597,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           <div class="text-content-secondary dark:text-content-muted text-sm mb-4">{{ error }}</div>
           <button
             @click="fetchIdentities"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors"
+            class="btn-primary"
           >
             Retry
           </button>
@@ -640,14 +609,9 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <div
           v-for="identity in identities.configured"
           :key="identity.name"
-          class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300"
+          class="glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/10"
         >
-          <!-- Subtle gradient overlay on hover -->
-          <div
-            class="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-          ></div>
-
-          <div class="relative flex items-start justify-between">
+          <div class="flex items-start justify-between">
             <div class="flex-1">
               <div class="flex items-center gap-3 mb-4">
                 <!-- Status indicator with pulse -->
@@ -665,7 +629,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 </div>
 
                 <h3
-                  class="text-xl font-bold text-content-primary dark:text-content-primary group-hover:text-primary transition-colors"
+                  class="text-xl font-bold text-content-primary dark:text-content-primary"
                 >
                   {{ identity.name }}
                 </h3>
@@ -806,13 +770,13 @@ async function removeClient(publicKey: string, identityHash?: string) {
               </button>
               <button
                 @click="openEditModal(identity)"
-                class="px-3 py-1 bg-primary/20 hover:bg-primary/30 text-primary rounded text-xs transition-colors"
+                class="btn-primary-xs"
               >
                 Edit
               </button>
               <button
                 @click="promptDeleteIdentity(identity.name)"
-                class="px-3 py-1 bg-accent-red/20 hover:bg-accent-red/30 text-accent-red rounded text-xs transition-colors"
+                class="btn-danger-xs"
               >
                 Delete
               </button>
@@ -839,8 +803,8 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <p class="text-lg mb-2">No room servers configured</p>
         <p class="text-sm mb-4">Add your first room server to get started</p>
         <button
-          @click="showCreateModal = true"
-          class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
+          @click="openCreateModal"
+          class="btn-primary"
         >
           + Add Room Server
         </button>
@@ -848,47 +812,72 @@ async function removeClient(publicKey: string, identityHash?: string) {
     </div>
 
     <!-- Create Modal -->
+    <Teleport to="body">
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+      leave-active-class="transition-opacity duration-200"
+      leave-to-class="opacity-0"
+    >
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="modal-backdrop"
+      @click.self="closeModals"
     >
-      <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
-          Add Room Server
-        </h2>
+      <div class="modal-card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
 
-        <div class="space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-7">
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >Name *</label
-            >
+            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+              Add Room Server
+            </h3>
+            <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
+              Configure a new room server identity
+            </p>
+          </div>
+          <button
+            @click="closeModals"
+            class="text-content-secondary dark:text-white/60 hover:text-content-primary dark:hover:text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="createIdentity" class="modal-form">
+
+          <!-- Name -->
+          <div>
+            <label class="modal-field-label">Name <span class="text-red-500">*</span></label>
             <input
               v-model="newIdentity.name"
               type="text"
               placeholder="e.g., MainBBS"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
+          <!-- Identity Key -->
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
-              Identity Key (Optional)
+            <div class="modal-field-label-row">
+              <span class="text-xs font-medium text-content-secondary dark:text-content-muted">Identity Key (Optional)</span>
               <button
                 @click="showKeyInCreate = !showKeyInCreate"
                 type="button"
-                class="ml-2 text-primary/70 hover:text-primary text-xs underline"
+                class="text-primary/70 hover:text-primary text-xs underline"
               >
                 {{ showKeyInCreate ? 'Hide' : 'Show/Edit' }}
               </button>
-            </label>
+            </div>
             <div v-if="showKeyInCreate">
               <input
                 v-model="newIdentity.identity_key"
                 type="text"
                 placeholder="Leave empty to auto-generate"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary font-mono text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input font-mono"
               />
               <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
                 Leave empty to automatically generate a secure key
@@ -899,146 +888,165 @@ async function removeClient(publicKey: string, identityHash?: string) {
             </div>
           </div>
 
+          <!-- Node Name -->
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >Node Name</label
-            >
+            <label class="modal-field-label">Node Name</label>
             <input
               v-model="newIdentity.settings.node_name"
               type="text"
               placeholder="Display name for the room server"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Latitude</label
-              >
-              <input
-                v-model.number="newIdentity.settings.latitude"
-                type="number"
-                step="0.000001"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Longitude</label
-              >
-              <input
-                v-model.number="newIdentity.settings.longitude"
-                type="number"
-                step="0.000001"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
-              />
+          <!-- Location -->
+          <div>
+            <label class="modal-field-label">Location</label>
+            <button
+              type="button"
+              @click="showLocationPickerCreate = true"
+              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors"
+              title="Pick location on map"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Pick on Map
+            </button>
+            <div class="grid grid-cols-2 gap-5">
+              <div>
+                <label class="modal-field-label">Latitude</label>
+                <input
+                  v-model.number="newIdentity.settings.latitude"
+                  type="number"
+                  step="0.000001"
+                  class="modal-input"
+                />
+              </div>
+              <div>
+                <label class="modal-field-label">Longitude</label>
+                <input
+                  v-model.number="newIdentity.settings.longitude"
+                  type="number"
+                  step="0.000001"
+                  class="modal-input"
+                />
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <!-- Passwords -->
+          <div class="grid grid-cols-2 gap-5">
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Admin Password (Optional)</label
-              >
+              <label class="modal-field-label">Admin Password (Optional)</label>
               <input
                 v-model="newIdentity.settings.admin_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Full access to room server
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Full access to room server</p>
             </div>
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Guest Password (Optional)</label
-              >
+              <label class="modal-field-label">Guest Password (Optional)</label>
               <input
                 v-model="newIdentity.settings.guest_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Read-only access
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Read-only access</p>
             </div>
           </div>
-        </div>
 
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="createIdentity"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
-          >
-            Create
-          </button>
-        </div>
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button type="button" @click="closeModals" class="modal-btn-cancel">Cancel</button>
+            <button type="submit" class="modal-btn-primary">Create</button>
+          </div>
+
+        </form>
       </div>
     </div>
+    </Transition>
+    </Teleport>
+
+    <!-- Location Picker for Create modal -->
+    <LocationPicker
+      :is-open="showLocationPickerCreate"
+      :latitude="newIdentity.settings.latitude"
+      :longitude="newIdentity.settings.longitude"
+      @close="showLocationPickerCreate = false"
+      @select="handleLocationPickerSelect"
+    />
 
     <!-- Edit Modal -->
+    <Teleport to="body">
+    <Transition
+      enter-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+      leave-active-class="transition-opacity duration-200"
+      leave-to-class="opacity-0"
+    >
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      class="modal-backdrop"
+      @click.self="closeModals"
     >
-      <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-      >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
-          Edit Room Server
-        </h2>
+      <div class="modal-card max-w-2xl w-full max-h-[90vh] overflow-y-auto">
 
-        <div class="space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-7">
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >Current Name</label
-            >
+            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+              Edit Room Server
+            </h3>
+            <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
+              Update room server identity
+            </p>
+          </div>
+          <button
+            @click="closeModals"
+            class="text-content-secondary dark:text-white/60 hover:text-content-primary dark:hover:text-white transition-colors"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form @submit.prevent="updateIdentity" class="modal-form">
+
+          <!-- Name -->
+          <div>
+            <label class="modal-field-label">Name <span class="text-red-500">*</span></label>
             <input
-              :value="editingIdentity.name"
-              disabled
+              v-model="editingIdentity.name"
               type="text"
-              class="w-full bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-muted dark:text-content-muted cursor-not-allowed"
+              class="modal-input"
             />
           </div>
 
+          <!-- Identity Key -->
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >New Name (optional)</label
-            >
-            <input
-              v-model="editingIdentity.new_name"
-              type="text"
-              placeholder="Leave empty to keep current name"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
-            />
-          </div>
-
-          <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
-              Identity Key (Optional)
+            <div class="modal-field-label-row">
+              <span class="text-xs font-medium text-content-secondary dark:text-content-muted">Identity Key (Optional)</span>
               <button
                 @click="showKeyInEdit = !showKeyInEdit"
                 type="button"
-                class="ml-2 text-primary/70 hover:text-primary text-xs underline"
+                class="text-primary/70 hover:text-primary text-xs underline"
               >
                 {{ showKeyInEdit ? 'Hide' : 'Show/Edit' }}
               </button>
-            </label>
+            </div>
             <div v-if="showKeyInEdit">
               <input
                 v-model="editingIdentity.identity_key"
                 type="text"
                 placeholder="Leave empty to keep current key"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary font-mono text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input font-mono"
               />
               <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
                 Leave empty to keep the current identity key
@@ -1049,90 +1057,97 @@ async function removeClient(publicKey: string, identityHash?: string) {
             </div>
           </div>
 
+          <!-- Node Name -->
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-              >Node Name</label
-            >
+            <label class="modal-field-label">Node Name</label>
             <input
               v-model="editingIdentity.settings.node_name"
               type="text"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Latitude</label
-              >
-              <input
-                v-model.number="editingIdentity.settings.latitude"
-                type="number"
-                step="0.000001"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
-              />
-            </div>
-            <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Longitude</label
-              >
-              <input
-                v-model.number="editingIdentity.settings.longitude"
-                type="number"
-                step="0.000001"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
-              />
+          <!-- Location -->
+          <div>
+            <label class="modal-field-label">Location</label>
+            <button
+              type="button"
+              @click="showLocationPickerEdit = true"
+              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors"
+              title="Pick location on map"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Pick on Map
+            </button>
+            <div class="grid grid-cols-2 gap-5">
+              <div>
+                <label class="modal-field-label">Latitude</label>
+                <input
+                  v-model.number="editingIdentity.settings.latitude"
+                  type="number"
+                  step="0.000001"
+                  class="modal-input"
+                />
+              </div>
+              <div>
+                <label class="modal-field-label">Longitude</label>
+                <input
+                  v-model.number="editingIdentity.settings.longitude"
+                  type="number"
+                  step="0.000001"
+                  class="modal-input"
+                />
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4">
+          <!-- Passwords -->
+          <div class="grid grid-cols-2 gap-5">
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Admin Password</label
-              >
+              <label class="modal-field-label">Admin Password (Optional)</label>
               <input
                 v-model="editingIdentity.settings.admin_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Full access to room server
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Full access to room server</p>
             </div>
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
-                >Guest Password</label
-              >
+              <label class="modal-field-label">Guest Password (Optional)</label>
               <input
                 v-model="editingIdentity.settings.guest_password"
                 type="password"
                 placeholder="Leave empty for no password"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
-                Read-only access
-              </p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Read-only access</p>
             </div>
           </div>
-        </div>
 
-        <div class="flex justify-end gap-3 mt-6">
-          <button
-            @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="updateIdentity"
-            class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors"
-          >
-            Update
-          </button>
-        </div>
+          <!-- Actions -->
+          <div class="modal-actions">
+            <button type="button" @click="closeModals" class="modal-btn-cancel">Cancel</button>
+            <button type="submit" class="modal-btn-primary">Update</button>
+          </div>
+
+        </form>
       </div>
     </div>
+    </Transition>
+    </Teleport>
+
+    <!-- Location Picker for Edit modal -->
+    <LocationPicker
+      :is-open="showLocationPickerEdit"
+      :latitude="editingIdentity?.settings?.latitude"
+      :longitude="editingIdentity?.settings?.longitude"
+      @close="showLocationPickerEdit = false"
+      @select="handleLocationPickerSelectEdit"
+    />
   </div>
 
   <!-- Confirm Delete Dialog -->
@@ -1155,10 +1170,19 @@ async function removeClient(publicKey: string, identityHash?: string) {
     @close="showMessageDialog = false"
   />
 
+  <!-- Restart Modal -->
+  <RestartModal
+    v-model="showRestartModal"
+    message="Room server settings have been saved. A service restart is required for the changes to take effect."
+  />
+
+
   <!-- Room Messages Dialog -->
+  <Teleport to="body">
   <div
     v-if="showMessagesDialog"
-    class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
+    class="fixed inset-0 bg-black/70 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+    @click.self="showMessagesDialog = false"
   >
     <div
       class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[20px] p-6 max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl"
@@ -1264,9 +1288,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           class="flex items-center justify-center py-12"
         >
           <div class="text-center">
-            <div
-              class="animate-spin w-8 h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-primary rounded-full mx-auto mb-4"
-            ></div>
+            <Spinner class="mx-auto mb-4" />
             <div class="text-content-secondary dark:text-content-primary/70">
               Loading messages...
             </div>
@@ -1282,7 +1304,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             </div>
             <button
               @click="fetchRoomMessages(true)"
-              class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors"
+              class="btn-primary"
             >
               Retry
             </button>
@@ -1416,9 +1438,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             <div
               class="flex items-center justify-center gap-2 text-content-secondary dark:text-content-muted text-sm"
             >
-              <div
-                class="animate-spin w-4 h-4 border-2 border-stroke-subtle dark:border-stroke/20 border-t-primary rounded-full"
-              ></div>
+              <Spinner size="sm" />
               Loading...
             </div>
           </div>
@@ -1522,11 +1542,13 @@ async function removeClient(publicKey: string, identityHash?: string) {
       </div>
     </div>
   </div>
+  </Teleport>
 
   <!-- Sessions Dialog -->
+  <Teleport to="body">
   <div
     v-if="showSessionsDialog"
-    class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[60] p-4"
+    class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[350] p-4"
   >
     <div
       class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-3xl w-full max-h-[80vh] flex flex-col"
@@ -1639,4 +1661,5 @@ async function removeClient(publicKey: string, identityHash?: string) {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

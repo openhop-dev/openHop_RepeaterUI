@@ -1,10 +1,12 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import { useWebSocketStore } from '@/stores/websocket';
+import { useDataService } from '@/stores/dataService';
 
 export function useConnectionLifecycle() {
   const appRuntime = useAppRuntimeStore();
   const websocketStore = useWebSocketStore();
+  const dataService = useDataService();
 
   const handleVisibilityChange = () => {
     const isVisible = document.visibilityState === 'visible';
@@ -31,8 +33,11 @@ export function useConnectionLifecycle() {
 
   watch(
     () => appRuntime.canMaintainConnections,
-    (canMaintainConnections) => {
+    async (canMaintainConnections) => {
       if (canMaintainConnections) {
+        // Load all data over HTTP first, then open the WebSocket.
+        // Sequencing prevents HTTP and WS from competing on marginal links.
+        await dataService.bootstrap();
         websocketStore.allowReconnect();
         websocketStore.connect();
       } else if (!appRuntime.isOnline) {

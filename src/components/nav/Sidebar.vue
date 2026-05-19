@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
-import { useWebSocketStore } from '@/stores/websocket';
-import ApiService from '@/utils/api';
-import { useManagedPolling } from '@/composables/useManagedPolling';
+import { usePacketStore } from '@/stores/packets';
+import { useDataService } from '@/stores/dataService';
 import GitHubIcon from '../icons/github.vue';
 import DiscordIcon from '../icons/discord.vue';
 import CoffeeIcon from '../icons/coffee.vue';
@@ -23,13 +22,19 @@ import NeighborsIcon from '../icons/neighbors.vue';
 import GpsIcon from '../icons/gps.vue';
 
 import DutycycleIcon from '../icons/dutycycle.vue';
+import { useTheme } from '@/composables/useTheme';
+import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
+import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
 defineOptions({ name: 'SidebarNav' });
 
 const router = useRouter();
 const route = useRoute();
 const systemStore = useSystemStore();
-const wsStore = useWebSocketStore();
+const dataService = useDataService();
+const { theme } = useTheme();
+const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
+const packetStore = usePacketStore();
 
 // Loading states for buttons
 const sendingAdvert = ref(false);
@@ -41,66 +46,23 @@ const showAdvertModal = ref(false);
 const advertSuccess = ref(false);
 const advertError = ref<string | null>(null);
 
-const currentTier = ref('unknown');
-const advertsAllowed = ref(0);
-const advertsDropped = ref(0);
-const activePenalties = ref(0);
-
-const fetchAdaptiveTier = async () => {
-  try {
-    const response = await ApiService.get('/advert_rate_limit_stats');
-    const data = response?.data as any;
-    currentTier.value =
-      typeof data?.adaptive?.current_tier === 'string' ? data.adaptive.current_tier : 'unknown';
-    advertsAllowed.value = data?.stats?.adverts_allowed || 0;
-    advertsDropped.value = data?.stats?.adverts_dropped || 0;
-    activePenalties.value = Object.keys(data?.active_penalties || {}).length;
-  } catch {
-    currentTier.value = 'unknown';
-    advertsAllowed.value = 0;
-    advertsDropped.value = 0;
-    activePenalties.value = 0;
-  }
-};
-
-onMounted(async () => {
-  await systemStore.fetchStats();
-  await fetchAdaptiveTier();
-});
-
-watch(
-  () => wsStore.isConnected,
-  (connected) => {
-    if (connected) {
-      void systemStore.fetchStats();
-    }
-  },
-);
-
-useManagedPolling(() => systemStore.fetchStats(), {
-  intervalMs: 5000,
-  enabled: () => !wsStore.isConnected,
-  immediate: false,
-});
-
-useManagedPolling(fetchAdaptiveTier, {
-  intervalMs: 30000,
-  enabled: true,
-  immediate: false,
-});
+const currentTier = computed(() => dataService.advertTier.currentTier);
+const advertsAllowed = computed(() => dataService.advertTier.advertsAllowed);
+const advertsDropped = computed(() => dataService.advertTier.advertsDropped);
+const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
     case 'quiet':
-      return 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/50';
+      return 'bg-accent-green/20 text-accent-green border-accent-green/50';
     case 'normal':
-      return 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/50';
+      return 'bg-primary/20 text-primary border-primary/50';
     case 'busy':
-      return 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border-yellow-500/50';
+      return 'bg-secondary/20 text-secondary border-secondary/50';
     case 'congested':
-      return 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/50';
+      return 'bg-accent-red/20 text-accent-red border-accent-red/50';
     default:
-      return 'bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-400 border-gray-500/50';
+      return 'bg-surface-elevated text-content-muted border-stroke-subtle';
   }
 });
 
@@ -110,6 +72,7 @@ const iconComponents = {
   neighbors: NeighborsIcon,
   statistics: StatsIcon,
   gps: GpsIcon,
+  sensors: SystemIcon,
   'system-stats': SystemIcon,
   sessions: SystemIcon, // Reuse SystemIcon for sessions
   configuration: ConfigurationsIcon,
@@ -122,19 +85,22 @@ const iconComponents = {
 
 type IconKey = keyof typeof iconComponents;
 
-const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string }> = [
-  { name: 'Dashboard', icon: 'dashboard', route: '/' },
-  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors' },
-  { name: 'Statistics', icon: 'statistics', route: '/statistics' },
-  { name: 'GPS', icon: 'gps', route: '/gps' },
-  { name: 'System Stats', icon: 'system-stats', route: '/system-stats' },
-  { name: 'Sessions', icon: 'sessions', route: '/sessions' },
-  { name: 'Configuration', icon: 'configuration', route: '/configuration' },
-  { name: 'Terminal', icon: 'terminal', route: '/terminal' },
-  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers' },
-  { name: 'Companions', icon: 'companions', route: '/companions' },
-  { name: 'Logs', icon: 'logs', route: '/logs' },
-  { name: 'Help', icon: 'help', route: '/help' },
+type NavGroup = 'monitoring' | 'system' | 'room' | 'other';
+
+const baseSidebarItems: Array<{ name: string; icon: IconKey; route: string; group: NavGroup }> = [
+  { name: 'Dashboard', icon: 'dashboard', route: '/', group: 'monitoring' },
+  { name: 'Neighbors', icon: 'neighbors', route: '/neighbors', group: 'monitoring' },
+  { name: 'Statistics', icon: 'statistics', route: '/statistics', group: 'monitoring' },
+  { name: 'GPS', icon: 'gps', route: '/gps', group: 'monitoring' },
+  { name: 'Sensors', icon: 'sensors', route: '/sensors', group: 'monitoring' },
+  { name: 'System Stats', icon: 'system-stats', route: '/system-stats', group: 'monitoring' },
+  { name: 'Sessions', icon: 'sessions', route: '/sessions', group: 'system' },
+  { name: 'Configuration', icon: 'configuration', route: '/configuration', group: 'system' },
+  { name: 'Terminal', icon: 'terminal', route: '/terminal', group: 'system' },
+  { name: 'Room Servers', icon: 'room-servers', route: '/room-servers', group: 'room' },
+  { name: 'Companions', icon: 'companions', route: '/companions', group: 'room' },
+  { name: 'Logs', icon: 'logs', route: '/logs', group: 'other' },
+  { name: 'Help', icon: 'help', route: '/help', group: 'other' },
 ];
 
 const isGpsEnabled = computed(() => {
@@ -142,9 +108,26 @@ const isGpsEnabled = computed(() => {
   return stats?.gps?.enabled === true || stats?.config?.gps?.enabled === true;
 });
 
+const isSensorsEnabled = computed(() => {
+  const stats = systemStore.stats as {
+    sensors?: { enabled?: boolean };
+    config?: { sensors?: { enabled?: boolean } };
+  } | null;
+  return stats?.sensors?.enabled === true || stats?.config?.sensors?.enabled === true;
+});
+
 const sidebarItems = computed(() =>
-  baseSidebarItems.filter((item) => item.route !== '/gps' || isGpsEnabled.value),
+  baseSidebarItems.filter(
+    (item) =>
+      (item.route !== '/gps' || isGpsEnabled.value) &&
+      (item.route !== '/sensors' || isSensorsEnabled.value),
+  ),
 );
+
+const navMonitoring = computed(() => sidebarItems.value.filter((i) => i.group === 'monitoring'));
+const navSystem = computed(() => sidebarItems.value.filter((i) => i.group === 'system'));
+const navRoom = computed(() => sidebarItems.value.filter((i) => i.group === 'room'));
+const navOther = computed(() => sidebarItems.value.filter((i) => i.group === 'other'));
 
 const modeOptions = [
   {
@@ -225,23 +208,24 @@ const handleToggleDutyCycle = async () => {
   }
 };
 
-// Computed values
-const currentTime = ref(new Date().toLocaleTimeString());
-
-// Update time every second
-setInterval(() => {
-  currentTime.value = new Date().toLocaleTimeString();
-}, 1000);
+// Most recent fetch across all stores
+const currentTime = computed(() => {
+  const times = [systemStore.lastUpdated, packetStore.lastUpdated].filter(Boolean) as Date[];
+  if (times.length === 0) return 'Never';
+  const latest = times.reduce((a, b) => (a > b ? a : b));
+  return latest.toLocaleTimeString();
+});
 
 // Computed duty cycle bar width and color
+// Width is genuinely dynamic; colour uses CSS custom properties so it adapts to light/dark mode.
 const dutyCycleBarStyle = computed(() => {
   const percentage = systemStore.dutyCyclePercentage;
-  let backgroundColor = '#A5E5B6'; // accent-green
+  let backgroundColor = 'var(--color-accent-green)';
 
   if (percentage > 90) {
-    backgroundColor = '#FB787B'; // accent-red
+    backgroundColor = 'var(--color-accent-red)';
   } else if (percentage > 70) {
-    backgroundColor = '#FFC246'; // secondary (yellow)
+    backgroundColor = 'var(--color-secondary)';
   }
 
   return {
@@ -281,7 +265,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
       <div class="mb-12">
         <div class="mb-3 flex justify-center">
           <img
-            src="@/assets/pymclogo.png"
+            :src="logoSrc"
             alt="pyMC"
             class="h-[6.5rem]"
           />
@@ -358,9 +342,9 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
 
       <div class="mb-8">
         <p class="text-content-muted dark:text-content-muted text-xs uppercase mb-4">Monitoring</p>
-        <div class="space-y-2">
+        <TransitionGroup tag="div" class="space-y-2" name="sidebar-item">
           <button
-            v-for="item in sidebarItems.slice(0, 4)"
+            v-for="item in navMonitoring"
             :key="item.name"
             @click="navigateToRoute(item.route)"
             :class="
@@ -380,14 +364,14 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
             />
             {{ item.name }}
           </button>
-        </div>
+        </TransitionGroup>
       </div>
 
       <div class="mb-8">
         <p class="text-content-muted dark:text-content-muted text-xs uppercase mb-4">System</p>
         <div class="space-y-2">
           <button
-            v-for="item in sidebarItems.slice(4, 8)"
+            v-for="item in navSystem"
             :key="item.name"
             @click="navigateToRoute(item.route)"
             :class="
@@ -416,7 +400,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
         </p>
         <div class="space-y-2">
           <button
-            v-for="item in sidebarItems.slice(8, 10)"
+            v-for="item in navRoom"
             :key="item.name"
             @click="navigateToRoute(item.route)"
             :class="
@@ -443,7 +427,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
         <p class="text-content-muted dark:text-content-muted text-xs uppercase mb-4">Other</p>
         <div class="space-y-2">
           <button
-            v-for="item in sidebarItems.slice(10)"
+            v-for="item in navOther"
             :key="item.name"
             @click="navigateToRoute(item.route)"
             :class="
@@ -709,7 +693,7 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
 
       <div class="flex items-center justify-center gap-3">
         <a
-          href="https://discord.gg/SMHkUDwf"
+          href="https://discord.gg/qreAsnmJ"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
@@ -718,7 +702,28 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
           <DiscordIcon class="w-5 h-5 text-white group-hover:text-indigo-500 transition-colors" />
         </a>
         <a
-          href="https://github.com/rightup"
+          href="https://pymc.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+          title="pyMC Website"
+        >
+          <svg
+            class="w-5 h-5 text-white group-hover:text-cyan-500 transition-colors"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.75"
+              d="M12 21a9.004 9.004 0 008.716-6M12 21a9.004 9.004 0 01-8.716-6M12 21c1.656 0 3-4.03 3-9s-1.344-9-3-9m0 18c-1.656 0-3-4.03-3-9s1.344-9 3-9m0 0a9.004 9.004 0 018.716 6M12 3a9.004 9.004 0 00-8.716 6M3.284 9h17.432M3.284 15h17.432"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://github.com/pyMC-dev/pyMC_Repeater"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
@@ -749,3 +754,13 @@ const coreVersion = computed(() => parseVersion(systemStore.coreVersion));
     @send="handleAdvertModalSend"
   />
 </template>
+
+<style scoped>
+.sidebar-item-enter-active {
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+.sidebar-item-enter-from {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+</style>

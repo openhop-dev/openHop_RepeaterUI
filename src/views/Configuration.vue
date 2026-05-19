@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue';
+import { ref, onMounted, watch, nextTick, type Ref, type ComponentPublicInstance } from 'vue';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
 import RepeaterSettings from '@/components/configuration/RepeaterSettings.vue';
 import DutyCycle from '@/components/configuration/DutyCycle.vue';
@@ -14,15 +15,53 @@ import BackupRestore from '@/components/configuration/BackupRestore.vue';
 import DatabaseManagement from '@/components/configuration/DatabaseManagement.vue';
 import MemoryDebug from '@/components/configuration/MemoryDebug.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
+import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'ConfigurationView' });
 
+type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void) => void; isEditing: Ref<boolean> | boolean };
+
 const systemStore = useSystemStore();
+const dataService = useDataService();
 const activeTab = ref(getPreference('configuration_activeTab', 'radio'));
 const initialLoadComplete = ref(false);
 const tabsContainer = ref<HTMLElement | null>(null);
 const showRightFade = ref(false);
 const showLeftFade = ref(false);
+
+const radioRef = ref<EditableTabRef | null>(null);
+const repeaterRef = ref<EditableTabRef | null>(null);
+const advertRef = ref<EditableTabRef | null>(null);
+const dutyRef = ref<EditableTabRef | null>(null);
+const delaysRef = ref<EditableTabRef | null>(null);
+const transportRef = ref<EditableTabRef | null>(null);
+const letsMeshRef = ref<EditableTabRef | null>(null);
+
+const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
+  radio: radioRef,
+  repeater: repeaterRef,
+  advert: advertRef,
+  duty: dutyRef,
+  delays: delaysRef,
+  transport: transportRef,
+  observer: letsMeshRef,
+};
+
+function isCurrentTabEditing(): boolean {
+  const r = editableTabRefs[activeTab.value]?.value;
+  if (!r) return false;
+  const editing = r.isEditing;
+  return typeof editing === 'boolean' ? editing : editing.value;
+}
+
+function requestCurrentTabLeave(callback: () => void) {
+  const ref = editableTabRefs[activeTab.value]?.value;
+  if (ref) {
+    ref.requestLeave(callback);
+  } else {
+    callback();
+  }
+}
 
 function updateFades() {
   if (!tabsContainer.value) return;
@@ -45,7 +84,7 @@ const tabs = [
   { id: 'advert', label: 'Advert Limits', icon: 'advert' },
   { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
   { id: 'delays', label: 'TX Delays', icon: 'delays' },
-  { id: 'transport', label: 'Regions/Keys', icon: 'keys' },
+  { id: 'transport', label: 'Region Configuration', icon: 'keys' },
   { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
   { id: 'web', label: 'Web Options', icon: 'web' },
   { id: 'observer', label: 'Observer', icon: 'observer' },
@@ -55,18 +94,28 @@ const tabs = [
 ];
 
 onMounted(async () => {
-  // Fetch system stats to populate configuration data
-  try {
-    await systemStore.fetchStats();
+  if (systemStore.stats) {
+    // Stats already in store (normal path after bootstrap) — no fetch needed.
+    // DataService polls freshness in the background; the page reacts to store changes.
     initialLoadComplete.value = true;
-  } catch (error) {
-    console.error('Failed to load configuration data:', error);
-    initialLoadComplete.value = true; // Still mark as complete to show error state
+  } else {
+    // Bootstrap failed to load stats — try once before showing the page.
+    try {
+      await dataService.ensure('stats');
+    } catch (error) {
+      console.error('Failed to load configuration data:', error);
+    } finally {
+      initialLoadComplete.value = true;
+    }
   }
   nextTick(() => updateFades());
 });
 
 function setActiveTab(tabId: string) {
+  if (tabId !== activeTab.value && isCurrentTabEditing()) {
+    requestCurrentTabLeave(() => { activeTab.value = tabId; });
+    return;
+  }
   activeTab.value = tabId;
 }
 </script>
@@ -74,37 +123,34 @@ function setActiveTab(tabId: string) {
 <template>
   <div class="p-3 sm:p-6 space-y-4 sm:space-y-6">
     <!-- Header -->
-    <div>
-      <h1 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
-        Configuration
-      </h1>
-      <p class="text-content-secondary dark:text-content-muted mt-1 sm:mt-2 text-sm sm:text-base">
-        System configuration and settings
-      </p>
-    </div>
-
-    <!-- Info Box -->
-
-    <!-- CAD Calibration Tool Banner -->
-    <div
-      class="glass-card rounded-[15px] z-10 p-3 sm:p-4 border border-cyan-400 dark:border-primary/30 bg-cyan-500/10 dark:bg-primary/10"
-    >
-      <div class="text-cyan-700 dark:text-primary text-sm sm:text-base">
-        <strong>CAD Calibration Tool Available</strong>
-        <p class="mt-1 sm:mt-2 text-cyan-600 dark:text-primary/80">
-          Optimize your Channel Activity Detection settings.
-          <router-link
-            to="/cad-calibration"
-            class="underline hover:text-cyan-800 dark:hover:text-primary transition-colors"
-          >
-            Launch CAD Calibration Tool →
-          </router-link>
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
+          Configuration
+        </h1>
+        <p class="text-content-secondary dark:text-content-muted mt-1 sm:mt-2 text-sm sm:text-base">
+          System configuration and settings
         </p>
       </div>
+
+      <!-- CAD Calibration Tool Banner — shown only when no calibration is saved yet -->
+      <router-link
+        v-if="initialLoadComplete && !(systemStore.stats?.config?.radio as any)?.cad?.peak_threshold"
+        to="/cad-calibration"
+        class="flex-shrink-0 flex items-center gap-4 px-5 py-3 min-w-[280px] rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        <div>
+          <div class="text-sm font-semibold">CAD Calibration Available</div>
+          <div class="text-xs text-primary/70">Optimise CAD settings →</div>
+        </div>
+      </router-link>
     </div>
 
     <!-- Configuration Tabs -->
-    <div class="glass-card rounded-[15px] p-3 sm:p-6">
+    <div class="glass-card rounded-[15px] p-3 sm:p-6 mt-4 sm:mt-6">
       <!-- Tab Navigation -->
       <div class="relative -mx-3 sm:mx-0 mb-4 sm:mb-6">
         <!-- Left scroll fade + button (mobile only) -->
@@ -116,7 +162,7 @@ function setActiveTab(tabId: string) {
             <div class="tab-fade-left absolute inset-0 pointer-events-none"></div>
             <button
               @click="scrollTabs('left')"
-              class="relative z-10 ml-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 shadow-md border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300"
+              class="relative z-10 ml-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-surface shadow-md border border-stroke-subtle dark:border-stroke/30 text-content-muted"
             >
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -139,7 +185,7 @@ function setActiveTab(tabId: string) {
             <div class="tab-fade-right absolute inset-0 pointer-events-none"></div>
             <button
               @click="scrollTabs('right')"
-              class="relative z-10 mr-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-white dark:bg-zinc-900 shadow-md border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-300"
+              class="relative z-10 mr-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-surface shadow-md border border-stroke-subtle dark:border-stroke/30 text-content-muted"
             >
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -156,7 +202,7 @@ function setActiveTab(tabId: string) {
         <div
           ref="tabsContainer"
           @scroll="updateFades"
-          class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke/10 px-3 sm:px-0 scrollbar-hide"
+          class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke px-3 sm:px-0 scrollbar-hide"
         >
           <button
             v-for="tab in tabs"
@@ -165,7 +211,7 @@ function setActiveTab(tabId: string) {
             :class="[
               'px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors duration-200 border-b-2 mr-3 sm:mr-6 whitespace-nowrap flex-shrink-0',
               activeTab === tab.id
-                ? 'text-cyan-500 dark:text-primary border-cyan-500 dark:border-primary'
+                ? 'text-primary border-primary'
                 : 'text-content-secondary dark:text-content-muted border-transparent hover:text-content-primary dark:hover:text-content-primary hover:border-stroke-subtle dark:hover:border-stroke/30',
             ]"
           >
@@ -353,9 +399,7 @@ function setActiveTab(tabId: string) {
           class="flex items-center justify-center py-12"
         >
           <div class="text-center">
-            <div
-              class="animate-spin w-8 h-8 border-2 border-stroke-subtle dark:border-stroke/20 border-t-cyan-500 dark:border-t-primary rounded-full mx-auto mb-4"
-            ></div>
+            <Spinner class="mx-auto mb-4" />
             <div class="text-content-secondary dark:text-content-muted">
               Loading configuration...
             </div>
@@ -364,17 +408,17 @@ function setActiveTab(tabId: string) {
 
         <!-- Error State -->
         <div
-          v-else-if="systemStore.error && !initialLoadComplete"
+          v-else-if="initialLoadComplete && !systemStore.stats"
           class="flex items-center justify-center py-12"
         >
           <div class="text-center">
-            <div class="text-red-500 dark:text-red-400 mb-2">Failed to load configuration</div>
+            <div class="text-accent-red mb-2">Failed to load configuration</div>
             <div class="text-content-secondary dark:text-content-muted text-sm mb-4">
               {{ systemStore.error }}
             </div>
             <button
               @click="systemStore.fetchStats()"
-              class="px-4 py-2 bg-cyan-500/20 dark:bg-primary/20 hover:bg-cyan-500/30 dark:hover:bg-primary/30 text-cyan-900 dark:text-white rounded-lg border border-cyan-500/50 dark:border-primary/50 transition-colors"
+              class="btn-primary"
             >
               Retry
             </button>
@@ -383,40 +427,40 @@ function setActiveTab(tabId: string) {
 
         <!-- Tab Components -->
         <div v-else>
-          <div v-show="activeTab === 'radio'">
-            <RadioSettings key="radio-settings" />
+          <div v-if="activeTab === 'radio'">
+            <RadioSettings ref="radioRef" key="radio-settings" />
           </div>
-          <div v-show="activeTab === 'repeater'">
-            <RepeaterSettings key="repeater-settings" />
+          <div v-if="activeTab === 'repeater'">
+            <RepeaterSettings ref="repeaterRef" key="repeater-settings" />
           </div>
-          <div v-show="activeTab === 'advert'">
-            <AdvertSettings key="advert-settings" />
+          <div v-if="activeTab === 'advert'">
+            <AdvertSettings ref="advertRef" key="advert-settings" />
           </div>
-          <div v-show="activeTab === 'duty'">
-            <DutyCycle key="duty-cycle" />
+          <div v-if="activeTab === 'duty'">
+            <DutyCycle ref="dutyRef" key="duty-cycle" />
           </div>
-          <div v-show="activeTab === 'delays'">
-            <TransmissionDelays key="transmission-delays" />
+          <div v-if="activeTab === 'delays'">
+            <TransmissionDelays ref="delaysRef" key="transmission-delays" />
           </div>
-          <div v-show="activeTab === 'transport'">
-            <TransportKeys key="transport-keys" />
+          <div v-if="activeTab === 'transport'">
+            <TransportKeys ref="transportRef" key="transport-keys" />
           </div>
-          <div v-show="activeTab === 'api-tokens'">
+          <div v-if="activeTab === 'api-tokens'">
             <APITokens key="api-tokens" />
           </div>
-          <div v-show="activeTab === 'web'">
+          <div v-if="activeTab === 'web'">
             <WebSettings key="web-settings" />
           </div>
-          <div v-show="activeTab === 'observer'">
-            <LetsMeshSettings key="letsmesh-settings" />
+          <div v-if="activeTab === 'observer'">
+            <LetsMeshSettings ref="letsMeshRef" key="letsmesh-settings" />
           </div>
-          <div v-show="activeTab === 'backup'">
+          <div v-if="activeTab === 'backup'">
             <BackupRestore key="backup-restore" />
           </div>
-          <div v-show="activeTab === 'database'">
+          <div v-if="activeTab === 'database'">
             <DatabaseManagement key="database-management" />
           </div>
-          <div v-show="activeTab === 'memory'">
+          <div v-if="activeTab === 'memory'">
             <MemoryDebug key="memory-debug" />
           </div>
         </div>

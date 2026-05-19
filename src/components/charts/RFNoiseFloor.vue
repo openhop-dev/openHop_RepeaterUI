@@ -1,7 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { usePacketStore } from '@/stores/packets';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
+import { useTheme } from '@/composables/useTheme';
+import Spinner from '@/components/ui/Spinner.vue';
+
+// Chart palette — fixed vibrant colour, same in both light and dark mode.
+const CHART_COLORS = {
+  noiseFloorDot: 'rgba(245, 158, 11, 0.8)', // amber — scatter dot fill
+} as const;
+
+// Theme-aware chrome colours (grid lines). Re-evaluated when theme changes.
+const { theme } = useTheme();
+const gridLineColor = computed(() =>
+  theme.value === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+);
 
 // Props
 interface Props {
@@ -15,7 +29,7 @@ const props = withDefaults(defineProps<Props>(), {
 // Use packet store for real API data
 const store = usePacketStore();
 const systemStore = useSystemStore();
-const updateInterval = ref<number | null>(null);
+const dataService = useDataService();
 
 // Chart dimensions
 const chartWidth = 200;
@@ -61,55 +75,17 @@ const scatterPoints = computed(() => {
   });
 });
 
-// Fetch noise floor data
-const fetchNoiseFloorData = async () => {
-  try {
-    const fetchParams: { hours: number; limit?: number } = { hours: 1 };
-    if (props.limit) {
-      fetchParams.limit = props.limit;
-    }
-
-    await Promise.all([
-      store.fetchNoiseFloorHistory(fetchParams),
-      store.fetchNoiseFloorStats({ hours: 1 }),
-    ]);
-  } catch (error) {
-    console.error('Error fetching noise floor data:', error);
-  }
-};
-
-const startPolling = () => {
-  if (updateInterval.value) return;
-  updateInterval.value = window.setInterval(fetchNoiseFloorData, 5000);
-};
-
-const stopPolling = () => {
-  if (updateInterval.value) {
-    clearInterval(updateInterval.value);
-    updateInterval.value = null;
-  }
-};
-
-// Start fetching data on mount and set up auto-refresh
+// DataService polls noiseFloor every 60s. Ensure data is present on mount
+// (safety net if bootstrap somehow skipped it).
 onMounted(() => {
-  fetchNoiseFloorData();
-
-  startPolling();
+  void dataService.ensure('noiseFloor');
 });
 
-onBeforeUnmount(() => {
-  stopPolling();
-});
-
-// Get current noise level from store stats - use most recent history value instead of average
-const noiseLevel = computed(() => {
-  const historyData = store.noiseFloorSparklineData;
-  if (historyData && historyData.length > 0) {
-    return historyData[historyData.length - 1];
-  }
-  // Fallback to average if no history data
-  return store.noiseFloorStats?.avg_noise_floor ?? -116.0;
-});
+// Prefer the WS-pushed value from systemStore (updates without any HTTP poll),
+// fall back to the last point in the HTTP history if stats haven't arrived yet.
+const noiseLevel = computed<number | null>(
+  () => systemStore.noiseFloorDbm ?? store.currentNoiseFloor,
+);
 
 // Get sparkline data from store
 const dataPoints = computed(() => {
@@ -118,7 +94,7 @@ const dataPoints = computed(() => {
 </script>
 
 <template>
-  <div class="glass-card p-5 relative overflow-hidden">
+  <div class="bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10 p-5 relative overflow-hidden">
     <!-- CAD Calibration Overlay -->
     <div
       v-if="systemStore.cadCalibrationRunning"
@@ -126,19 +102,7 @@ const dataPoints = computed(() => {
     >
       <div class="text-center">
         <div class="flex items-center justify-center gap-2 mb-2">
-          <svg
-            class="w-4 h-4 text-secondary animate-spin"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-            />
-          </svg>
+          <Spinner size="sm" color="current" />
           <span class="text-secondary text-sm font-medium">CAD Calibration</span>
         </div>
         <p class="text-content-muted dark:text-content-muted text-xs">In Progress</p>
@@ -150,9 +114,9 @@ const dataPoints = computed(() => {
     </p>
     <div class="flex items-baseline gap-2 mb-4">
       <span class="text-content-primary dark:text-content-primary text-2xl font-medium">{{
-        noiseLevel
+        noiseLevel !== null ? noiseLevel : 'Unknown'
       }}</span>
-      <span class="text-content-secondary dark:text-content-muted text-xs uppercase">dBm</span>
+      <span v-if="noiseLevel !== null" class="text-content-secondary dark:text-content-muted text-xs uppercase">dBm</span>
     </div>
 
     <!-- Scatter chart -->
@@ -170,7 +134,7 @@ const dataPoints = computed(() => {
         :y1="(i * chartHeight) / 4"
         :x2="chartWidth"
         :y2="(i * chartHeight) / 4"
-        stroke="rgba(255, 255, 255, 0.1)"
+        :stroke="gridLineColor"
         stroke-width="1"
       />
 
@@ -180,8 +144,8 @@ const dataPoints = computed(() => {
         :key="'point-' + index"
         :cx="point.x"
         :cy="point.y"
-        r="2.5"
-        fill="rgba(245, 158, 11, 0.8)"
+        r="1.5"
+        :fill="CHART_COLORS.noiseFloorDot"
         class="transition-all duration-300"
       />
     </svg>

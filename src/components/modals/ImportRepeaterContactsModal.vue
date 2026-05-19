@@ -175,27 +175,23 @@ async function submit() {
   }
 }
 
-function handleBackdropClick(e: MouseEvent) {
-  if (e.target === e.currentTarget) emit('close');
-}
-
 function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close');
 }
 </script>
 
 <template>
+  <Teleport to="body">
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-    @click="handleBackdropClick"
+    class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[350] p-4"
+    @click.self="emit('close')"
     @keydown="handleKeydown"
   >
     <div
       role="dialog"
       aria-describedby="import-modal-description"
       class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
-      @click.stop
     >
       <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
         Import repeater contacts
@@ -336,7 +332,7 @@ function handleKeydown(e: KeyboardEvent) {
         <button
           type="button"
           :disabled="loading"
-          class="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary rounded-lg border border-primary/50 transition-colors disabled:opacity-50"
+          class="btn-primary"
           @click="submit"
         >
           {{ loading ? 'Importing…' : 'Import' }}
@@ -344,4 +340,5 @@ function handleKeydown(e: KeyboardEvent) {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>

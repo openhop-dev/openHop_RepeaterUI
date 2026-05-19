@@ -2,6 +2,7 @@
 import { ref, computed, watch, onUnmounted } from 'vue';
 import ApiService from '@/utils/api';
 import { getToken } from '@/utils/auth';
+import Spinner from '@/components/ui/Spinner.vue';
 
 interface Props {
   show: boolean;
@@ -470,7 +471,8 @@ function handleBackdropClick(e: MouseEvent) {
   if (
     e.target === e.currentTarget &&
     installState.value !== 'installing' &&
-    installState.value !== 'restarting'
+    installState.value !== 'restarting' &&
+    installState.value !== 'verified'
   ) {
     emit('close');
   }
@@ -485,7 +487,7 @@ function reloadPage() {
   <Teleport to="body">
     <div
       v-if="props.show"
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-4"
+      class="modal-backdrop"
       @click="handleBackdropClick"
     >
       <div
@@ -520,7 +522,7 @@ function reloadPage() {
             </div>
           </div>
           <button
-            v-if="installState !== 'installing' && installState !== 'restarting'"
+            v-if="installState !== 'installing' && installState !== 'restarting' && installState !== 'verified'"
             @click="emit('close')"
             class="text-content-secondary hover:text-content-primary transition-colors"
           >
@@ -559,9 +561,7 @@ function reloadPage() {
             >
               <p class="text-xs text-content-muted mb-1">On GitHub</p>
               <div v-if="checkingVersion" class="flex items-center gap-1.5 mt-1">
-                <span
-                  class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block"
-                ></span>
+                <Spinner size="xs" class="inline-block" />
                 <span class="text-xs text-content-muted">Checking…</span>
               </div>
               <p
@@ -632,10 +632,7 @@ function reloadPage() {
             >
               <span>What's New</span>
               <span class="flex items-center gap-1">
-                <span
-                  v-if="changelogLoading"
-                  class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block"
-                ></span>
+                <Spinner v-if="changelogLoading" size="xs" class="inline-block" />
                 <span v-else class="text-content-muted"
                   >{{ changelog.length }} commit{{ changelog.length !== 1 ? 's' : '' }}</span
                 >
@@ -709,14 +706,14 @@ function reloadPage() {
             <div class="flex gap-2">
               <select
                 v-model="selectedChannel"
-                :disabled="loadingChannels || installState === 'installing' || checkingVersion"
+                :disabled="loadingChannels || installState === 'installing' || installState === 'verified' || checkingVersion"
                 class="flex-1 bg-background-mute dark:bg-surface border border-stroke-subtle dark:border-stroke/20 rounded-xl px-3 py-2 text-sm text-content-primary dark:text-content-primary disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option v-for="ch in channels" :key="ch" :value="ch">{{ ch }}</option>
               </select>
               <button
                 @click="applyChannel"
-                :disabled="loadingChannels || installState === 'installing' || checkingVersion"
+                :disabled="loadingChannels || installState === 'installing' || installState === 'verified' || checkingVersion"
                 class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
               >
                 {{ loadingChannels || checkingVersion ? '…' : 'Apply' }}
@@ -804,18 +801,14 @@ function reloadPage() {
                 v-if="installState === 'restarting' && restartPhase === 'verifying'"
                 class="flex items-center gap-2 mt-2 text-primary"
               >
-                <span
-                  class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin inline-block"
-                ></span>
+                <Spinner size="xs" class="inline-block" />
                 Service is back — verifying version…
               </div>
               <div
                 v-else-if="installState === 'restarting'"
                 class="flex items-center gap-2 mt-2 text-yellow-400"
               >
-                <span
-                  class="w-3 h-3 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin inline-block"
-                ></span>
+                <Spinner size="xs" class="inline-block" />
                 {{
                   restartPhase === 'going-down'
                     ? 'Waiting for service to stop…'
@@ -837,9 +830,7 @@ function reloadPage() {
             v-if="installState === 'restarting' && restartPhase === 'verifying'"
             class="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-3 text-sm text-primary"
           >
-            <span
-              class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0"
-            ></span>
+            <Spinner size="sm" class="shrink-0" />
             <div>
               <p class="font-medium">Checking version…</p>
               <p class="text-xs opacity-70 mt-0.5">
@@ -851,9 +842,7 @@ function reloadPage() {
             <div
               class="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3 text-sm text-yellow-800 dark:text-yellow-400"
             >
-              <span
-                class="w-4 h-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin shrink-0"
-              ></span>
+              <Spinner size="sm" class="shrink-0" />
               <div>
                 <p class="font-medium">
                   {{ restartPhase === 'going-down' ? 'Stopping service…' : 'Starting service…' }}
@@ -893,10 +882,10 @@ function reloadPage() {
                 </svg>
               </div>
               <div>
-                <p class="font-semibold text-gray-900 dark:text-content-primary">
+                <p class="font-semibold text-content-primary">
                   Installed successfully!
                 </p>
-                <p class="text-xs text-gray-600 dark:text-content-muted mt-0.5">
+                <p class="text-xs text-content-muted mt-0.5">
                   Running version
                   <span class="font-mono font-semibold">{{ postRestartVersion }}</span>
                 </p>
@@ -904,7 +893,7 @@ function reloadPage() {
             </div>
             <button
               @click="reloadPage"
-              class="mt-3 w-full py-2 px-4 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-colors"
+              class="modal-btn-primary w-full mt-3 text-sm font-semibold"
             >
               Refresh Page to Load New Version
             </button>
@@ -975,36 +964,32 @@ function reloadPage() {
             class="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :class="
               installState === 'verified' || installState === 'complete'
-                ? 'bg-accent-green/20 text-accent-green cursor-default'
+                ? 'bg-accent-green/20 text-accent-green border border-accent-green/50 cursor-default'
                 : installState === 'error' || installState === 'verify-failed'
-                  ? 'bg-accent-red hover:bg-accent-red/80 text-white'
+                  ? 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border border-accent-red/50'
                   : installState === 'restarting'
                     ? 'bg-yellow-500/20 text-yellow-600 cursor-default'
-                    : 'bg-primary hover:bg-primary/80 text-white'
+                    : 'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50'
             "
           >
             <span
               v-if="installState === 'installing'"
               class="flex items-center justify-center gap-2"
             >
-              <span
-                class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-              ></span>
+              <Spinner size="sm" color="white" />
               Installing…
             </span>
             <span
               v-else-if="installState === 'restarting'"
               class="flex items-center justify-center gap-2"
             >
-              <span
-                class="w-4 h-4 border-2 border-yellow-600 border-t-transparent rounded-full animate-spin"
-              ></span>
+              <Spinner size="sm" />
               Restarting service…
             </span>
             <span v-else>{{ installButtonLabel }}</span>
           </button>
           <button
-            v-if="installState !== 'installing' && installState !== 'restarting'"
+            v-if="installState !== 'installing' && installState !== 'restarting' && installState !== 'verified'"
             @click="emit('close')"
             class="px-6 py-3 rounded-xl border border-stroke-subtle dark:border-stroke/20 text-content-secondary hover:text-content-primary hover:bg-background-mute transition-colors text-sm"
           >

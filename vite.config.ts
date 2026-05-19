@@ -11,8 +11,10 @@ export default defineConfig(async ({ command, mode }) => {
   return {
     plugins: [
       vue(),
-      // DevTools plugin uses localStorage; only load in dev to avoid Node build error
-      ...(command === 'serve' ? [(await import('vite-plugin-vue-devtools')).default()] : []),
+      // DevTools plugin uses APIs unavailable in mobile Safari — disable via VITE_NO_DEVTOOLS=true
+      ...(command === 'serve' && !env.VITE_NO_DEVTOOLS
+        ? [(await import('vite-plugin-vue-devtools')).default()]
+        : []),
     ],
     resolve: {
       alias: {
