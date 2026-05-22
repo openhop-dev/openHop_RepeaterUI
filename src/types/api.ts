@@ -111,6 +111,7 @@ export interface NoiseFloorChartData {
 export interface SystemStats {
   version: string;
   core_version: string;
+  site_name?: string;
   public_key?: string;
   current_airtime_ms?: number;
   max_airtime_ms?: number;
