@@ -85,6 +85,9 @@ export function isTokenExpired(): boolean {
   const payload = parseJWT(token);
   if (!payload || !payload.exp) return true;
 
+  // TEMPORARY: 10-minute session cap for re-login testing — remove before merge
+  if (payload.iat && Date.now() >= payload.iat * 1000 + 10 * 60 * 1000) return true;
+
   // Check if expired (with 30 second buffer)
   return Date.now() >= payload.exp * 1000 - 30000;
 }

@@ -133,18 +133,17 @@ async function checkSetupStatus() {
 
 // Navigation guard - check setup status and authentication
 router.beforeEach(async (to) => {
+  const needsSetup = await checkSetupStatus();
+
+  if (needsSetup) {
+    if (to.path !== '/setup') return '/setup';
+    return;
+  }
+
+  if (to.path === '/setup') return '/login';
+
   const requiresAuth = to.meta.requiresAuth !== false;
   const authenticated = isAuthenticated();
-
-  if (to.path !== '/setup') {
-    const needsSetup = await checkSetupStatus();
-    if (needsSetup) return '/setup';
-  }
-
-  if (to.path === '/setup') {
-    const needsSetup = await checkSetupStatus();
-    if (!needsSetup) return '/login';
-  }
 
   if (requiresAuth && !authenticated) return '/login';
   if (to.path === '/login' && authenticated) return '/';
