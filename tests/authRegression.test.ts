@@ -297,3 +297,103 @@ describe('Scenario 3 — setup check is always the first gate in the router guar
     expect(router.currentRoute.value.path).toBe('/login');
   });
 });
+
+// ── Scenario 4 ────────────────────────────────────────────────────────────────
+//
+// Bug: after a session timeout-logout, logging back in showed no repeater name
+// or live data. The BootstrapModal re-appeared but all steps stayed pending.
+//
+// Root cause: DataService.bootstrap() guards against running twice using a
+// private _bootstrapped flag. stopSession() called reset() on every other store
+// (system, packets, websocket) but NOT on DataService, so _bootstrapped was
+// still true. When canMaintainConnections became true on re-login,
+// dataService.bootstrap() returned immediately without fetching anything.
+//
+// Fix: stopSession() now calls dataService.reset() before redirecting to /login.
+// These tests lock in (a) the idempotency guarantee of bootstrap() and (b) that
+// stopSession() calls reset() so bootstrap() can re-run on the next login.
+
+describe('Scenario 4 — DataService re-bootstraps after logout', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    localStorage.clear();
+    vi.useFakeTimers();
+    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
+      matches: false,
+      addListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  async function mockBootstrapDeps() {
+    const { useSystemStore } = await import('@/stores/system');
+    const { usePacketStore } = await import('@/stores/packets');
+    const { useNeighborStore } = await import('@/stores/neighbors');
+
+    const fetchStatsSpy = vi.spyOn(useSystemStore(), 'fetchStats').mockResolvedValue(undefined as any);
+    vi.spyOn(usePacketStore(), 'fetchPacketStats').mockResolvedValue(undefined as any);
+    vi.spyOn(usePacketStore(), 'fetchNoiseFloorHistory').mockResolvedValue(undefined as any);
+    vi.spyOn(usePacketStore(), 'fetchRecentPackets').mockResolvedValue(undefined as any);
+    vi.spyOn(usePacketStore(), 'initializeSparklineHistory').mockResolvedValue(undefined as any);
+    vi.spyOn(useNeighborStore(), 'fetchAll').mockResolvedValue(undefined as any);
+    vi.spyOn(useNeighborStore(), 'isStale').mockReturnValue(true);
+
+    return { fetchStatsSpy };
+  }
+
+  it('bootstrap() does not re-fetch on a second call — _bootstrapped flag prevents redundant loading', async () => {
+    const { fetchStatsSpy } = await mockBootstrapDeps();
+    const { useDataService } = await import('@/stores/dataService');
+    const dataService = useDataService();
+
+    await dataService.bootstrap();
+    expect(fetchStatsSpy).toHaveBeenCalledTimes(1);
+
+    await dataService.bootstrap();
+    expect(fetchStatsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('reset() clears the bootstrapped flag so bootstrap() re-fetches data on the next call', async () => {
+    const { fetchStatsSpy } = await mockBootstrapDeps();
+    const { useDataService } = await import('@/stores/dataService');
+    const dataService = useDataService();
+
+    await dataService.bootstrap();
+    expect(fetchStatsSpy).toHaveBeenCalledTimes(1);
+
+    dataService.reset();
+
+    await dataService.bootstrap();
+    expect(fetchStatsSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('stopSession calls dataService.reset() so bootstrap() re-runs when the user logs back in', async () => {
+    storeToken(validToken());
+
+    const { useWebSocketStore } = await import('@/stores/websocket');
+    const { usePacketStore } = await import('@/stores/packets');
+    const { useSystemStore } = await import('@/stores/system');
+    const { useDataService } = await import('@/stores/dataService');
+    const { useAppRuntimeStore } = await import('@/stores/appRuntime');
+
+    vi.spyOn(useWebSocketStore(), 'disconnect').mockImplementation(() => {});
+    vi.spyOn(usePacketStore(), 'reset').mockImplementation(() => {});
+    vi.spyOn(useSystemStore(), 'reset').mockImplementation(() => {});
+    const resetSpy = vi.spyOn(useDataService(), 'reset');
+
+    const appRuntime = useAppRuntimeStore();
+    appRuntime.markAuthenticated();
+
+    await appRuntime.stopSession('logout');
+
+    expect(resetSpy).toHaveBeenCalled();
+  });
+});

@@ -56,14 +56,17 @@ export const useAppRuntimeStore = defineStore('appRuntime', () => {
     const { useWebSocketStore } = await import('@/stores/websocket');
     const { usePacketStore } = await import('@/stores/packets');
     const { useSystemStore } = await import('@/stores/system');
+    const { useDataService } = await import('@/stores/dataService');
 
     const websocketStore = useWebSocketStore();
     const packetStore = usePacketStore();
     const systemStore = useSystemStore();
+    const dataService = useDataService();
 
     websocketStore.disconnect({ preventReconnect: true, silent: reason !== 'logout' });
     packetStore.reset();
     systemStore.reset();
+    dataService.reset();
     clearToken();
 
     if (router.currentRoute.value.path !== '/login') {
