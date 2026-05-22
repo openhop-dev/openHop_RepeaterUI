@@ -149,10 +149,13 @@ authClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401 || error.response?.status === 403) {
-      const appRuntime = useAppRuntimeStore();
-      void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      const requestToken = (error.config?.headers?.['Authorization'] as string | undefined)?.replace('Bearer ', '');
+      const currentToken = getToken();
+      if (!requestToken || requestToken === currentToken) {
+        const appRuntime = useAppRuntimeStore();
+        void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      }
     }
 
     console.error('Auth API Response Error:', error.response?.data || error.message);
@@ -207,10 +210,13 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401 || error.response?.status === 403) {
-      const appRuntime = useAppRuntimeStore();
-      void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      const requestToken = (error.config?.headers?.['Authorization'] as string | undefined)?.replace('Bearer ', '');
+      const currentToken = getToken();
+      if (!requestToken || requestToken === currentToken) {
+        const appRuntime = useAppRuntimeStore();
+        void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      }
     }
 
     console.error('API Response Error:', error.response?.data || error.message);

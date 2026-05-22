@@ -2,7 +2,6 @@
 import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
-import { isAuthenticated } from '@/utils/auth';
 import { useTheme } from '@/composables/useTheme';
 import { useConnectionLifecycle } from '@/composables/useConnectionLifecycle';
 import ConnectionSnackbar from '@/components/ui/ConnectionSnackbar.vue';
@@ -24,13 +23,7 @@ watch(
   { immediate: true },
 );
 
-// Show layout only if authenticated AND not on login page
-const showLayout = computed(() => {
-  const isLoginPage = route.path === '/login';
-  const authenticated = isAuthenticated();
-  const shouldShow = authenticated && !isLoginPage;
-  return shouldShow;
-});
+const showLayout = computed(() => appRuntime.isAuthenticated && route.path !== '/login' && route.path !== '/setup');
 </script>
 
 <template>
