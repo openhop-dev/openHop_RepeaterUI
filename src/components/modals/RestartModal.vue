@@ -48,6 +48,7 @@ const validationPassed = ref(false);
 const validationMessage = ref('');
 const validationErrors = ref<ValidationIssue[]>([]);
 const validationWarnings = ref<ValidationIssue[]>([]);
+const warningConfirmationRequired = ref(false);
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let pollAttempts = 0;
 let stableCount = 0;
@@ -61,6 +62,7 @@ function resetValidationState() {
   validationMessage.value = '';
   validationErrors.value = [];
   validationWarnings.value = [];
+  warningConfirmationRequired.value = false;
 }
 
 function close() {
@@ -83,6 +85,7 @@ async function runConfigPreflight(): Promise<boolean> {
   validationMessage.value = '';
   validationErrors.value = [];
   validationWarnings.value = [];
+  warningConfirmationRequired.value = false;
 
   try {
     const response = await apiClient.get<ValidationResult>('/validate_config');
@@ -98,7 +101,14 @@ async function runConfigPreflight(): Promise<boolean> {
     validationChecked.value = true;
 
     if (valid) {
-      validationMessage.value = payload.message || 'Configuration preflight passed.';
+      if (warnings.length > 0) {
+        validationMessage.value =
+          payload.message ||
+          'Configuration is valid but has warnings. Review them before continuing.';
+        warningConfirmationRequired.value = true;
+      } else {
+        validationMessage.value = payload.message || 'Configuration preflight passed.';
+      }
       return true;
     }
 
@@ -134,9 +144,19 @@ async function handleRestart() {
   hasFailed.value = false;
   failureMessage.value = '';
 
-  const configOk = await runConfigPreflight();
-  if (!configOk) {
-    return;
+  if (validationPassed.value && warningConfirmationRequired.value) {
+    // Second confirmation click after warnings were shown.
+    warningConfirmationRequired.value = false;
+  } else {
+    const configOk = await runConfigPreflight();
+    if (!configOk) {
+      return;
+    }
+
+    // Pause on warning-only preflight and require explicit user confirmation.
+    if (warningConfirmationRequired.value) {
+      return;
+    }
   }
 
   isRestarting.value = true;
@@ -318,18 +338,30 @@ onBeforeUnmount(() => {
               v-if="validationChecked"
               class="mb-4 rounded-lg border px-3 py-3"
               :class="validationPassed
-                ? 'border-emerald-300/80 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700/60'
+                ? (validationWarnings.length
+                  ? 'border-amber-300/80 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700/60'
+                  : 'border-emerald-300/80 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700/60')
                 : 'border-red-300/80 bg-red-50 dark:bg-red-900/20 dark:border-red-700/60'"
             >
               <div class="flex items-start gap-2">
                 <svg
-                  v-if="validationPassed"
+                  v-if="validationPassed && !validationWarnings.length"
                   class="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <svg
+                  v-else-if="validationPassed && validationWarnings.length"
+                  class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
                 <svg
                   v-else
@@ -342,7 +374,11 @@ onBeforeUnmount(() => {
                 </svg>
                 <div class="min-w-0">
                   <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">
-                    {{ validationPassed ? 'Preflight Passed' : 'Preflight Failed' }}
+                    {{
+                      validationPassed
+                        ? (validationWarnings.length ? 'Preflight Warning' : 'Preflight Passed')
+                        : 'Preflight Failed'
+                    }}
                   </h4>
                   <p class="text-xs text-content-secondary dark:text-content-muted mt-1">
                     {{ validationMessage }}
@@ -386,7 +422,11 @@ onBeforeUnmount(() => {
             <div class="modal-actions">
               <button @click="close" class="modal-btn-cancel">Cancel</button>
               <button @click="handleRestart" class="modal-btn-primary" :disabled="isValidating || isRestarting">
-                {{ validationPassed ? 'Restart' : 'Validate & Restart' }}
+                {{
+                  warningConfirmationRequired
+                    ? 'Restart Anyway'
+                    : (validationPassed ? 'Restart' : 'Validate & Restart')
+                }}
               </button>
             </div>
           </template>
