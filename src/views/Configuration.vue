@@ -3,6 +3,7 @@ import { ref, onMounted, watch, nextTick, type Ref, type ComponentPublicInstance
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
+import RadioHardwareSettings from '@/components/configuration/RadioHardwareSettings.vue';
 import RepeaterSettings from '@/components/configuration/RepeaterSettings.vue';
 import DutyCycle from '@/components/configuration/DutyCycle.vue';
 import TransmissionDelays from '@/components/configuration/TransmissionDelays.vue';
@@ -17,6 +18,7 @@ import MemoryDebug from '@/components/configuration/MemoryDebug.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 import Spinner from '@/components/ui/Spinner.vue';
 
+
 defineOptions({ name: 'ConfigurationView' });
 
 type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void) => void; isEditing: Ref<boolean> | boolean };
@@ -30,6 +32,7 @@ const showRightFade = ref(false);
 const showLeftFade = ref(false);
 
 const radioRef = ref<EditableTabRef | null>(null);
+const radioHardwareRef = ref<EditableTabRef | null>(null);
 const repeaterRef = ref<EditableTabRef | null>(null);
 const advertRef = ref<EditableTabRef | null>(null);
 const dutyRef = ref<EditableTabRef | null>(null);
@@ -39,6 +42,7 @@ const letsMeshRef = ref<EditableTabRef | null>(null);
 
 const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
   radio: radioRef,
+  'radio-hardware': radioHardwareRef,
   repeater: repeaterRef,
   advert: advertRef,
   duty: dutyRef,
@@ -80,6 +84,7 @@ watch(activeTab, (value) => setPreference('configuration_activeTab', value));
 
 const tabs = [
   { id: 'radio', label: 'Radio Settings', icon: 'radio' },
+  { id: 'radio-hardware', label: 'Radio Hardware', icon: 'hardware' },
   { id: 'repeater', label: 'Repeater Settings', icon: 'repeater' },
   { id: 'advert', label: 'Advert Limits', icon: 'advert' },
   { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
@@ -229,6 +234,20 @@ function setActiveTab(tabId: string) {
                   stroke-linejoin="round"
                   stroke-width="2"
                   d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.822c5.716-5.716 14.976-5.716 20.692 0"
+                />
+              </svg>
+              <svg
+                v-else-if="tab.icon === 'hardware'"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
                 />
               </svg>
               <svg
@@ -432,6 +451,9 @@ function setActiveTab(tabId: string) {
           </div>
           <div v-if="activeTab === 'repeater'">
             <RepeaterSettings ref="repeaterRef" key="repeater-settings" />
+          </div>
+          <div v-if="activeTab === 'radio-hardware'">
+            <RadioHardwareSettings ref="radioHardwareRef" key="radio-hardware-settings" />
           </div>
           <div v-if="activeTab === 'advert'">
             <AdvertSettings ref="advertRef" key="advert-settings" />

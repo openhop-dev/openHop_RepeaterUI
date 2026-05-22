@@ -308,6 +308,12 @@ export class ApiService {
     return this.get('gps');
   }
 
+  static async getSerialPorts(): Promise<
+    ApiResponse<Array<{ device: string; description?: string }>>
+  > {
+    return this.get('serial_ports');
+  }
+
   static async createTransportKey(
     name: string,
     flood_policy: string,

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, ref, watch } from 'vue';
 import { Cpu, Usb, Wifi } from '@lucide/vue';
 import { useSetupStore } from '@/stores/setup';
+import { ApiService } from '@/utils/api';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import RestartModal from '@/components/modals/RestartModal.vue';
@@ -15,6 +16,39 @@ const dialogTitle = ref('');
 const dialogMessage = ref('');
 const dialogType = ref<'error'>('error');
 const showRestartModal = ref(false);
+const serialDevices = ref<Array<{ device: string; description?: string }>>([]);
+const serialDevicesLoading = ref(false);
+const serialDevicesError = ref('');
+const useCustomUsbPath = ref(false);
+
+function selectedHardwareKey(): string {
+  return setupStore.selectedHardware?.key?.toLowerCase() ?? '';
+}
+
+function isUsbHardwareSelected(): boolean {
+  const key = selectedHardwareKey();
+  return key === 'kiss' || key === 'pymc_usb';
+}
+
+async function loadSerialDevices() {
+  serialDevicesLoading.value = true;
+  serialDevicesError.value = '';
+  try {
+    const result = await ApiService.getSerialPorts();
+    if (result.success && Array.isArray(result.data)) {
+      serialDevices.value = result.data;
+    } else {
+      serialDevices.value = [];
+      serialDevicesError.value = result.error || 'Could not load USB serial devices';
+    }
+  } catch (error: unknown) {
+    const e = error as { message?: string };
+    serialDevices.value = [];
+    serialDevicesError.value = e.message || 'Could not load USB serial devices';
+  } finally {
+    serialDevicesLoading.value = false;
+  }
+}
 
 // Map preset titles to flag emojis
 const getFlagEmoji = (title: string): string => {
@@ -32,8 +66,19 @@ const getFlagEmoji = (title: string): string => {
 
 onMounted(async () => {
   // Load hardware options and radio presets
-  await Promise.all([setupStore.fetchHardwareOptions(), setupStore.fetchRadioPresets()]);
+  await Promise.all([setupStore.fetchHardwareOptions(), setupStore.fetchRadioPresets(), loadSerialDevices()]);
 });
+
+watch(
+  () => setupStore.selectedHardware?.key,
+  () => {
+    if (isUsbHardwareSelected()) {
+      void loadSerialDevices();
+    } else {
+      useCustomUsbPath.value = false;
+    }
+  },
+);
 
 const progressPercentage = computed(() => {
   return (setupStore.currentStep / setupStore.totalSteps) * 100;
@@ -465,12 +510,57 @@ const stepTitles = [
                         <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
                           Serial Port
                         </label>
-                        <input
-                          v-model="setupStore.usbPort"
-                          type="text"
-                          class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
-                          placeholder="/dev/ttyACM0"
-                        />
+                        <div class="space-y-2">
+                          <div class="flex gap-2">
+                            <select
+                              v-model="setupStore.usbPort"
+                              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                              :disabled="useCustomUsbPath"
+                            >
+                              <option
+                                v-if="setupStore.usbPort && !serialDevices.some((d) => d.device === setupStore.usbPort)"
+                                :value="setupStore.usbPort"
+                              >
+                                {{ setupStore.usbPort }} (current)
+                              </option>
+                              <option
+                                v-for="dev in serialDevices"
+                                :key="dev.device"
+                                :value="dev.device"
+                              >
+                                {{ dev.description || dev.device }}
+                              </option>
+                            </select>
+                            <button
+                              type="button"
+                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-sm text-content-primary dark:text-content-primary bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 disabled:opacity-50"
+                              :disabled="serialDevicesLoading"
+                              @click="loadSerialDevices"
+                            >
+                              {{ serialDevicesLoading ? '...' : 'Refresh' }}
+                            </button>
+                          </div>
+
+                          <label class="flex items-center gap-2 text-xs text-content-secondary dark:text-content-muted">
+                            <input v-model="useCustomUsbPath" type="checkbox" />
+                            Enter custom device path
+                          </label>
+
+                          <input
+                            v-if="useCustomUsbPath"
+                            v-model="setupStore.usbPort"
+                            type="text"
+                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                            placeholder="/dev/ttyACM0"
+                          />
+
+                          <p
+                            v-if="serialDevicesError"
+                            class="text-xs text-red-600 dark:text-red-400"
+                          >
+                            {{ serialDevicesError }}
+                          </p>
+                        </div>
                         <p class="text-content-muted dark:text-content-muted text-xs mt-2">
                           The USB-CDC device path for your modem. If you have the pyMC udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
                         </p>
