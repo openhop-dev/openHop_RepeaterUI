@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watchEffect } from 'vue';
 import ApiService, { apiClient } from '@/utils/api';
 import type { SystemStats } from '@/types/api';
 import { usePacketStore } from './packets';
@@ -48,6 +48,13 @@ export const useSystemStore = defineStore('system', () => {
 
   // Node information
   const nodeName = computed(() => stats.value?.config?.node_name ?? 'Unknown');
+  const siteName = computed(() => stats.value?.site_name ?? '');
+
+  // Keep browser tab title in sync with site name
+  watchEffect(() => {
+    const name = siteName.value;
+    document.title = name ? `${name} — pyMC Repeater` : 'pyMC Repeater Dashboard';
+  });
   const pubKey = computed(() => {
     const key = stats.value?.public_key;
     if (!key || key === 'Unknown') return 'Unknown';
@@ -363,6 +370,7 @@ export const useSystemStore = defineStore('system', () => {
     dutyCycleMax,
     cadCalibrationRunning,
     nodeName,
+    siteName,
     pubKey,
 
     // Computed

@@ -149,10 +149,13 @@ authClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401 || error.response?.status === 403) {
-      const appRuntime = useAppRuntimeStore();
-      void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      const requestToken = (error.config?.headers?.['Authorization'] as string | undefined)?.replace('Bearer ', '');
+      const currentToken = getToken();
+      if (!requestToken || requestToken === currentToken) {
+        const appRuntime = useAppRuntimeStore();
+        void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      }
     }
 
     console.error('Auth API Response Error:', error.response?.data || error.message);
@@ -207,10 +210,13 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized - redirect to login
     if (error.response?.status === 401 || error.response?.status === 403) {
-      const appRuntime = useAppRuntimeStore();
-      void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      const requestToken = (error.config?.headers?.['Authorization'] as string | undefined)?.replace('Bearer ', '');
+      const currentToken = getToken();
+      if (!requestToken || requestToken === currentToken) {
+        const appRuntime = useAppRuntimeStore();
+        void appRuntime.handleAuthFailure(error.response?.status === 403 ? 'forbidden' : 'unauthorized');
+      }
     }
 
     console.error('API Response Error:', error.response?.data || error.message);
@@ -300,6 +306,12 @@ export class ApiService {
 
   static async getGpsDiagnostics(): Promise<ApiResponse<GPSDiagnostics>> {
     return this.get('gps');
+  }
+
+  static async getSerialPorts(): Promise<
+    ApiResponse<Array<{ device: string; description?: string }>>
+  > {
+    return this.get('serial_ports');
   }
 
   static async createTransportKey(

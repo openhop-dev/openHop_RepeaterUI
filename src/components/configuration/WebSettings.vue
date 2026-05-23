@@ -4,7 +4,44 @@
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
         <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Web Options</h3>
-        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure CORS policy and web frontend selection</p>
+        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure site identification, CORS policy and web frontend selection</p>
+      </div>
+    </div>
+
+    <!-- Site Identification -->
+    <div class="cfg-section">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+            Site Identification
+          </h3>
+          <p class="text-sm text-content-secondary dark:text-content-muted">
+            Customise the browser tab title and login page caption
+          </p>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label
+            for="site-name"
+            class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2"
+          >
+            Site Name
+          </label>
+          <input
+            id="site-name"
+            v-model="localConfig.site_name"
+            type="text"
+            maxlength="80"
+            placeholder="e.g. Base Station Alpha"
+            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary dark:text-content-primary placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-colors"
+            @change="saveSettings"
+            :disabled="saving"
+          />
+          <p class="text-xs text-content-secondary dark:text-content-muted mt-1.5">
+            Shown in the browser tab and above the login form. Leave blank to use the default title.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -327,6 +364,7 @@ defineOptions({ name: 'WebSettings' });
 interface WebConfig {
   cors_enabled: boolean;
   use_default_frontend: boolean;
+  site_name: string;
 }
 
 const { stats } = storeToRefs(useSystemStore());
@@ -342,6 +380,7 @@ const checkingConsole = ref(true);
 const localConfig = reactive<WebConfig>({
   cors_enabled: false,
   use_default_frontend: true,
+  site_name: '',
 });
 
 const saveMessageClass = computed(() => {
@@ -370,6 +409,7 @@ function loadSettings() {
   localConfig.cors_enabled = webConfig.cors_enabled === true;
   const webPath = webConfig.web_path;
   localConfig.use_default_frontend = !webPath || webPath === '';
+  localConfig.site_name = typeof stats.value?.site_name === 'string' ? stats.value.site_name : '';
 }
 
 async function saveSettings() {
@@ -380,6 +420,7 @@ async function saveSettings() {
     const updates: any = {
       web: {
         cors_enabled: localConfig.cors_enabled,
+        site_name: localConfig.site_name.trim(),
       },
     };
 
