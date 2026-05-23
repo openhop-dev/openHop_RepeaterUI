@@ -108,7 +108,7 @@ describe('Scenario 1 — bootstrap modal must not appear in unconfigured state',
     const store = useAppRuntimeStore();
     store.syncAuthState();
     expect(store.isAuthenticated).toBe(true);
-    const onSetupPage = '/setup';
+    const onSetupPage: string = '/setup';
     const showLayout = store.isAuthenticated && onSetupPage !== '/login' && onSetupPage !== '/setup';
     expect(showLayout).toBe(false);
   });

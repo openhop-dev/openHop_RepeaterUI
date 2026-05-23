@@ -8,6 +8,7 @@ interface RadioPreset {
   spreading_factor: string;
   bandwidth: string;
   coding_rate: string;
+  tx_power: string;
 }
 
 interface HardwareOption {
@@ -49,6 +50,7 @@ export const useSetupStore = defineStore('setup', () => {
     spreading_factor: '7',
     bandwidth: '125',
     coding_rate: '5',
+    tx_power: '14',
   });
 
   // Data from API
@@ -81,7 +83,8 @@ export const useSetupStore = defineStore('setup', () => {
           ? customRadio.value.frequency &&
               customRadio.value.spreading_factor &&
               customRadio.value.bandwidth &&
-              customRadio.value.coding_rate
+              customRadio.value.coding_rate &&
+              customRadio.value.tx_power
           : selectedRadioPreset.value !== null;
       case 6:
         return adminPassword.value.length >= 6 && adminPassword.value === confirmPassword.value;
@@ -122,6 +125,7 @@ export const useSetupStore = defineStore('setup', () => {
     spreading_factor: String(entry.spreading_factor ?? ''),
     bandwidth: String(entry.bandwidth ?? ''),
     coding_rate: String(entry.coding_rate ?? ''),
+    tx_power: String(entry.tx_power ?? '14'),
   });
 
   async function fetchRadioPresets() {
@@ -180,8 +184,14 @@ export const useSetupStore = defineStore('setup', () => {
             spreading_factor: customRadio.value.spreading_factor,
             bandwidth: customRadio.value.bandwidth,
             coding_rate: customRadio.value.coding_rate,
+            tx_power: customRadio.value.tx_power,
           }
         : selectedRadioPreset.value;
+
+      const txPowerNum = Number(radioConfig?.tx_power ?? 14);
+      if (!Number.isFinite(txPowerNum) || txPowerNum < -9 || txPowerNum > 22) {
+        throw new Error('TX power must be between -9 and +22 dBm');
+      }
 
       const response = await fetch('/api/setup_wizard', {
         method: 'POST',
@@ -267,6 +277,7 @@ export const useSetupStore = defineStore('setup', () => {
       spreading_factor: '7',
       bandwidth: '125',
       coding_rate: '5',
+      tx_power: '14',
     };
     adminPassword.value = '';
     confirmPassword.value = '';

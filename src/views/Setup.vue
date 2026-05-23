@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue';
+import { onMounted, computed, nextTick, ref, watch } from 'vue';
 import { Cpu, Usb, Wifi } from '@lucide/vue';
 import { useSetupStore } from '@/stores/setup';
+import { ApiService } from '@/utils/api';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import RestartModal from '@/components/modals/RestartModal.vue';
+import TxPowerNoticeModal from '@/components/modals/TxPowerNoticeModal.vue';
 
 const setupStore = useSetupStore();
 
@@ -15,6 +17,52 @@ const dialogTitle = ref('');
 const dialogMessage = ref('');
 const dialogType = ref<'error'>('error');
 const showRestartModal = ref(false);
+const serialDevices = ref<Array<{ device: string; description?: string }>>([]);
+const serialDevicesLoading = ref(false);
+const serialDevicesError = ref('');
+const useCustomUsbPath = ref(false);
+const showTxPowerNoticeModal = ref(false);
+const txPowerNoticeConfirmed = ref(false);
+const txPowerNoticeAcknowledged = ref(false);
+const nextActionButtonRef = ref<HTMLElement | null>(null);
+
+const selectedTxPowerForWarning = computed(() => {
+  if (setupStore.useCustomRadio) {
+    const n = Number(setupStore.customRadio.tx_power);
+    return Number.isFinite(n) ? n : null;
+  }
+  const n = Number(setupStore.selectedRadioPreset?.tx_power ?? 14);
+  return Number.isFinite(n) ? n : 14;
+});
+
+function selectedHardwareKey(): string {
+  return setupStore.selectedHardware?.key?.toLowerCase() ?? '';
+}
+
+function isUsbHardwareSelected(): boolean {
+  const key = selectedHardwareKey();
+  return key === 'kiss' || key === 'pymc_usb';
+}
+
+async function loadSerialDevices() {
+  serialDevicesLoading.value = true;
+  serialDevicesError.value = '';
+  try {
+    const result = await ApiService.getSerialPorts();
+    if (result.success && Array.isArray(result.data)) {
+      serialDevices.value = result.data;
+    } else {
+      serialDevices.value = [];
+      serialDevicesError.value = result.error || 'Could not load USB serial devices';
+    }
+  } catch (error: unknown) {
+    const e = error as { message?: string };
+    serialDevices.value = [];
+    serialDevicesError.value = e.message || 'Could not load USB serial devices';
+  } finally {
+    serialDevicesLoading.value = false;
+  }
+}
 
 // Map preset titles to flag emojis
 const getFlagEmoji = (title: string): string => {
@@ -32,8 +80,31 @@ const getFlagEmoji = (title: string): string => {
 
 onMounted(async () => {
   // Load hardware options and radio presets
-  await Promise.all([setupStore.fetchHardwareOptions(), setupStore.fetchRadioPresets()]);
+  await Promise.all([setupStore.fetchHardwareOptions(), setupStore.fetchRadioPresets(), loadSerialDevices()]);
 });
+
+watch(
+  () => setupStore.selectedHardware?.key,
+  () => {
+    if (isUsbHardwareSelected()) {
+      void loadSerialDevices();
+    } else {
+      useCustomUsbPath.value = false;
+    }
+  },
+);
+
+watch(
+  [
+    () => setupStore.useCustomRadio,
+    () => setupStore.selectedRadioPreset?.title,
+    () => setupStore.customRadio.tx_power,
+  ],
+  () => {
+    txPowerNoticeAcknowledged.value = false;
+    txPowerNoticeConfirmed.value = false;
+  },
+);
 
 const progressPercentage = computed(() => {
   return (setupStore.currentStep / setupStore.totalSteps) * 100;
@@ -94,7 +165,23 @@ function selectConnectionFilter(connection: ConnectionType) {
   }
 }
 
+function scrollToNextAction() {
+  void nextTick(() => {
+    nextActionButtonRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+}
+
 async function handleNext() {
+  if (
+    setupStore.currentStep === 5 &&
+    setupStore.canGoNext &&
+    !txPowerNoticeAcknowledged.value &&
+    selectedTxPowerForWarning.value !== null
+  ) {
+    showTxPowerNoticeModal.value = true;
+    return;
+  }
+
   if (setupStore.isLastStep) {
     // Complete setup
     const result = await setupStore.completeSetup();
@@ -110,6 +197,18 @@ async function handleNext() {
   } else {
     setupStore.nextStep();
   }
+}
+
+function closeTxPowerNotice() {
+  showTxPowerNoticeModal.value = false;
+  txPowerNoticeConfirmed.value = false;
+}
+
+async function confirmTxPowerNoticeAndContinue() {
+  if (!txPowerNoticeConfirmed.value) return;
+  txPowerNoticeAcknowledged.value = true;
+  showTxPowerNoticeModal.value = false;
+  await handleNext();
 }
 
 function handleBack() {
@@ -405,7 +504,10 @@ const stepTitles = [
                   <button
                     v-for="hardware in filteredHardwareOptions"
                     :key="hardware.key"
-                    @click="setupStore.selectedHardware = hardware"
+                    @click="
+                      setupStore.selectedHardware = hardware;
+                      scrollToNextAction();
+                    "
                     :class="[
                       'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
                       setupStore.selectedHardware?.key === hardware.key
@@ -465,12 +567,57 @@ const stepTitles = [
                         <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
                           Serial Port
                         </label>
-                        <input
-                          v-model="setupStore.usbPort"
-                          type="text"
-                          class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
-                          placeholder="/dev/ttyACM0"
-                        />
+                        <div class="space-y-2">
+                          <div class="flex gap-2">
+                            <select
+                              v-model="setupStore.usbPort"
+                              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                              :disabled="useCustomUsbPath"
+                            >
+                              <option
+                                v-if="setupStore.usbPort && !serialDevices.some((d) => d.device === setupStore.usbPort)"
+                                :value="setupStore.usbPort"
+                              >
+                                {{ setupStore.usbPort }} (current)
+                              </option>
+                              <option
+                                v-for="dev in serialDevices"
+                                :key="dev.device"
+                                :value="dev.device"
+                              >
+                                {{ dev.description || dev.device }}
+                              </option>
+                            </select>
+                            <button
+                              type="button"
+                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-sm text-content-primary dark:text-content-primary bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 disabled:opacity-50"
+                              :disabled="serialDevicesLoading"
+                              @click="loadSerialDevices"
+                            >
+                              {{ serialDevicesLoading ? '...' : 'Refresh' }}
+                            </button>
+                          </div>
+
+                          <label class="flex items-center gap-2 text-xs text-content-secondary dark:text-content-muted">
+                            <input v-model="useCustomUsbPath" type="checkbox" />
+                            Enter custom device path
+                          </label>
+
+                          <input
+                            v-if="useCustomUsbPath"
+                            v-model="setupStore.usbPort"
+                            type="text"
+                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                            placeholder="/dev/ttyACM0"
+                          />
+
+                          <p
+                            v-if="serialDevicesError"
+                            class="text-xs text-red-600 dark:text-red-400"
+                          >
+                            {{ serialDevicesError }}
+                          </p>
+                        </div>
                         <p class="text-content-muted dark:text-content-muted text-xs mt-2">
                           The USB-CDC device path for your modem. If you have the pyMC udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
                         </p>
@@ -559,6 +706,7 @@ const stepTitles = [
                   @click="
                     setupStore.selectedRadioPreset = preset;
                     setupStore.useCustomRadio = false;
+                    scrollToNextAction();
                   "
                   :class="[
                     'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm relative overflow-hidden',
@@ -618,6 +766,12 @@ const stepTitles = [
                         <div class="text-content-muted dark:text-content-muted">CR</div>
                         <div class="text-content-primary dark:text-content-primary/80 font-medium">
                           {{ preset.coding_rate }}
+                        </div>
+                      </div>
+                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1 col-span-2">
+                        <div class="text-content-muted dark:text-content-muted">TX Power</div>
+                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                          {{ preset.tx_power || '14' }} dBm
                         </div>
                       </div>
                     </div>
@@ -728,6 +882,21 @@ const stepTitles = [
                         <option value="8">4/8</option>
                       </select>
                     </div>
+                    <div class="col-span-2 sm:col-span-1">
+                      <label
+                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        >TX Power (dBm)</label
+                      >
+                      <input
+                        v-model="setupStore.customRadio.tx_power"
+                        type="number"
+                        min="-9"
+                        max="22"
+                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        placeholder="14"
+                      />
+                      <p class="text-content-muted dark:text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
+                    </div>
                   </div>
                 </Transition>
               </div>
@@ -805,6 +974,7 @@ const stepTitles = [
           <div v-else></div>
 
           <button
+            ref="nextActionButtonRef"
             @click="handleNext"
             :disabled="!setupStore.canGoNext || setupStore.isSubmitting"
             class="px-8 py-3 rounded-[12px] font-semibold transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -838,6 +1008,16 @@ const stepTitles = [
     </div>
 
     <!-- Error Dialog -->
+    <TxPowerNoticeModal
+      :show="showTxPowerNoticeModal"
+      :confirmed="txPowerNoticeConfirmed"
+      :selected-tx-power="selectedTxPowerForWarning"
+      action-label="I Understand, Continue"
+      @update:show="(v) => (v ? (showTxPowerNoticeModal = true) : closeTxPowerNotice())"
+      @update:confirmed="(v) => (txPowerNoticeConfirmed = v)"
+      @confirm="confirmTxPowerNoticeAndContinue"
+    />
+
     <Transition name="modal">
       <div
         v-if="showDialog"

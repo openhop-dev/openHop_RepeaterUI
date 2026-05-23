@@ -39,6 +39,9 @@
               class="logo-image h-36 sm:h-40 relative z-10"
             />
           </div>
+          <p v-if="siteName" class="text-content-primary dark:text-content-primary text-sm sm:text-base font-semibold mb-1">
+            {{ siteName }}
+          </p>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
             Sign in to access your dashboard
           </p>
@@ -175,7 +178,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { setToken, getClientId } from '@/utils/auth';
 import { authClient } from '@/utils/api';
@@ -213,6 +216,16 @@ const loading = ref(false);
 const errorMessage = ref('');
 const showPasswordChangeModal = ref(false);
 const usedDefaultCredentials = ref(false);
+const siteName = ref('');
+
+onMounted(async () => {
+  try {
+    const resp = await authClient.get<{ success: boolean; site_name: string }>('/api/site_info');
+    siteName.value = resp.data?.site_name ?? '';
+  } catch {
+    // Silently ignore — site name is purely cosmetic
+  }
+});
 
 const handleLogin = async () => {
   errorMessage.value = '';
