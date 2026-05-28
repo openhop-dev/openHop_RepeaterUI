@@ -17,7 +17,6 @@ import { createPinia, setActivePinia } from 'pinia';
 // confirmation text. This matches the pattern used in AdvertSettings.vue.
 
 vi.mock('@/utils/api', () => ({
-  authClient: { post: vi.fn() },
   default: { get: vi.fn(), post: vi.fn() },
   API_SERVER_URL: '',
 }));
@@ -46,7 +45,7 @@ vi.mock('@/composables/useUnsavedChanges', () => ({
   }),
 }));
 
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import DutyCycle from '@/components/configuration/DutyCycle.vue';
 
 function mountDutyCycle() {
@@ -58,30 +57,26 @@ function mountDutyCycle() {
   });
 }
 
+// ApiService.post() returns response.data (the JSON body) directly, not a
+// full AxiosResponse. The component then accesses .data on that, landing on
+// the inner payload — so data.message and data.persisted are correctly found.
 function apiSuccess() {
-  // This is the exact envelope shape the backend returns via _success().
-  // The bug was that the component read data.message / data.persisted
-  // instead of data.data.message / data.data.persisted.
   return Promise.resolve({
+    success: true,
     data: {
-      success: true,
-      data: {
-        applied: ['max_airtime=6.0%', 'enforcement=enabled'],
-        persisted: true,
-        live_update: true,
-        restart_required: false,
-        message: 'Duty cycle settings applied immediately.',
-      },
+      applied: ['max_airtime=6.0%', 'enforcement=enabled'],
+      persisted: true,
+      live_update: true,
+      restart_required: false,
+      message: 'Duty cycle settings applied immediately.',
     },
   });
 }
 
 function apiFailure() {
   return Promise.resolve({
-    data: {
-      success: false,
-      error: 'No valid settings provided',
-    },
+    success: false,
+    error: 'No valid settings provided',
   });
 }
 
@@ -96,7 +91,7 @@ describe('DutyCycle save — response envelope parsing', () => {
   });
 
   it('shows success message when API returns { success: true, data: { persisted, message } }', async () => {
-    vi.mocked(authClient.post).mockImplementation(() => apiSuccess());
+    vi.mocked(ApiService.post).mockImplementation(() => apiSuccess());
 
     const wrapper = mountDutyCycle();
 
@@ -114,7 +109,7 @@ describe('DutyCycle save — response envelope parsing', () => {
   });
 
   it('shows error message when API returns { success: false }', async () => {
-    vi.mocked(authClient.post).mockImplementation(() => apiFailure());
+    vi.mocked(ApiService.post).mockImplementation(() => apiFailure());
 
     const wrapper = mountDutyCycle();
 
@@ -130,7 +125,7 @@ describe('DutyCycle save — response envelope parsing', () => {
   });
 
   it('calls the correct endpoint with max_airtime_percent and enforcement_enabled', async () => {
-    vi.mocked(authClient.post).mockImplementation(() => apiSuccess());
+    vi.mocked(ApiService.post).mockImplementation(() => apiSuccess());
 
     const wrapper = mountDutyCycle();
     await wrapper.find('button').trigger('click');
@@ -140,8 +135,8 @@ describe('DutyCycle save — response envelope parsing', () => {
     await saveBtn!.trigger('click');
     await flushPromises();
 
-    expect(authClient.post).toHaveBeenCalledWith(
-      '/api/update_duty_cycle_config',
+    expect(ApiService.post).toHaveBeenCalledWith(
+      '/update_duty_cycle_config',
       expect.objectContaining({
         max_airtime_percent: expect.any(Number),
         enforcement_enabled: expect.any(Boolean),
