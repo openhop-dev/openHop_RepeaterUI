@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, nextTick } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import Spinner from '@/components/ui/Spinner.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
@@ -53,9 +53,9 @@ const busyMax = ref(0.5);
 const fetchStats = async () => {
   statsLoading.value = true;
   try {
-    const response = await authClient.get('/api/advert_rate_limit_stats');
-    if (response.data?.success) {
-      rateLimitStats.value = response.data.data;
+    const response = await ApiService.get('/advert_rate_limit_stats');
+    if (response.success) {
+      rateLimitStats.value = response.data;
     }
   } catch (err) {
     console.error('Failed to fetch rate limit stats:', err);
@@ -179,11 +179,10 @@ const saveChanges = async () => {
       busy_max: busyMax.value,
     };
 
-    const response = await authClient.post('/api/update_advert_rate_limit_config', payload);
-    const data = response.data;
+    const response = await ApiService.post('/update_advert_rate_limit_config', payload);
 
-    if (data.success) {
-      successMessage.value = data.data?.message || 'Settings saved successfully';
+    if (response.success) {
+      successMessage.value = response.data?.message || 'Settings saved successfully';
 
       // Fetch updated config from backend first
       await systemStore.fetchStats();

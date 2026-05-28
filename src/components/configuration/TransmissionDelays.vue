@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
@@ -65,7 +65,7 @@ const saveChanges = async () => {
   successMessage.value = '';
 
   try {
-    const response = await authClient.post('/api/update_radio_config', {
+    const response = await ApiService.post('/update_radio_config', {
       tx_delay_factor: floodTxDelayInput.value,
       direct_tx_delay_factor: directTxDelayInput.value,
     });
