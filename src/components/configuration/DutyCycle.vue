@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
@@ -71,14 +71,14 @@ const saveChanges = async () => {
   successMessage.value = '';
 
   try {
-    const response = await authClient.post('/api/update_duty_cycle_config', {
+    const response = await ApiService.post('/update_duty_cycle_config', {
       max_airtime_percent: maxAirtimeInput.value,
       enforcement_enabled: enforcementInput.value,
     });
 
     const data = response.data;
-    if (data.success) {
-      successMessage.value = data.data?.message || 'Settings saved successfully';
+    if (data.message || data.persisted) {
+      successMessage.value = data.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
