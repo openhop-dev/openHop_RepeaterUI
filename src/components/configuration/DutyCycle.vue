@@ -77,8 +77,8 @@ const saveChanges = async () => {
     });
 
     const data = response.data;
-    if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
+    if (data.success) {
+      successMessage.value = data.data?.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
