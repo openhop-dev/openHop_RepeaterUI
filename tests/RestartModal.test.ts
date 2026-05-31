@@ -5,6 +5,7 @@ import RestartModal from '@/components/modals/RestartModal.vue';
 vi.mock('@/utils/api', () => ({
   default: {
     post: vi.fn(),
+    get: vi.fn(),
   },
 }));
 
@@ -31,6 +32,18 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('fetch', vi.fn());
   vi.stubGlobal('location', { reload: vi.fn() });
+
+  // New restart flow runs config preflight via GET /validate_config.
+  // Default to a passing preflight unless a test overrides it.
+  vi.mocked(apiClient.get).mockResolvedValue({
+    data: {
+      valid: true,
+      blocked_restart: false,
+      errors: [],
+      warnings: [],
+      message: 'Configuration preflight passed.',
+    },
+  });
 });
 
 afterEach(() => {
