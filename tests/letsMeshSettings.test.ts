@@ -75,7 +75,15 @@ const BROKER_PRESETS_RESPONSE = {
 };
 
 function mountComponent() {
-  vi.mocked(ApiService.get).mockResolvedValue(BROKER_PRESETS_RESPONSE as any);
+  vi.mocked(ApiService.get).mockImplementation(async (url: string) => {
+    if (url === '/mqtt_status') {
+      return MQTT_STATUS_RESPONSE as any;
+    }
+    if (url === '/broker_presets') {
+      return BROKER_PRESETS_RESPONSE as any;
+    }
+    return { success: true, data: {} } as any;
+  });
   return mount(LetsMeshSettings, {
     global: {
       stubs: { Teleport: true, UnsavedChangesModal: true },
@@ -107,7 +115,15 @@ describe('LetsMeshSettings — response parsing', () => {
   });
 
   it('GET /mqtt_status success shape is handled without error', async () => {
-    vi.mocked(ApiService.get).mockResolvedValue(MQTT_STATUS_RESPONSE as any);
+    vi.mocked(ApiService.get).mockImplementation(async (url: string) => {
+      if (url === '/mqtt_status') {
+        return MQTT_STATUS_RESPONSE as any;
+      }
+      if (url === '/broker_presets') {
+        return BROKER_PRESETS_RESPONSE as any;
+      }
+      return { success: true, data: {} } as any;
+    });
 
     // Should not throw — if res.data?.success was still being checked (old
     // authClient shape), res.data would be the inner object with no success
@@ -119,7 +135,15 @@ describe('LetsMeshSettings — response parsing', () => {
   });
 
   it('POST /update_mqtt_config real response shape is treated as success', async () => {
-    vi.mocked(ApiService.get).mockResolvedValue(BROKER_PRESETS_RESPONSE as any);
+    vi.mocked(ApiService.get).mockImplementation(async (url: string) => {
+      if (url === '/mqtt_status') {
+        return MQTT_STATUS_RESPONSE as any;
+      }
+      if (url === '/broker_presets') {
+        return BROKER_PRESETS_RESPONSE as any;
+      }
+      return { success: true, data: {} } as any;
+    });
     vi.mocked(ApiService.post).mockResolvedValue(MQTT_SAVE_RESPONSE as any);
 
     const wrapper = mountComponent();
