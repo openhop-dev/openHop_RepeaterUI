@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, type Ref, type ComponentPublicInstance } from 'vue';
+import { computed, ref, onMounted, watch, nextTick, type Ref, type ComponentPublicInstance } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
@@ -27,6 +27,7 @@ type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void)
 const systemStore = useSystemStore();
 const dataService = useDataService();
 const activeTab = ref(getPreference('configuration_activeTab', 'radio'));
+const activeGroup = ref(getPreference('configuration_activeGroup', 'radio'));
 const initialLoadComplete = ref(false);
 const tabsContainer = ref<HTMLElement | null>(null);
 const showRightFade = ref(false);
@@ -80,25 +81,71 @@ function scrollTabs(direction: 'left' | 'right') {
   tabsContainer.value.scrollBy({ left: direction === 'right' ? 150 : -150, behavior: 'smooth' });
 }
 
-// Watch for changes and persist to localStorage
-watch(activeTab, (value) => setPreference('configuration_activeTab', value));
+type ConfigTab = { id: string; label: string; icon: string };
+type ConfigTabGroup = { id: string; label: string; tabs: ConfigTab[] };
 
-const tabs = [
-  { id: 'radio', label: 'Radio Settings', icon: 'radio' },
-  { id: 'radio-hardware', label: 'Radio Hardware', icon: 'hardware' },
-  { id: 'repeater', label: 'Repeater Settings', icon: 'repeater' },
-  { id: 'advert', label: 'Advert Limits', icon: 'advert' },
-  { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
-  { id: 'delays', label: 'TX Delays', icon: 'delays' },
-  { id: 'transport', label: 'Region Configuration', icon: 'keys' },
-  { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
-  { id: 'web', label: 'Web Options', icon: 'web' },
-  { id: 'observer', label: 'Observer', icon: 'observer' },
-  { id: 'policy-engine', label: 'Policies', icon: 'policy' },
-  { id: 'backup', label: 'Backup', icon: 'backup' },
-  { id: 'database', label: 'Database', icon: 'database' },
-  { id: 'memory', label: 'Memory', icon: 'memory' },
+const tabGroups: ConfigTabGroup[] = [
+  {
+    id: 'radio',
+    label: 'Radio',
+    tabs: [
+      { id: 'radio', label: 'Radio Settings', icon: 'radio' },
+      { id: 'radio-hardware', label: 'Radio Hardware', icon: 'hardware' },
+      { id: 'repeater', label: 'Repeater Settings', icon: 'repeater' },
+      { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
+      { id: 'delays', label: 'TX Delays', icon: 'delays' },
+    ],
+  },
+  {
+    id: 'access',
+    label: 'Access',
+    tabs: [
+      { id: 'advert', label: 'Advert Limits', icon: 'advert' },
+      { id: 'transport', label: 'Region Configuration', icon: 'keys' },
+      { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
+      { id: 'web', label: 'Web Options', icon: 'web' },
+      { id: 'observer', label: 'Observer', icon: 'observer' },
+      { id: 'policy-engine', label: 'Policies', icon: 'policy' },
+    ],
+  },
+  {
+    id: 'maintenance',
+    label: 'Maintenance',
+    tabs: [
+      { id: 'backup', label: 'Backup', icon: 'backup' },
+      { id: 'database', label: 'Database', icon: 'database' },
+      { id: 'memory', label: 'Memory', icon: 'memory' },
+    ],
+  },
 ];
+
+const activeGroupTabs = computed(() => tabGroups.find((group) => group.id === activeGroup.value)?.tabs ?? []);
+
+function findGroupForTab(tabId: string): ConfigTabGroup | undefined {
+  return tabGroups.find((group) => group.tabs.some((tab) => tab.id === tabId));
+}
+
+function ensureValidNavigationState() {
+  const groupFromTab = findGroupForTab(activeTab.value);
+  if (!groupFromTab) {
+    const fallbackGroup = tabGroups[0];
+    activeGroup.value = fallbackGroup.id;
+    activeTab.value = fallbackGroup.tabs[0].id;
+    return;
+  }
+
+  if (!tabGroups.some((group) => group.id === activeGroup.value)) {
+    activeGroup.value = groupFromTab.id;
+  }
+
+  const isTabVisibleInActiveGroup = tabGroups
+    .find((group) => group.id === activeGroup.value)
+    ?.tabs.some((tab) => tab.id === activeTab.value);
+
+  if (!isTabVisibleInActiveGroup) {
+    activeGroup.value = groupFromTab.id;
+  }
+}
 
 onMounted(async () => {
   if (systemStore.stats) {
@@ -118,12 +165,53 @@ onMounted(async () => {
   nextTick(() => updateFades());
 });
 
+ensureValidNavigationState();
+
+watch(activeTab, (value) => {
+  setPreference('configuration_activeTab', value);
+  const group = findGroupForTab(value);
+  if (group && group.id !== activeGroup.value) {
+    activeGroup.value = group.id;
+    return;
+  }
+  nextTick(() => updateFades());
+});
+
+watch(activeGroup, (value) => {
+  setPreference('configuration_activeGroup', value);
+  nextTick(() => updateFades());
+});
+
 function setActiveTab(tabId: string) {
   if (tabId !== activeTab.value && isCurrentTabEditing()) {
     requestCurrentTabLeave(() => { activeTab.value = tabId; });
     return;
   }
   activeTab.value = tabId;
+}
+
+function setActiveGroup(groupId: string) {
+  if (groupId === activeGroup.value) return;
+  const group = tabGroups.find((item) => item.id === groupId);
+  if (!group || !group.tabs.length) return;
+
+  const targetTab = group.tabs.some((tab) => tab.id === activeTab.value)
+    ? activeTab.value
+    : group.tabs[0].id;
+
+  const applyGroupSwitch = () => {
+    activeGroup.value = groupId;
+    if (targetTab !== activeTab.value) {
+      activeTab.value = targetTab;
+    }
+  };
+
+  if (targetTab !== activeTab.value && isCurrentTabEditing()) {
+    requestCurrentTabLeave(applyGroupSwitch);
+    return;
+  }
+
+  applyGroupSwitch();
 }
 </script>
 
@@ -159,7 +247,25 @@ function setActiveTab(tabId: string) {
     <!-- Configuration Tabs -->
     <div class="glass-card rounded-[15px] p-3 sm:p-6 mt-4 sm:mt-6">
       <!-- Tab Navigation -->
-      <div class="relative -mx-3 sm:mx-0 mb-4 sm:mb-6">
+      <div class="space-y-3 mb-4 sm:mb-6">
+        <!-- Group Navigation -->
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            v-for="group in tabGroups"
+            :key="group.id"
+            @click="setActiveGroup(group.id)"
+            :class="[
+              'px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full border transition-colors duration-200',
+              activeGroup === group.id
+                ? 'border-primary/60 bg-primary/10 text-primary'
+                : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary hover:bg-background-mute dark:hover:bg-white/10',
+            ]"
+          >
+            {{ group.label }}
+          </button>
+        </div>
+
+        <div class="relative -mx-3 sm:mx-0">
         <!-- Left scroll fade + button (mobile only) -->
         <Transition name="tab-fade">
           <div
@@ -212,7 +318,7 @@ function setActiveTab(tabId: string) {
           class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke px-3 sm:px-0 scrollbar-hide"
         >
           <button
-            v-for="tab in tabs"
+            v-for="tab in activeGroupTabs"
             :key="tab.id"
             @click="setActiveTab(tab.id)"
             :class="[
@@ -424,6 +530,7 @@ function setActiveTab(tabId: string) {
             </div>
           </button>
         </div>
+      </div>
       </div>
 
       <!-- Tab Content -->
