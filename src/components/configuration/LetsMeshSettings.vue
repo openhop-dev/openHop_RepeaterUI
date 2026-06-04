@@ -69,6 +69,17 @@ interface Snapshot {
 }
 const globalSnapshot = ref<Snapshot | null>(null);
 
+interface MqttStatus {
+  handler_active: boolean;
+  brokers: {
+    enabled: boolean;
+    name: string;
+    host: string;
+    status: { connected: boolean; reconnecting: boolean };
+    format: string;
+  }[];
+}
+
 // ── Observer settings ─────────────────────────────────────────────────────
 const isEditingObserver = ref(false);
 const iataCodeInput = ref('');
@@ -106,7 +117,7 @@ async function fetchStatus() {
   loadingStatus.value = true;
   try {
     const res = await ApiService.get('/mqtt_status');
-    if (res.success) status.value = res.data;
+    if (res.success) status.value = res.data as MqttStatus;
   } catch { /* silent */ } finally {
     loadingStatus.value = false;
   }

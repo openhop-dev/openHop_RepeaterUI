@@ -92,6 +92,14 @@ type ImportConfigResponse = EndpointApiResponse<
   (typeof generatedApiClient)['configImport']['configImportCreate']
 >;
 
+const toAxiosHeaders = (headers?: HeadersInit): Record<string, string> | undefined => {
+  if (!headers) {
+    return undefined;
+  }
+
+  return Object.fromEntries(new Headers(headers).entries());
+};
+
 // API Response interface for consistent response structure
 export interface ApiResponse<T = unknown> {
   success?: boolean;
@@ -621,7 +629,7 @@ export class ApiService {
     try {
       const requestParams = await this.getGeneratedRequestParams();
       const response = await apiClient.delete('/policy_groups', {
-        headers: requestParams.headers,
+        headers: toAxiosHeaders(requestParams.headers),
         data,
         params: data,
       });
@@ -672,7 +680,7 @@ export class ApiService {
     try {
       const requestParams = await this.getGeneratedRequestParams();
       const response = await apiClient.delete('/policy_group_entries', {
-        headers: requestParams.headers,
+        headers: toAxiosHeaders(requestParams.headers),
         data,
         params: data,
       });

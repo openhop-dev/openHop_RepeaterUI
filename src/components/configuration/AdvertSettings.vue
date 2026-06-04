@@ -180,9 +180,10 @@ const saveChanges = async () => {
     };
 
     const response = await ApiService.post('/update_advert_rate_limit_config', payload);
+    const data = response.data as { message?: string; error?: string } | undefined;
 
     if (response.success) {
-      successMessage.value = response.data?.message || 'Settings saved successfully';
+      successMessage.value = data?.message || 'Settings saved successfully';
 
       // Fetch updated config from backend first
       await systemStore.fetchStats();
@@ -201,8 +202,8 @@ const saveChanges = async () => {
         successMessage.value = '';
       }, 3000);
     } else {
-      errorMessage.value = data.error || 'Failed to save settings';
-      console.error('[AdvertSettings] Save failed:', data.error);
+      errorMessage.value = data?.error || 'Failed to save settings';
+      console.error('[AdvertSettings] Save failed:', data?.error);
     }
   } catch (error: any) {
     console.error('Failed to save advert settings:', error);
