@@ -84,12 +84,12 @@ const getRTTStatus = computed(() => {
 });
 
 const getSignalStrength = computed(() => {
-  if (!props.result) return { bars: 0, color: 'text-gray-400' };
+  if (!props.result) return { bars: 0, bgColor: 'bg-gray-400 dark:bg-gray-500' };
 
   const quality = getSignalQuality(props.result.rssi);
   return {
     bars: quality.bars,
-    color: quality.color,
+    bgColor: quality.bgColor,
   };
 });
 
@@ -309,7 +309,7 @@ const close = () => {
                         :class="[
                           'w-1 h-3 rounded-sm',
                           i <= getSignalStrength.bars
-                            ? getSignalStrength.color
+                            ? getSignalStrength.bgColor
                             : 'bg-stroke-subtle dark:bg-stroke/10',
                         ]"
                       ></div>

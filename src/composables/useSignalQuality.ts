@@ -25,7 +25,8 @@ const GOOD_SNR_MARGIN = 5.0; // dB above minimum for "good" signal
 
 export interface SignalQuality {
   bars: number; // 0-5 signal bars
-  color: string; // Tailwind color class
+  color: string; // text-* Tailwind class — for text/icon colouring
+  bgColor: string; // bg-* Tailwind class — for filled bar/chip colouring
   snr: number; // Calculated SNR
   quality: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'None'; // Text label
 }
@@ -56,6 +57,7 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
     return {
       bars,
       color: 'text-red-600 dark:text-red-400',
+      bgColor: 'bg-accent-red',
       snr,
       quality: bars === 0 ? 'None' : 'Poor',
     };
@@ -72,6 +74,10 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
         bars === 2
           ? 'text-orange-600 dark:text-orange-400'
           : 'text-yellow-600 dark:text-yellow-400',
+      bgColor:
+        bars === 2
+          ? 'bg-orange-600 dark:bg-orange-400'
+          : 'bg-yellow-600 dark:bg-yellow-400',
       snr,
       quality: 'Fair',
     };
@@ -84,6 +90,7 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
   return {
     bars,
     color: bars === 5 ? 'text-green-600 dark:text-green-400' : 'text-green-600 dark:text-green-300',
+    bgColor: 'bg-accent-green',
     snr,
     quality: bars === 5 ? 'Excellent' : 'Good',
   };
@@ -118,6 +125,7 @@ export function useSignalQuality() {
       return {
         bars: 0,
         color: 'text-gray-400 dark:text-gray-500',
+        bgColor: 'bg-gray-400 dark:bg-gray-500',
         snr: -999,
         quality: 'None',
       };
