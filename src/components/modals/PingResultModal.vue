@@ -83,13 +83,19 @@ const getRTTStatus = computed(() => {
   return { color: 'text-red-600 dark:text-red-400', label: 'Poor' };
 });
 
+// Signal bar height lookup — staircase pattern matching NeighborDetailsModal
+// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
+// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
+const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
+
 const getSignalStrength = computed(() => {
-  if (!props.result) return { bars: 0, bgColor: 'bg-gray-400 dark:bg-gray-500' };
+  if (!props.result) return { bars: 0, color: 'text-gray-400 dark:text-gray-500', quality: 'None' as const };
 
   const quality = getSignalQuality(props.result.rssi);
   return {
     bars: quality.bars,
-    bgColor: quality.bgColor,
+    color: quality.color,
+    quality: quality.quality,
   };
 });
 
@@ -295,31 +301,14 @@ const close = () => {
               </div>
 
               <!-- Signal Metrics -->
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-3 gap-3">
                 <!-- RSSI -->
                 <div
                   class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
                 >
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-content-secondary dark:text-content-muted text-sm">RSSI</span>
-                    <div class="flex gap-0.5">
-                      <div
-                        v-for="i in 5"
-                        :key="i"
-                        :class="[
-                          'w-1 h-3 rounded-sm',
-                          i <= getSignalStrength.bars
-                            ? getSignalStrength.bgColor
-                            : 'bg-stroke-subtle dark:bg-stroke/10',
-                        ]"
-                      ></div>
-                    </div>
-                  </div>
+                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.rssi }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.rssi }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dBm</span>
                   </div>
                 </div>
@@ -328,13 +317,37 @@ const close = () => {
                 <div
                   class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
                 >
-                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
+                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.snr_db }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.snr_db }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dB</span>
+                  </div>
+                </div>
+
+                <!-- Signal Strength -->
+                <div
+                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                >
+                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">Signal Strength</div>
+                  <div class="flex items-center gap-2">
+                    <div class="flex items-end gap-0.5">
+                      <template v-for="i in 5" :key="i">
+                        <div
+                          :class="[
+                            'w-1 transition-colors',
+                            BAR_HEIGHTS_SM[i - 1],
+                            i <= getSignalStrength.bars
+                              ? getSignalStrength.color
+                              : 'text-gray-600 dark:text-gray-700',
+                          ]"
+                        >
+                          <div class="w-full h-full bg-current rounded-sm"></div>
+                        </div>
+                      </template>
+                    </div>
+                    <span class="text-sm font-medium" :class="getSignalStrength.color">
+                      {{ getSignalStrength.quality }}
+                    </span>
                   </div>
                 </div>
               </div>
