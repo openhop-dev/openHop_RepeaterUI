@@ -1952,6 +1952,262 @@ export class Api<
         ...params,
       }),
   };
+  policy = {
+    /**
+     * @description Returns normalized policy engine configuration and grouped channel hash/pubkey entries.
+     *
+     * @tags Network Policy
+     * @name PolicyList
+     * @summary Get policy document
+     * @request GET:/policy
+     * @secure
+     */
+    policyList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            policy_file?: string;
+            exists?: boolean;
+            policy_engine?: object;
+            groups?: object;
+          };
+        },
+        any
+      >({
+        path: `/policy`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Update policy_engine configuration while preserving or replacing named groups.
+     *
+     * @tags Network Policy
+     * @name PolicyCreate
+     * @summary Update policy document
+     * @request POST:/policy
+     * @secure
+     */
+    policyCreate: (data: object, params: RequestParams = {}) =>
+      this.request<SuccessResponse, any>({
+        path: `/policy`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  policyValidate = {
+    /**
+     * @description Validate a policy payload without saving it to disk.
+     *
+     * @tags Network Policy
+     * @name PolicyValidateCreate
+     * @summary Validate policy payload
+     * @request POST:/policy_validate
+     * @secure
+     */
+    policyValidateCreate: (data: object, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            valid?: boolean;
+            normalized?: object;
+            effective?: object;
+          };
+        },
+        any
+      >({
+        path: `/policy_validate`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  policyGroups = {
+    /**
+     * @description List named channel hash and pubkey groups.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupsList
+     * @summary List policy groups
+     * @request GET:/policy_groups
+     * @secure
+     */
+    policyGroupsList: (
+      query?: {
+        /** Optional group kind filter. */
+        kind?: "channel_hashes" | "pubkeys";
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: object;
+        },
+        any
+      >({
+        path: `/policy_groups`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Create a named group for channel hashes or pubkeys.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupsCreate
+     * @summary Create policy group
+     * @request POST:/policy_groups
+     * @secure
+     */
+    policyGroupsCreate: (
+      data: {
+        kind: "channel_hashes" | "pubkeys";
+        group_id?: string;
+        friendly_name?: string;
+        description?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/policy_groups`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Delete a named group and all of its entries.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupsDelete
+     * @summary Delete policy group
+     * @request DELETE:/policy_groups
+     * @secure
+     */
+    policyGroupsDelete: (
+      data: {
+        kind: "channel_hashes" | "pubkeys";
+        group_id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/policy_groups`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  policyGroupEntries = {
+    /**
+     * @description Return entries for a specific named channel hash/pubkey group.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupEntriesList
+     * @summary List group entries
+     * @request GET:/policy_group_entries
+     * @secure
+     */
+    policyGroupEntriesList: (
+      query: {
+        kind: "channel_hashes" | "pubkeys";
+        group_id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: object;
+        },
+        any
+      >({
+        path: `/policy_group_entries`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Add a friendly-named entry to a policy group.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupEntriesCreate
+     * @summary Add group entry
+     * @request POST:/policy_group_entries
+     * @secure
+     */
+    policyGroupEntriesCreate: (
+      data: {
+        kind: "channel_hashes" | "pubkeys";
+        group_id: string;
+        value: string;
+        entry_id?: string;
+        friendly_name?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/policy_group_entries`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Remove an entry by entry_id or value from a policy group.
+     *
+     * @tags Network Policy
+     * @name PolicyGroupEntriesDelete
+     * @summary Remove group entry
+     * @request DELETE:/policy_group_entries
+     * @secure
+     */
+    policyGroupEntriesDelete: (
+      data: {
+        kind: "channel_hashes" | "pubkeys";
+        group_id: string;
+        entry_id?: string;
+        value?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/policy_group_entries`,
+        method: "DELETE",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   createIdentity = {
     /**
      * @description Create a new repeater or room server identity. `name` must be non-empty after trimming leading/trailing whitespace (whitespace-only values are rejected).

@@ -15,6 +15,7 @@ import LetsMeshSettings from '@/components/configuration/LetsMeshSettings.vue';
 import BackupRestore from '@/components/configuration/BackupRestore.vue';
 import DatabaseManagement from '@/components/configuration/DatabaseManagement.vue';
 import MemoryDebug from '@/components/configuration/MemoryDebug.vue';
+import PolicyEngineSettings from '@/components/configuration/PolicyEngineSettings.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 import Spinner from '@/components/ui/Spinner.vue';
 
@@ -93,6 +94,7 @@ const tabs = [
   { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
   { id: 'web', label: 'Web Options', icon: 'web' },
   { id: 'observer', label: 'Observer', icon: 'observer' },
+  { id: 'policy-engine', label: 'Policies', icon: 'policy' },
   { id: 'backup', label: 'Backup', icon: 'backup' },
   { id: 'database', label: 'Database', icon: 'database' },
   { id: 'memory', label: 'Memory', icon: 'memory' },
@@ -363,6 +365,20 @@ function setActiveTab(tabId: string) {
                 />
               </svg>
               <svg
+                v-else-if="tab.icon === 'policy'"
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m5-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <svg
                 v-else-if="tab.icon === 'backup'"
                 class="w-4 h-4"
                 fill="none"
@@ -475,6 +491,9 @@ function setActiveTab(tabId: string) {
           </div>
           <div v-if="activeTab === 'observer'">
             <LetsMeshSettings ref="letsMeshRef" key="letsmesh-settings" />
+          </div>
+          <div v-if="activeTab === 'policy-engine'">
+            <PolicyEngineSettings key="policy-engine" />
           </div>
           <div v-if="activeTab === 'backup'">
             <BackupRestore key="backup-restore" />

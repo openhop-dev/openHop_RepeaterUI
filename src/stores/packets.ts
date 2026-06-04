@@ -309,6 +309,7 @@ export const usePacketStore = defineStore('packets', () => {
         totalPackets: [],
         transmittedPackets: [],
         droppedPackets: [],
+        policyEvents: [],
         crcErrors: crcErrorHistory.value.map((h) => h.count),
         currentRates: interpolatedRates.value,
       };
@@ -316,6 +317,7 @@ export const usePacketStore = defineStore('packets', () => {
 
     const rxSeries = metricsGraphData.value.series.find((s) => s.type === 'rx_count');
     const txSeries = metricsGraphData.value.series.find((s) => s.type === 'tx_count');
+    const policySeries = metricsGraphData.value.series.find((s) => s.type === 'policy_events');
 
     const rxData = rxSeries?.data || [];
     const txData = txSeries?.data || [];
@@ -333,6 +335,7 @@ export const usePacketStore = defineStore('packets', () => {
       totalPackets: rxData.map((d) => d[1]),
       transmittedPackets: txData.map((d) => d[1]),
       droppedPackets: droppedData,
+      policyEvents: (policySeries?.data || []).map((d) => d[1]),
       crcErrors: crcErrorHistory.value.map((h) => h.count),
       currentRates: interpolatedRates.value,
     };
@@ -395,10 +398,14 @@ export const usePacketStore = defineStore('packets', () => {
       ]);
 
       if (countRes?.success && countRes.data) {
-        crcErrorCount.value = (countRes.data as any).crc_error_count ?? 0;
+        const countData = countRes.data as { crc_error_count?: number };
+        crcErrorCount.value = countData.crc_error_count ?? 0;
       }
       if (historyRes?.success && historyRes.data) {
-        crcErrorHistory.value = (historyRes.data as any).history ?? [];
+        const historyData = historyRes.data as {
+          history?: Array<{ timestamp: number; count: number }>;
+        };
+        crcErrorHistory.value = historyData.history ?? [];
       }
     } catch (err) {
       console.error('Failed to fetch CRC error data:', err);
@@ -414,7 +421,7 @@ export const usePacketStore = defineStore('packets', () => {
         ApiService.get('/metrics_graph_data', {
           hours: 24,
           resolution: 'average',
-          metrics: 'rx_count,tx_count',
+          metrics: 'rx_count,tx_count,policy_events',
         }),
         fetchCrcErrors(24),
       ]);

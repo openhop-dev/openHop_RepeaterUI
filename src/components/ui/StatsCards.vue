@@ -13,6 +13,7 @@ const CHART_COLORS = {
   rx:        '#AAE8E8', // teal
   forward:   '#FFC246', // bright amber
   dropped:   '#FB787B', // coral
+  policy:    '#7DD3FC', // sky
   crcErrors: '#F59E0B', // amber
   hashCache: '#9F7AEA', // purple
 } as const;
@@ -35,12 +36,20 @@ const stats = computed(() => {
   const uptimeSeconds = systemStore.stats?.uptime_seconds || 0;
   const total = packetStats?.total_packets || 0;
   const dropped = packetStats?.dropped_packets || 0;
+  const policyEvents =
+    packetStats?.drop_reasons?.reduce((sum, item) => {
+      if (typeof item?.reason === 'string' && item.reason.startsWith('Policy blocked packet')) {
+        return sum + (item.count || 0);
+      }
+      return sum;
+    }, 0) || 0;
 
   return {
     packetsReceived: total,
     packetsForwarded: packetStats?.transmitted_packets || 0,
     uptimeFormatted: formatUptime(uptimeSeconds),
     droppedPackets: dropped,
+    policyEvents,
     crcErrorCount: packetStore.crcErrorCount,
     hashCacheSize: packetStore.systemStats?.duplicate_cache_size ?? 0,
   };
@@ -56,7 +65,7 @@ onMounted(() => {
 
 <template>
   <div
-    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4 mb-5 stats-cards-container"
+    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 lg:gap-4 mb-5 stats-cards-container"
   >
     <!-- Up Time -->
     <ChartSparkline
@@ -92,6 +101,15 @@ onMounted(() => {
       :value="stats.droppedPackets"
       :color="CHART_COLORS.dropped"
       :data="sparklineData.droppedPackets"
+      class="stat-card"
+    />
+
+    <!-- Policy Events -->
+    <ChartSparkline
+      title="Policy Events"
+      :value="stats.policyEvents"
+      :color="CHART_COLORS.policy"
+      :data="sparklineData.policyEvents"
       class="stat-card"
     />
 
