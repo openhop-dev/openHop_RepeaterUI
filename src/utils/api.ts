@@ -9,7 +9,14 @@ import {
   getClientId,
 } from './auth';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
-import type { GPSDiagnostics } from '@/types/api';
+import type {
+  GPSDiagnostics,
+  PolicyDocumentData,
+  PolicyEngineConfig,
+  PolicyGroup,
+  PolicyGroupKind,
+  PolicyValidationResult,
+} from '@/types/api';
 import { generatedApiClient } from '@/services/api/generatedClient';
 
 type GeneratedEndpointData<T extends (...args: any[]) => Promise<{ data: any }>> =
@@ -64,6 +71,8 @@ type DeleteTransportKeyResponse = EndpointApiResponse<
 type UnscopedFloodPolicyResponse = EndpointApiResponse<
   (typeof generatedApiClient)['unscopedFloodPolicy']['unscopedFloodPolicyCreate']
 >;
+type PolicyDocumentResponse = ApiResponse<PolicyDocumentData>;
+type PolicyValidationResponse = ApiResponse<PolicyValidationResult>;
 type DeleteAdvertResponse = EndpointApiResponse<(typeof generatedApiClient)['advert']['advertDelete']>;
 type IdentitiesResponse = EndpointApiResponse<(typeof generatedApiClient)['identities']['identitiesList']>;
 type IdentityResponse = EndpointApiResponse<(typeof generatedApiClient)['identity']['identityList']>;
@@ -530,6 +539,144 @@ export class ApiService {
         params,
       );
       return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getPolicyDocument(): Promise<PolicyDocumentResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policy.policyList(params);
+      return response.data as PolicyDocumentResponse;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async updatePolicyDocument(data: {
+    policy_engine: PolicyEngineConfig;
+    groups?: {
+      channel_hashes: PolicyGroup[];
+      pubkeys: PolicyGroup[];
+    };
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policy.policyCreate(data, params);
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async validatePolicyDocument(payload: {
+    policy_engine?: PolicyEngineConfig;
+    enabled?: boolean;
+    default_action?: string;
+    rules?: Array<Record<string, unknown>>;
+    objects?: Record<string, unknown>;
+  }): Promise<PolicyValidationResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policyValidate.policyValidateCreate(payload, params);
+      return response.data as PolicyValidationResponse;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getPolicyGroups(kind?: PolicyGroupKind): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policyGroups.policyGroupsList(
+        kind ? { kind } : undefined,
+        params,
+      );
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async createPolicyGroup(data: {
+    kind: PolicyGroupKind;
+    group_id?: string;
+    friendly_name?: string;
+    description?: string;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policyGroups.policyGroupsCreate(data, params);
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async deletePolicyGroup(data: {
+    kind: PolicyGroupKind;
+    group_id: string;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const requestParams = await this.getGeneratedRequestParams();
+      const response = await apiClient.delete('/policy_groups', {
+        headers: requestParams.headers,
+        data,
+        params: data,
+      });
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getPolicyGroupEntries(data: {
+    kind: PolicyGroupKind;
+    group_id: string;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policyGroupEntries.policyGroupEntriesList(data, params);
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async createPolicyGroupEntry(data: {
+    kind: PolicyGroupKind;
+    group_id: string;
+    value: string;
+    entry_id?: string;
+    friendly_name?: string;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.policyGroupEntries.policyGroupEntriesCreate(
+        data,
+        params,
+      );
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async deletePolicyGroupEntry(data: {
+    kind: PolicyGroupKind;
+    group_id: string;
+    entry_id?: string;
+    value?: string;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const requestParams = await this.getGeneratedRequestParams();
+      const response = await apiClient.delete('/policy_group_entries', {
+        headers: requestParams.headers,
+        data,
+        params: data,
+      });
+      return response.data as ApiResponse<Record<string, unknown>>;
     } catch (error: unknown) {
       throw this.handleError(error);
     }
