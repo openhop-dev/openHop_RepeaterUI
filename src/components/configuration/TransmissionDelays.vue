@@ -70,10 +70,18 @@ const saveChanges = async () => {
       direct_tx_delay_factor: directTxDelayInput.value,
     });
 
-    const data = response.data;
+    const data = response.data as
+      | {
+          success?: boolean;
+          data?: { persisted?: boolean; message?: string; error?: string };
+          persisted?: boolean;
+          message?: string;
+          error?: string;
+        }
+      | undefined;
     const inner = data?.data ?? data;
-    if (data.success || inner.persisted || inner.message) {
-      successMessage.value = inner.message || 'Settings saved successfully';
+    if (data?.success || inner?.persisted || inner?.message) {
+      successMessage.value = inner?.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
@@ -84,7 +92,7 @@ const saveChanges = async () => {
         successMessage.value = '';
       }, 3000);
     } else {
-      errorMessage.value = 'Failed to save settings';
+      errorMessage.value = inner?.error || 'Failed to save settings';
     }
   } catch (error: any) {
     console.error('Failed to save delay settings:', error);

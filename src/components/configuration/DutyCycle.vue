@@ -76,9 +76,9 @@ const saveChanges = async () => {
       enforcement_enabled: enforcementInput.value,
     });
 
-    const data = response.data;
-    if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
+    const data = response.data as { message?: string; persisted?: boolean; error?: string } | undefined;
+    if (data?.message || data?.persisted) {
+      successMessage.value = data?.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
@@ -89,7 +89,7 @@ const saveChanges = async () => {
         successMessage.value = '';
       }, 3000);
     } else {
-      errorMessage.value = 'Failed to save settings';
+      errorMessage.value = data?.error || 'Failed to save settings';
     }
   } catch (error: any) {
     console.error('Failed to save duty cycle settings:', error);
