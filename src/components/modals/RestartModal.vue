@@ -165,7 +165,7 @@ async function handleRestart() {
     if (!response.success) {
       isRestarting.value = false;
       hasFailed.value = true;
-      failureMessage.value = response.error ? `Restart failed: ${response.error}` : 'Restart failed.';
+      failureMessage.value = response.error || 'Restart failed.';
       return;
     }
   } catch (err) {
