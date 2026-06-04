@@ -303,7 +303,7 @@ const close = () => {
                 <div
                   class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
                 >
-                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">RSSI</div>
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
                     <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.rssi }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dBm</span>
@@ -314,7 +314,7 @@ const close = () => {
                 <div
                   class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
                 >
-                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">SNR</div>
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
                     <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.snr_db }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dB</span>
@@ -325,7 +325,7 @@ const close = () => {
                 <div
                   class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
                 >
-                  <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">Signal Strength</div>
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">Signal</div>
                   <div class="flex items-center gap-2">
                     <SignalBars :bars="getSignalStrength.bars" :color="getSignalStrength.color" />
                     <span class="text-sm font-medium" :class="getSignalStrength.color">
