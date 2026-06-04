@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
+import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -263,10 +264,6 @@ const signalQuality = computed(() => {
   return getSignalQuality(props.neighbor.rssi);
 });
 
-// Signal bar height lookup — i is 1-based (v-for="i in 5")
-// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
-// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
-const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 </script>
 
 <template>
@@ -418,21 +415,7 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex items-end gap-0.5">
-                        <template v-for="i in 5" :key="i">
-                          <div
-                            :class="[
-                              'w-1 transition-colors',
-                              BAR_HEIGHTS_SM[i - 1],
-                              i <= signalQuality.bars
-                                ? signalQuality.color
-                                : 'text-gray-600 dark:text-gray-700',
-                            ]"
-                          >
-                            <div class="w-full h-full bg-current rounded-sm"></div>
-                          </div>
-                        </template>
-                      </div>
+                      <SignalBars :bars="signalQuality.bars" :color="signalQuality.color" />
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
                       </span>

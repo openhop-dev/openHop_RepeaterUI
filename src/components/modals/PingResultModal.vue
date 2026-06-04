@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import Spinner from '@/components/ui/Spinner.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
 
 interface PingResult {
   target_id: string;
@@ -83,10 +84,6 @@ const getRTTStatus = computed(() => {
   return { color: 'text-red-600 dark:text-red-400', label: 'Poor' };
 });
 
-// Signal bar height lookup — staircase pattern matching NeighborDetailsModal
-// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
-// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
-const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 
 const getSignalStrength = computed(() => {
   if (!props.result) return { bars: 0, color: 'text-gray-400 dark:text-gray-500', quality: 'None' as const };
@@ -330,21 +327,7 @@ const close = () => {
                 >
                   <div class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-2">Signal Strength</div>
                   <div class="flex items-center gap-2">
-                    <div class="flex items-end gap-0.5">
-                      <template v-for="i in 5" :key="i">
-                        <div
-                          :class="[
-                            'w-1 transition-colors',
-                            BAR_HEIGHTS_SM[i - 1],
-                            i <= getSignalStrength.bars
-                              ? getSignalStrength.color
-                              : 'text-gray-600 dark:text-gray-700',
-                          ]"
-                        >
-                          <div class="w-full h-full bg-current rounded-sm"></div>
-                        </div>
-                      </template>
-                    </div>
+                    <SignalBars :bars="getSignalStrength.bars" :color="getSignalStrength.color" />
                     <span class="text-sm font-medium" :class="getSignalStrength.color">
                       {{ getSignalStrength.quality }}
                     </span>
