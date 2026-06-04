@@ -913,6 +913,29 @@ export class Api<
         ...params,
       }),
   };
+  logsStream = {
+    /**
+     * @description Server-Sent Events stream of live system log entries.
+     *
+     * @tags System
+     * @name LogsStreamList
+     * @summary Stream system logs
+     * @request GET:/logs_stream
+     */
+    logsStreamList: (
+      query?: {
+        /** Resume the stream after this log entry id. */
+        since_id?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<string, any>({
+        path: `/logs_stream`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+  };
   hardwareStats = {
     /**
      * @description CPU, memory, disk usage statistics

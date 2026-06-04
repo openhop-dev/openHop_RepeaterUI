@@ -683,7 +683,20 @@ export class ApiService {
   }
 
   static async getLogs(): Promise<{
-    logs: Array<{ message: string; timestamp: string; level: string }>;
+    logs: Array<{
+      id?: number;
+      message: string;
+      timestamp: string;
+      level: string;
+      logger?: string;
+      raw_message?: string;
+      exception?: string;
+      module?: string;
+      pathname?: string;
+      line?: number;
+      thread?: string;
+      process?: string;
+    }>;
   }> {
     try {
       const params = await this.getGeneratedRequestParams();
