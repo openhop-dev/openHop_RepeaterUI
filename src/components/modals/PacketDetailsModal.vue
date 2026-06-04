@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import SignalBars from '@/components/ui/SignalBars.vue';
 defineOptions({ name: 'PacketDetailsModal' });
 
 const { getSignalQuality } = useSignalQuality();
@@ -856,38 +857,6 @@ const getSnrClass = (snr: number | null, rssi: number | null) => {
   return quality.color;
 };
 
-// Signal bars component - using SNR-based signal quality
-const getSignalBars = (rssi: number | null) => {
-  // Handle null RSSI (TX packets or no data)
-  if (rssi == null) {
-    return { level: 0, className: 'signal-none' };
-  }
-
-  const quality = getSignalQuality(rssi);
-
-  // Map 5-bar system to 4-bar system
-  let level: number;
-  let className: string;
-
-  if (quality.bars >= 5) {
-    level = 4;
-    className = 'signal-excellent';
-  } else if (quality.bars >= 4) {
-    level = 3;
-    className = 'signal-good';
-  } else if (quality.bars >= 2) {
-    level = 2;
-    className = 'signal-fair';
-  } else if (quality.bars >= 1) {
-    level = 1;
-    className = 'signal-poor';
-  } else {
-    level = 0;
-    className = 'signal-none';
-  }
-
-  return { level, className };
-};
 
 // Parse LBT backoff delays from JSON string
 const parseLbtDelays = (delaysJson?: string): number[] => {
@@ -1567,28 +1536,11 @@ watch(
                     <div class="text-content-secondary dark:text-content-muted text-sm mb-2">
                       Signal Quality
                     </div>
-                    <div class="flex items-center gap-3">
-                      <div class="flex gap-1">
-                        <div
-                          v-for="n in 4"
-                          :key="n"
-                          class="w-2 h-6 rounded-sm transition-all duration-300"
-                          :class="
-                            n <= getSignalBars(packet.rssi).level
-                              ? {
-                                  'signal-excellent': 'bg-green-400',
-                                  'signal-good': 'bg-cyan-400',
-                                  'signal-fair': 'bg-yellow-400',
-                                  'signal-poor': 'bg-red-400',
-                                }[getSignalBars(packet.rssi).className]
-                              : 'bg-stroke-subtle dark:bg-stroke/10'
-                          "
-                        ></div>
-                      </div>
-                      <span
-                        class="text-content-secondary dark:text-content-primary/80 text-sm capitalize"
-                        >{{ getSignalBars(packet.rssi).className.replace('signal-', '') }}</span
-                      >
+                    <div class="flex items-center gap-2">
+                      <SignalBars :bars="getSignalQuality(packet.rssi).bars" :color="getSignalQuality(packet.rssi).color" />
+                      <span class="text-sm font-medium" :class="getSignalQuality(packet.rssi).color">
+                        {{ getSignalQuality(packet.rssi).quality }}
+                      </span>
                     </div>
                   </div>
                   <div v-else class="mb-4">
