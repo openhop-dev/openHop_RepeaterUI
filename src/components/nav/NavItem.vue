@@ -97,7 +97,7 @@ const buttonClass = computed(() => {
   const indent = isChild.value ? 'pl-2 pr-2' : 'pl-4 pr-2'
 
   if (isActive.value) {
-    return `${base} ${indent} dark:bg-primary/15 text-primary font-semibold border border-transparent`
+    return `${base} ${indent} text-primary font-semibold border border-transparent`
   }
   return `${base} ${indent} text-content-primary dark:text-content-primary hover:text-primary border border-transparent`
 })
