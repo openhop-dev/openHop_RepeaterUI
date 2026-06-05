@@ -112,7 +112,7 @@ export const useDataService = defineStore('dataService', () => {
         promise = packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); });
         break;
       case 'noiseFloor':
-        promise = packetStore.fetchNoiseFloorHistory({ hours: 24, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); });
+        promise = packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); });
         break;
       case 'recentPackets':
         promise = packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); });
@@ -170,7 +170,7 @@ export const useDataService = defineStore('dataService', () => {
     // Phase 2: Secondary — packet data in parallel
     await Promise.allSettled([
       _runStep('packetStats', () => packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); })),
-      _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 24, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
+      _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
       _runStep('recentPackets', () => packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); })),
     ]);
 

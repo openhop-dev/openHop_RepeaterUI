@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, watch, nextTick, type Ref, type ComponentPublicInstance } from 'vue';
+import { ref, computed, onMounted, watch, type Ref, type ComponentPublicInstance } from 'vue';
+import { useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
 import RadioSettings from '@/components/configuration/RadioSettings.vue';
@@ -19,38 +20,39 @@ import PolicyEngineSettings from '@/components/configuration/PolicyEngineSetting
 import { getPreference, setPreference } from '@/utils/preferences';
 import Spinner from '@/components/ui/Spinner.vue';
 
-
 defineOptions({ name: 'ConfigurationView' });
 
 type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void) => void; isEditing: Ref<boolean> | boolean };
 
+const route = useRoute();
 const systemStore = useSystemStore();
 const dataService = useDataService();
-const activeTab = ref(getPreference('configuration_activeTab', 'radio'));
-const activeGroup = ref(getPreference('configuration_activeGroup', 'radio'));
-const initialLoadComplete = ref(false);
-const tabsContainer = ref<HTMLElement | null>(null);
-const showRightFade = ref(false);
-const showLeftFade = ref(false);
 
-const radioRef = ref<EditableTabRef | null>(null);
-const radioHardwareRef = ref<EditableTabRef | null>(null);
-const repeaterRef = ref<EditableTabRef | null>(null);
-const advertRef = ref<EditableTabRef | null>(null);
-const dutyRef = ref<EditableTabRef | null>(null);
-const delaysRef = ref<EditableTabRef | null>(null);
-const transportRef = ref<EditableTabRef | null>(null);
-const letsMeshRef = ref<EditableTabRef | null>(null);
+const DEFAULT_TAB = 'radio';
+
+const activeTab = ref(getPreference('configuration_activeTab', DEFAULT_TAB));
+const initialLoadComplete = ref(false);
+
+// ── Editable tab refs (for unsaved-changes guard) ─────────────────────────────
+
+const radioRef          = ref<EditableTabRef | null>(null);
+const radioHardwareRef  = ref<EditableTabRef | null>(null);
+const repeaterRef       = ref<EditableTabRef | null>(null);
+const advertRef         = ref<EditableTabRef | null>(null);
+const dutyRef           = ref<EditableTabRef | null>(null);
+const delaysRef         = ref<EditableTabRef | null>(null);
+const transportRef      = ref<EditableTabRef | null>(null);
+const letsMeshRef       = ref<EditableTabRef | null>(null);
 
 const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
-  radio: radioRef,
+  radio:           radioRef,
   'radio-hardware': radioHardwareRef,
-  repeater: repeaterRef,
-  advert: advertRef,
-  duty: dutyRef,
-  delays: delaysRef,
-  transport: transportRef,
-  observer: letsMeshRef,
+  repeater:        repeaterRef,
+  advert:          advertRef,
+  duty:            dutyRef,
+  delays:          delaysRef,
+  transport:       transportRef,
+  observer:        letsMeshRef,
 };
 
 function isCurrentTabEditing(): boolean {
@@ -69,91 +71,49 @@ function requestCurrentTabLeave(callback: () => void) {
   }
 }
 
-function updateFades() {
-  if (!tabsContainer.value) return;
-  const el = tabsContainer.value;
-  showLeftFade.value = el.scrollLeft > 4;
-  showRightFade.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 4;
+// ── Route → active tab ────────────────────────────────────────────────────────
+
+const VALID_TABS = new Set([
+  'radio', 'radio-hardware', 'repeater', 'duty', 'delays',
+  'advert', 'transport', 'api-tokens', 'web', 'observer', 'policy-engine',
+  'backup', 'database', 'memory',
+]);
+
+function resolveTab(queryTab: string | undefined): string {
+  if (queryTab && VALID_TABS.has(queryTab)) return queryTab;
+  return getPreference('configuration_activeTab', DEFAULT_TAB);
 }
 
-function scrollTabs(direction: 'left' | 'right') {
-  if (!tabsContainer.value) return;
-  tabsContainer.value.scrollBy({ left: direction === 'right' ? 150 : -150, behavior: 'smooth' });
-}
+// Apply tab from query param immediately on mount.
+activeTab.value = resolveTab(route.query.tab as string | undefined);
 
-type ConfigTab = { id: string; label: string; icon: string };
-type ConfigTabGroup = { id: string; label: string; tabs: ConfigTab[] };
+watch(activeTab, (val) => setPreference('configuration_activeTab', val));
 
-const tabGroups: ConfigTabGroup[] = [
-  {
-    id: 'radio',
-    label: 'Radio',
-    tabs: [
-      { id: 'radio', label: 'Radio Settings', icon: 'radio' },
-      { id: 'radio-hardware', label: 'Radio Hardware', icon: 'hardware' },
-      { id: 'repeater', label: 'Repeater Settings', icon: 'repeater' },
-      { id: 'duty', label: 'Duty Cycle', icon: 'duty' },
-      { id: 'delays', label: 'TX Delays', icon: 'delays' },
-    ],
-  },
-  {
-    id: 'access',
-    label: 'Access',
-    tabs: [
-      { id: 'advert', label: 'Advert Limits', icon: 'advert' },
-      { id: 'transport', label: 'Region Configuration', icon: 'keys' },
-      { id: 'api-tokens', label: 'API Tokens', icon: 'tokens' },
-      { id: 'web', label: 'Web Options', icon: 'web' },
-      { id: 'observer', label: 'Observer', icon: 'observer' },
-      { id: 'policy-engine', label: 'Policies', icon: 'policy' },
-    ],
-  },
-  {
-    id: 'maintenance',
-    label: 'Maintenance',
-    tabs: [
-      { id: 'backup', label: 'Backup', icon: 'backup' },
-      { id: 'database', label: 'Database', icon: 'database' },
-      { id: 'memory', label: 'Memory', icon: 'memory' },
-    ],
-  },
-];
+// Watch same-route query changes (sidebar clicks while already on /configuration).
+// Guard against unsaved changes before allowing the switch.
+onBeforeRouteUpdate((to, _from, next) => {
+  const incoming = resolveTab(to.query.tab as string | undefined);
+  if (incoming === activeTab.value) { next(); return; }
 
-const activeGroupTabs = computed(() => tabGroups.find((group) => group.id === activeGroup.value)?.tabs ?? []);
-
-function findGroupForTab(tabId: string): ConfigTabGroup | undefined {
-  return tabGroups.find((group) => group.tabs.some((tab) => tab.id === tabId));
-}
-
-function ensureValidNavigationState() {
-  const groupFromTab = findGroupForTab(activeTab.value);
-  if (!groupFromTab) {
-    const fallbackGroup = tabGroups[0];
-    activeGroup.value = fallbackGroup.id;
-    activeTab.value = fallbackGroup.tabs[0].id;
+  if (isCurrentTabEditing()) {
+    requestCurrentTabLeave(() => {
+      activeTab.value = incoming;
+      next();
+    });
+    // Don't call next() — requestCurrentTabLeave will do it after confirmation.
     return;
   }
 
-  if (!tabGroups.some((group) => group.id === activeGroup.value)) {
-    activeGroup.value = groupFromTab.id;
-  }
+  activeTab.value = incoming;
+  next();
+});
 
-  const isTabVisibleInActiveGroup = tabGroups
-    .find((group) => group.id === activeGroup.value)
-    ?.tabs.some((tab) => tab.id === activeTab.value);
-
-  if (!isTabVisibleInActiveGroup) {
-    activeGroup.value = groupFromTab.id;
-  }
-}
+// ── Data loading ──────────────────────────────────────────────────────────────
 
 onMounted(async () => {
   if (systemStore.stats) {
-    // Stats already in store (normal path after bootstrap) — no fetch needed.
-    // DataService polls freshness in the background; the page reacts to store changes.
     initialLoadComplete.value = true;
   } else {
-    // Bootstrap failed to load stats — try once before showing the page.
     try {
       await dataService.ensure('stats');
     } catch (error) {
@@ -162,57 +122,7 @@ onMounted(async () => {
       initialLoadComplete.value = true;
     }
   }
-  nextTick(() => updateFades());
 });
-
-ensureValidNavigationState();
-
-watch(activeTab, (value) => {
-  setPreference('configuration_activeTab', value);
-  const group = findGroupForTab(value);
-  if (group && group.id !== activeGroup.value) {
-    activeGroup.value = group.id;
-    return;
-  }
-  nextTick(() => updateFades());
-});
-
-watch(activeGroup, (value) => {
-  setPreference('configuration_activeGroup', value);
-  nextTick(() => updateFades());
-});
-
-function setActiveTab(tabId: string) {
-  if (tabId !== activeTab.value && isCurrentTabEditing()) {
-    requestCurrentTabLeave(() => { activeTab.value = tabId; });
-    return;
-  }
-  activeTab.value = tabId;
-}
-
-function setActiveGroup(groupId: string) {
-  if (groupId === activeGroup.value) return;
-  const group = tabGroups.find((item) => item.id === groupId);
-  if (!group || !group.tabs.length) return;
-
-  const targetTab = group.tabs.some((tab) => tab.id === activeTab.value)
-    ? activeTab.value
-    : group.tabs[0].id;
-
-  const applyGroupSwitch = () => {
-    activeGroup.value = groupId;
-    if (targetTab !== activeTab.value) {
-      activeTab.value = targetTab;
-    }
-  };
-
-  if (targetTab !== activeTab.value && isCurrentTabEditing()) {
-    requestCurrentTabLeave(applyGroupSwitch);
-    return;
-  }
-
-  applyGroupSwitch();
-}
 </script>
 
 <template>
@@ -244,392 +154,50 @@ function setActiveGroup(groupId: string) {
       </router-link>
     </div>
 
-    <!-- Configuration Tabs -->
+    <!-- Content panel -->
     <div class="glass-card rounded-[15px] p-3 sm:p-6 mt-4 sm:mt-6">
-      <!-- Tab Navigation -->
-      <div class="space-y-3 mb-4 sm:mb-6">
-        <!-- Group Navigation -->
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            v-for="group in tabGroups"
-            :key="group.id"
-            @click="setActiveGroup(group.id)"
-            :class="[
-              'px-3 py-1.5 text-xs sm:text-sm font-semibold rounded-full border transition-colors duration-200',
-              activeGroup === group.id
-                ? 'border-primary/60 bg-primary/10 text-primary'
-                : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary hover:bg-background-mute dark:hover:bg-white/10',
-            ]"
-          >
-            {{ group.label }}
-          </button>
-        </div>
-
-        <div class="relative -mx-3 sm:mx-0">
-        <!-- Left scroll fade + button (mobile only) -->
-        <Transition name="tab-fade">
-          <div
-            v-if="showLeftFade"
-            class="absolute left-0 top-0 bottom-[1px] w-12 z-10 flex items-center"
-          >
-            <div class="tab-fade-left absolute inset-0 pointer-events-none"></div>
-            <button
-              @click="scrollTabs('left')"
-              class="relative z-10 ml-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-surface shadow-md border border-stroke-subtle dark:border-stroke/30 text-content-muted"
-            >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
-          </div>
-        </Transition>
-
-        <!-- Right scroll fade + button (mobile only) -->
-        <Transition name="tab-fade">
-          <div
-            v-if="showRightFade"
-            class="absolute right-0 top-0 bottom-[1px] w-12 z-10 flex items-center justify-end"
-          >
-            <div class="tab-fade-right absolute inset-0 pointer-events-none"></div>
-            <button
-              @click="scrollTabs('right')"
-              class="relative z-10 mr-1.5 w-6 h-6 flex items-center justify-center rounded-full bg-surface shadow-md border border-stroke-subtle dark:border-stroke/30 text-content-muted"
-            >
-              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
-          </div>
-        </Transition>
-
-        <div
-          ref="tabsContainer"
-          @scroll="updateFades"
-          class="flex overflow-x-auto border-b border-stroke-subtle dark:border-stroke px-3 sm:px-0 scrollbar-hide"
-        >
-          <button
-            v-for="tab in activeGroupTabs"
-            :key="tab.id"
-            @click="setActiveTab(tab.id)"
-            :class="[
-              'px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors duration-200 border-b-2 mr-3 sm:mr-6 whitespace-nowrap flex-shrink-0',
-              activeTab === tab.id
-                ? 'text-primary border-primary'
-                : 'text-content-secondary dark:text-content-muted border-transparent hover:text-content-primary dark:hover:text-content-primary hover:border-stroke-subtle dark:hover:border-stroke/30',
-            ]"
-          >
-            <div class="flex items-center gap-1 sm:gap-2">
-              <!-- Icons for each tab -->
-              <svg
-                v-if="tab.icon === 'radio'"
-                class="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.822c5.716-5.716 14.976-5.716 20.692 0"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'hardware'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'repeater'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M5 12h14M5 12l4-4m-4 4l4 4"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'advert'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'duty'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'delays'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'keys'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'tokens'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'web'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'observer'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'policy'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m5-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'backup'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'database'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-                />
-              </svg>
-              <svg
-                v-else-if="tab.icon === 'memory'"
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                />
-              </svg>
-              {{ tab.label }}
-            </div>
-          </button>
+      <!-- Loading state — only on initial load -->
+      <div
+        v-if="!initialLoadComplete && systemStore.isLoading"
+        class="flex items-center justify-center py-12"
+      >
+        <div class="text-center">
+          <Spinner class="mx-auto mb-4" />
+          <div class="text-content-secondary dark:text-content-muted">Loading configuration...</div>
         </div>
       </div>
+
+      <!-- Error state -->
+      <div
+        v-else-if="initialLoadComplete && !systemStore.stats"
+        class="flex items-center justify-center py-12"
+      >
+        <div class="text-center">
+          <div class="text-accent-red mb-2">Failed to load configuration</div>
+          <div class="text-content-secondary dark:text-content-muted text-sm mb-4">
+            {{ systemStore.error }}
+          </div>
+          <button @click="systemStore.fetchStats()" class="btn-primary">Retry</button>
+        </div>
       </div>
 
-      <!-- Tab Content -->
-      <div class="min-h-[400px]">
-        <!-- Loading State - only show on initial load -->
-        <div
-          v-if="!initialLoadComplete && systemStore.isLoading"
-          class="flex items-center justify-center py-12"
-        >
-          <div class="text-center">
-            <Spinner class="mx-auto mb-4" />
-            <div class="text-content-secondary dark:text-content-muted">
-              Loading configuration...
-            </div>
-          </div>
-        </div>
-
-        <!-- Error State -->
-        <div
-          v-else-if="initialLoadComplete && !systemStore.stats"
-          class="flex items-center justify-center py-12"
-        >
-          <div class="text-center">
-            <div class="text-accent-red mb-2">Failed to load configuration</div>
-            <div class="text-content-secondary dark:text-content-muted text-sm mb-4">
-              {{ systemStore.error }}
-            </div>
-            <button
-              @click="systemStore.fetchStats()"
-              class="btn-primary"
-            >
-              Retry
-            </button>
-          </div>
-        </div>
-
-        <!-- Tab Components -->
-        <div v-else>
-          <div v-if="activeTab === 'radio'">
-            <RadioSettings ref="radioRef" key="radio-settings" />
-          </div>
-          <div v-if="activeTab === 'repeater'">
-            <RepeaterSettings ref="repeaterRef" key="repeater-settings" />
-          </div>
-          <div v-if="activeTab === 'radio-hardware'">
-            <RadioHardwareSettings ref="radioHardwareRef" key="radio-hardware-settings" />
-          </div>
-          <div v-if="activeTab === 'advert'">
-            <AdvertSettings ref="advertRef" key="advert-settings" />
-          </div>
-          <div v-if="activeTab === 'duty'">
-            <DutyCycle ref="dutyRef" key="duty-cycle" />
-          </div>
-          <div v-if="activeTab === 'delays'">
-            <TransmissionDelays ref="delaysRef" key="transmission-delays" />
-          </div>
-          <div v-if="activeTab === 'transport'">
-            <TransportKeys ref="transportRef" key="transport-keys" />
-          </div>
-          <div v-if="activeTab === 'api-tokens'">
-            <APITokens key="api-tokens" />
-          </div>
-          <div v-if="activeTab === 'web'">
-            <WebSettings key="web-settings" />
-          </div>
-          <div v-if="activeTab === 'observer'">
-            <LetsMeshSettings ref="letsMeshRef" key="letsmesh-settings" />
-          </div>
-          <div v-if="activeTab === 'policy-engine'">
-            <PolicyEngineSettings key="policy-engine" />
-          </div>
-          <div v-if="activeTab === 'backup'">
-            <BackupRestore key="backup-restore" />
-          </div>
-          <div v-if="activeTab === 'database'">
-            <DatabaseManagement key="database-management" />
-          </div>
-          <div v-if="activeTab === 'memory'">
-            <MemoryDebug key="memory-debug" />
-          </div>
-        </div>
+      <!-- Active panel -->
+      <div v-else class="min-h-[400px]">
+        <RadioSettings          v-if="activeTab === 'radio'"         ref="radioRef"         key="radio-settings" />
+        <RadioHardwareSettings  v-if="activeTab === 'radio-hardware'" ref="radioHardwareRef" key="radio-hardware-settings" />
+        <RepeaterSettings       v-if="activeTab === 'repeater'"      ref="repeaterRef"      key="repeater-settings" />
+        <AdvertSettings         v-if="activeTab === 'advert'"        ref="advertRef"        key="advert-settings" />
+        <DutyCycle              v-if="activeTab === 'duty'"          ref="dutyRef"          key="duty-cycle" />
+        <TransmissionDelays     v-if="activeTab === 'delays'"        ref="delaysRef"        key="transmission-delays" />
+        <TransportKeys          v-if="activeTab === 'transport'"     ref="transportRef"     key="transport-keys" />
+        <APITokens              v-if="activeTab === 'api-tokens'"                           key="api-tokens" />
+        <WebSettings            v-if="activeTab === 'web'"                                  key="web-settings" />
+        <LetsMeshSettings       v-if="activeTab === 'observer'"      ref="letsMeshRef"      key="letsmesh-settings" />
+        <PolicyEngineSettings   v-if="activeTab === 'policy-engine'"                        key="policy-engine" />
+        <BackupRestore          v-if="activeTab === 'backup'"                               key="backup-restore" />
+        <DatabaseManagement     v-if="activeTab === 'database'"                             key="database-management" />
+        <MemoryDebug            v-if="activeTab === 'memory'"                               key="memory-debug" />
       </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.tab-fade-left {
-  background: linear-gradient(to right, var(--color-surface) 30%, transparent);
-}
-.tab-fade-right {
-  background: linear-gradient(to left, var(--color-surface) 30%, transparent);
-}
-.tab-fade-enter-active,
-.tab-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-.tab-fade-enter-from,
-.tab-fade-leave-to {
-  opacity: 0;
-}
-</style>
