@@ -76,12 +76,12 @@ const getRTTStatus = computed(() => {
 
   // Very lenient thresholds for LoRa mesh networks with potential congestion
   if (rtt < expectedRTT * 2.5)
-    return { color: 'text-green-600 dark:text-green-400', label: 'Excellent' };
+    return { color: 'text-green-600 dark:text-green-400', label: 'Fast' };
   if (rtt < expectedRTT * 4)
-    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Good' };
+    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Normal' };
   if (rtt < expectedRTT * 7)
-    return { color: 'text-orange-600 dark:text-orange-400', label: 'Fair' };
-  return { color: 'text-red-600 dark:text-red-400', label: 'Poor' };
+    return { color: 'text-orange-600 dark:text-orange-400', label: 'Slow' };
+  return { color: 'text-red-600 dark:text-red-400', label: 'Very Slow' };
 });
 
 
@@ -275,10 +275,8 @@ const close = () => {
               <div
                 class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
               >
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-content-secondary dark:text-content-muted text-sm"
-                    >Round-Trip Time</span
-                  >
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-content-secondary dark:text-content-muted text-sm">Round-Trip Time</span>
                   <span
                     :class="[
                       'text-xs font-medium px-2 py-1 rounded-full',
