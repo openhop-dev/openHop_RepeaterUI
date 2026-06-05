@@ -1,7 +1,6 @@
 export type NavItemConfig = {
   id: string
   label: string
-  icon?: string
   /** Navigate to this route when clicked (leaf nodes only). */
   route?: string
   /** Query params merged into the route on navigation. */
@@ -34,34 +33,33 @@ export const knownCapabilities = ['gps', 'sensors'] as const
 export type Capability = typeof knownCapabilities[number]
 
 export const navigationItems: NavItemConfig[] = [
-  { id: 'dashboard',    label: 'Dashboard',    route: '/' },
-  { id: 'send-advert',  label: 'Send Advert',  action: 'sendAdvert' },
+  { id: 'dashboard',   label: 'Dashboard',   route: '/' },
+  { id: 'send-advert', label: 'Send Advert', action: 'sendAdvert' },
   {
     id: 'monitoring',
     label: 'Monitoring',
     children: [
-      { id: 'neighbors', label: 'Neighbors', icon: 'neighbors', route: '/neighbors' },
-      { id: 'sessions',  label: 'Sessions',  icon: 'sessions',  route: '/sessions' },
-      { id: 'gps',     label: 'GPS',     icon: 'gps',     route: '/gps',     enabledWhen: 'gps' },
-      { id: 'sensors', label: 'Sensors', icon: 'sensors', route: '/sensors', enabledWhen: 'sensors' },
+      { id: 'neighbors', label: 'Neighbors', route: '/neighbors' },
+      { id: 'sessions',  label: 'Sessions',  route: '/sessions' },
+      { id: 'gps',       label: 'GPS',       route: '/gps',     enabledWhen: 'gps' },
+      { id: 'sensors',   label: 'Sensors',   route: '/sensors', enabledWhen: 'sensors' },
     ],
   },
   {
     id: 'analytics',
     label: 'Analytics',
     children: [
-      { id: 'statistics', label: 'Statistics', icon: 'statistics', route: '/statistics' },
+      { id: 'statistics', label: 'Statistics', route: '/statistics' },
     ],
   },
   {
     id: 'system',
     label: 'System',
     children: [
-      { id: 'system-stats', label: 'System Stats', icon: 'system-stats', route: '/system-stats' },
+      { id: 'system-stats', label: 'System Stats', route: '/system-stats' },
       {
         id: 'configuration',
         label: 'Configuration',
-        icon: 'configuration',
         activeOn: ['/configuration', '/cad-calibration'],
         children: [
           {
@@ -69,11 +67,11 @@ export const navigationItems: NavItemConfig[] = [
             label: 'Radio',
             activeOn: ['/configuration'],
             children: [
-              { id: 'config-radio-settings',  label: 'Radio Settings',      route: '/configuration', params: { tab: 'radio' },          activeOn: ['/configuration'] },
-              { id: 'config-radio-hardware',  label: 'Radio Hardware',      route: '/configuration', params: { tab: 'radio-hardware' }, activeOn: ['/configuration'] },
-              { id: 'config-repeater',        label: 'Repeater Settings',   route: '/configuration', params: { tab: 'repeater' },       activeOn: ['/configuration'] },
-              { id: 'config-duty',            label: 'Duty Cycle',          route: '/configuration', params: { tab: 'duty' },           activeOn: ['/configuration'] },
-              { id: 'config-delays',          label: 'TX Delays',           route: '/configuration', params: { tab: 'delays' },         activeOn: ['/configuration'] },
+              { id: 'config-radio-settings', label: 'Radio Settings',    route: '/configuration', params: { tab: 'radio' },          activeOn: ['/configuration'] },
+              { id: 'config-radio-hardware', label: 'Radio Hardware',    route: '/configuration', params: { tab: 'radio-hardware' }, activeOn: ['/configuration'] },
+              { id: 'config-repeater',       label: 'Repeater Settings', route: '/configuration', params: { tab: 'repeater' },       activeOn: ['/configuration'] },
+              { id: 'config-duty',           label: 'Duty Cycle',        route: '/configuration', params: { tab: 'duty' },           activeOn: ['/configuration'] },
+              { id: 'config-delays',         label: 'TX Delays',         route: '/configuration', params: { tab: 'delays' },         activeOn: ['/configuration'] },
             ],
           },
           {
@@ -101,23 +99,23 @@ export const navigationItems: NavItemConfig[] = [
           },
         ],
       },
-      { id: 'terminal', label: 'Terminal', icon: 'terminal', route: '/terminal' },
+      { id: 'terminal', label: 'Terminal', route: '/terminal' },
     ],
   },
   {
     id: 'room',
     label: 'Rooms, Companions',
     children: [
-      { id: 'room-servers', label: 'Room Servers', icon: 'room-servers', route: '/room-servers' },
-      { id: 'companions',   label: 'Companions',   icon: 'companions',   route: '/companions' },
+      { id: 'room-servers', label: 'Room Servers', route: '/room-servers' },
+      { id: 'companions',   label: 'Companions',   route: '/companions' },
     ],
   },
   {
     id: 'other',
     label: 'Other',
     children: [
-      { id: 'logs', label: 'Logs', icon: 'logs', route: '/logs' },
-      { id: 'help', label: 'Help', icon: 'help', route: '/help' },
+      { id: 'logs', label: 'Logs', route: '/logs' },
+      { id: 'help', label: 'Help', route: '/help' },
     ],
   },
 ]
