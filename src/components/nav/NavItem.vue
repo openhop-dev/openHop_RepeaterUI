@@ -219,17 +219,10 @@ const iconClass = computed(() =>
 .nav-root-children   > div:first-child.nav-precedes-active::after { top: -10px; }
 
 /* ── Hover glow — text only ──
- * Surface knock-out hugs each letter so text sits cleanly inside the glow.
+ * Intensity is set per mode via --nav-hover-*-shadow tokens in base.css.
  */
-button:hover .nav-label {
-  text-shadow:
-    0 0 2px var(--color-surface),
-    0 0 6px var(--color-primary),
-    0 0 12px var(--color-primary);
-}
-button:hover svg {
-  filter: drop-shadow(0 0 3px var(--color-primary));
-}
+button:hover .nav-label { text-shadow: var(--nav-hover-label-shadow); }
+button:hover svg        { filter: var(--nav-hover-icon-shadow); }
 
 /* ── Tick ── */
 .nav-tick {
