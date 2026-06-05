@@ -219,23 +219,15 @@ const iconClass = computed(() =>
 .nav-root-children   > div:first-child.nav-precedes-active::after { top: -10px; }
 
 /* ── Hover glow — text only ──
- * Default (light mode): barely-there — primary is dark teal on white so
- * a heavy shadow blurs rather than glows.
- * Dark mode (.dark class): full glow with surface knock-out for separation.
+ * Surface knock-out hugs each letter so text sits cleanly inside the glow.
  */
 button:hover .nav-label {
-  text-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 40%, transparent);
-}
-button:hover svg {
-  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent));
-}
-:global(.dark) button:hover .nav-label {
   text-shadow:
     0 0 2px var(--color-surface),
     0 0 6px var(--color-primary),
     0 0 12px var(--color-primary);
 }
-:global(.dark) button:hover svg {
+button:hover svg {
   filter: drop-shadow(0 0 3px var(--color-primary));
 }
 
