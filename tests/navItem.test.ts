@@ -21,7 +21,6 @@ function makeRouter(path = '/', query: Record<string, string> = {}) {
 const leafItem: NavItemConfig = {
   id: 'neighbors',
   label: 'Neighbors',
-  icon: 'neighbors',
   route: '/neighbors',
 }
 
@@ -29,7 +28,6 @@ const leafItem: NavItemConfig = {
 const groupItem: NavItemConfig = {
   id: 'configuration',
   label: 'Configuration',
-  icon: 'configuration',
   activeOn: ['/configuration'],
   children: [
     {
