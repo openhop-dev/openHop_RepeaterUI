@@ -91,9 +91,9 @@ function handleClick() {
 const isChild = computed(() => depth.value > 0)
 
 const buttonClass = computed(() => {
-  const py = depth.value >= 2 ? 'py-1.5' : depth.value === 1 ? 'py-2' : 'py-3'
-  const base = `w-full rounded-[10px] ${py} flex items-center gap-2 text-sm font-medium transition-all duration-200`
-  const indent = isChild.value ? 'px-2' : 'px-4'
+  const py = isChild.value ? 'py-2' : 'py-3'
+  const base = `w-full rounded-[10px] ${py} flex items-center gap-3 text-sm font-medium transition-all duration-200`
+  const indent = isChild.value ? 'px-3' : 'px-4'
 
   if (isActive.value) {
     return `${base} ${indent} bg-primary/20 text-primary border border-primary/40 font-semibold`
