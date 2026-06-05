@@ -228,3 +228,66 @@ Defined in `src/assets/main.css`. Use these instead of repeating the card/border
 **Do not** write the raw Tailwind string `bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-stroke/10` in templates — use `cfg-card` or `cfg-section` so visual changes propagate from one place.
 
 **Do not** use `cfg-btn-*` inside modals — use `modal-btn-*` there.
+
+---
+
+## InteractiveSparkline
+
+`src/components/ui/InteractiveSparkline.vue`
+
+A generic interactive SVG sparkline with hover cursor, snapping dot, and a floating tooltip. Use this for any time-series data sparkline in the app — do not write bespoke SVG sparklines inline.
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `data` | `{ value: number; timestamp: number }[]` | required | Data points. `timestamp` is Unix seconds. |
+| `height` | `number` | `28` | SVG height in px |
+| `unit` | `string` | `''` | Unit label appended to the tooltip value (e.g. `'dBm'`) |
+
+### Exposes
+
+| Name | Type | Description |
+|---|---|---|
+| `hoveredPoint` | `{ value, timestamp, x, y } \| null` | The currently hovered data point, or `null`. Parents can react to this to update labels. |
+
+### Behaviour
+
+- Renders nothing when `data.length < 2`.
+- Tooltip is `<Teleport to="body">` at `z-index: 9999` — it escapes all overflow/clip contexts including the sidebar's scroll container.
+- Tooltip flips left when the cursor is within 120 px of the right viewport edge.
+- Mouse leave clears hover state instantly.
+
+### Data shape contract
+
+The store provides **raw history** data; the consuming component is responsible for filtering and mapping it into `{ value, timestamp }[]`. Do not add UI-specific computed properties to stores.
+
+```ts
+// ✓ Correct — mapping in the component
+const sparklineData = computed(() =>
+  packetStore.noiseFloorHistory
+    .filter((p) => p.noise_floor_dbm !== 0 && p.timestamp >= oneHourAgo)
+    .map((p) => ({ value: p.noise_floor_dbm, timestamp: p.timestamp })),
+)
+```
+
+### Usage
+
+```vue
+<InteractiveSparkline :data="sparklineData" unit="dBm" />
+
+<!-- with height override -->
+<InteractiveSparkline :data="sparklineData" :height="40" unit="%" />
+
+<!-- reading hovered value in parent -->
+<InteractiveSparkline ref="sparkRef" :data="sparklineData" unit="dBm" />
+<span>{{ sparkRef?.hoveredPoint?.value ?? currentValue }} dBm</span>
+```
+
+### Colour
+
+The line uses `text-secondary` (`--color-secondary`, amber) via `stroke="currentColor"`. To use a different colour, wrap the component and override with a parent colour class — do not modify the component itself for one-off colours.
+
+### TODO
+
+All sparklines that currently use the old `RFNoiseFloor.vue` scatter-dot pattern should be migrated to `InteractiveSparkline` when next touched.
