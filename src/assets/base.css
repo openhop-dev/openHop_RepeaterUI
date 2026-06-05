@@ -195,8 +195,8 @@ body {
 /* Native form control theming for browser-rendered UI (e.g., dropdowns/autofill). */
 :root {
   color-scheme: light;
-  --nav-hover-label-shadow: 0 0 2px var(--color-surface), 0 0 3px var(--color-primary);
-  --nav-hover-icon-shadow: drop-shadow(0 0 1px var(--color-primary));
+  --nav-hover-label-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent);
+  --nav-hover-icon-shadow: drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 50%, transparent));
 }
 
 .dark {
