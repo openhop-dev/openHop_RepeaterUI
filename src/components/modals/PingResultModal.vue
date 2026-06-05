@@ -186,7 +186,7 @@ const close = () => {
         @click.self="close"
       >
         <div
-          class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/20 rounded-[20px] shadow-2xl w-full max-w-md overflow-hidden"
+          class="modal-card-glass max-w-md overflow-hidden"
           @click.stop
         >
           <!-- Header -->
@@ -273,7 +273,7 @@ const close = () => {
             <div v-else-if="result" class="space-y-4">
               <!-- RTT Card -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
                 <div class="flex items-center gap-2 mb-2">
                   <span class="text-content-secondary dark:text-content-muted text-sm">Round-Trip Time</span>
@@ -299,7 +299,7 @@ const close = () => {
               <div class="grid grid-cols-3 gap-3">
                 <!-- RSSI -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
@@ -310,7 +310,7 @@ const close = () => {
 
                 <!-- SNR -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
@@ -321,7 +321,7 @@ const close = () => {
 
                 <!-- Signal Strength -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">Signal</div>
                   <div class="flex items-center gap-2">
@@ -365,7 +365,7 @@ const close = () => {
 
               <!-- Path -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
                 <div class="text-content-secondary dark:text-content-muted text-sm mb-3">
                   Network Path
@@ -449,12 +449,9 @@ const close = () => {
 
           <!-- Footer -->
           <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
-            <button
-              @click="close"
-              class="w-full py-2.5 bg-gradient-to-r from-cyan-400 to-cyan-500 text-white hover:from-cyan-500 hover:to-cyan-600 dark:bg-primary/20 dark:text-primary dark:border dark:border-primary/30 dark:hover:bg-primary/30 dark:from-transparent dark:to-transparent rounded-lg font-medium transition-all shadow-[0_2px_12px_rgba(6,182,212,0.3)] dark:shadow-none"
-            >
-              Close
-            </button>
+            <div class="modal-actions">
+              <button type="button" class="modal-btn-primary" @click="close">Close</button>
+            </div>
           </div>
         </div>
       </div>
