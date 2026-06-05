@@ -14,7 +14,7 @@ watch(
   (dbm) => { if (dbm !== null) packetStore.appendNoiseFloorReading(dbm) },
 )
 
-const currentValue = computed(() => systemStore.noiseFloorDbm ?? packetStore.currentNoiseFloor)
+const currentValue = computed(() => systemStore.noiseFloorDbm || packetStore.currentNoiseFloor)
 
 const sparklineData = computed(() => {
   if (!packetStore.noiseFloorHistory?.length) return []
