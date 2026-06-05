@@ -131,6 +131,13 @@
     @apply bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full border border-stroke-subtle dark:border-white/10;
   }
 
+  /* Glass-surface modal shell — for notification/result modals. combine with max-w-* and overflow-hidden in the template */
+  .modal-card-glass {
+    @apply backdrop-blur-xl rounded-[20px] shadow-2xl w-full border border-white/20;
+    background: var(--color-glass-bg);
+    box-shadow: var(--color-glass-shadow);
+  }
+
   /* ── Modal form elements ────────────────────────────────────────────────── */
 
   /* Apply to every modal <form> — flex column with gap avoids margin-collapse brittleness */

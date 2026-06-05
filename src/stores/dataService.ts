@@ -6,7 +6,7 @@ import { useNeighborStore } from './neighbors';
 import ApiService from '@/utils/api';
 import type { RecentPacket } from '@/types/api';
 
-type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors';
+type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors' | 'radioConfig';
 export type StepStatus = 'pending' | 'loading' | 'done' | 'error';
 
 const TTL: Record<DataKey, number> = {
@@ -17,6 +17,7 @@ const TTL: Record<DataKey, number> = {
   sparklines: 300_000,
   advertTier: 60_000,
   neighbors: 10 * 60_000,
+  radioConfig: Number.MAX_SAFE_INTEGER, // stable until explicitly invalidated by config UI
 };
 
 export const useDataService = defineStore('dataService', () => {
@@ -42,6 +43,7 @@ export const useDataService = defineStore('dataService', () => {
     sparklines: 'pending',
     advertTier: 'pending',
     neighbors: 'pending',
+    radioConfig: 'pending',
   });
 
   const _lastFetch = new Map<DataKey, number>();
@@ -96,7 +98,15 @@ export const useDataService = defineStore('dataService', () => {
 
     switch (key) {
       case 'stats':
-        promise = systemStore.fetchStats().then(() => { _lastFetch.set('stats', Date.now()); });
+        promise = systemStore.fetchStats().then(() => {
+          _lastFetch.set('stats', Date.now());
+          _lastFetch.set('radioConfig', Date.now());
+        });
+        break;
+      case 'radioConfig':
+        promise = ensure('stats').then(() => {
+          _lastFetch.set('radioConfig', Date.now());
+        });
         break;
       case 'packetStats':
         promise = packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); });
@@ -148,6 +158,7 @@ export const useDataService = defineStore('dataService', () => {
         onFirstByte: () => { statsSubStatus.value = 'reading'; },
       }));
       _lastFetch.set('stats', Date.now());
+      _lastFetch.set('radioConfig', Date.now());
       loadProgress.stats = 'done';
     } catch {
       loadProgress.stats = 'error';
@@ -220,6 +231,10 @@ export const useDataService = defineStore('dataService', () => {
     ]);
   }
 
+  function invalidate(key: DataKey): void {
+    _lastFetch.delete(key);
+  }
+
   function stopPolling(): void {
     for (const h of _pollHandles) clearInterval(h);
     _pollHandles = [];
@@ -249,6 +264,7 @@ export const useDataService = defineStore('dataService', () => {
     loadProgress,
     bootstrap,
     ensure,
+    invalidate,
     noteDisconnect,
     onReconnect,
     stopPolling,

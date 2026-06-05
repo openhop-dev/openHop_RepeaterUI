@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
 import { useSetupStore } from '@/stores/setup';
 import apiClient from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
@@ -11,6 +12,7 @@ import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
 const router = useRouter();
 const systemStore = useSystemStore();
+const dataService = useDataService();
 const setupStore = useSetupStore();
 
 const radioConfig = computed(() => systemStore.stats?.config?.radio || {});
@@ -181,6 +183,7 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
       isEditing.value = false;
       txPowerNoticeConfirmed.value = false;
       await systemStore.fetchStats();
+      dataService.invalidate('radioConfig');
       if (!silent) showRestartModal.value = true;
       return true;
     } else if (data.error) {
