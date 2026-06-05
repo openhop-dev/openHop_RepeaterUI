@@ -4,16 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 import type { NavItemConfig } from '@/config/navigation'
 import { NAV_ACTION_HANDLERS_KEY } from '@/config/navActionHandlers'
 
-import ConfigurationsIcon from '@/components/icons/configurations.vue'
-import DashboardIcon from '@/components/icons/dashboard.vue'
-import HelpIcon from '@/components/icons/help.vue'
-import LogsIcon from '@/components/icons/logs.vue'
-import TerminalIcon from '@/components/icons/terminal.vue'
-import StatsIcon from '@/components/icons/stats.vue'
-import SystemIcon from '@/components/icons/system.vue'
-import NeighborsIcon from '@/components/icons/neighbors.vue'
-import GpsIcon from '@/components/icons/gps.vue'
-
 defineOptions({ name: 'NavItem' })
 
 const props = defineProps<{ item: NavItemConfig; depth?: number }>()
@@ -26,22 +16,6 @@ const depth = computed(() => props.depth ?? 0)
 // ── Icon map ─────────────────────────────────────────────────────────────────
 
 const actionHandlers = inject<Record<string, () => void>>(NAV_ACTION_HANDLERS_KEY, {})
-
-const iconComponents: Record<string, unknown> = {
-  dashboard: DashboardIcon,
-  neighbors: NeighborsIcon,
-  statistics: StatsIcon,
-  gps: GpsIcon,
-  sensors: SystemIcon,
-  'system-stats': SystemIcon,
-  sessions: SystemIcon,
-  configuration: ConfigurationsIcon,
-  'room-servers': ConfigurationsIcon,
-  companions: ConfigurationsIcon,
-  logs: LogsIcon,
-  terminal: TerminalIcon,
-  help: HelpIcon,
-}
 
 // ── Active state ──────────────────────────────────────────────────────────────
 
@@ -128,21 +102,11 @@ const buttonClass = computed(() => {
   return `${base} ${indent} text-content-primary dark:text-content-primary hover:bg-primary/10 hover:text-primary hover:border-primary/20 border border-transparent`
 })
 
-const iconClass = computed(() =>
-  isActive.value
-    ? 'w-3.5 h-3.5 text-primary [&_path]:fill-current flex-shrink-0'
-    : 'w-3.5 h-3.5 text-content-primary dark:text-content-primary [&_path]:fill-current flex-shrink-0',
-)
 </script>
 
 <template>
   <div>
     <button :class="buttonClass" @click="handleClick">
-      <component
-        :is="iconComponents[item.icon ?? '']"
-        v-if="item.icon && iconComponents[item.icon]"
-        :class="iconClass"
-      />
       <span class="flex-1 text-left">{{ item.label }}</span>
       <!-- Chevron for groups -->
       <svg
