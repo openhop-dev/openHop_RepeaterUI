@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { usePacketStore } from '@/stores/packets'
 import { useSystemStore } from '@/stores/system'
 import InteractiveSparkline from '@/components/ui/InteractiveSparkline.vue'
@@ -16,8 +16,6 @@ watch(
 
 const currentValue = computed(() => systemStore.noiseFloorDbm ?? packetStore.currentNoiseFloor)
 
-const sparklineRef = ref<InstanceType<typeof InteractiveSparkline> | null>(null)
-
 const sparklineData = computed(() => {
   if (!packetStore.noiseFloorHistory?.length) return []
   const oneHourAgo = Date.now() / 1000 - 3600
@@ -25,10 +23,6 @@ const sparklineData = computed(() => {
     .filter((p) => p.noise_floor_dbm !== 0 && p.timestamp >= oneHourAgo)
     .map((p) => ({ value: p.noise_floor_dbm, timestamp: p.timestamp }))
 })
-
-const displayValue = computed(() =>
-  sparklineRef.value?.hoveredPoint?.value ?? currentValue.value,
-)
 </script>
 
 <template>
@@ -36,13 +30,9 @@ const displayValue = computed(() =>
     <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted uppercase tracking-wide mb-1">
       <span>Noise Floor</span>
       <span class="text-content-primary dark:text-content-primary normal-case tracking-normal font-medium">
-        {{ displayValue }} dBm
+        {{ currentValue }} dBm
       </span>
     </div>
-    <InteractiveSparkline
-      ref="sparklineRef"
-      :data="sparklineData"
-      unit="dBm"
-    />
+    <InteractiveSparkline :data="sparklineData" unit="dBm" />
   </div>
 </template>
