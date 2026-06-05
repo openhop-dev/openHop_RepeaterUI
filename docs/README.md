@@ -14,3 +14,4 @@ Technical reference for contributors working on the frontend.
 | [UI Components](ui-components.md) | Shared UI primitives: Spinner, NeighborMenu, modal utilities, glass cards, configuration card utilities |
 | [Configuration Workflow](configuration-workflow.md) | Unsaved-changes guard, `useUnsavedChanges` composable, save/restart flow, and per-tab behaviour differences |
 | [z-index Layering](z-index-layering.md) | Standardised z-index scale for all fixed/modal/overlay elements |
+| [Navigation System](nav-system.md) | Config-driven sidebar nav: `NavItemConfig` shape, NavItem component, action items, unified Sidebar (desktop+mobile), adding tabs |
