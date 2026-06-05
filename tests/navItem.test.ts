@@ -66,14 +66,14 @@ describe('NavItem — leaf', () => {
     const router = makeRouter('/')
     await router.isReady()
     const wrapper = mount(NavItem, { props: { item: leafItem }, global: { plugins: [router] } })
-    expect(wrapper.find('button').classes().join(' ')).not.toContain('bg-primary/20')
+    expect(wrapper.find('button').classes()).not.toContain('text-primary')
   })
 
   it('is active when route matches', async () => {
     const router = makeRouter('/neighbors')
     await router.isReady()
     const wrapper = mount(NavItem, { props: { item: leafItem }, global: { plugins: [router] } })
-    expect(wrapper.find('button').classes().join(' ')).toContain('bg-primary/20')
+    expect(wrapper.find('button').classes()).toContain('text-primary')
   })
 
   it('navigates on click', async () => {
@@ -173,13 +173,13 @@ describe('NavItem — 3-level group', () => {
     const buttons = wrapper.findAll('button')
     const backupBtn = buttons.find((b) => b.text().includes('Backup'))
     expect(backupBtn).toBeDefined()
-    expect(backupBtn!.classes().join(' ')).toContain('bg-primary/20')
+    expect(backupBtn!.classes().join(' ')).toContain('text-primary')
 
     // Parent group buttons must NOT carry the active blue style
     const configBtn = buttons[0]
-    expect(configBtn.classes().join(' ')).not.toContain('bg-primary/20')
+    expect(configBtn.classes().join(' ')).not.toContain('font-semibold')
     const maintenanceBtn = buttons.find((b) => b.text().includes('Maintenance'))
-    expect(maintenanceBtn!.classes().join(' ')).not.toContain('bg-primary/20')
+    expect(maintenanceBtn!.classes().join(' ')).not.toContain('font-semibold')
   })
 
   it('does not navigate when the group toggle is clicked', async () => {
