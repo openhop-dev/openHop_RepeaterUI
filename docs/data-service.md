@@ -61,6 +61,7 @@ Phase 2 and 3 run regardless of whether Phase 1 succeeded — the UI degrades gr
 | `sparklines` | `/sparkline_history` | 300 s | 300 s |
 | `advertTier` | `/advert_rate_limit_stats` | 60 s | 30 s |
 | `neighbors` | `/adverts` (5 contact types) | 10 min | not polled (user-triggered via `neighborStore.fetchAll`) |
+| `radioConfig` | `/stats` (piggybacked) | session-stable | not polled — invalidated explicitly by config UI after a radio settings save |
 
 Polling starts after bootstrap completes (`_startPolling()`). Each interval calls `ensure(key)`, which checks the TTL and skips the fetch if the cached data is still fresh.
 
@@ -155,7 +156,7 @@ Not all HTTP calls go through DataService. The distinction is:
 |---|---|
 | Display data that DataService loads | Read from the Pinia store directly (`systemStore.stats`, `packetStore.packetStats`, etc.) |
 | Ensure data is present on mount | `void dataService.ensure(key)` in `onMounted` |
-| Force a refresh after a config save | Call the store fetch method directly (e.g. `systemStore.fetchStats()`) — this is an intentional cache-bust and should bypass `ensure` |
+| Force a refresh after a config save | Call the store fetch method directly (e.g. `systemStore.fetchStats()`) — this is an intentional cache-bust and should bypass `ensure`. Then call `dataService.invalidate(key)` for any DataKey whose data was affected by the save (e.g. `'radioConfig'` after a radio settings save). |
 | Poll data on your own | Don't — DataService owns all polling. If the interval is wrong, change it in `_startPolling()` |
 | Fetch data with a custom time range | Fetch directly from the store (e.g. `packetStore.fetchPacketStats({ hours: 48 })`) — DataService caches 24 h only |
 

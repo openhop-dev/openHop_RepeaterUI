@@ -167,9 +167,7 @@ async function confirmDeleteIdentity() {
 
     if (response.success) {
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity deleted successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to delete identity: ${response.error}`, 'error');
     }
@@ -227,6 +225,7 @@ function resetForm() {
       guest_password: '',
     },
   };
+  roundCoords(newIdentity.value.settings);
   showKeyInCreate.value = false;
 }
 

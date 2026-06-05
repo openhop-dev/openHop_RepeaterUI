@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import Spinner from '@/components/ui/Spinner.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
 
 interface PingResult {
   target_id: string;
@@ -75,21 +76,23 @@ const getRTTStatus = computed(() => {
 
   // Very lenient thresholds for LoRa mesh networks with potential congestion
   if (rtt < expectedRTT * 2.5)
-    return { color: 'text-green-600 dark:text-green-400', label: 'Excellent' };
+    return { color: 'text-green-600 dark:text-green-400', label: 'Fast' };
   if (rtt < expectedRTT * 4)
-    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Good' };
+    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Normal' };
   if (rtt < expectedRTT * 7)
-    return { color: 'text-orange-600 dark:text-orange-400', label: 'Fair' };
-  return { color: 'text-red-600 dark:text-red-400', label: 'Poor' };
+    return { color: 'text-orange-600 dark:text-orange-400', label: 'Slow' };
+  return { color: 'text-red-600 dark:text-red-400', label: 'Very Slow' };
 });
 
+
 const getSignalStrength = computed(() => {
-  if (!props.result) return { bars: 0, color: 'text-gray-400' };
+  if (!props.result) return { bars: 0, color: 'text-gray-400 dark:text-gray-500', quality: 'None' as const };
 
   const quality = getSignalQuality(props.result.rssi);
   return {
     bars: quality.bars,
     color: quality.color,
+    quality: quality.quality,
   };
 });
 
@@ -183,7 +186,7 @@ const close = () => {
         @click.self="close"
       >
         <div
-          class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/20 rounded-[20px] shadow-2xl w-full max-w-md overflow-hidden"
+          class="modal-card-glass max-w-md overflow-hidden"
           @click.stop
         >
           <!-- Header -->
@@ -270,12 +273,10 @@ const close = () => {
             <div v-else-if="result" class="space-y-4">
               <!-- RTT Card -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-content-secondary dark:text-content-muted text-sm"
-                    >Round-Trip Time</span
-                  >
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-content-secondary dark:text-content-muted text-sm">Round-Trip Time</span>
                   <span
                     :class="[
                       'text-xs font-medium px-2 py-1 rounded-full',
@@ -295,46 +296,39 @@ const close = () => {
               </div>
 
               <!-- Signal Metrics -->
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-3 gap-3">
                 <!-- RSSI -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-content-secondary dark:text-content-muted text-sm">RSSI</span>
-                    <div class="flex gap-0.5">
-                      <div
-                        v-for="i in 5"
-                        :key="i"
-                        :class="[
-                          'w-1 h-3 rounded-sm',
-                          i <= getSignalStrength.bars
-                            ? getSignalStrength.color
-                            : 'bg-stroke-subtle dark:bg-stroke/10',
-                        ]"
-                      ></div>
-                    </div>
-                  </div>
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.rssi }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.rssi }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dBm</span>
                   </div>
                 </div>
 
                 <!-- SNR -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.snr_db }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.snr_db }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dB</span>
+                  </div>
+                </div>
+
+                <!-- Signal Strength -->
+                <div
+                  class="p-4"
+                >
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">Signal</div>
+                  <div class="flex items-center gap-2">
+                    <SignalBars :bars="getSignalStrength.bars" :color="getSignalStrength.color" />
+                    <span class="text-sm font-medium" :class="getSignalStrength.color">
+                      {{ getSignalStrength.quality }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -371,7 +365,7 @@ const close = () => {
 
               <!-- Path -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
                 <div class="text-content-secondary dark:text-content-muted text-sm mb-3">
                   Network Path
@@ -455,12 +449,9 @@ const close = () => {
 
           <!-- Footer -->
           <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
-            <button
-              @click="close"
-              class="w-full py-2.5 bg-gradient-to-r from-cyan-400 to-cyan-500 text-white hover:from-cyan-500 hover:to-cyan-600 dark:bg-primary/20 dark:text-primary dark:border dark:border-primary/30 dark:hover:bg-primary/30 dark:from-transparent dark:to-transparent rounded-lg font-medium transition-all shadow-[0_2px_12px_rgba(6,182,212,0.3)] dark:shadow-none"
-            >
-              Close
-            </button>
+            <div class="modal-actions">
+              <button type="button" class="modal-btn-primary" @click="close">Close</button>
+            </div>
           </div>
         </div>
       </div>

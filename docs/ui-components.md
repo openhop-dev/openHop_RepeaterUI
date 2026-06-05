@@ -136,12 +136,18 @@ Both classes include `flex items-center justify-center p-4` so the inner card is
 
 | Class | Purpose |
 |---|---|
-| `modal-card` | White/elevated inner card. `bg-white dark:bg-surface-elevated`, `rounded-[20px] p-6 w-full`, border. Combine with `max-w-md`, `max-w-lg`, or `max-w-2xl` in the template. |
+| `modal-card` | White/elevated inner card. `bg-white dark:bg-surface-elevated`, `rounded-[20px] p-6 w-full`, border. Combine with `max-w-md`, `max-w-lg`, or `max-w-2xl` in the template. Use for all input/form/confirmation modals. |
+| `modal-card-glass` | Glass-surface shell for result/notification modals. Uses the glass background token and heavy backdrop blur. No built-in padding — add `overflow-hidden` and manage padding per-section. Inner sections should render content directly without sub-card backgrounds. |
 
 ```html
-<!-- primary modal -->
+<!-- input / confirmation modal -->
 <div class="modal-backdrop" @click.self="close">
   <div class="modal-card max-w-lg">…</div>
+</div>
+
+<!-- result / notification modal -->
+<div class="modal-backdrop" @click.self="close">
+  <div class="modal-card-glass max-w-md overflow-hidden">…</div>
 </div>
 ```
 

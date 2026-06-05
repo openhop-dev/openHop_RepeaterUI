@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
+import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -263,10 +264,6 @@ const signalQuality = computed(() => {
   return getSignalQuality(props.neighbor.rssi);
 });
 
-// Signal bar height lookup — i is 1-based (v-for="i in 5")
-// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
-// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
-const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 </script>
 
 <template>
@@ -274,19 +271,16 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
     <Transition name="modal" appear>
       <div
         v-if="isOpen && neighbor"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+        class="modal-backdrop overflow-hidden"
         @click="handleBackdropClick"
         @keydown="handleKeyDown"
         tabindex="0"
       >
-        <!-- Backdrop with blur -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
-
         <!-- Modal Content -->
         <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
           <div
-            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/20 flex flex-col h-full overflow-hidden"
+            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/10 flex flex-col h-full overflow-hidden"
           >
             <!-- Header -->
             <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
@@ -304,7 +298,7 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                 <!-- Close Button -->
                 <button
                   @click="emit('close')"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/10 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors duration-200 text-content-secondary dark:text-content-primary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -421,21 +415,7 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex items-end gap-0.5">
-                        <template v-for="i in 5" :key="i">
-                          <div
-                            :class="[
-                              'w-1 transition-colors',
-                              BAR_HEIGHTS_SM[i - 1],
-                              i <= signalQuality.bars
-                                ? signalQuality.color
-                                : 'text-gray-600 dark:text-gray-700',
-                            ]"
-                          >
-                            <div class="w-full h-full bg-current rounded-sm"></div>
-                          </div>
-                        </template>
-                      </div>
+                      <SignalBars :bars="signalQuality.bars" :color="signalQuality.color" />
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
                       </span>

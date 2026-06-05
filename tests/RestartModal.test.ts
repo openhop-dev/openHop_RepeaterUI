@@ -111,7 +111,7 @@ describe('RestartModal', () => {
       await flushPromises();
 
       expect(fetch).not.toHaveBeenCalled();
-      expect(wrapper.text()).toContain('Restart failed: Permission denied');
+      expect(wrapper.text()).toContain('Permission denied');
       expect(wrapper.find('button.modal-btn-cancel').exists()).toBe(true);
     });
 

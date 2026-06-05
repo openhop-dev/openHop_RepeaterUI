@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue';
 import NeighborMenu from '@/components/ui/NeighborMenu.vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import SignalBars from '@/components/ui/SignalBars.vue';
 import {
   formatRSSI,
   formatSNR,
@@ -185,8 +186,6 @@ const getRSSIStrength = (rssi: number | null): { bars: number; color: string } =
 // SM variant: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
 // MD variant: 8, 10, 12, 14, 16 px  →  h-2 h-2.5 h-3 h-3.5 h-4
 // Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5 h-4
-const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
-const BAR_HEIGHTS_MD = ['h-2', 'h-2.5', 'h-3', 'h-3.5', 'h-4'] as const;
 
 // View mode utility
 const getCellPadding = () => {
@@ -715,21 +714,7 @@ const sortedAdverts = computed(() => {
             >
               <div class="flex items-center gap-2">
                 <!-- Signal strength bars -->
-                <div class="flex items-end gap-0.5">
-                  <template v-for="bar in 5" :key="bar">
-                    <div
-                      :class="[
-                        'w-1 transition-colors',
-                        BAR_HEIGHTS_SM[bar - 1],
-                        bar <= getRSSIStrength(advert.rssi).bars
-                          ? getRSSIStrength(advert.rssi).color
-                          : 'text-gray-600',
-                      ]"
-                    >
-                      <div class="w-full h-full bg-current rounded-sm"></div>
-                    </div>
-                  </template>
-                </div>
+                <SignalBars :bars="getRSSIStrength(advert.rssi).bars" :color="getRSSIStrength(advert.rssi).color" />
                 <!-- RSSI value -->
                 <span :class="getRSSIStrength(advert.rssi).color">
                   {{ formatRSSI(advert.rssi) }}
@@ -862,21 +847,7 @@ const sortedAdverts = computed(() => {
               <div class="text-content-muted text-xs mb-1">Signal</div>
               <div class="flex items-center gap-2 justify-end">
                 <!-- Signal strength bars -->
-                <div class="flex items-end gap-0.5">
-                  <template v-for="bar in 5" :key="bar">
-                    <div
-                      :class="[
-                        'w-1.5 transition-colors',
-                        BAR_HEIGHTS_MD[bar - 1],
-                        bar <= getRSSIStrength(advert.rssi).bars
-                          ? getRSSIStrength(advert.rssi).color
-                          : 'text-gray-600',
-                      ]"
-                    >
-                      <div class="w-full h-full bg-current rounded-sm"></div>
-                    </div>
-                  </template>
-                </div>
+                <SignalBars :bars="getRSSIStrength(advert.rssi).bars" :color="getRSSIStrength(advert.rssi).color" size="md" />
                 <!-- RSSI value -->
                 <span :class="`${getRSSIStrength(advert.rssi).color} text-sm font-medium`">
                   {{ formatRSSI(advert.rssi) }}
