@@ -97,7 +97,7 @@ const buttonClass = computed(() => {
   const indent = isChild.value ? 'pl-2 pr-2' : 'pl-4 pr-2'
 
   if (isActive.value) {
-    return `${base} ${indent} bg-primary/15 text-primary font-semibold border border-transparent`
+    return `${base} ${indent} dark:bg-primary/15 text-primary font-semibold border border-transparent`
   }
   return `${base} ${indent} text-content-primary dark:text-content-primary hover:text-primary border border-transparent`
 })
@@ -219,8 +219,9 @@ const iconClass = computed(() =>
 .nav-root-children   > div:first-child.nav-precedes-active::after { top: -10px; }
 
 /* ── Hover glow — text only ──
- * The surface-coloured shadow hugs each letter edge, creating visible
- * separation between the text and the primary glow that radiates beyond it.
+ * Dark mode: full glow with surface knock-out for separation.
+ * Light mode: minimal — primary is dark teal on white, so a heavy shadow
+ * just blurs the text. Keep it barely-there.
  */
 button:hover .nav-label {
   text-shadow:
@@ -230,6 +231,14 @@ button:hover .nav-label {
 }
 button:hover svg {
   filter: drop-shadow(0 0 3px var(--color-primary));
+}
+@media (prefers-color-scheme: light) {
+  button:hover .nav-label {
+    text-shadow: 0 0 6px var(--color-primary);
+  }
+  button:hover svg {
+    filter: drop-shadow(0 0 2px var(--color-primary));
+  }
 }
 
 /* ── Tick ── */
