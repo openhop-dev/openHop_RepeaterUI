@@ -253,7 +253,7 @@ const currentTime = computed(() => {
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
                 <span v-if="activePenalties > 0" class="text-secondary">Pen: {{ activePenalties }}</span>
               </div>
-              <div v-if="systemStore.dutyCycleEnabled" class="mt-2">
+              <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
                 <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted mb-1">
                   <span>Duty Cycle</span>
                   <span class="text-content-primary dark:text-content-primary">
