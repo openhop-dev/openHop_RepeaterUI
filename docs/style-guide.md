@@ -199,6 +199,14 @@ All classes live in `src/assets/main.css` inside `@layer utilities`.
 <div class="modal-card max-w-lg">…</div>
 ```
 
+#### `.modal-card-glass`
+**Purpose:** Glass-surface modal shell for result/notification modals — modals that present the outcome of an action rather than collecting user input. Uses the glass background token and heavy backdrop blur instead of the opaque solid surface of `modal-card`. Inner content sections should not use sub-card backgrounds; render content directly with padding only, keeping a clean single-colour interior.  
+**Usage:**
+```html
+<div class="modal-card-glass max-w-md overflow-hidden">…</div>
+```
+**Do not use** for confirmations, edit dialogs, or any modal that accepts user input — use `modal-card` for those.
+
 #### `.modal-form`
 **Purpose:** `flex flex-col gap-4` wrapper for modal `<form>` elements. Avoids margin-collapse brittleness.  
 **Usage:**
