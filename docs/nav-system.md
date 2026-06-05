@@ -13,15 +13,18 @@ Exports `navigationItems: NavItemConfig[]` — a tree of items rendered by `NavI
 ### `NavItemConfig` shape
 
 ```ts
+import type { Component } from 'vue'
+
 type NavItemConfig = {
-  id: string           // unique identifier (used as Vue :key)
-  label: string        // display text
-  icon?: string        // key into NavItem's icon map (optional)
-  route?: string       // navigates here on click (leaf nodes)
-  params?: Record<string, string>  // query params merged into the route
-  activeOn?: string[]  // routes that trigger active/expand state
-  children?: NavItemConfig[]       // makes this a collapsible group
-  action?: string      // named action instead of navigation (see below)
+  id: string                        // unique identifier (used as Vue :key)
+  label: string                     // display text
+  icon?: Component                  // Lucide icon component (optional)
+  route?: string                    // navigates here on click (leaf nodes)
+  params?: Record<string, string>   // query params merged into the route
+  activeOn?: string[]               // routes that trigger active/expand state
+  children?: NavItemConfig[]        // makes this a collapsible group
+  action?: string                   // named action instead of navigation (see below)
+  enabledWhen?: Capability          // hide unless device capability is enabled
 }
 ```
 
@@ -32,12 +35,36 @@ type NavItemConfig = {
 - **`activeOn`** defaults to `[route]` when `route` is set. Set explicitly when a leaf shares a route with others and uses `params` to distinguish (e.g. config tabs).
 - **`id`** must be unique across the entire tree — the test suite enforces this.
 
+### Icons
+
+Icons are [Lucide Vue](https://lucide.dev) components imported directly in `navigation.ts` and assigned on each item. There is no separate icon map — the component reference lives in the config.
+
+```ts
+import { LayoutDashboard, Settings } from '@lucide/vue'
+
+{ id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, route: '/' }
+```
+
+To add or change an icon, import the Lucide component at the top of `navigation.ts` and assign it. Items without an `icon` field render text-only (no icon shown).
+
+Browse available icons at [lucide.dev](https://lucide.dev).
+
+### Capability-gated items
+
+Items with `enabledWhen` are hidden when the device reports that feature as disabled.
+
+```ts
+{ id: 'gps', label: 'GPS', icon: MapPin, route: '/gps', enabledWhen: 'gps' }
+```
+
+Every `enabledWhen` value must be registered in `knownCapabilities` (also in `navigation.ts`) and have a corresponding resolver in `Sidebar.vue`'s `capabilities` computed. The test suite enforces this — adding an unknown value will fail `navCapabilities.test.ts`.
+
 ### Configuration tabs (4-level nesting)
 
 Configuration tabs are 4 levels deep:
 
 ```
-Monitoring / System / … (depth 0)
+System (depth 0)
   └ Configuration (depth 1, group)
       └ Radio / Access / Maintenance (depth 2, group)
           └ Radio Settings / … (depth 3, leaf, route + params)
@@ -56,15 +83,45 @@ Recursive renderer. Handles:
 - **Group**: toggles `expanded` on click. Auto-expands when `hasActiveDescendant` is true (page load and route changes).
 - **Action item**: calls `actionHandlers[item.action]?.()` injected via `provide`/`inject`.
 
+### Props
+
+| Prop | Type | Description |
+|---|---|---|
+| `item` | `NavItemConfig` | The item to render |
+| `depth` | `number?` | Nesting depth (0 = top level). Controls padding and tree line offsets |
+| `precedesActive` | `boolean?` | Set by the parent loop when this item comes before the active/has-active child |
+
 ### Active state
 
-Only **leaf items** get the active highlight (`bg-primary/20 text-primary border border-primary/40`). Group items never show active styling — they only expand.
+Only **leaf items** get the active highlight (`bg-primary/15 text-primary font-semibold`). Group items never show active styling — they only expand.
 
 `matchesActive` returns `false` for items with no `activeOn` and no `route` (empty targets = never active). This prevents top-level groups from spuriously expanding on load.
 
-### Icons
+### Active path colouring
 
-Icons are registered in NavItem's `iconComponents` map. To add a new icon, import the Vue icon component and add an entry to the map.
+The parent loop computes `activeChildIndex` — the index of the first child that is active or contains the active item. Children before this index receive `precedesActive: true`.
+
+Three CSS classes drive the tree line colouring on each child div:
+
+| Class | Role | Vertical overlay |
+|---|---|---|
+| `nav-item-active` | Selected leaf | Primary, stops at tick |
+| `nav-has-active` | Ancestor of selected leaf | Primary, stops at tick |
+| `nav-precedes-active` | Sibling before the active path | Primary, full height |
+
+Only `nav-item-active` items get a primary-coloured tick. Ancestors and preceding siblings keep their tick in the subtle guide colour.
+
+### Tree lines
+
+Two independent CSS layers ensure the structural guide is never removed when the primary overlay changes:
+
+- **`div::before`** — subtle structural line, always full height. First-child items extend upward into the parent button space (`top: -10px` for root groups, `-8px` for nested). Last-child items stop at the tick (`bottom: calc(100% - 18px)`).
+- **`div::after`** — primary coloured overlay, only generated for active-path items.
+- **`.nav-tick` span** — a real DOM element (not a pseudo-element) to avoid button pseudo-element positioning quirks. Positioned at `top: 18px` from the child div (= centre of a `py-2 text-sm` button).
+
+### Hover glow
+
+On hover, the item label gets a `text-shadow` glow in `var(--color-primary)` with a thin `var(--color-surface)` knock-out shadow around each letter for visual separation. The content icon gets a matching `filter: drop-shadow`.
 
 ---
 
@@ -115,18 +172,13 @@ Do not create a separate mobile sidebar component. All content changes must be m
 
 ---
 
-## GPS / Sensors filtering
-
-GPS and Sensors nav items are filtered out when the device reports those features as disabled. The filter is applied recursively in `Sidebar.vue`'s `filterNavItems` function. The config itself always includes these items — the filter is purely a runtime concern.
-
----
-
 ## Adding a new nav item
 
 1. Open `src/config/navigation.ts`.
-2. Add a `NavItemConfig` object to the appropriate group's `children` array (or at the top level for a standalone item).
-3. If it's a new action, register the handler in `Sidebar.vue`'s `provide` call.
-4. Run `npm run test:unit` — the shape invariants will catch missing `route`/`action`, duplicate `id`s, and config tab leaves without `tab` params.
+2. Import the Lucide icon at the top of the file (browse at [lucide.dev](https://lucide.dev)).
+3. Add a `NavItemConfig` object to the appropriate group's `children` array (or at the top level for a standalone item), including the `icon` field.
+4. If it's a new action, register the handler in `Sidebar.vue`'s `provide` call.
+5. Run `npm run test:unit` — the shape invariants will catch missing `route`/`action`, duplicate `id`s, unregistered `enabledWhen` values, and config tab leaves without `tab` params.
 
 ## Adding a new configuration tab
 

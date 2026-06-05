@@ -1,6 +1,16 @@
+import type { Component } from 'vue'
+import {
+  LayoutDashboard, Megaphone, Activity, Cable, MapPin, Gauge,
+  BarChart2, Server, Cpu, Settings, Antenna, Terminal,
+  Users2, ScrollText, HelpCircle, Ellipsis,
+  ShieldCheck, Wrench, Radio, Timer, Percent, Globe, KeyRound, Eye, Scale,
+  DatabaseBackup, Database, MemoryStick, Building2, Bot, Repeat2,
+} from '@lucide/vue'
+
 export type NavItemConfig = {
   id: string
   label: string
+  icon?: Component
   /** Navigate to this route when clicked (leaf nodes only). */
   route?: string
   /** Query params merged into the route on navigation. */
@@ -33,89 +43,80 @@ export const knownCapabilities = ['gps', 'sensors'] as const
 export type Capability = typeof knownCapabilities[number]
 
 export const navigationItems: NavItemConfig[] = [
-  { id: 'dashboard',   label: 'Dashboard',   route: '/' },
-  { id: 'send-advert', label: 'Send Advert', action: 'sendAdvert' },
+  { id: 'dashboard',   label: 'Dashboard',   icon: LayoutDashboard, route: '/' },
+  { id: 'send-advert', label: 'Send Advert', icon: Megaphone,        action: 'sendAdvert' },
   {
-    id: 'monitoring',
-    label: 'Monitoring',
+    id: 'monitoring', label: 'Monitoring', icon: Activity,
     children: [
-      { id: 'neighbors', label: 'Neighbors', route: '/neighbors' },
-      { id: 'sessions',  label: 'Sessions',  route: '/sessions' },
-      { id: 'gps',       label: 'GPS',       route: '/gps',     enabledWhen: 'gps' },
-      { id: 'sensors',   label: 'Sensors',   route: '/sensors', enabledWhen: 'sensors' },
+      { id: 'neighbors', label: 'Neighbors', icon: Users2,  route: '/neighbors' },
+      { id: 'sessions',  label: 'Sessions',  icon: Cable,   route: '/sessions' },
+      { id: 'gps',       label: 'GPS',       icon: MapPin,  route: '/gps',     enabledWhen: 'gps' },
+      { id: 'sensors',   label: 'Sensors',   icon: Gauge,   route: '/sensors', enabledWhen: 'sensors' },
     ],
   },
   {
-    id: 'analytics',
-    label: 'Analytics',
+    id: 'analytics', label: 'Analytics', icon: BarChart2,
     children: [
-      { id: 'statistics', label: 'Statistics', route: '/statistics' },
+      { id: 'statistics', label: 'Statistics', icon: BarChart2,  route: '/statistics' },
     ],
   },
   {
-    id: 'system',
-    label: 'System',
+    id: 'system', label: 'System', icon: Server,
     children: [
-      { id: 'system-stats', label: 'System Stats', route: '/system-stats' },
       {
-        id: 'configuration',
-        label: 'Configuration',
+        id: 'configuration', label: 'Configuration', icon: Settings,
         activeOn: ['/configuration', '/cad-calibration'],
         children: [
           {
-            id: 'config-radio',
-            label: 'Radio',
+            id: 'config-radio', label: 'Radio', icon: Antenna,
             activeOn: ['/configuration'],
             children: [
-              { id: 'config-radio-settings', label: 'Radio Settings',    route: '/configuration', params: { tab: 'radio' },          activeOn: ['/configuration'] },
-              { id: 'config-radio-hardware', label: 'Radio Hardware',    route: '/configuration', params: { tab: 'radio-hardware' }, activeOn: ['/configuration'] },
-              { id: 'config-repeater',       label: 'Repeater Settings', route: '/configuration', params: { tab: 'repeater' },       activeOn: ['/configuration'] },
-              { id: 'config-duty',           label: 'Duty Cycle',        route: '/configuration', params: { tab: 'duty' },           activeOn: ['/configuration'] },
-              { id: 'config-delays',         label: 'TX Delays',         route: '/configuration', params: { tab: 'delays' },         activeOn: ['/configuration'] },
+              { id: 'config-radio-settings', label: 'Radio Settings',    icon: Radio,    route: '/configuration', params: { tab: 'radio' },          activeOn: ['/configuration'] },
+              { id: 'config-radio-hardware', label: 'Radio Hardware',    icon: Antenna,  route: '/configuration', params: { tab: 'radio-hardware' }, activeOn: ['/configuration'] },
+              { id: 'config-repeater',       label: 'Repeater',          icon: Repeat2,  route: '/configuration', params: { tab: 'repeater' },       activeOn: ['/configuration'] },
+              { id: 'config-duty',           label: 'Duty Cycle',        icon: Percent,  route: '/configuration', params: { tab: 'duty' },           activeOn: ['/configuration'] },
+              { id: 'config-delays',         label: 'TX Delays',         icon: Timer,    route: '/configuration', params: { tab: 'delays' },         activeOn: ['/configuration'] },
             ],
           },
           {
-            id: 'config-access',
-            label: 'Access',
+            id: 'config-access', label: 'Access', icon: ShieldCheck,
             activeOn: ['/configuration'],
             children: [
-              { id: 'config-advert',        label: 'Advert Limits',        route: '/configuration', params: { tab: 'advert' },        activeOn: ['/configuration'] },
-              { id: 'config-transport',     label: 'Region Configuration', route: '/configuration', params: { tab: 'transport' },     activeOn: ['/configuration'] },
-              { id: 'config-api-tokens',    label: 'API Tokens',           route: '/configuration', params: { tab: 'api-tokens' },    activeOn: ['/configuration'] },
-              { id: 'config-web',           label: 'Web Options',          route: '/configuration', params: { tab: 'web' },           activeOn: ['/configuration'] },
-              { id: 'config-observer',      label: 'Observer',             route: '/configuration', params: { tab: 'observer' },      activeOn: ['/configuration'] },
-              { id: 'config-policy-engine', label: 'Policies',             route: '/configuration', params: { tab: 'policy-engine' }, activeOn: ['/configuration'] },
+              { id: 'config-advert',        label: 'Advert Limits',        icon: Megaphone, route: '/configuration', params: { tab: 'advert' },        activeOn: ['/configuration'] },
+              { id: 'config-transport',     label: 'Regions/Keys',         icon: Globe,     route: '/configuration', params: { tab: 'transport' },     activeOn: ['/configuration'] },
+              { id: 'config-api-tokens',    label: 'API Tokens',           icon: KeyRound,  route: '/configuration', params: { tab: 'api-tokens' },    activeOn: ['/configuration'] },
+              { id: 'config-web',           label: 'Web Options',          icon: Globe,     route: '/configuration', params: { tab: 'web' },           activeOn: ['/configuration'] },
+              { id: 'config-observer',      label: 'Observer',             icon: Eye,       route: '/configuration', params: { tab: 'observer' },      activeOn: ['/configuration'] },
+              { id: 'config-policy-engine', label: 'Policies',             icon: Scale,     route: '/configuration', params: { tab: 'policy-engine' }, activeOn: ['/configuration'] },
             ],
           },
           {
-            id: 'config-maintenance',
-            label: 'Maintenance',
+            id: 'config-maintenance', label: 'Maintenance', icon: Wrench,
             activeOn: ['/configuration'],
             children: [
-              { id: 'config-backup',   label: 'Backup',   route: '/configuration', params: { tab: 'backup' },   activeOn: ['/configuration'] },
-              { id: 'config-database', label: 'Database', route: '/configuration', params: { tab: 'database' }, activeOn: ['/configuration'] },
-              { id: 'config-memory',   label: 'Memory',   route: '/configuration', params: { tab: 'memory' },   activeOn: ['/configuration'] },
+              { id: 'config-backup',   label: 'Backup',   icon: DatabaseBackup, route: '/configuration', params: { tab: 'backup' },   activeOn: ['/configuration'] },
+              { id: 'config-database', label: 'Database', icon: Database,       route: '/configuration', params: { tab: 'database' }, activeOn: ['/configuration'] },
+              { id: 'config-memory',   label: 'Memory',   icon: MemoryStick,    route: '/configuration', params: { tab: 'memory' },   activeOn: ['/configuration'] },
             ],
           },
         ],
       },
-      { id: 'terminal', label: 'Terminal', route: '/terminal' },
+      { id: 'system-stats', label: 'System Stats', icon: Cpu,      route: '/system-stats' },
+      { id: 'terminal',     label: 'Terminal',     icon: Terminal,  route: '/terminal' },
     ],
   },
   {
-    id: 'room',
-    label: 'Rooms, Companions',
+    id: 'room', label: 'Rooms, Companions', icon: Users2,
     children: [
-      { id: 'room-servers', label: 'Room Servers', route: '/room-servers' },
-      { id: 'companions',   label: 'Companions',   route: '/companions' },
+      { id: 'room-servers', label: 'Room Servers', icon: Building2, route: '/room-servers' },
+      { id: 'companions',   label: 'Companions',   icon: Bot,       route: '/companions' },
     ],
   },
   {
-    id: 'other',
-    label: 'Other',
+    id: 'other', label: 'Other', icon: Ellipsis,
     children: [
-      { id: 'logs', label: 'Logs', route: '/logs' },
-      { id: 'help', label: 'Help', route: '/help' },
+      { id: 'logs', label: 'Logs', icon: ScrollText,  route: '/logs' },
+      { id: 'help', label: 'Help', icon: HelpCircle,  route: '/help' },
     ],
   },
 ]
