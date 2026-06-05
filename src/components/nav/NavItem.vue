@@ -117,8 +117,9 @@ function handleClick() {
 const isChild = computed(() => depth.value > 0)
 
 const buttonClass = computed(() => {
-  const base = 'w-full rounded-[10px] py-3 flex items-center gap-3 text-sm font-medium transition-all duration-200'
-  const indent = isChild.value ? 'px-3' : 'px-4'
+  const py = depth.value >= 2 ? 'py-1.5' : depth.value === 1 ? 'py-2' : 'py-3'
+  const base = `w-full rounded-[10px] ${py} flex items-center gap-2 text-sm font-medium transition-all duration-200`
+  const indent = isChild.value ? 'px-2' : 'px-4'
 
   if (isActive.value) {
     return `${base} ${indent} bg-primary/20 text-primary border border-primary/40 font-semibold`
@@ -162,7 +163,7 @@ const iconClass = computed(() =>
     <Transition name="nav-expand">
       <div
         v-if="isGroup && expanded"
-        class="mt-1 ml-3 pl-3 border-l border-stroke-subtle dark:border-stroke/30 space-y-1"
+        class="mt-1 ml-1 pl-2 border-l border-stroke-subtle dark:border-stroke/30 space-y-0.5"
       >
         <NavItem
           v-for="child in item.children"
