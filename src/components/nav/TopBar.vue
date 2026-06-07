@@ -110,7 +110,7 @@ const checkForUpdates = async (force = false) => {
 };
 
 // Called by UpdateModal when install completes – update version info in the header.
-// Do NOT close the modal here; the user sees the success card and closes it themselves.
+// Do NOT close the UpdateModal here; the user sees the success card and closes it themselves.
 const handleInstalled = () => {
   notif.close();
   // Refresh update status so the bell badge reflects the new version
