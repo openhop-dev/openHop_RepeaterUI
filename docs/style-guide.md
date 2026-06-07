@@ -238,6 +238,21 @@ All classes live in `src/assets/main.css` inside `@layer utilities`.
 <input class="modal-input" type="text" />
 ```
 
+#### `.modal-input-readonly`
+**Purpose:** Read-only value display fields inside modals — API tokens, derived transport keys, coordinate readouts, or any field that shows a computed/fetched value the user cannot edit. Renders with the same surface as `modal-input` but adds `font-mono` and `cursor-default`. Has no focus ring. If copying is needed, provide an explicit copy button alongside the field rather than relying on select-on-click.
+
+Use `readonly` on the element itself. Do not use `disabled` — disabled fields are faded and cannot be selected/copied.  
+**Usage:**
+```html
+<!-- Token display -->
+<input :value="createdToken" readonly class="modal-input-readonly" />
+
+<!-- With extra layout classes at the callsite (floor-not-ceiling rule) -->
+<input :value="createdToken" readonly class="modal-input-readonly flex-1 text-sm" />
+```
+
+**Do not use** for editable fields. If a field the user types into sometimes becomes read-only based on state, use `modal-input` and add `readonly` conditionally — the visual appearance will still follow `modal-input` styling with a focus ring, which is fine since the field is usually editable.
+
 #### `.modal-select`
 **Purpose:** Full-width `<select>` for modal forms.  
 **Usage:**

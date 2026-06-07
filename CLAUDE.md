@@ -89,7 +89,7 @@ Before writing a Tailwind utility string in a template, check `src/assets/main.c
 ```
 Modal:   modal-backdrop  modal-backdrop-heavy  modal-card
          modal-form  modal-field-label  modal-field-label-row
-         modal-input  modal-select
+         modal-input  modal-input-readonly  modal-select
          modal-actions  modal-btn-cancel  modal-btn-primary  modal-btn-danger
 
 Config:  cfg-section  cfg-card  cfg-btn-primary  cfg-btn-secondary
@@ -148,6 +148,8 @@ If a variation is complex enough that it can't be handled with one or two extra 
 | Tailwind token aliases | `tailwind.config.js` |
 | Global utility classes | `src/assets/main.css` |
 | Spinner component | `src/components/ui/Spinner.vue` |
+| Copy button label | `src/components/ui/CopyLabel.vue` |
+| Copy to clipboard composable | `src/composables/useCopyToClipboard.ts` |
 | DataService store | `src/stores/dataService.ts` |
 | System store (stats) | `src/stores/system.ts` |
 | API client (auto-JWT) | `src/utils/api.ts` |

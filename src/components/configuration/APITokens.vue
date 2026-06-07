@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue';
 import apiClient, { API_SERVER_URL } from '@/utils/api';
 import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
+import CopyLabel from '@/components/ui/CopyLabel.vue';
 
 defineOptions({ name: 'APITokens' });
 
@@ -112,11 +114,10 @@ const closeTokenModal = () => {
   createdToken.value = null;
 };
 
-const copyToken = () => {
-  if (createdToken.value) {
-    navigator.clipboard.writeText(createdToken.value);
-    // Could add a toast notification here
-  }
+const { copy: copyToken, copied: tokenCopied } = useCopyToClipboard();
+
+const handleCopyToken = () => {
+  if (createdToken.value) copyToken(createdToken.value);
 };
 
 const formatTimestamp = (timestamp: number | null) => {
@@ -181,10 +182,10 @@ onMounted(() => {
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <div class="text-xs sm:text-sm text-blue-700 dark:text-blue-200">
+        <div class="text-xs sm:text-sm text-content-secondary dark:text-content-muted">
           <p>
             <strong>API tokens</strong> are used for machine-to-machine authentication. Include the
-            token in the <code class="bg-blue-500/20 px-1 rounded">X-API-Key</code> header when
+            token in the <code class="bg-background-mute dark:bg-white/10 px-1 rounded font-mono">X-API-Key</code> header when
             making API requests.
           </p>
           <p class="mt-2">Tokens are only shown once at creation. Store them securely.</p>
@@ -371,7 +372,7 @@ onMounted(() => {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <div class="text-sm text-yellow-200">
+              <div class="text-sm text-secondary">
                 <strong>Save this token now!</strong> For security reasons, it will not be shown
                 again.
               </div>
@@ -387,31 +388,26 @@ onMounted(() => {
               <input
                 :value="createdToken"
                 readonly
-                class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary font-mono text-sm"
+                class="modal-input-readonly flex-1 text-sm"
               />
               <button
-                @click="copyToken"
-                class="btn-primary flex items-center gap-2"
-                title="Copy to clipboard"
+                @click="handleCopyToken"
+                :class="['flex items-center gap-2 transition-colors', tokenCopied ? 'btn-success' : 'btn-primary']"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
+                <svg v-if="!tokenCopied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <CopyLabel :copied="tokenCopied" />
               </button>
             </div>
           </div>
 
-          <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <p class="text-sm text-blue-200 mb-2"><strong>Usage Example:</strong></p>
-            <code
-              class="block bg-blue-500/20 px-3 py-2 rounded text-xs text-blue-100 font-mono overflow-x-auto"
-            >
+          <div class="cfg-card p-4">
+            <p class="text-sm text-content-secondary dark:text-content-muted mb-2"><strong>Usage Example:</strong></p>
+            <code class="code-block">
               curl -H "X-API-Key: {{ createdToken }}" {{ exampleUrl }}
             </code>
           </div>

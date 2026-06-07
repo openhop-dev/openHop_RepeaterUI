@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue';
 import TreeNode from '@/components/ui/TreeNode.vue';
-import AddKeyModal from '@/components/modals/AddKeyModal.vue';
-import EditKeyModal from '@/components/modals/EditKeyModal.vue';
+import KeyModal from '@/components/modals/KeyModal.vue';
 import DeleteConfirmModal from '@/components/modals/DeleteConfirmModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useTreeStateStore } from '@/stores/treeState';
@@ -446,19 +445,21 @@ defineExpose({ requestLeave, isEditing });
       </div>
     </div>
 
-    <!-- Add Region Modal -->
-    <AddKeyModal
+    <!-- Add Modal -->
+    <KeyModal
       :show="showAddModal"
-      :selected-node-name="getSelectedNodeName()"
-      :selected-node-id="treeStore.selectedNodeId.value || undefined"
+      :node="null"
+      :selected-parent-id="treeStore.selectedNodeId.value || undefined"
+      :all-nodes="transportKeysData"
       @close="showAddModal = false"
       @add="handleAddKey"
     />
 
-    <!-- Edit Region Modal -->
-    <EditKeyModal
+    <!-- Edit Modal -->
+    <KeyModal
       :show="showEditModal"
       :node="editingNode"
+      :all-nodes="transportKeysData"
       @close="handleCloseEditModal"
       @save="handleSaveEdit"
     />

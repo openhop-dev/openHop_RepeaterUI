@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
+import CopyLabel from '@/components/ui/CopyLabel.vue';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
@@ -9,7 +11,7 @@ import 'leaflet/dist/leaflet.css';
 defineOptions({ name: 'NeighborDetailsModal' });
 
 const { getSignalQuality } = useSignalQuality();
-const copyButtonText = ref('Copy');
+const { copy: _copyCoords, copied: coordsCopied } = useCopyToClipboard();
 
 interface Neighbor {
   id: number;
@@ -73,28 +75,11 @@ const getContactTypeColor = (contactType: string) => {
   return colors[contactType] || 'text-gray-600 dark:text-gray-400';
 };
 
-const copyCoordinates = async () => {
+const copyCoordinates = () => {
   if (!props.neighbor?.latitude || !props.neighbor?.longitude) return;
-
   const lat = props.neighbor.latitude.toFixed(6);
   const lon = props.neighbor.longitude.toFixed(6);
-  const coordString = `${lat}, ${lon}`;
-
-  try {
-    await navigator.clipboard.writeText(coordString);
-    copyButtonText.value = 'Copied!';
-
-    setTimeout(() => {
-      copyButtonText.value = 'Copy';
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy coordinates:', error);
-    copyButtonText.value = 'Failed';
-
-    setTimeout(() => {
-      copyButtonText.value = 'Copy';
-    }, 2000);
-  }
+  _copyCoords(`${lat}, ${lon}`);
 };
 
 // Calculate distance if both base and neighbor coordinates exist
@@ -512,7 +497,7 @@ const signalQuality = computed(() => {
                           d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                         />
                       </svg>
-                      {{ copyButtonText }}
+                      <CopyLabel :copied="coordsCopied" />
                     </button>
                   </div>
                 </div>

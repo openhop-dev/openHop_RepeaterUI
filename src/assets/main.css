@@ -172,6 +172,31 @@
            focus:outline-none focus:border-primary transition-colors;
   }
 
+  /* Copy-button label swap transition — pair with <Transition name="label-swap" mode="out-in"> */
+  .label-swap-enter-active,
+  .label-swap-leave-active {
+    transition: opacity 150ms ease;
+  }
+  .label-swap-enter-from,
+  .label-swap-leave-to {
+    opacity: 0;
+  }
+
+  /* Block-level monospace code/command display (curl examples, config snippets) */
+  .code-block {
+    @apply block bg-background-mute dark:bg-white/10 px-3 py-2 rounded
+           text-xs text-content-primary dark:text-content-primary
+           font-mono overflow-x-auto;
+  }
+
+  /* Read-only value display fields (tokens, coordinates, derived keys) */
+  .modal-input-readonly {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
+           border border-stroke-subtle dark:border-stroke/10
+           text-content-primary dark:text-content-primary
+           font-mono cursor-default focus:outline-none focus:ring-0 focus:border-stroke-subtle dark:focus:border-stroke/10;
+  }
+
   /* ── Modal action row + buttons ─────────────────────────────────────────── */
 
   /* Wraps the button row at the bottom of a modal form */
