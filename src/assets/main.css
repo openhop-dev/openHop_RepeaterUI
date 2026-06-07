@@ -54,6 +54,11 @@
     @apply px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* ── TopBar icon buttons ────────────────────────────────────────────────── */
+  .topbar-icon-btn {
+    @apply w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors;
+  }
+
   /* ── General-purpose buttons ────────────────────────────────────────────── */
   /* Use outside modal/config contexts. No flex-1 — add layout classes inline. */
   /* Never use bg-primary text-white — primary is light teal in dark mode.     */
