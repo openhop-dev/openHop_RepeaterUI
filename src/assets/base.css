@@ -205,12 +205,6 @@ body {
   --nav-hover-icon-shadow: drop-shadow(0 0 3px var(--color-primary));
 }
 
-.dark select,
-.dark input,
-.dark textarea {
-  color-scheme: dark;
-}
-
 /* Avoid forcing a bright custom surface on native dropdown controls in dark mode. */
 .dark select {
   background-color: transparent !important;
