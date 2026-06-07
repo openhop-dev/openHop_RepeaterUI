@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import {
   LayoutDashboard, Megaphone, Activity, Cable, MapPin, Gauge,
   BarChart2, Server, Cpu, Settings, Antenna, Terminal,
-  Users2, ScrollText, HelpCircle, Ellipsis,
+  Users2, ScrollText, HelpCircle,
   ShieldCheck, Wrench, Radio, Timer, Percent, Globe, KeyRound, Eye, Scale,
   DatabaseBackup, Database, MemoryStick, Building2, Bot, Repeat2,
 } from '@lucide/vue'
@@ -58,6 +58,7 @@ export const navigationItems: NavItemConfig[] = [
     id: 'analytics', label: 'Analytics', icon: BarChart2,
     children: [
       { id: 'statistics', label: 'Statistics', icon: BarChart2,  route: '/statistics' },
+      { id: 'logs',       label: 'Logs',       icon: ScrollText, route: '/logs' },
     ],
   },
   {
@@ -112,11 +113,5 @@ export const navigationItems: NavItemConfig[] = [
       { id: 'companions',   label: 'Companions',   icon: Bot,       route: '/companions' },
     ],
   },
-  {
-    id: 'other', label: 'Other', icon: Ellipsis,
-    children: [
-      { id: 'logs', label: 'Logs', icon: ScrollText,  route: '/logs' },
-      { id: 'help', label: 'Help', icon: HelpCircle,  route: '/help' },
-    ],
-  },
+  { id: 'help', label: 'Help', icon: HelpCircle, route: '/help' },
 ]
