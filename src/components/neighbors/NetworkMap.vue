@@ -863,7 +863,7 @@ onUnmounted(() => {
     </button>
 
     <!-- Legend overlay -->
-    <div v-if="hasValidCoordinates && adverts.length > 0 && showLegend" class="map-legend">
+    <div v-if="hasValidCoordinates && adverts.length > 0 && showLegend" class="map-legend z-[200]">
       <!-- Node Types -->
       <div class="legend-section">
         <div class="legend-subtitle">Node Types</div>
@@ -920,7 +920,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Manual attribution to avoid chrome errors -->
-    <div v-if="hasValidCoordinates" class="map-attribution">
+    <div v-if="hasValidCoordinates" class="map-attribution z-[200]">
       © OpenStreetMap contributors © CARTO
     </div>
   </div>
@@ -951,7 +951,6 @@ onUnmounted(() => {
   font-size: 12px;
   color: #ffffff;
   backdrop-filter: blur(20px);
-  z-index: 200;
   min-width: 150px;
   max-width: 180px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
@@ -1191,7 +1190,6 @@ onUnmounted(() => {
   padding: 4px 8px;
   font-size: 10px;
   backdrop-filter: blur(20px);
-  z-index: 1000;
 }
 
 /* Hide leaflet attribution on small screens */

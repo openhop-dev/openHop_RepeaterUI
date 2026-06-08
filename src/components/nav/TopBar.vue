@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import { useAnchoredDropdown } from '@/composables/useAnchoredDropdown';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
 import { useNeighborStore } from '@/stores/neighbors';
@@ -26,11 +27,9 @@ const systemStore = useSystemStore();
 const neighborStore = useNeighborStore();
 const appRuntime = useAppRuntimeStore();
 
-const showNotifications = ref(false);
-const notifRef = ref<HTMLElement | null>(null);
+const notif = useAnchoredDropdown();
+const userMenu = useAnchoredDropdown();
 const showUpdateModal = ref(false);
-const showUserMenu = ref(false);
-const userMenuRef = ref<HTMLElement | null>(null);
 const showRestartModal = ref(false);
 
 // Update checking state
@@ -74,15 +73,6 @@ const lastUpdateTime = computed(() =>
   neighborStore.lastFetched ? new Date(neighborStore.lastFetched) : null,
 );
 
-function handleDocClick(e: MouseEvent) {
-  const target = e.target as Node;
-  if (notifRef.value && !notifRef.value.contains(target)) {
-    showNotifications.value = false;
-  }
-  if (userMenuRef.value && !userMenuRef.value.contains(target)) {
-    showUserMenu.value = false;
-  }
-}
 
 // Check for updates via the backend API (server-side GitHub check)
 const checkForUpdates = async (force = false) => {
@@ -120,9 +110,9 @@ const checkForUpdates = async (force = false) => {
 };
 
 // Called by UpdateModal when install completes – update version info in the header.
-// Do NOT close the modal here; the user sees the success card and closes it themselves.
+// Do NOT close the UpdateModal here; the user sees the success card and closes it themselves.
 const handleInstalled = () => {
-  showNotifications.value = false;
+  notif.close();
   // Refresh update status so the bell badge reflects the new version
   checkForUpdates();
   // Immediately refresh /api/stats so the sidebar version reflects the newly installed package
@@ -206,12 +196,7 @@ const getLatestNodeName = (contactType: string) => {
 };
 
 onMounted(() => {
-  document.addEventListener('click', handleDocClick);
   checkForUpdates();
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocClick);
 });
 
 useManagedPolling(() => checkForUpdates(), {
@@ -231,7 +216,7 @@ const toggleMobileSidebar = () => {
       <div class="flex items-center gap-3">
         <button
           @click="toggleMobileSidebar"
-          class="lg:hidden w-10 h-10 rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors"
+          class="lg:hidden topbar-icon-btn"
         >
           <svg
             class="w-5 h-5 text-content-secondary dark:text-content-primary"
@@ -258,7 +243,7 @@ const toggleMobileSidebar = () => {
         </div>
       </div>
       <div class="flex items-center gap-3 sm:gap-4 relative">
-        <div class="text-right" style="min-width: 180px">
+        <div class="text-right min-w-[120px] sm:min-w-[180px]">
           <div v-if="loading" class="flex items-center gap-2 justify-end">
             <Spinner size="xs" />
             <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -303,7 +288,7 @@ const toggleMobileSidebar = () => {
           href="https://github.com/rightup/pyMC_Repeater/issues/new"
           target="_blank"
           rel="noopener noreferrer"
-          class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors hidden sm:flex"
+          class="topbar-icon-btn hidden sm:flex"
           title="Report a bug"
         >
           <svg
@@ -348,7 +333,7 @@ const toggleMobileSidebar = () => {
           href="/doc"
           target="_blank"
           rel="noopener noreferrer"
-          class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors hidden sm:flex"
+          class="topbar-icon-btn hidden sm:flex"
           title="API Documentation"
         >
           <svg
@@ -365,10 +350,11 @@ const toggleMobileSidebar = () => {
             <path d="M11 3L9 17" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </a>
-        <div ref="notifRef" @click.stop>
+        <div :ref="notif.wrapperRef">
         <button
-          @click="showNotifications = !showNotifications"
-          class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors relative"
+          :ref="notif.triggerRef"
+          @click="notif.toggle()"
+          class="topbar-icon-btn relative"
         >
           <svg
             class="w-5 h-5 text-content-secondary dark:text-content-primary"
@@ -397,9 +383,12 @@ const toggleMobileSidebar = () => {
             "
           ></span>
         </button>
+        <Teleport to="body">
         <div
-          v-if="showNotifications"
-          class="absolute right-[5px] top-10 z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm"
+          v-if="notif.isOpen.value"
+          :ref="notif.panelRef"
+          :style="notif.panelStyle.value"
+          class="fixed z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm overflow-y-auto max-h-[calc(100vh-4rem)]"
         >
           <div class="flex items-center justify-between mb-3">
             <p class="text-content-primary dark:text-content-primary font-semibold">
@@ -444,7 +433,7 @@ const toggleMobileSidebar = () => {
                 <button
                   @click="
                     showUpdateModal = true;
-                    showNotifications = false;
+                    notif.close();
                   "
                   class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red"
                 >
@@ -517,7 +506,7 @@ const toggleMobileSidebar = () => {
                 <button
                   @click="
                     showUpdateModal = true;
-                    showNotifications = false;
+                    notif.close();
                   "
                   class="text-xs bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg font-medium transition-colors"
                 >
@@ -646,15 +635,17 @@ const toggleMobileSidebar = () => {
             </div>
           </div>
         </div>
+        </Teleport>
         </div>
 
         <!-- Theme Toggle -->
         <ThemeToggle />
 
-        <div class="hidden sm:block" ref="userMenuRef" @click.stop>
+        <div :ref="userMenu.wrapperRef">
           <button
-            @click="showUserMenu = !showUserMenu"
-            class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors flex"
+            :ref="userMenu.triggerRef"
+            @click="userMenu.toggle()"
+            class="topbar-icon-btn"
             title="User menu"
           >
             <svg
@@ -672,12 +663,15 @@ const toggleMobileSidebar = () => {
               />
             </svg>
           </button>
+          <Teleport to="body">
           <div
-            v-if="showUserMenu"
-            class="absolute right-[5px] top-10 z-[100] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
+            v-if="userMenu.isOpen.value"
+            :ref="userMenu.panelRef"
+            :style="userMenu.panelStyle.value"
+            class="fixed z-[250] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
           >
             <button
-              @click="showRestartModal = true; showUserMenu = false"
+              @click="showRestartModal = true; userMenu.close()"
               class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
             >
               <svg
@@ -719,6 +713,7 @@ const toggleMobileSidebar = () => {
               Logout
             </button>
           </div>
+          </Teleport>
         </div>
       </div>
     </div>

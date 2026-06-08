@@ -95,6 +95,66 @@ The `label-swap` transition (150ms opacity crossfade) is defined in `main.css` a
 
 ---
 
+## useAnchoredDropdown
+
+`src/composables/useAnchoredDropdown.ts`
+
+A composable for Teleported dropdown panels that need to escape a CSS stacking context (e.g. a parent with `backdrop-filter` or `transform`). Manages open/close state, click-outside dismissal, and `fixed` viewport-relative positioning anchored to a trigger button.
+
+Use this any time a dropdown panel needs to be teleported to `<body>`. Do not duplicate the Teleport + positioning logic inline.
+
+### Returns
+
+| Name | Type | Description |
+|---|---|---|
+| `triggerRef` | `Ref<HTMLElement \| null>` | Attach to the button that opens/closes the panel |
+| `wrapperRef` | `Ref<HTMLElement \| null>` | Attach to the container div that wraps the trigger |
+| `panelRef` | `Ref<HTMLElement \| null>` | Attach to the Teleported panel element |
+| `isOpen` | `Ref<boolean>` | Whether the panel is currently open |
+| `panelStyle` | `Ref<Record<string, string>>` | Inline style object — bind to the panel with `:style` |
+| `open()` | `() => void` | Open the panel and calculate position |
+| `close()` | `() => void` | Close the panel |
+| `toggle()` | `() => void` | Toggle open/closed |
+
+### Usage
+
+```vue
+<script setup>
+import { useAnchoredDropdown } from '@/composables/useAnchoredDropdown'
+const menu = useAnchoredDropdown()
+</script>
+
+<template>
+  <div :ref="menu.wrapperRef">
+    <button :ref="menu.triggerRef" @click="menu.toggle()" class="topbar-icon-btn">
+      <!-- icon -->
+    </button>
+    <Teleport to="body">
+      <div
+        v-if="menu.isOpen.value"
+        :ref="menu.panelRef"
+        :style="menu.panelStyle.value"
+        class="fixed z-[250] ..."
+      >
+        <!-- panel content -->
+      </div>
+    </Teleport>
+  </div>
+</template>
+```
+
+### Positioning behaviour
+
+- **Desktop (≥ 640 px):** panel is right-aligned to the trigger button's right edge, 4 px below it.
+- **Mobile (< 640 px):** panel is horizontally centred in the viewport.
+- A scroll listener on `<main>` recalculates position as the page scrolls so the panel tracks the trigger button.
+
+### Click-outside
+
+Handled automatically via a `document` click listener. Do **not** add `@click.stop` to the wrapper — propagation must reach the document so that opening one dropdown closes any other open dropdown.
+
+---
+
 ## NeighborMenu
 
 `src/components/ui/NeighborMenu.vue`
