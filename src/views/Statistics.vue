@@ -944,7 +944,7 @@ onBeforeUnmount(() => {
         <select
           v-model="selectedHours"
           @change="onTimeRangeChange"
-          class="bg-white dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-content-primary dark:text-content-primary text-xs sm:text-sm focus:outline-hidden focus:border-primary dark:focus:border-accent-purple/50 transition-colors"
+          class="modal-select w-auto"
         >
           <option
             v-for="option in timeOptions"

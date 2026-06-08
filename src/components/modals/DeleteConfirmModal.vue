@@ -251,7 +251,7 @@ const handleClose = () => {
               v-model="searchQuery"
               type="text"
               placeholder="Search regions..."
-              class="w-full pl-9 pr-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors text-sm"
+              class="modal-input pl-9"
             />
           </div>
         </div>

@@ -167,9 +167,7 @@ async function confirmDeleteIdentity() {
 
     if (response.success) {
       await fetchIdentities();
-
-      // Show success message with hot reload status
-      showMessage(response.message || 'Identity deleted successfully!', 'success');
+      showRestartModal.value = true;
     } else {
       showMessage(`Failed to delete identity: ${response.error}`, 'error');
     }
@@ -227,6 +225,7 @@ function resetForm() {
       guest_password: '',
     },
   };
+  roundCoords(newIdentity.value.settings);
   showKeyInCreate.value = false;
 }
 
@@ -1496,7 +1495,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 @keydown.meta.enter="sendMessage"
                 placeholder="Type your message... (Ctrl+Enter to send)"
                 rows="3"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-3 text-content-primary dark:text-content-primary text-sm placeholder-gray-500 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 focus:bg-white dark:focus:bg-white/10 transition-all resize-none"
+                class="modal-input resize-none px-4 py-3"
               ></textarea>
             </div>
             <button

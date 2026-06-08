@@ -564,7 +564,7 @@ function onImportDone(imported: number) {
               v-model="newIdentity.name"
               type="text"
               placeholder="e.g., TestCompanion"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
@@ -584,7 +584,7 @@ function onImportDone(imported: number) {
                 v-model="newIdentity.identity_key"
                 type="text"
                 placeholder="Leave empty to auto-generate (32 bytes hex)"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary font-mono text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input font-mono text-sm"
               />
               <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
                 32 or 64 bytes hex. Leave empty to auto-generate.
@@ -603,7 +603,7 @@ function onImportDone(imported: number) {
               v-model="newIdentity.settings.node_name"
               type="text"
               placeholder="Display name (defaults to Name)"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
@@ -617,7 +617,7 @@ function onImportDone(imported: number) {
                 type="number"
                 min="1"
                 max="65535"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
             </div>
             <div>
@@ -628,7 +628,7 @@ function onImportDone(imported: number) {
                 v-model="newIdentity.settings.bind_address"
                 type="text"
                 placeholder="0.0.0.0"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
             </div>
           </div>
@@ -674,7 +674,7 @@ function onImportDone(imported: number) {
             <input
               v-model="editingIdentity.name"
               type="text"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
@@ -694,7 +694,7 @@ function onImportDone(imported: number) {
                 v-model="editingIdentity.identity_key"
                 type="text"
                 placeholder="Leave empty to keep current key"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary font-mono text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input font-mono text-sm"
               />
             </div>
           </div>
@@ -706,7 +706,7 @@ function onImportDone(imported: number) {
             <input
               v-model="editingIdentity.settings.node_name"
               type="text"
-              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+              class="modal-input"
             />
           </div>
 
@@ -720,7 +720,7 @@ function onImportDone(imported: number) {
                 type="number"
                 min="1"
                 max="65535"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
             </div>
             <div>
@@ -730,7 +730,7 @@ function onImportDone(imported: number) {
               <input
                 v-model="editingIdentity.settings.bind_address"
                 type="text"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+                class="modal-input"
               />
             </div>
           </div>

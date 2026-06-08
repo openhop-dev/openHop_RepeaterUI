@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
@@ -71,14 +71,14 @@ const saveChanges = async () => {
   successMessage.value = '';
 
   try {
-    const response = await authClient.post('/api/update_duty_cycle_config', {
+    const response = await ApiService.post('/update_duty_cycle_config', {
       max_airtime_percent: maxAirtimeInput.value,
       enforcement_enabled: enforcementInput.value,
     });
 
-    const data = response.data;
-    if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
+    const data = response.data as { message?: string; persisted?: boolean; error?: string } | undefined;
+    if (data?.message || data?.persisted) {
+      successMessage.value = data?.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
@@ -89,7 +89,7 @@ const saveChanges = async () => {
         successMessage.value = '';
       }, 3000);
     } else {
-      errorMessage.value = 'Failed to save settings';
+      errorMessage.value = data?.error || 'Failed to save settings';
     }
   } catch (error: any) {
     console.error('Failed to save duty cycle settings:', error);

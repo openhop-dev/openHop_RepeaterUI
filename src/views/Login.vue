@@ -48,7 +48,7 @@
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="handleLogin" class="space-y-4 sm:space-y-5">
+        <form @submit.prevent="handleLogin" autocomplete="on" action="/" class="space-y-4 sm:space-y-5">
           <!-- Username Field -->
           <div class="form-group">
             <label
@@ -60,9 +60,13 @@
             <div class="relative">
               <input
                 id="username"
+                name="username"
                 v-model="username"
                 type="text"
                 autocomplete="username"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter username"
@@ -83,9 +87,13 @@
             <div class="relative">
               <input
                 id="password"
+                name="password"
                 v-model="password"
                 type="password"
                 autocomplete="current-password"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter password"

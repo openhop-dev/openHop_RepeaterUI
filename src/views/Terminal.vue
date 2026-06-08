@@ -956,7 +956,7 @@ const handleMobileBackspace = () => {
           @keydown.esc="closeSearch"
           type="text"
           placeholder="Search terminal output..."
-          class="flex-1 px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 outline-none focus:border-primary/50 transition-colors"
+          class="modal-input flex-1 px-4"
         />
         <button
           @click="searchPrev"

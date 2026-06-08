@@ -183,6 +183,19 @@ const getStatusText = (packet: RecentPacket) => {
   return packet.transmitted ? 'Forward' : 'Received';
 };
 
+const isPolicyBlockedPacket = (packet: RecentPacket) => {
+  const reason = packet.drop_reason?.toLowerCase();
+  return Boolean(reason && reason.includes('policy blocked'));
+};
+
+const getPacketRowClass = (packet: RecentPacket) => {
+  if (!isPolicyBlockedPacket(packet)) {
+    return '';
+  }
+
+  return '';
+};
+
 const getRouteClass = (route: number) => {
   return route === 1
     ? 'bg-badge-cyan-bg text-badge-cyan-text'
@@ -555,7 +568,7 @@ onBeforeUnmount(() => {
           v-for="(packet, index) in paginatedPackets"
           :key="`${packet.packet_hash}_${packet.timestamp}_${index}`"
           class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
-          :class="getPacketTypeColor(packet.type)"
+          :class="[getPacketTypeColor(packet.type), getPacketRowClass(packet)]"
           @click="openPacketDetails(packet)"
         >
           <!-- Desktop Table View -->
@@ -692,9 +705,37 @@ onBeforeUnmount(() => {
             </div>
             <div class="col-span-1">
               <div>
-                <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                  getStatusText(packet)
-                }}</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
+                    getStatusText(packet)
+                  }}</span>
+                  <span
+                    v-if="isPolicyBlockedPacket(packet)"
+                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                    title="Policy blocked"
+                  >
+                    <svg
+                      class="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                      ></path>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 8l8 8"
+                      ></path>
+                    </svg>
+                  </span>
+                </div>
                 <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
                   {{ packet.drop_reason }}
                 </p>
@@ -736,9 +777,37 @@ onBeforeUnmount(() => {
                 <span class="text-content-secondary dark:text-content-muted text-xs">{{
                   formatTime(packet.timestamp)
                 }}</span>
-                <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                  getStatusText(packet)
-                }}</span>
+                <div class="flex items-center gap-1">
+                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
+                    getStatusText(packet)
+                  }}</span>
+                  <span
+                    v-if="isPolicyBlockedPacket(packet)"
+                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                    title="Policy blocked"
+                  >
+                    <svg
+                      class="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                      ></path>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 8l8 8"
+                      ></path>
+                    </svg>
+                  </span>
+                </div>
               </div>
             </div>
 
