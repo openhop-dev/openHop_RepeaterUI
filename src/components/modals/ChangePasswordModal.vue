@@ -26,7 +26,7 @@
             v-model="currentPassword"
             type="password"
             required
-            class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
+            class="modal-input"
             placeholder="Enter current password"
           />
         </div>
@@ -42,7 +42,7 @@
             type="password"
             required
             minlength="8"
-            class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
+            class="modal-input"
             placeholder="Enter new password (min 8 characters)"
           />
         </div>
@@ -58,7 +58,7 @@
             type="password"
             required
             minlength="8"
-            class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
+            class="modal-input"
             placeholder="Confirm new password"
           />
         </div>

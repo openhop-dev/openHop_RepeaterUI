@@ -13,9 +13,11 @@ const emit = defineEmits<{
   select: [{ latitude: number; longitude: number }];
 }>();
 
+const roundCoord = (v: number) => Math.round(v * 1e6) / 1e6;
+
 const mapContainer = ref<HTMLDivElement | null>(null);
-const selectedLat = ref(props.latitude || 0);
-const selectedLng = ref(props.longitude || 0);
+const selectedLat = ref(roundCoord(props.latitude || 0));
+const selectedLng = ref(roundCoord(props.longitude || 0));
 let map: any = null;
 let marker: any = null;
 
@@ -82,8 +84,8 @@ const initMap = async () => {
 
     // Click to set location
     map.on('click', (e: any) => {
-      selectedLat.value = e.latlng.lat;
-      selectedLng.value = e.latlng.lng;
+      selectedLat.value = roundCoord(e.latlng.lat);
+      selectedLng.value = roundCoord(e.latlng.lng);
 
       if (marker) {
         marker.setLatLng(e.latlng);
@@ -125,15 +127,15 @@ watch(
 watch(
   () => [props.latitude, props.longitude],
   ([lat, lng]) => {
-    selectedLat.value = lat;
-    selectedLng.value = lng;
+    selectedLat.value = roundCoord(lat);
+    selectedLng.value = roundCoord(lng);
   },
 );
 
 const handleSelect = () => {
   emit('select', {
-    latitude: Math.round(selectedLat.value * 1e6) / 1e6,
-    longitude: Math.round(selectedLng.value * 1e6) / 1e6,
+    latitude: roundCoord(selectedLat.value),
+    longitude: roundCoord(selectedLng.value),
   });
   emit('close');
 };
@@ -147,8 +149,8 @@ const getCurrentLocation = () => {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        selectedLat.value = position.coords.latitude;
-        selectedLng.value = position.coords.longitude;
+        selectedLat.value = roundCoord(position.coords.latitude);
+        selectedLng.value = roundCoord(position.coords.longitude);
 
         if (map) {
           map.setView([selectedLat.value, selectedLng.value], 13);
@@ -226,7 +228,7 @@ onUnmounted(() => {
               v-model.number="selectedLat"
               type="number"
               step="0.000001"
-              class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary focus:outline-none focus:border-primary"
+              class="modal-input-readonly"
               readonly
             />
           </div>
@@ -239,7 +241,7 @@ onUnmounted(() => {
               v-model.number="selectedLng"
               type="number"
               step="0.000001"
-              class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary focus:outline-none focus:border-primary"
+              class="modal-input-readonly"
               readonly
             />
           </div>
