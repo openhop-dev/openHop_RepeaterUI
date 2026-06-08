@@ -102,6 +102,9 @@ Buttons: btn-primary  btn-danger  btn-success  btn-secondary
          (use modal-btn-* inside modal footers; btn-* everywhere else)
 
 Misc:    code-block  (block monospace code/command display)
+
+TopBar:  topbar-icon-btn
+         (35×35 px icon button — use for all icon buttons in the TopBar)
 ```
 
 If the same Tailwind string appears in more than two files, add a named class to `main.css` rather than repeating it.

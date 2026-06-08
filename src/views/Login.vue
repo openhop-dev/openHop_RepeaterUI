@@ -48,7 +48,7 @@
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="handleLogin" autocomplete="on" class="space-y-4 sm:space-y-5">
+        <form @submit.prevent="handleLogin" autocomplete="on" action="/" class="space-y-4 sm:space-y-5">
           <!-- Username Field -->
           <div class="form-group">
             <label
