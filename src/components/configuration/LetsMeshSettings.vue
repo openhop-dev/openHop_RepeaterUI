@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
 import BrokerEditModal from '@/components/modals/BrokerEditModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
@@ -69,6 +69,17 @@ interface Snapshot {
 }
 const globalSnapshot = ref<Snapshot | null>(null);
 
+interface MqttStatus {
+  handler_active: boolean;
+  brokers: {
+    enabled: boolean;
+    name: string;
+    host: string;
+    status: { connected: boolean; reconnecting: boolean };
+    format: string;
+  }[];
+}
+
 // ── Observer settings ─────────────────────────────────────────────────────
 const isEditingObserver = ref(false);
 const iataCodeInput = ref('');
@@ -105,8 +116,8 @@ async function fetchStatus() {
   if (loadingStatus.value) return;
   loadingStatus.value = true;
   try {
-    const res = await authClient.get('/api/mqtt_status');
-    if (res.data?.success) status.value = res.data.data;
+    const res = await ApiService.get('/mqtt_status');
+    if (res.success) status.value = res.data as MqttStatus;
   } catch { /* silent */ } finally {
     loadingStatus.value = false;
   }
@@ -166,14 +177,13 @@ function buildPayload() {
 
 async function callSaveApi(): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await authClient.post('/api/update_mqtt_config', buildPayload());
-    const data = res.data;
-    if (data?.success) {
+    const res = await ApiService.post('/update_mqtt_config', buildPayload());
+    if (res.success) {
       await systemStore.fetchStats();
       await fetchStatus();
       return { success: true };
     }
-    return { success: false, error: data?.error || 'Save failed' };
+    return { success: false, error: res.error || 'Save failed' };
   } catch (err: unknown) {
     const e = err as { response?: { data?: { error?: string } }; message?: string };
     return { success: false, error: e?.response?.data?.error || e?.message || 'Request failed' };
@@ -321,13 +331,12 @@ async function fetchBrokerPresets() {
   templatesLoading.value = true;
   templatesError.value = '';
   try {
-    const res = await authClient.get('/api/broker_presets');
-    const data = res.data;
-    if (data?.success && Array.isArray(data.data)) {
-      BROKER_TEMPLATES.value = data.data as BrokerTemplate[];
+    const res = await ApiService.get('/broker_presets');
+    if (res.success && Array.isArray(res.data)) {
+      BROKER_TEMPLATES.value = res.data as BrokerTemplate[];
     } else {
       BROKER_TEMPLATES.value = [];
-      templatesError.value = data?.error || 'Failed to load broker presets';
+      templatesError.value = res.error || 'Failed to load broker presets';
     }
   } catch (err: unknown) {
     BROKER_TEMPLATES.value = [];

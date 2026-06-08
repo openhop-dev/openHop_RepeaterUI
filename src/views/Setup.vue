@@ -411,7 +411,7 @@ const stepTitles = [
               <input
                 v-model="setupStore.nodeName"
                 type="text"
-                class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                class="modal-input"
                 placeholder="e.g., pyRpt0001"
                 maxlength="32"
               />
@@ -571,7 +571,7 @@ const stepTitles = [
                           <div class="flex gap-2">
                             <select
                               v-model="setupStore.usbPort"
-                              class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                              class="modal-select px-4 py-3 font-mono"
                               :disabled="useCustomUsbPath"
                             >
                               <option
@@ -607,7 +607,7 @@ const stepTitles = [
                             v-if="useCustomUsbPath"
                             v-model="setupStore.usbPort"
                             type="text"
-                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                            class="modal-input px-4 py-3 font-mono"
                             placeholder="/dev/ttyACM0"
                           />
 
@@ -638,7 +638,7 @@ const stepTitles = [
                         <input
                           v-model="setupStore.tcpHost"
                           type="text"
-                          class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all font-mono"
+                          class="modal-input px-4 py-3 font-mono"
                           placeholder="pymc-3e2834.local"
                         />
                         <p class="text-content-muted dark:text-content-muted text-xs mt-2">
@@ -655,7 +655,7 @@ const stepTitles = [
                             type="number"
                             min="1"
                             max="65535"
-                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                            class="modal-input px-4 py-3"
                             placeholder="5055"
                           />
                           <p class="text-content-muted dark:text-content-muted text-xs mt-2">Default is 5055.</p>
@@ -668,7 +668,7 @@ const stepTitles = [
                           <input
                             v-model="setupStore.tcpToken"
                             type="password"
-                            class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                            class="modal-input px-4 py-3"
                             placeholder="Leave blank if none"
                           />
                           <p class="text-content-muted dark:text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
@@ -834,7 +834,7 @@ const stepTitles = [
                         v-model="setupStore.customRadio.frequency"
                         type="number"
                         step="0.1"
-                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        class="modal-input px-4 py-2.5"
                         placeholder="915.0"
                       />
                     </div>
@@ -846,7 +846,7 @@ const stepTitles = [
                       <input
                         v-model="setupStore.customRadio.bandwidth"
                         type="number"
-                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        class="modal-input px-4 py-2.5"
                         placeholder="125"
                       />
                     </div>
@@ -857,7 +857,7 @@ const stepTitles = [
                       >
                       <select
                         v-model="setupStore.customRadio.spreading_factor"
-                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        class="modal-select px-4 py-2.5"
                       >
                         <option value="7">7</option>
                         <option value="8">8</option>
@@ -874,7 +874,7 @@ const stepTitles = [
                       >
                       <select
                         v-model="setupStore.customRadio.coding_rate"
-                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        class="modal-select px-4 py-2.5"
                       >
                         <option value="5">4/5</option>
                         <option value="6">4/6</option>
@@ -892,7 +892,7 @@ const stepTitles = [
                         type="number"
                         min="-9"
                         max="22"
-                        class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] px-4 py-2.5 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                        class="modal-input px-4 py-2.5"
                         placeholder="14"
                       />
                       <p class="text-content-muted dark:text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
@@ -917,7 +917,7 @@ const stepTitles = [
                 <input
                   v-model="setupStore.adminPassword"
                   type="password"
-                  class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  class="modal-input px-4 py-3"
                   placeholder="Enter password (min 6 characters)"
                   minlength="6"
                 />
@@ -930,7 +930,7 @@ const stepTitles = [
                 <input
                   v-model="setupStore.confirmPassword"
                   type="password"
-                  class="w-full bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-3 text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  class="modal-input px-4 py-3"
                   placeholder="Confirm password"
                 />
               </div>

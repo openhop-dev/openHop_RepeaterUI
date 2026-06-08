@@ -190,16 +190,16 @@ export const usePacketStore = defineStore('packets', () => {
     }
   }
 
-  // Computed sparkline data for noise floor
-  const noiseFloorSparklineData = computed(() => {
-    if (!noiseFloorHistory.value || !Array.isArray(noiseFloorHistory.value)) {
-      return [];
-    }
-    return noiseFloorHistory.value
-      .filter((point) => point.noise_floor_dbm !== 0)
-      .slice(-50)
-      .map((point) => point.noise_floor_dbm);
-  });
+
+  // Append a live WS reading into noiseFloorHistory so the sparkline updates immediately.
+  function appendNoiseFloorReading(dbm: number) {
+    if (!dbm) return;
+    const now = Math.floor(Date.now() / 1000);
+    // Avoid duplicating if an HTTP poll just added the same second's reading.
+    const last = noiseFloorHistory.value[noiseFloorHistory.value.length - 1];
+    if (last && Math.abs(last.timestamp - now) < 2 && last.noise_floor_dbm === dbm) return;
+    noiseFloorHistory.value = [...noiseFloorHistory.value, { timestamp: now, noise_floor_dbm: dbm }];
+  }
 
   async function fetchPacketStats(params: PacketStatsParams = { hours: 24 }) {
     try {
@@ -309,6 +309,7 @@ export const usePacketStore = defineStore('packets', () => {
         totalPackets: [],
         transmittedPackets: [],
         droppedPackets: [],
+        policyEvents: [],
         crcErrors: crcErrorHistory.value.map((h) => h.count),
         currentRates: interpolatedRates.value,
       };
@@ -316,6 +317,7 @@ export const usePacketStore = defineStore('packets', () => {
 
     const rxSeries = metricsGraphData.value.series.find((s) => s.type === 'rx_count');
     const txSeries = metricsGraphData.value.series.find((s) => s.type === 'tx_count');
+    const policySeries = metricsGraphData.value.series.find((s) => s.type === 'policy_events');
 
     const rxData = rxSeries?.data || [];
     const txData = txSeries?.data || [];
@@ -333,6 +335,7 @@ export const usePacketStore = defineStore('packets', () => {
       totalPackets: rxData.map((d) => d[1]),
       transmittedPackets: txData.map((d) => d[1]),
       droppedPackets: droppedData,
+      policyEvents: (policySeries?.data || []).map((d) => d[1]),
       crcErrors: crcErrorHistory.value.map((h) => h.count),
       currentRates: interpolatedRates.value,
     };
@@ -395,10 +398,14 @@ export const usePacketStore = defineStore('packets', () => {
       ]);
 
       if (countRes?.success && countRes.data) {
-        crcErrorCount.value = (countRes.data as any).crc_error_count ?? 0;
+        const countData = countRes.data as { crc_error_count?: number };
+        crcErrorCount.value = countData.crc_error_count ?? 0;
       }
       if (historyRes?.success && historyRes.data) {
-        crcErrorHistory.value = (historyRes.data as any).history ?? [];
+        const historyData = historyRes.data as {
+          history?: Array<{ timestamp: number; count: number }>;
+        };
+        crcErrorHistory.value = historyData.history ?? [];
       }
     } catch (err) {
       console.error('Failed to fetch CRC error data:', err);
@@ -414,7 +421,7 @@ export const usePacketStore = defineStore('packets', () => {
         ApiService.get('/metrics_graph_data', {
           hours: 24,
           resolution: 'average',
-          metrics: 'rx_count,tx_count',
+          metrics: 'rx_count,tx_count,policy_events',
         }),
         fetchCrcErrors(24),
       ]);
@@ -542,7 +549,6 @@ export const usePacketStore = defineStore('packets', () => {
     recentPacketsByType,
     sparklineData,
     legacySparklineData,
-    noiseFloorSparklineData,
     crcErrorCount,
     crcErrorHistory,
     metricsGraphData,
@@ -557,6 +563,7 @@ export const usePacketStore = defineStore('packets', () => {
     getPacketByHash,
     fetchNoiseFloorHistory,
     fetchNoiseFloorStats,
+    appendNoiseFloorReading,
     startAutoRefresh,
     initializeSparklineHistory,
     interpolateRates,

@@ -301,9 +301,10 @@ const confirmDelete = async (neighborId: number) => {
   }
 };
 
-// Lifecycle — DataService bootstrap handles stats; ensure neighbors are fresh
+// Lifecycle — DataService bootstrap handles stats; ensure neighbors and radio config are fresh
 onMounted(() => {
   void dataService.ensure('neighbors');
+  void dataService.ensure('radioConfig');
 });
 </script>
 

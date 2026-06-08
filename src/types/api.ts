@@ -440,3 +440,48 @@ export interface RRDDataParams extends Record<string, unknown> {
   end_time?: number;
   resolution?: 'average' | 'max' | 'min';
 }
+
+export type PolicyGroupKind = 'channel_hashes' | 'pubkeys';
+
+export interface PolicyGroupEntry {
+  id: string;
+  friendly_name: string;
+  value: string;
+}
+
+export interface PolicyGroup {
+  id: string;
+  friendly_name: string;
+  description?: string;
+  entries: PolicyGroupEntry[];
+}
+
+export interface PolicyGroups {
+  channel_hashes: PolicyGroup[];
+  pubkeys: PolicyGroup[];
+}
+
+export interface PolicyEngineConfig {
+  enabled: boolean;
+  default_action: string;
+  rules: Array<Record<string, unknown>>;
+  objects: Record<string, unknown>;
+}
+
+export interface PolicyDocumentData {
+  policy_file?: string;
+  exists?: boolean;
+  policy_engine: PolicyEngineConfig;
+  groups: PolicyGroups;
+}
+
+export interface PolicyValidationResult {
+  valid: boolean;
+  normalized?: Record<string, unknown>;
+  effective?: {
+    enabled?: boolean;
+    default_action?: string;
+    rule_count?: number;
+  };
+  error?: string;
+}
