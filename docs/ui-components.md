@@ -60,6 +60,41 @@ import Spinner from '@/components/ui/Spinner.vue';
 
 ---
 
+## CopyLabel
+
+`src/components/ui/CopyLabel.vue`
+
+A fixed-width label for copy buttons that crossfades between a default state ("Copy") and a confirmed state ("Copied!") without changing the button's size. Uses a CSS grid overlay — an invisible sizer span always occupies the width of the longer string, keeping the button stable while the visible label transitions.
+
+Pair with `useCopyToClipboard` to drive the `copied` prop.
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `copied` | `boolean` | — | Required. When true, shows the confirmed label |
+| `label` | `string` | `'Copy'` | Default label text |
+| `confirmed` | `string` | `'Copied!'` | Label shown when `copied` is true |
+
+### Usage
+
+```vue
+<button @click="handleCopy" class="btn-primary flex items-center gap-2">
+  <svg>…</svg>
+  <CopyLabel :copied="copied" />
+</button>
+
+<!-- With a custom default label -->
+<button @click="handleCopy" class="btn-success flex items-center gap-2">
+  <svg>…</svg>
+  <CopyLabel :copied="copied" label="Copy Key" />
+</button>
+```
+
+The `label-swap` transition (150ms opacity crossfade) is defined in `main.css` and applies automatically — no local `<style>` block needed. **Do not remove the `label-swap` CSS from `main.css`** — `CopyLabel` has an implicit runtime dependency on it. The component will still function (the label still swaps) but the crossfade will disappear silently with no build error.
+
+---
+
 ## NeighborMenu
 
 `src/components/ui/NeighborMenu.vue`
@@ -159,6 +194,7 @@ Both classes include `flex items-center justify-center p-4` so the inner card is
 | `modal-field-label` | `block text-xs font-medium text-content-secondary`, `mt-2 mb-1` | Standard field label above an input or select |
 | `modal-field-label-row` | Same spacing as `modal-field-label` but `flex items-baseline gap-3` | Use when the label sits beside an inline action button (e.g. a "Show/Edit" toggle) |
 | `modal-input` | Full-width text/number/password input, `rounded-md`, focus ring on `border-primary` | Do not write raw Tailwind input classes in modal templates |
+| `modal-input-readonly` | Read-only value display. Same surface as `modal-input`, adds `font-mono cursor-default`, no focus ring | For computed/fetched values the user reads but cannot edit — tokens, keys, coordinates. Provide an explicit copy button if copying is needed. |
 | `modal-select` | Full-width `<select>` — same visual style as `modal-input` | No `placeholder-*` token needed for selects |
 
 **Form spacing:** `modal-form` applies `gap-4` between direct children. `modal-field-label` adds `mt-2` for within-group breathing room only. Do not add extra margin or padding between fields — let the container gap handle section spacing.
@@ -176,9 +212,87 @@ All three button classes include `flex-1` so buttons in a `modal-actions` row sh
 
 **Do not** use these classes outside of modal contexts. For configuration page buttons use `cfg-btn-primary` / `cfg-btn-secondary` instead.
 
+### Readonly fields
+
+Use `modal-input-readonly` on any `<input readonly>` that displays a derived or fetched value — API tokens, transport keys, coordinate readouts:
+
+```html
+<input :value="generatedToken" readonly class="modal-input-readonly" />
+
+<!-- With callsite size overrides (floor-not-ceiling rule) -->
+<input :value="generatedToken" readonly class="modal-input-readonly flex-1 text-sm" />
+```
+
+Use `readonly`, not `disabled` — disabled fields cannot be selected or copied.
+
 ### Canonical example
 
 See `BrokerEditModal.vue` for a fully-styled modal using all of the above classes.
+
+---
+
+## KeyModal
+
+`src/components/modals/KeyModal.vue`
+
+A dual-mode modal that handles both creating and editing transport key entries (regions and private keys). The mode is determined by the `node` prop — `null` for add, a `TreeNodeData` object for edit.
+
+### Props
+
+| Prop | Type | Required | Description |
+|---|---|---|---|
+| `show` | `boolean` | Yes | Controls modal visibility |
+| `node` | `TreeNodeData \| null` | Yes | `null` = add mode; non-null = edit mode, pre-populates the form |
+| `selectedParentId` | `number` | No | In add mode, the node ID that will be the parent of the new entry |
+| `allNodes` | `TreeNodeData[]` | Yes | Full flat tree. Used to walk the parent path for display in both modes |
+
+### Emits
+
+| Event | Payload | When |
+|---|---|---|
+| `close` | — | User cancels or dismisses the modal |
+| `add` | `{ name, floodPolicy, parentId? }` | Add mode — user submits a new entry |
+| `save` | `{ id, name, floodPolicy, transportKey? }` | Edit mode — user saves changes |
+
+`transportKey` is only present in the `save` payload when the entry is a region (`#`-prefixed) **and** the name has changed. The caller is responsible for applying the key to the API update.
+
+### Add mode
+
+Opens with empty fields and a region/private-key type toggle. Shows the parent node's full path above the form so the user can see where the new entry will appear in the tree. The `#` prefix is added automatically for region entries.
+
+### Edit mode
+
+Pre-populates from the `node` prop (via a `watch`). For region entries with an existing `transport_key`:
+
+- Derives the current transport key client-side using `SHA-256(#name)[:16] → base64`, matching the `pymc_core get_auto_key_for` algorithm.
+- Displays the derived key in a `modal-input-readonly` field.
+- If the name is changed (`nameChanged` computed), the transport key updates live and the "updated for …" notice appears. The new key is included in the `save` payload only when the name actually changed.
+- The copy button (copies the existing server key) is hidden when the name is dirty.
+
+### Usage
+
+The single callsite is `TransportKeys.vue`. Pass `:node="null"` for the add flow and `:node="editingNode"` for the edit flow.
+
+```vue
+<!-- Add mode -->
+<KeyModal
+  :show="showAddModal"
+  :node="null"
+  :selected-parent-id="selectedNodeId"
+  :all-nodes="transportKeysData"
+  @close="showAddModal = false"
+  @add="handleAddKey"
+/>
+
+<!-- Edit mode -->
+<KeyModal
+  :show="showEditModal"
+  :node="editingNode"
+  :all-nodes="transportKeysData"
+  @close="handleCloseEditModal"
+  @save="handleSaveEdit"
+/>
+```
 
 ---
 
@@ -297,3 +411,27 @@ The line uses `text-secondary` (`--color-secondary`, amber) via `stroke="current
 ### TODO
 
 All sparklines that currently use the old `RFNoiseFloor.vue` scatter-dot pattern should be migrated to `InteractiveSparkline` when next touched.
+
+---
+
+## Composables
+
+Reusable logic in `src/composables/`. Import directly — no registration needed.
+
+### useCopyToClipboard
+
+`src/composables/useCopyToClipboard.ts`
+
+Handles clipboard writes with a timed `copied` flag. Falls back to a `textarea` + `execCommand` approach for older browsers. Use alongside `CopyLabel` for consistent copy button feedback across the app.
+
+```ts
+const { copy, copied } = useCopyToClipboard()
+// copied: Ref<boolean> — true for 2 seconds after a successful copy
+
+// In a handler:
+const handleCopy = () => copy(someText)
+```
+
+The reset delay defaults to 2000 ms and can be overridden: `useCopyToClipboard(3000)`.
+
+**Do not** write ad-hoc `navigator.clipboard.writeText` + `setTimeout` inline in components — use this composable so all copy feedback is consistent.

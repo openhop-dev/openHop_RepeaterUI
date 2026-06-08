@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
+import CopyLabel from '@/components/ui/CopyLabel.vue';
 import { useTreeStateStore } from '@/stores/treeState';
 import type { TreeNodeData } from '@/types/tree';
 import { formatTimeAgo, getTruncatedKey } from '@/utils/formatters';
@@ -79,11 +81,11 @@ function toggleShowFullKey(event: Event) {
   showFullKey.value = !showFullKey.value;
 }
 
+const { copy: _copyKey, copied: keyCopied } = useCopyToClipboard();
+
 function copyToClipboard(event: Event) {
   event.stopPropagation();
-  if (props.node.transport_key && window.navigator?.clipboard) {
-    window.navigator.clipboard.writeText(props.node.transport_key);
-  }
+  if (props.node.transport_key) _copyKey(props.node.transport_key);
 }
 </script>
 
@@ -240,8 +242,7 @@ function copyToClipboard(event: Event) {
               <div class="flex justify-end">
                 <button
                   @click="copyToClipboard"
-                  class="btn-success flex items-center gap-2"
-                  title="Copy to clipboard"
+                  :class="['flex items-center gap-2 transition-colors', keyCopied ? 'btn-primary' : 'btn-success']"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -251,7 +252,7 @@ function copyToClipboard(event: Event) {
                       d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                     />
                   </svg>
-                  Copy Key
+                  <CopyLabel :copied="keyCopied" label="Copy Key" />
                 </button>
               </div>
             </div>
