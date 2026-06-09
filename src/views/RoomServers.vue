@@ -73,7 +73,7 @@ const showSessionsDialog = ref(false);
 const newIdentity = ref({
   name: '',
   identity_key: '',
-  type: 'room_server',
+  type: 'room_server' as const,
   settings: {
     node_name: '',
     latitude: 0,
