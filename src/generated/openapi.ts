@@ -2233,7 +2233,7 @@ export class Api<
   };
   createIdentity = {
     /**
-     * @description Create a new repeater or room server identity. `name` must be non-empty after trimming leading/trailing whitespace (whitespace-only values are rejected).
+     * @description Create a new companion or room server identity. `name` must be non-empty after trimming leading/trailing whitespace (whitespace-only values are rejected).
      *
      * @tags Identities
      * @name CreateIdentityCreate
@@ -2252,9 +2252,9 @@ export class Api<
          */
         name: string;
         /**
-         * 32-byte hex key (64 chars). Omit for auto-generation
-         * @pattern ^[0-9a-fA-F]{64}$
-         * @example "abc123def456..."
+         * 32- or 64-byte hex key (64 or 128 chars). Omit for auto-generation
+         * @pattern ^(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{128})$
+         * @example "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
          */
         identity_key?: string;
         /**
@@ -2285,6 +2285,25 @@ export class Api<
            * @example 32
            */
           max_posts?: number;
+          /**
+           * Advertised node name (companion only; defaults to identity name)
+           * @example "My Companion"
+           */
+          node_name?: string;
+          /**
+           * TCP listener port (companion only)
+           * @min 1
+           * @max 65535
+           * @default 5000
+           * @example 5000
+           */
+          tcp_port?: number;
+          /**
+           * TCP listener bind address (companion only)
+           * @default "0.0.0.0"
+           * @example "0.0.0.0"
+           */
+          bind_address?: string;
         };
       },
       params: RequestParams = {},
