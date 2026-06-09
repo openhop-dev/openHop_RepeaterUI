@@ -3,6 +3,7 @@ import { computed, ref, watch, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { NavItemConfig } from '@/config/navigation'
 import { NAV_ACTION_HANDLERS_KEY } from '@/config/navActionHandlers'
+import { useSidebarPin } from '@/composables/useSidebarPin'
 import { ChevronDown } from '@lucide/vue'
 
 defineOptions({ name: 'NavItem' })
@@ -63,13 +64,20 @@ const activeChildIndex = computed(() => {
 // ── Expand / collapse ─────────────────────────────────────────────────────────
 
 const isGroup = computed(() => !!props.item.children?.length)
-const expanded = ref(false)
+const { getRestoredFold, recordFold } = useSidebarPin()
+
+// Initialise from saved pin state when available, otherwise default to closed.
+const restored = isGroup.value ? getRestoredFold(props.item.id) : null
+const expanded = ref(restored !== null ? restored : false)
 
 watch(
   hasActiveDescendant,
   (active) => { if (active) expanded.value = true },
   { immediate: true },
 )
+
+// Persist fold changes whenever the pin is active.
+watch(expanded, (val) => { if (isGroup.value) recordFold(props.item.id, val) })
 
 function toggle() { expanded.value = !expanded.value }
 
