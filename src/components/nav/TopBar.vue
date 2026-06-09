@@ -10,6 +10,7 @@ import { useRouter } from 'vue-router';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import UpdateModal from '@/components/modals/UpdateModal.vue';
 import RestartModal from '@/components/modals/RestartModal.vue';
+import ChangePasswordModal from '@/components/modals/ChangePasswordModal.vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import Spinner from '@/components/ui/Spinner.vue';
@@ -31,6 +32,7 @@ const notif = useAnchoredDropdown();
 const userMenu = useAnchoredDropdown();
 const showUpdateModal = ref(false);
 const showRestartModal = ref(false);
+const showChangePasswordModal = ref(false);
 
 // Update checking state
 const updateInfo = ref<{
@@ -668,11 +670,26 @@ const toggleMobileSidebar = () => {
             v-if="userMenu.isOpen.value"
             :ref="userMenu.panelRef"
             :style="userMenu.panelStyle.value"
-            class="fixed z-[250] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl overflow-hidden"
+            class="fixed z-[250] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl p-1"
           >
             <button
+              @click="showChangePasswordModal = true; userMenu.close()"
+              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary dark:text-content-primary rounded-lg transition-colors"
+            >
+              <svg
+                class="w-4 h-4 text-content-secondary"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round" stroke-linejoin="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>Change Password</span>
+            </button>
+            <div class="border-t border-stroke-subtle dark:border-stroke/40 my-1 mx-2"></div>
+            <button
               @click="showRestartModal = true; userMenu.close()"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-content-primary dark:text-content-primary hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary dark:text-content-primary rounded-lg transition-colors"
             >
               <svg
                 class="w-4 h-4 text-content-secondary"
@@ -689,12 +706,11 @@ const toggleMobileSidebar = () => {
                   stroke-linejoin="round"
                 />
               </svg>
-              Restart Service
+              <span>Restart Service</span>
             </button>
-            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
             <button
               @click="handleLogout"
-              class="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-accent-red hover:bg-background-mute dark:hover:bg-background-mute transition-colors"
+              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-accent-red rounded-lg transition-colors"
             >
               <svg
                 class="w-4 h-4"
@@ -710,7 +726,7 @@ const toggleMobileSidebar = () => {
                   stroke-linejoin="round"
                 />
               </svg>
-              Logout
+              <span>Logout</span>
             </button>
           </div>
           </Teleport>
@@ -748,6 +764,12 @@ const toggleMobileSidebar = () => {
     title="Restart Service"
     message="The service will restart. You will be automatically returned to the dashboard when it comes back online."
   />
+  <ChangePasswordModal
+    :is-open="showChangePasswordModal"
+    :can-skip="false"
+    @close="showChangePasswordModal = false"
+    @success="showChangePasswordModal = false"
+  />
 
   <!-- Update Modal -->
   <UpdateModal
@@ -764,4 +786,7 @@ const toggleMobileSidebar = () => {
 
 <style scoped>
 /* Simple z-index fix for notification dropdown */
+
+.user-menu-item:hover span { text-shadow: var(--nav-hover-label-shadow); }
+.user-menu-item:hover svg  { filter: var(--nav-hover-icon-shadow); }
 </style>
