@@ -1292,7 +1292,7 @@ onMounted(loadPolicy);
           Policy Engine
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Fortinet-style policy and object management with chained rule conditions
+          Policy and object management with chained rule conditions
         </p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
