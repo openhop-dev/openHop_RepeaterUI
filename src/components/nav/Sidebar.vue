@@ -41,7 +41,7 @@ const pinIconClass = computed(() =>
 const pinButtonClass = computed(() =>
   isPinned.value
     ? 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
-    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted opacity-40 hover:opacity-100 hover:text-content-primary',
+    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
 );
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
