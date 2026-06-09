@@ -2,17 +2,17 @@
   <Teleport to="body">
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
     @click.self="closeModal"
   >
     <div
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/20 rounded-[15px] p-6 max-w-md w-full shadow-2xl"
+      class="modal-card max-w-md shadow-xl"
     >
       <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-2">
-        Change Default Password
+        Change Password
       </h3>
       <p class="text-content-secondary dark:text-content-muted text-sm mb-6">
-        You're using the default password. Please change it to secure your account.
+        {{ canSkip ? "You're using the default password. Please change it to secure your account." : 'Enter your current password and choose a new one.' }}
       </p>
 
       <form @submit.prevent="handleSubmit" class="space-y-4">
@@ -64,28 +64,27 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-          <p class="text-red-600 dark:text-red-400 text-sm">{{ error }}</p>
+        <div v-if="error" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3">
+          <p class="text-accent-red text-sm">{{ error }}</p>
         </div>
 
         <!-- Success Message -->
         <div
           v-if="success"
-          class="bg-green-500/10 border border-green-600/40 dark:border-green-500/30 rounded-lg p-3"
+          class="bg-accent-green/10 border border-accent-green/30 rounded-lg p-3"
         >
-          <p class="text-green-600 dark:text-green-400 text-sm">{{ success }}</p>
+          <p class="text-accent-green text-sm">{{ success }}</p>
         </div>
 
         <!-- Buttons -->
         <div class="flex justify-end gap-3 mt-6">
           <button
-            v-if="canSkip"
             type="button"
             @click="skipChange"
             :disabled="loading"
             class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
           >
-            Skip for Now
+            {{ canSkip ? 'Skip for Now' : 'Cancel' }}
           </button>
           <button
             type="submit"
