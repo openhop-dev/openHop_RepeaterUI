@@ -32,7 +32,7 @@ const makeTree = (): TreeNodeData[] => [
 
 function mountModal(props: Record<string, unknown>) {
   return mount(KeyModal, {
-    props: { show: true, allNodes: [], ...props },
+    props: { show: true, node: null, allNodes: [], ...props },
     global: { stubs: { Teleport: true, Transition: true, CopyLabel: true } },
   })
 }
