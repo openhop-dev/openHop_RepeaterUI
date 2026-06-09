@@ -15,6 +15,8 @@ import NoiseFloorSparkline from './NoiseFloorSparkline.vue';
 import { navigationItems, knownCapabilities } from '@/config/navigation';
 import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
+import { useSidebarPin } from '@/composables/useSidebarPin';
+import { Pin } from '@lucide/vue';
 import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
 import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
@@ -30,6 +32,17 @@ const dataService = useDataService();
 const packetStore = usePacketStore();
 const { theme } = useTheme();
 const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
+const { isPinned, togglePin } = useSidebarPin();
+
+const pinIconClass = computed(() =>
+  isPinned.value ? 'w-3 h-3' : 'w-3 h-3 rotate-45',
+);
+
+const pinButtonClass = computed(() =>
+  isPinned.value
+    ? 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
+    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted opacity-40 hover:opacity-100 hover:text-content-primary',
+);
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
 
@@ -302,7 +315,14 @@ const currentTime = computed(() => {
       </div>
 
       <!-- Nav items -->
-      <div class="mb-8 space-y-2">
+      <div class="relative mb-8 space-y-2">
+        <button
+          @click="togglePin"
+          :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
+          :class="pinButtonClass"
+        >
+          <Pin :class="pinIconClass" />
+        </button>
         <NavItem
           v-for="item in visibleNavItems"
           :key="item.id"
