@@ -12,6 +12,7 @@ const generatedApiClientMock = {
   dbPurge: { dbPurgeCreate: vi.fn() },
   dbVacuum: { dbVacuumCreate: vi.fn() },
   configExport: { configExportList: vi.fn() },
+  createIdentity: { createIdentityCreate: vi.fn() },
 } as const;
 
 vi.mock('@/services/api/generatedClient', () => ({
@@ -102,6 +103,42 @@ describe('ApiService contract regressions', () => {
 
     expect(generatedApiClientMock.gps.getGps).toHaveBeenCalledWith({});
     expect(result.data?.raw_attributes?.sentence_type).toBe('RMC');
+  });
+
+  it('createIdentity allows companion identities and sends them to the API', async () => {
+    generatedApiClientMock.createIdentity.createIdentityCreate.mockResolvedValue({
+      data: {
+        success: true,
+        message: 'Companion created',
+      },
+    });
+
+    const { default: ApiService } = await import('@/utils/api');
+    const result = await ApiService.createIdentity({
+      name: 'test-companion',
+      identity_key: 'aa'.repeat(32),
+      type: 'companion',
+      settings: {
+        node_name: 'Test Companion',
+        tcp_port: 5000,
+        bind_address: '0.0.0.0',
+      },
+    });
+
+    expect(generatedApiClientMock.createIdentity.createIdentityCreate).toHaveBeenCalledWith(
+      {
+        name: 'test-companion',
+        identity_key: 'aa'.repeat(32),
+        type: 'companion',
+        settings: {
+          node_name: 'Test Companion',
+          tcp_port: 5000,
+          bind_address: '0.0.0.0',
+        },
+      },
+      {},
+    );
+    expect(result.success).toBe(true);
   });
 
   it('db methods call generated endpoints and return response body', async () => {

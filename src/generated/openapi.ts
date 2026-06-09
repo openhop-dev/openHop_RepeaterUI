@@ -2258,11 +2258,11 @@ export class Api<
          */
         identity_key?: string;
         /**
-         * - repeater: Repeater identity (only one allowed)
+         * - companion: Companion identity with a TCP endpoint
          * - room_server: Room server for group chat
          * @example "room_server"
          */
-        type: "repeater" | "room_server";
+        type: "companion" | "room_server";
         /** Type-specific settings */
         settings?: {
           /**

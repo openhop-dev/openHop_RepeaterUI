@@ -784,12 +784,12 @@ export class ApiService {
   static async createIdentity(data: {
     name: string;
     identity_key: string;
-    type: string;
+    type: 'companion' | 'room_server';
     settings?: Record<string, unknown>;
   }): Promise<CreateIdentityResponse> {
     try {
       const params = await this.getGeneratedRequestParams();
-      if (data.type !== 'repeater' && data.type !== 'room_server') {
+      if (data.type !== 'companion' && data.type !== 'room_server') {
         throw new Error(`Unsupported identity type: ${data.type}`);
       }
       const response = await generatedApiClient.createIdentity.createIdentityCreate(
