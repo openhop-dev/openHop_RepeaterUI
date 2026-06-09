@@ -16,6 +16,7 @@ import { navigationItems, knownCapabilities } from '@/config/navigation';
 import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
 import { useSidebarPin } from '@/composables/useSidebarPin';
+import { Pin } from '@lucide/vue';
 import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
 import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
 
@@ -32,6 +33,16 @@ const packetStore = usePacketStore();
 const { theme } = useTheme();
 const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
 const { isPinned, togglePin } = useSidebarPin();
+
+const pinIconClass = computed(() =>
+  isPinned.value ? 'w-3 h-3' : 'w-3 h-3 rotate-45',
+);
+
+const pinButtonClass = computed(() =>
+  isPinned.value
+    ? 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
+    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted opacity-40 hover:opacity-100 hover:text-content-primary',
+);
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
 
@@ -308,21 +319,9 @@ const currentTime = computed(() => {
         <button
           @click="togglePin"
           :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
-          :class="[
-            'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200',
-            isPinned
-              ? 'text-primary opacity-100'
-              : 'text-content-muted opacity-40 hover:opacity-100 hover:text-content-primary',
-          ]"
+          :class="pinButtonClass"
         >
-          <svg
-            :class="['w-3 h-3 transition-transform duration-200', isPinned ? '' : 'rotate-45']"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round"
-          >
-            <line x1="12" y1="17" x2="12" y2="22" />
-            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 0-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
-          </svg>
+          <Pin :class="pinIconClass" />
         </button>
         <NavItem
           v-for="item in visibleNavItems"
