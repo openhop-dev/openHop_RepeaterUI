@@ -186,9 +186,14 @@ export const useSetupStore = defineStore('setup', () => {
             coding_rate: customRadio.value.coding_rate,
             tx_power: customRadio.value.tx_power,
           }
-        : selectedRadioPreset.value;
+        : { ...selectedRadioPreset.value! };
 
-      const txPowerNum = Number(radioConfig?.tx_power ?? 14);
+      const hwTxPower = selectedHardware.value?.config?.tx_power;
+      if (hwTxPower != null && hwTxPower !== '') {
+        radioConfig.tx_power = String(hwTxPower);
+      }
+
+      const txPowerNum = Number(radioConfig.tx_power ?? 14);
       if (!Number.isFinite(txPowerNum) || txPowerNum < -9 || txPowerNum > 22) {
         throw new Error('TX power must be between -9 and +22 dBm');
       }
