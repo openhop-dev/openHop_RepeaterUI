@@ -119,6 +119,17 @@
     @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
   }
 
+  .dark .cfg-select,
+  .dark .modal-select {
+    color-scheme: dark;
+  }
+
+  .dark .cfg-select option,
+  .dark .modal-select option {
+    background-color: var(--color-surface-elevated);
+    color: var(--color-text-primary);
+  }
+
   /* ── Modal utilities ────────────────────────────────────────────────────── */
 
   /* Standard modal backdrop (confirmations, edit dialogs) — z-[300] per layering scale */
