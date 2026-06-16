@@ -771,7 +771,7 @@ const stepTitles = [
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1 col-span-2">
                         <div class="text-content-muted dark:text-content-muted">TX Power</div>
                         <div class="text-content-primary dark:text-content-primary/80 font-medium">
-                          {{ preset.tx_power || '14' }} dBm
+                          {{ setupStore.selectedHardware?.config?.tx_power ?? (preset.tx_power || '14') }} dBm
                         </div>
                       </div>
                     </div>
