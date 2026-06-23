@@ -36,6 +36,7 @@ export default defineConfig(async ({ command, mode }) => {
     build: {
       outDir: '../pyMC_Repeater/repeater/web/html',
       emptyOutDir: true,
+      chunkSizeWarningLimit: 5000,
     },
   }
 })
