@@ -282,7 +282,7 @@ const currentTime = computed(() => {
       <!-- Header: logo + optional mobile close button -->
       <div :class="['mb-4', isMobile ? 'flex items-start justify-between' : '']">
         <div>
-          <div :class="['flex', isMobile ? 'mb-2' : 'mb-3 justify-center']">
+          <div :class="['flex', isMobile ? 'mb-0' : 'mb-0 justify-center']">
             <img :src="logoSrc" alt="openHop" class="logo-image" :class="isMobile ? 'h-[130px]' : 'h-[154px]'" />
           </div>
           <h2 class="text-content-primary dark:text-content-primary text-center text-lg sm:text-xl font-heading font-bold mb-3">
