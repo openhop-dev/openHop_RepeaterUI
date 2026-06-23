@@ -310,7 +310,7 @@ const handleBackdropClick = (event: MouseEvent) => {
           @click.stop
         >
           <!-- Header -->
-          <div class="sticky top-0 z-10 bg-white dark:bg-surface-elevated border-b border-stroke-subtle px-6 py-4 flex items-center justify-between">
+          <div class="sticky top-0 z-20 border-b border-stroke px-6 py-4 flex items-center justify-between shadow-sm backdrop-blur-md bg-surface-primary/95 dark:bg-surface-elevated/92 supports-backdrop-filter:bg-surface-primary/80 supports-backdrop-filter:dark:bg-surface-elevated/78">
             <div>
               <h3 class="text-lg font-semibold text-content-primary">RF Degradation Event</h3>
               <p class="text-sm text-content-secondary mt-1">{{ incidentDetails?.startTime }}</p>

@@ -17,8 +17,8 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import ChartCard from '@/components/ui/ChartCard.vue';
-  import IncidentDetailsModal from '@/components/IncidentDetailsModal.vue';
-  import { useManagedPolling } from '@/composables/useManagedPolling';
+import IncidentDetailsModal from '@/components/modals/IncidentDetailsModal.vue';
+import { useManagedPolling } from '@/composables/useManagedPolling';
 import { streamingGet } from '@/utils/streamingFetch';
 
 ChartJS.register(
