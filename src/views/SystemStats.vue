@@ -98,23 +98,27 @@ interface ProcessesResponse {
 
 const { theme } = useTheme();
 
+const cssVar = (name: string, fallback: string): string => {
+  if (typeof window === 'undefined') return fallback;
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
 // Theme-aware chrome colours (axis labels, legend text). Re-evaluated at chart creation/rebuild time.
 const getChartChrome = () => {
-  const isDark = document.documentElement.classList.contains('dark');
   return {
-    labelColor: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-    textColor:  isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+    labelColor: cssVar('--color-text-muted', 'gray'),
+    textColor: cssVar('--color-text-secondary', 'gainsboro'),
   };
 };
 
 // Chart palette — fixed vibrant colours, same in both light and dark mode.
 // Matches the pattern used in Statistics.vue and StatsCards.vue.
 const CHART_COLORS = {
-  cpu:    '#FFC246',
-  memory: '#A5E5B6',
-  disk:   '#FB787B', // matches "Dropped" in Dashboard StatsCards
-  free:   '#A5E5B6',
-  uptime: '#EBA0FC',
+  cpu: 'var(--color-accent-cyan)',
+  memory: 'var(--color-accent-green)',
+  disk: 'var(--color-accent-red)',
+  free: 'var(--color-accent-green)',
+  uptime: 'var(--color-accent-purple)',
 } as const;
 
 // Hardware stats data
@@ -314,11 +318,10 @@ const updateCpuChart = () => {
     }
   }
 
-  const cpuColor = CHART_COLORS.cpu;
+  const cpuColor = cssVar('--color-accent-cyan', 'deepskyblue');
   const chrome = getChartChrome();
-  const isDark = document.documentElement.classList.contains('dark');
-  const availableBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-  const availableBorder = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+  const availableBg = cssVar('--color-background-mute', 'lightgray');
+  const availableBorder = cssVar('--color-border', 'gray');
 
   try {
     const chartInstance = new ChartJS(ctx, {
@@ -421,11 +424,10 @@ const updateMemoryChart = () => {
     }
   }
 
-  const memoryColor = CHART_COLORS.memory;
+  const memoryColor = cssVar('--color-accent-green', 'limegreen');
   const chrome = getChartChrome();
-  const isDark = document.documentElement.classList.contains('dark');
-  const availableBg = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-  const availableBorder = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)';
+  const availableBg = cssVar('--color-background-mute', 'lightgray');
+  const availableBorder = cssVar('--color-border', 'gray');
 
   try {
     const chartInstance = new ChartJS(ctx, {
@@ -519,7 +521,10 @@ const updateDiskChart = () => {
           labels: ['Used', 'Free'],
           values: [disk.used, disk.free],
           marker: {
-            colors: [CHART_COLORS.disk, CHART_COLORS.free],
+            colors: [
+              cssVar('--color-accent-red', 'tomato'),
+              cssVar('--color-accent-green', 'limegreen'),
+            ],
           },
           hovertemplate:
             '<b>%{label}</b><br>Size: %{value}<br>Percentage: %{percent}<extra></extra>',
@@ -534,8 +539,8 @@ const updateDiskChart = () => {
           text: '',
           font: { color: textColor },
         },
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent',
         font: {
           color: textColor,
           size: 11,
@@ -992,12 +997,12 @@ onBeforeUnmount(() => {
 }
 
 .process-row:hover {
-  background: rgba(0, 0, 0, 0.02);
+  background: color-mix(in srgb, var(--color-background) 15%, transparent);
   transform: translateX(2px);
 }
 
 .dark .process-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
 }
 
 /* Vue transition animations for process rows */

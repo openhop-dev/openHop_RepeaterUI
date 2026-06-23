@@ -171,6 +171,10 @@ const initMap = () => {
     Math.abs(props.baseLongitude) <= 180;
 
   if (hasValidBase) {
+    const routeColor =
+      window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
+      'deepskyblue';
+
     const baseIcon = L.divIcon({
       className: 'custom-marker',
       html: '<div class="w-8 h-8 rounded-full bg-green-500 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
@@ -189,7 +193,7 @@ const initMap = () => {
         [props.neighbor.latitude!, props.neighbor.longitude!],
       ],
       {
-        color: '#3b82f6',
+        color: routeColor,
         weight: 2,
         opacity: 0.6,
         dashArray: '5, 10',
@@ -537,20 +541,20 @@ const signalQuality = computed(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: color-mix(in srgb, var(--color-background) 25%, transparent);
   border-radius: 4px;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--color-surface) 25%, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
 }
 
 /* Modal transitions */

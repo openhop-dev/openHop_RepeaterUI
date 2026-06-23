@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen bg-background dark:bg-background overflow-hidden relative flex items-start sm:items-center justify-center p-2 sm:p-4 pt-8 sm:pt-4"
+    class="min-h-screen bg-background dark:bg-background overflow-hidden relative flex items-start sm:items-center justify-center p-2 sm:p-4 pt-1"
   >
     <!-- Theme Toggle in top right -->
     <div class="absolute top-4 right-4 z-20">
@@ -21,7 +21,7 @@
 
     <!-- Login Card with enhanced glass effect -->
     <div
-      class="login-card relative z-10 w-full max-w-md p-6 sm:p-10 rounded-[16px] sm:rounded-[24px] border-0 sm:border sm:border-stroke-subtle dark:sm:border-stroke/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] backdrop-blur-xl"
+      class="login-card relative z-10 w-full max-w-md p-6 sm:p-10 rounded-[16px] sm:rounded-[24px] border-0 sm:border sm:border-stroke-subtle dark:sm:border-stroke/20 backdrop-blur-xl"
     >
       <!-- Decorative glow effect -->
       <div
@@ -31,24 +31,27 @@
       <!-- Content -->
       <div class="relative login-content">
         <!-- Logo/Title -->
-        <div class="text-center mb-6 sm:mb-10">
-          <div class="mb-4 sm:mb-6 flex justify-center">
+        <div class="text-center">
+          <div class="flex justify-center">
             <img
               :src="logoSrc"
-              alt="pyMC"
-              class="logo-image h-36 sm:h-40 relative z-10"
+              alt="openHop"
+              class="logo-image h-[178px] sm:h-[210px] relative z-10"
             />
           </div>
+          <h1 class="text-content-primary dark:text-content-primary text-xl sm:text-2xl font-heading font-bold mt-1 mb-1">
+            Repeater
+          </h1>
           <p v-if="siteName" class="text-content-primary dark:text-content-primary text-sm sm:text-base font-semibold mb-1">
             {{ siteName }}
           </p>
-          <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+          <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm pt-2">
             Sign in to access your dashboard
           </p>
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="handleLogin" autocomplete="on" action="/" class="space-y-4 sm:space-y-5">
+        <form @submit.prevent="handleLogin" autocomplete="on" action="/" class="space-y-3 sm:space-y-4">
           <!-- Username Field -->
           <div class="form-group">
             <label
@@ -70,7 +73,7 @@
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter username"
-                :disabled="loading"
+                :disabled="loading || isRateLimited"
               />
               <div class="absolute inset-0 rounded-[12px] pointer-events-none input-glow"></div>
             </div>
@@ -97,7 +100,7 @@
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter password"
-                :disabled="loading"
+                :disabled="loading || isRateLimited"
               />
               <div class="absolute inset-0 rounded-[12px] pointer-events-none input-glow"></div>
             </div>
@@ -116,7 +119,7 @@
           <!-- Submit Button -->
           <button
             type="submit"
-            :disabled="loading"
+            :disabled="loading || isRateLimited"
             class="button-glass w-full relative overflow-hidden bg-primary/20 hover:bg-primary/30 active:scale-[0.98] text-primary dark:text-white font-semibold py-3 sm:py-4 px-4 rounded-[12px] border border-primary/50 hover:border-primary/60 transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-2.5 group mt-6 sm:mt-8 text-sm sm:text-base backdrop-blur-sm"
           >
             <Spinner v-if="loading" size="sm" color="white" />
@@ -134,12 +137,20 @@
                 d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
               />
             </svg>
-            <span class="relative">{{ loading ? 'Signing in...' : 'Sign In' }}</span>
+            <span class="relative">
+              {{
+                loading
+                  ? 'Signing in...'
+                  : isRateLimited
+                    ? `Try again in ${rateLimitSeconds}s`
+                    : 'Sign In'
+              }}
+            </span>
           </button>
         </form>
 
         <!-- Footer Info -->
-        <div class="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-stroke-subtle dark:border-stroke/10">
+        <div class="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/10">
           <!-- Powered by MeshCore -->
           <div class="flex flex-col items-center justify-center mb-4">
             <p class="text-content-muted dark:text-content-muted text-[10px] sm:text-xs mb-1.5 tracking-wide uppercase opacity-60">Powered by</p>
@@ -186,7 +197,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { setToken, getClientId } from '@/utils/auth';
 import { authClient } from '@/utils/api';
@@ -197,8 +208,7 @@ import GitHubIcon from '@/components/icons/github.vue';
 import CoffeeIcon from '@/components/icons/coffee.vue';
 import ThemeToggle from '@/components/ThemeToggle.vue';
 import { useTheme } from '@/composables/useTheme';
-import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
-import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
+import openHopLogo from '@/assets/logo/openhop_transparent_trim.png';
 
 // Define component name for linting
 defineOptions({
@@ -216,15 +226,44 @@ interface LoginResponse {
 const router = useRouter();
 const appRuntime = useAppRuntimeStore();
 const { theme } = useTheme();
-const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
+const logoSrc = computed(() => openHopLogo);
 
 const username = ref('admin');
 const password = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
+const rateLimitSeconds = ref(0);
 const showPasswordChangeModal = ref(false);
 const usedDefaultCredentials = ref(false);
 const siteName = ref('');
+const isRateLimited = computed(() => rateLimitSeconds.value > 0);
+let rateLimitTimer: ReturnType<typeof setInterval> | null = null;
+
+const stopRateLimitTimer = () => {
+  if (rateLimitTimer) {
+    clearInterval(rateLimitTimer);
+    rateLimitTimer = null;
+  }
+};
+
+const startRateLimitCooldown = (seconds: number) => {
+  const safeSeconds = Math.max(1, Math.floor(seconds));
+  rateLimitSeconds.value = safeSeconds;
+  stopRateLimitTimer();
+
+  rateLimitTimer = setInterval(() => {
+    if (rateLimitSeconds.value <= 1) {
+      rateLimitSeconds.value = 0;
+      stopRateLimitTimer();
+      return;
+    }
+    rateLimitSeconds.value -= 1;
+  }, 1000);
+};
+
+onBeforeUnmount(() => {
+  stopRateLimitTimer();
+});
 
 onMounted(async () => {
   try {
@@ -236,6 +275,11 @@ onMounted(async () => {
 });
 
 const handleLogin = async () => {
+  if (isRateLimited.value) {
+    errorMessage.value = `Too many login attempts. Please try again in ${rateLimitSeconds.value}s.`;
+    return;
+  }
+
   errorMessage.value = '';
   loading.value = true;
 
@@ -252,6 +296,8 @@ const handleLogin = async () => {
     const loginData = response.data;
 
     if (loginData.success && loginData.token) {
+      rateLimitSeconds.value = 0;
+      stopRateLimitTimer();
       // Check if default credentials were used
       const isDefaultPassword = password.value === 'admin123';
 
@@ -272,8 +318,26 @@ const handleLogin = async () => {
     }
   } catch (error: unknown) {
     console.error('Login error:', error);
-    const err = error as { response?: { data?: { error?: string } } };
-    errorMessage.value = err.response?.data?.error || 'Connection error. Please try again.';
+    const err = error as {
+      response?: {
+        status?: number;
+        headers?: Record<string, string | number>;
+        data?: { error?: string; retry_after?: number };
+      };
+    };
+    const status = err.response?.status;
+    const retryAfterHeader = Number(err.response?.headers?.['retry-after'] ?? 0);
+    const retryAfterBody = Number(err.response?.data?.retry_after ?? 0);
+    const retryAfter = Math.max(retryAfterHeader, retryAfterBody);
+
+    if (status === 429 && retryAfter > 0) {
+      startRateLimitCooldown(retryAfter);
+      errorMessage.value =
+        err.response?.data?.error ||
+        `Too many login attempts. Please try again in ${rateLimitSeconds.value}s.`;
+    } else {
+      errorMessage.value = err.response?.data?.error || 'Connection error. Please try again.';
+    }
   } finally {
     loading.value = false;
   }
@@ -296,29 +360,38 @@ const handlePasswordChangeClose = () => {
 </script>
 
 <style scoped>
-/* Background gradient colors — match app primary teal (#0d7377 light / #aae8e8 dark) */
+/* Background gradient colors — match app primary blue/purple with subtle contrast */
 .bg-gradient-light {
-  background: linear-gradient(to bottom, rgba(13, 115, 119, 0.3), rgba(170, 232, 232, 0.2));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-primary) 25%, transparent),
+    color-mix(in srgb, var(--color-secondary) 15%, transparent)
+  );
 }
 
 .bg-gradient-dark {
-  background: linear-gradient(to bottom, rgba(170, 232, 232, 0.18), rgba(13, 115, 119, 0.1));
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-primary) 12%, transparent),
+    color-mix(in srgb, var(--color-secondary) 8%, transparent)
+  );
 }
 
 /* Enhanced glass morphism effect */
 .login-card {
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--color-glass-shadow);
 }
 
 /* Light mode card */
 .login-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
 }
 
-/* Dark mode card — surface-elevated (#1a1e1f) with slight transparency */
+/* Dark mode card with slightly stronger elevation for depth */
 .dark .login-card {
-  background: rgba(26, 30, 31, 0.8);
+  background: color-mix(in srgb, var(--color-surface-elevated) 80%, transparent);
 }
 
 /* Glass inputs */
@@ -329,41 +402,41 @@ const handlePasswordChangeClose = () => {
 
 /* Input backgrounds and borders */
 .input-glass {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #d1d5db;
+  background: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  border: 1px solid var(--color-border);
 }
 
 .dark .input-glass {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-surface-elevated) 55%, transparent);
+  border-color: var(--color-border-subtle);
 }
 
 .input-glass:focus {
-  background: rgba(255, 255, 255, 1);
+  background: var(--color-surface);
 }
 
 .dark .input-glass:focus {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
 }
 
 .input-glass:focus {
   box-shadow:
-    0 0 0 1px rgba(170, 232, 232, 0.2),
-    0 0 20px rgba(170, 232, 232, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 0 1px color-mix(in srgb, var(--color-accent-cyan) 20%, transparent),
+    0 0 20px color-mix(in srgb, var(--color-accent-cyan) 15%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 45%, transparent);
 }
 
 .input-glow {
   opacity: 0;
   transition: opacity 0.3s ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-surface) 35%, transparent);
 }
 
 .input-glass:focus + .input-glow {
   opacity: 1;
   box-shadow:
-    0 0 20px rgba(170, 232, 232, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 20px color-mix(in srgb, var(--color-accent-cyan) 20%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 45%, transparent);
 }
 
 /* Glass button */
@@ -382,12 +455,12 @@ const handlePasswordChangeClose = () => {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(170, 232, 232, 0.3) 50%,
+    color-mix(in srgb, var(--color-accent-cyan) 30%, transparent) 50%,
     transparent 100%
   );
   -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
+    linear-gradient(var(--color-surface) 0 0) content-box,
+    linear-gradient(var(--color-surface) 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   transform: translateX(-100%);
@@ -400,17 +473,17 @@ const handlePasswordChangeClose = () => {
 
 .button-glass {
   box-shadow:
-    0 0 0 1px rgba(170, 232, 232, 0.2),
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 0 1px color-mix(in srgb, var(--color-accent-cyan) 20%, transparent),
+    0 4px 16px color-mix(in srgb, var(--color-background) 35%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 45%, transparent);
 }
 
 .button-glass:hover:not(:disabled) {
   box-shadow:
-    0 0 0 1px rgba(170, 232, 232, 0.4),
-    0 0 30px rgba(170, 232, 232, 0.3),
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    0 0 0 1px color-mix(in srgb, var(--color-accent-cyan) 40%, transparent),
+    0 0 30px color-mix(in srgb, var(--color-accent-cyan) 30%, transparent),
+    0 4px 20px color-mix(in srgb, var(--color-background) 45%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-surface) 55%, transparent);
 }
 
 
@@ -506,7 +579,7 @@ const handlePasswordChangeClose = () => {
 }
 
 .form-group:hover label {
-  color: rgba(170, 232, 232, 0.9);
+  color: var(--color-accent-cyan);
   transition: color 0.3s ease;
 }
 </style>

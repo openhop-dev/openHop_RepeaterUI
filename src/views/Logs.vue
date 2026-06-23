@@ -14,7 +14,6 @@ interface LogEntry {
   timestamp: string;
   level: string;
   logger?: string;
-  raw_message?: string;
   exception?: string;
   module?: string;
   pathname?: string;
@@ -62,7 +61,6 @@ const extractLoggerName = (entry: LogEntry): string => {
 };
 
 const cleanLogMessage = (entry: LogEntry): string => {
-  if (entry.raw_message) return entry.raw_message;
   const match = entry.message.match(
     /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - [^-]+ - (?:DEBUG|INFO|WARNING|ERROR|WARN) - (.+)$/,
   );
@@ -254,7 +252,6 @@ function normalizeLogEntry(entry: Partial<LogEntry>): LogEntry {
     timestamp: String(entry.timestamp ?? new Date().toISOString()),
     level: String(entry.level ?? 'INFO'),
     logger: entry.logger ? String(entry.logger) : undefined,
-    raw_message: entry.raw_message ? String(entry.raw_message) : undefined,
     exception: entry.exception ? String(entry.exception) : undefined,
     module: entry.module ? String(entry.module) : undefined,
     pathname: entry.pathname ? String(entry.pathname) : undefined,

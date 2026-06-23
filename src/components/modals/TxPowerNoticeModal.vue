@@ -38,7 +38,7 @@ function onConfirm() {
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       @click.self="closeModal"
     >
-      <div class="w-full max-w-2xl rounded-3xl border border-amber-300/70 dark:border-amber-400/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_rgba(0,0,0,0.35)] overflow-hidden">
+      <div class="w-full max-w-2xl rounded-3xl border border-amber-300/70 dark:border-amber-400/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
         <div class="p-5 border-b border-amber-200/70 dark:border-amber-400/20 bg-amber-50/70 dark:bg-amber-500/10">
           <div class="flex items-start gap-3">
             <div class="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 p-2">

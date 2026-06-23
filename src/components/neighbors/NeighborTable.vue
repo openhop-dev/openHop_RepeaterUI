@@ -148,9 +148,9 @@ const getLastSeenStatus = (timestamp: number): { color: string } => {
   const diff = now - time;
   const hours = Math.floor(diff / (1000 * 60 * 60));
 
-  if (hours < 1) return { color: 'text-green-600 dark:text-green-400' }; // Recent (less than 1 hour)
-  if (hours < 26) return { color: 'text-yellow-600 dark:text-yellow-400' }; // Moderate (1-25 hours)
-  return { color: 'text-red-600 dark:text-red-400' }; // Stale (26+ hours)
+  if (hours < 1) return { color: 'text-primary' }; // Recent (less than 1 hour)
+  if (hours < 26) return { color: 'text-secondary' }; // Moderate (1-25 hours)
+  return { color: 'text-accent-red' }; // Stale (26+ hours)
 };
 
 // Location utilities
@@ -256,20 +256,20 @@ const sortedAdverts = computed(() => {
 
 <template>
   <div
-    class="glass-card/30 backdrop-blur border border-stroke-subtle dark:border-white/10 rounded-[12px] p-6 shadow-sm dark:shadow-none"
+    class="glass-card/30 backdrop-blur border border-stroke-subtle rounded-xl p-6 shadow-sm dark:shadow-none"
   >
     <!-- Contact Type Header -->
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-3">
         <div
-          class="w-3 h-3 rounded-full border border-white/20"
+          class="w-3 h-3 rounded-full border border-stroke-subtle"
           :style="{ backgroundColor: color }"
         ></div>
         <h3 class="text-content-primary dark:text-content-primary text-lg font-semibold">
           {{ contactType }}
         </h3>
         <span
-          class="bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary text-xs px-2 py-1 rounded-full"
+          class="bg-background-mute text-content-secondary dark:text-content-primary text-xs px-2 py-1 rounded-full"
         >
           {{ adverts.length }}
           <span
@@ -284,7 +284,7 @@ const sortedAdverts = computed(() => {
       <!-- View Toggle (only show on first table and desktop) -->
       <div
         v-if="isFirstTable && showViewToggle"
-        class="hidden lg:flex bg-background-mute dark:bg-surface-elevated/30 backdrop-blur rounded-lg border border-stroke-subtle dark:border-stroke/10 p-1"
+        class="hidden lg:flex bg-background-mute backdrop-blur rounded-lg border border-stroke-subtle p-1"
       >
         <!-- Comfortable View Button -->
         <button
@@ -597,9 +597,9 @@ const sortedAdverts = computed(() => {
               <button
                 @click.stop="copyPubkey(advert.pubkey)"
                 :class="[
-                  'text-content-primary dark:text-content-primary hover:text-primary-light transition-colors cursor-pointer underline underline-offset-2 decoration-gray-400 dark:decoration-white/30 hover:decoration-primary-light/60',
+                  'text-content-primary dark:text-content-primary hover:text-primary transition-colors cursor-pointer underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60',
                   copiedPubkey === advert.pubkey
-                    ? 'text-green-600 dark:text-green-400 decoration-green-400/60'
+                    ? 'text-primary decoration-primary/60'
                     : '',
                 ]"
                 :title="
@@ -653,7 +653,7 @@ const sortedAdverts = computed(() => {
                   </button>
                   <button
                     @click.stop="openInMaps(advert.latitude!, advert.longitude!)"
-                    class="text-white/60 hover:text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                    class="text-content-muted hover:text-primary transition-colors cursor-pointer"
                     title="Open in Google Maps"
                   >
                     <!-- Map icon -->
@@ -702,8 +702,8 @@ const sortedAdverts = computed(() => {
                 :class="[
                   'inline-block px-2 py-1 rounded-full text-xs border transition-colors',
                   advert.zero_hop
-                    ? 'bg-green-100 dark:bg-green-500/20 border-green-500 dark:border-green-400/30 text-green-600 dark:text-green-400'
-                    : 'bg-orange-100 dark:bg-orange-500/20 border-orange-500 dark:border-orange-400/30 text-orange-600 dark:text-orange-400',
+                    ? 'bg-primary/20 border-primary/50 text-primary'
+                    : 'bg-secondary/20 border-secondary/50 text-secondary',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -734,16 +734,14 @@ const sortedAdverts = computed(() => {
                 <div
                   :class="[
                     'w-2 h-2 rounded-full',
-                    getLastSeenStatus(advert.last_seen).color ===
-                    'text-green-600 dark:text-green-400'
-                      ? 'bg-green-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-primary'
+                      ? 'bg-primary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color ===
-                    'text-yellow-600 dark:text-yellow-400'
-                      ? 'bg-yellow-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-secondary'
+                      ? 'bg-secondary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color === 'text-red-600 dark:text-red-400'
-                      ? 'bg-red-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-accent-red'
+                      ? 'bg-accent-red'
                       : '',
                   ]"
                 ></div>
@@ -778,7 +776,7 @@ const sortedAdverts = computed(() => {
       <div
         v-for="advert in sortedAdverts"
         :key="advert.id"
-        class="bg-surface/50 dark:bg-transparent border border-stroke-subtle dark:border-white/10 rounded-lg p-4 hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors"
+        class="bg-surface/50 dark:bg-transparent border border-stroke-subtle rounded-lg p-4 hover:bg-background-mute/50 dark:hover:bg-stroke/10 transition-colors"
         @click="handleHighlight(advert.pubkey)"
       >
         <!-- Card Header -->
@@ -802,8 +800,8 @@ const sortedAdverts = computed(() => {
                 :class="[
                   'inline-block px-2 py-1 rounded-full text-xs border',
                   advert.zero_hop
-                    ? 'bg-green-100 dark:bg-green-500/20 border-green-500 dark:border-green-400/30 text-green-600 dark:text-green-400'
-                    : 'bg-orange-100 dark:bg-orange-500/20 border-orange-500 dark:border-orange-400/30 text-orange-600 dark:text-orange-400',
+                    ? 'bg-primary/20 border-primary/50 text-primary'
+                    : 'bg-secondary/20 border-secondary/50 text-secondary',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -828,9 +826,9 @@ const sortedAdverts = computed(() => {
               <button
                 @click="copyPubkey(advert.pubkey)"
                 :class="[
-                  'text-content-primary dark:text-content-primary hover:text-primary-light transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-gray-400 dark:decoration-white/30 hover:decoration-primary-light/60 break-all',
+                  'text-content-primary dark:text-content-primary hover:text-primary transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60 break-all',
                   copiedPubkey === advert.pubkey
-                    ? 'text-green-600 dark:text-green-400 decoration-green-400/60'
+                    ? 'text-primary decoration-primary/60'
                     : '',
                 ]"
                 :title="
@@ -865,16 +863,14 @@ const sortedAdverts = computed(() => {
                 <div
                   :class="[
                     'w-2 h-2 rounded-full',
-                    getLastSeenStatus(advert.last_seen).color ===
-                    'text-green-600 dark:text-green-400'
-                      ? 'bg-green-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-primary'
+                      ? 'bg-primary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color ===
-                    'text-yellow-600 dark:text-yellow-400'
-                      ? 'bg-yellow-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-secondary'
+                      ? 'bg-secondary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color === 'text-red-600 dark:text-red-400'
-                      ? 'bg-red-400'
+                    getLastSeenStatus(advert.last_seen).color === 'text-accent-red'
+                      ? 'bg-accent-red'
                       : '',
                   ]"
                 ></div>
@@ -900,7 +896,7 @@ const sortedAdverts = computed(() => {
           <!-- Location (if available) -->
           <div
             v-if="advert.latitude !== null && advert.longitude !== null"
-            class="border-t border-white/10 pt-3"
+            class="border-t border-stroke-subtle pt-3"
           >
             <div class="text-content-muted text-xs mb-1">Location</div>
             <div class="flex items-center justify-between">
@@ -939,7 +935,7 @@ const sortedAdverts = computed(() => {
                 </button>
                 <button
                   @click="openInMaps(advert.latitude!, advert.longitude!)"
-                  class="text-white/60 hover:text-blue-600 dark:text-blue-400 transition-colors p-2 hover:bg-white/10 rounded-lg"
+                  class="text-content-muted hover:text-primary transition-colors p-2 hover:bg-stroke/10 rounded-lg"
                   title="Open in Maps"
                 >
                   <svg
@@ -962,7 +958,7 @@ const sortedAdverts = computed(() => {
           </div>
 
           <!-- Additional Stats -->
-          <div class="grid grid-cols-3 gap-4 pt-3 border-t border-white/10">
+          <div class="grid grid-cols-3 gap-4 pt-3 border-t border-stroke-subtle">
             <div class="text-center">
               <div class="text-content-muted text-xs mb-1">SNR</div>
               <span class="text-content-primary dark:text-content-primary text-sm font-medium">{{

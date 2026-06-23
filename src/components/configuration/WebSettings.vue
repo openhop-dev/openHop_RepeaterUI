@@ -129,7 +129,7 @@
                 Default Frontend
               </div>
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
-                Built-in pyMC Repeater web interface
+                Built-in Repeater web interface
               </div>
               <div class="text-xs text-content-muted dark:text-content-muted/60 mt-1 font-mono">
                 Built-in
@@ -166,7 +166,7 @@
                 >
               </div>
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
-                Alternative web interface for pyMC Repeater
+                Alternative web interface for Repeater
               </div>
               <div class="text-xs text-content-muted dark:text-content-muted/60 mt-1 font-mono">
                 /opt/pymc_console/web/html

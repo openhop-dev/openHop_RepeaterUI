@@ -5,6 +5,7 @@ import { useDataService } from '@/stores/dataService';
 import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import HopConnector from '@/components/ui/HopConnector.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 
 defineOptions({ name: 'PacketTable' });
@@ -547,18 +548,22 @@ onBeforeUnmount(() => {
 
     <!-- Table Header - Desktop only -->
     <div
-      class="hidden lg:grid grid-cols-12 gap-2 pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
+      class="hidden lg:block pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
     >
-      <div class="col-span-1">Time</div>
-      <div class="col-span-1">Type</div>
-      <div class="col-span-2">Route</div>
-      <div class="col-span-1">LEN</div>
-      <div class="col-span-2">Path/Hashes</div>
-      <div class="col-span-1">RSSI</div>
-      <div class="col-span-1">SNR</div>
-      <div class="col-span-1">Score</div>
-      <div class="col-span-1">TX Delay</div>
-      <div class="col-span-1">Status</div>
+      <div class="grid grid-cols-12 gap-2">
+        <div class="col-span-1">Time</div>
+        <div class="col-span-1">Type</div>
+        <div class="col-span-2">Route</div>
+        <div class="col-span-1">LEN</div>
+        <div class="col-span-1">RSSI</div>
+        <div class="col-span-1">SNR</div>
+        <div class="col-span-1">Score</div>
+        <div class="col-span-1">TX Delay</div>
+        <div class="col-span-3">Status</div>
+      </div>
+      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/50">
+        <div class="col-span-12">Path/Hashes</div>
+      </div>
     </div>
 
     <!-- Table Rows -->
@@ -572,61 +577,140 @@ onBeforeUnmount(() => {
           @click="openPacketDetails(packet)"
         >
           <!-- Desktop Table View -->
-          <div class="hidden lg:grid grid-cols-12 gap-2 items-center">
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-sm">
-              {{ formatTime(packet.timestamp) }}
-            </div>
-            <div class="col-span-1 flex items-center gap-2">
-              <div
-                class="w-2 h-2 rounded-full"
-                :class="getPacketTypeIndicatorColor(packet.type)"
-              ></div>
-              <div class="flex flex-col">
-                <span class="text-content-primary dark:text-content-primary text-xs">{{
-                  getPacketTypeName(packet.type)
-                }}</span>
-                <!-- Node name for ADVERT packets - subtle text below type -->
+          <div class="hidden lg:block space-y-2">
+            <div class="grid grid-cols-12 gap-2 items-center">
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-sm">
+                {{ formatTime(packet.timestamp) }}
+              </div>
+              <div class="col-span-1 flex items-center gap-2">
+                <div
+                  class="w-2 h-2 rounded-full"
+                  :class="getPacketTypeIndicatorColor(packet.type)"
+                ></div>
+                <div class="flex flex-col">
+                  <span class="text-content-primary dark:text-content-primary text-xs">{{
+                    getPacketTypeName(packet.type)
+                  }}</span>
+                  <span
+                    v-if="packet.type === 4 && getAdvertNodeName(packet)"
+                    class="text-accent-red/70 text-[10px] font-medium max-w-[80px] truncate"
+                    :title="getAdvertNodeName(packet) || undefined"
+                  >
+                    {{ getAdvertNodeName(packet) }}
+                  </span>
+                </div>
+              </div>
+              <div class="col-span-2">
                 <span
-                  v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                  class="text-accent-red/70 text-[10px] font-medium max-w-[80px] truncate"
-                  :title="getAdvertNodeName(packet) || undefined"
+                  class="inline-block px-2 py-1 rounded text-xs font-medium"
+                  :class="getRouteClass(packet.route)"
                 >
-                  {{ getAdvertNodeName(packet) }}
+                  {{ getRouteTypeName(packet.route) }}
                 </span>
               </div>
-            </div>
-            <div class="col-span-2">
-              <span
-                class="inline-block px-2 py-1 rounded text-xs font-medium"
-                :class="getRouteClass(packet.route)"
-              >
-                {{ getRouteTypeName(packet.route) }}
-              </span>
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.length }}B
-            </div>
-            <div class="col-span-2">
-              <div class="space-y-1">
-                <!-- Check if we have path information -->
-                <template v-if="getPathInfo(packet)">
-                  <!-- Show actual path with intermediate hops -->
-                  <div class="flex items-center gap-0.5 flex-wrap">
-                    <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
-                      <span
-                        class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
-                        :class="
-                          idx === 0
-                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
-                        "
-                        :title="node"
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+                {{ packet.length }}B
+              </div>
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+                {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
+              </div>
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+                {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
+              </div>
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+                {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
+              </div>
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+                <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
+                  <div
+                    v-if="packet.transmitted"
+                    class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    :class="getLbtIndicatorColor(packet)"
+                  ></div>
+                  <span>{{ formatDelay(Number(packet.tx_delay_ms)) }}</span>
+                </div>
+              </div>
+              <div class="col-span-3">
+                <div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
+                      getStatusText(packet)
+                    }}</span>
+                    <span
+                      v-if="isPolicyBlockedPacket(packet)"
+                      class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                      title="Policy blocked"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
                       >
-                        {{ node }}
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 8l8 8"
+                        ></path>
+                      </svg>
+                    </span>
+                  </div>
+                  <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
+                    {{ packet.drop_reason }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2 items-start">
+              <div class="col-span-12">
+                <div class="space-y-1">
+                  <template v-if="getPathInfo(packet)">
+                    <div class="flex items-center gap-0.5 flex-wrap">
+                      <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
+                        <span
+                          class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
+                          :class="
+                            idx === 0
+                              ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                              : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
+                          "
+                          :title="node"
+                        >
+                          {{ node }}
+                        </span>
+                        <HopConnector
+                          v-if="idx < getPathInfo(packet)!.nodes.length - 1"
+                          :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
+                        />
+                      </template>
+                      <span
+                        v-if="getPathInfo(packet)!.hops > 0"
+                        class="text-[9px] text-content-muted dark:text-content-muted ml-1"
+                      >
+                        {{ getPathInfo(packet)!.hops }} hop{{
+                          getPathInfo(packet)!.hops > 1 ? 's' : ''
+                        }}
+                      </span>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="flex items-center gap-1">
+                      <span
+                        class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono"
+                      >
+                        {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
                       </span>
                       <svg
-                        v-if="idx < getPathInfo(packet)!.nodes.length - 1"
-                        class="w-2.5 h-2.5 text-content-muted dark:text-content-muted/60"
+                        class="w-3 h-3 text-content-muted dark:text-content-muted/60"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -634,111 +718,23 @@ onBeforeUnmount(() => {
                         <path
                           stroke-linecap="round"
                           stroke-linejoin="round"
-                          stroke-width="3"
+                          stroke-width="2.5"
                           d="M9 5l7 7-7 7"
                         ></path>
                       </svg>
-                    </template>
-                    <span
-                      v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted dark:text-content-muted ml-1"
-                    >
-                      ({{ getPathInfo(packet)!.hops }} hop{{
-                        getPathInfo(packet)!.hops > 1 ? 's' : ''
-                      }})
-                    </span>
-                  </div>
-                </template>
-                <template v-else>
-                  <!-- Fallback: compact src/dst (node hashes, not per-hop path chunks) -->
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono"
-                    >
-                      {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
-                    </span>
-                    <svg
-                      class="w-3 h-3 text-content-muted dark:text-content-muted/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M9 5l7 7-7 7"
-                      ></path>
-                    </svg>
-                    <span
-                      class="inline-block px-2 py-0.5 rounded text-xs font-mono"
-                      :class="
-                        packet.dst_hash
-                          ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
-                      "
-                    >
-                      {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
-                    </span>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
-                <div
-                  v-if="packet.transmitted"
-                  class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  :class="getLbtIndicatorColor(packet)"
-                ></div>
-                <span>{{ formatDelay(Number(packet.tx_delay_ms)) }}</span>
-              </div>
-            </div>
-            <div class="col-span-1">
-              <div>
-                <div class="flex items-center gap-1">
-                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                    getStatusText(packet)
-                  }}</span>
-                  <span
-                    v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
-                    title="Policy blocked"
-                  >
-                    <svg
-                      class="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
-                      ></path>
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 8l8 8"
-                      ></path>
-                    </svg>
-                  </span>
+                      <span
+                        class="inline-block px-2 py-0.5 rounded text-xs font-mono"
+                        :class="
+                          packet.dst_hash
+                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                            : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                        "
+                      >
+                        {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
+                      </span>
+                    </div>
+                  </template>
                 </div>
-                <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
-                  {{ packet.drop_reason }}
-                </p>
               </div>
             </div>
           </div>
@@ -813,7 +809,7 @@ onBeforeUnmount(() => {
 
             <!-- Line 2: Path + Signal strength indicator -->
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5 flex-1">
                 <!-- Check if we have path information -->
                 <template v-if="getPathInfo(packet)">
                   <!-- Show actual path with intermediate hops -->
@@ -833,28 +829,18 @@ onBeforeUnmount(() => {
                       >
                         {{ node }}
                       </span>
-                      <svg
+                      <HopConnector
                         v-if="idx < getPathInfo(packet)!.nodes.length - 1"
-                        class="w-2.5 h-2.5 text-content-muted dark:text-content-muted/60"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M9 5l7 7-7 7"
-                        ></path>
-                      </svg>
+                        :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
+                      />
                     </template>
                     <span
                       v-if="getPathInfo(packet)!.hops > 0"
                       class="text-[9px] text-content-muted dark:text-content-muted ml-1"
                     >
-                      ({{ getPathInfo(packet)!.hops }} hop{{
+                      {{ getPathInfo(packet)!.hops }} hop{{
                         getPathInfo(packet)!.hops > 1 ? 's' : ''
-                      }})
+                      }}
                     </span>
                   </div>
                 </template>
@@ -923,9 +909,20 @@ onBeforeUnmount(() => {
                   </div>
                 </template>
               </div>
-              <div class="flex items-center gap-2">
-                <!-- Signal strength visual indicator -->
-                <div class="flex items-center gap-1">
+            </div>
+
+            <!-- Line 3: Technical details -->
+            <div
+              class="flex items-center justify-between text-content-secondary dark:text-content-muted text-xs"
+            >
+              <div class="flex items-center gap-3">
+                <span>{{ packet.length }}B</span>
+                <span>SNR: {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}</span>
+                <span class="hidden md:inline">Score: {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <!-- Signal bars on mobile, hidden on desktop -->
+                <div class="md:hidden flex items-center gap-1">
                   <div v-if="packet.snr != null" class="flex gap-0.5">
                     <div
                       class="w-1 h-3 rounded-sm"
@@ -948,19 +945,7 @@ onBeforeUnmount(() => {
                     packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
                   }}</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- Line 3: Technical details -->
-            <div
-              class="flex items-center justify-between text-content-secondary dark:text-content-muted text-xs"
-            >
-              <div class="flex items-center gap-3">
-                <span>{{ packet.length }}B</span>
-                <span>SNR: {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}</span>
-                <span>Score: {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}</span>
-              </div>
-              <div class="flex items-center gap-2">
+                <!-- Delay indicator -->
                 <span v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
                   <div
                     v-if="packet.transmitted"
@@ -1200,22 +1185,24 @@ onBeforeUnmount(() => {
 .packet-list-enter-active .packet-row {
   background: linear-gradient(
     90deg,
-    rgba(78, 201, 176, 0.1) 0%,
-    rgba(78, 201, 176, 0.05) 50%,
+    color-mix(in srgb, var(--color-accent-green) 10%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-green) 5%, transparent) 50%,
     transparent 100%
   );
-  box-shadow: 0 0 20px rgba(78, 201, 176, 0.2);
-  border-left: 3px solid rgba(78, 201, 176, 0.6);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-green) 20%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--color-accent-green) 60%, transparent);
   border-radius: 8px;
   padding-left: 12px;
 }
 
 /* Subtle hover effect */
 .packet-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
   border-radius: 8px;
   transition: background 0.2s ease;
 }
+
+
 
 @media (max-width: 1023px) {
   /* Better mobile filter layout - keep filters in a more compact grid */
