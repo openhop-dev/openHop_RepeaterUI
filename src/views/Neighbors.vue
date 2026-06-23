@@ -24,11 +24,11 @@ const contactTypes = CONTACT_TYPE_MAP;
 
 // Contact type colors for styling
 const contactTypeColors = {
-  0: '#6b7280', // gray-500
-  1: '#60a5fa', // blue-400
-  2: '#34d399', // emerald-400
-  3: '#a855f7', // purple-500
-  4: '#f59e0b', // amber-500
+  0: 'var(--color-text-muted)',
+  1: 'var(--color-primary)',
+  2: 'var(--color-accent-green)',
+  3: 'var(--color-secondary)',
+  4: 'var(--color-accent-cyan)',
 } as const;
 
 // State — backed by neighborStore

@@ -15,55 +15,36 @@ import { useTheme } from '@/composables/useTheme';
 // Theme configuration
 const { theme: currentTheme } = useTheme();
 
-const darkTheme: ITheme = {
-  background: '#1A1E1F',
-  foreground: '#e0e0e0',
-  cursor: '#00d9ff',
-  cursorAccent: '#000000',
-  selectionBackground: '#00d9ff40',
-  selectionForeground: '#ffffff',
-  black: '#000000',
-  red: '#ff6b6b',
-  green: '#51cf66',
-  yellow: '#ffd93d',
-  blue: '#00d9ff',
-  magenta: '#e599f7',
-  cyan: '#00d9ff',
-  white: '#e0e0e0',
-  brightBlack: '#6c757d',
-  brightRed: '#ff8787',
-  brightGreen: '#69db7c',
-  brightYellow: '#ffe066',
-  brightBlue: '#74c0fc',
-  brightMagenta: '#f3a6ff',
-  brightCyan: '#3bc9db',
-  brightWhite: '#ffffff',
+const readCssToken = (token: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return value || fallback;
 };
 
-const lightTheme: ITheme = {
-  background: '#F3F4F6',
-  foreground: '#1f2937',
-  cursor: '#0D7377',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#0D737740',
-  selectionForeground: '#000000',
-  black: '#1f2937',
-  red: '#dc2626',
-  green: '#15803d',
-  yellow: '#a16207',
-  blue: '#0D7377',
-  magenta: '#7c3aed',
-  cyan: '#0e7490',
-  white: '#f3f4f6',
-  brightBlack: '#6b7280',
-  brightRed: '#ef4444',
-  brightGreen: '#22c55e',
-  brightYellow: '#eab308',
-  brightBlue: '#0891b2',
-  brightMagenta: '#a855f7',
-  brightCyan: '#06b6d4',
-  brightWhite: '#ffffff',
-};
+const getTerminalTheme = (): ITheme => ({
+  background: readCssToken('--color-surface', 'black'),
+  foreground: readCssToken('--color-text-secondary', 'gainsboro'),
+  cursor: readCssToken('--color-accent-cyan', 'deepskyblue'),
+  cursorAccent: readCssToken('--color-surface', 'black'),
+  selectionBackground: readCssToken('--color-badge-cyan-bg', 'lightblue'),
+  selectionForeground: readCssToken('--color-heading', 'white'),
+  black: readCssToken('--color-background', 'black'),
+  red: readCssToken('--color-accent-red', 'tomato'),
+  green: readCssToken('--color-accent-green', 'limegreen'),
+  yellow: readCssToken('--color-primary', 'goldenrod'),
+  blue: readCssToken('--color-primary', 'dodgerblue'),
+  magenta: readCssToken('--color-secondary', 'orchid'),
+  cyan: readCssToken('--color-accent-cyan', 'deepskyblue'),
+  white: readCssToken('--color-text-primary', 'white'),
+  brightBlack: readCssToken('--color-text-muted', 'gray'),
+  brightRed: readCssToken('--color-accent-red', 'red'),
+  brightGreen: readCssToken('--color-accent-green', 'green'),
+  brightYellow: readCssToken('--openhop-blue-light', 'khaki'),
+  brightBlue: readCssToken('--openhop-blue-light', 'lightskyblue'),
+  brightMagenta: readCssToken('--openhop-purple-light', 'violet'),
+  brightCyan: readCssToken('--color-accent-cyan', 'cyan'),
+  brightWhite: readCssToken('--color-heading', 'white'),
+});
 
 defineOptions({ name: 'TerminalView' });
 
@@ -223,7 +204,7 @@ onMounted(() => {
     fastScrollSensitivity: 5,
     allowProposedApi: true,
     screenReaderMode: isMobileDevice.value, // Enable for mobile keyboard support
-    theme: currentTheme.value === 'dark' ? darkTheme : lightTheme,
+    theme: getTerminalTheme(),
     scrollback: isMobileDevice.value ? 500 : 10000,
     tabStopWidth: 4,
     macOptionIsMeta: true,
@@ -755,7 +736,10 @@ const exitFullWindow = () => {
 // Watch for theme changes and update terminal
 watch(currentTheme, (newTheme) => {
   if (term) {
-    term.options.theme = newTheme === 'dark' ? darkTheme : lightTheme;
+    requestAnimationFrame(() => {
+      if (!term) return;
+      term.options.theme = getTerminalTheme();
+    });
   }
 });
 
@@ -1094,12 +1078,12 @@ const handleMobileBackspace = () => {
 }
 
 :deep(.xterm-selection) {
-  background-color: rgba(0, 217, 255, 0.3) !important;
+  background-color: color-mix(in srgb, var(--color-accent-cyan) 30%, transparent) !important;
 }
 
 kbd {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 /* Hidden input for mobile keyboard */

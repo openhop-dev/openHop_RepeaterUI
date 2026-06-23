@@ -527,7 +527,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   scene.add(keyLight);
 
   const earthMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(cssVar('--color-primary', '#0d7377')),
+    color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
     roughness: 0.62,
     metalness: 0.04,
   });
@@ -554,7 +554,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const grid = new THREE.Mesh(
     new THREE.SphereGeometry(1.006, 28, 18),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(cssVar('--color-primary', '#aae8e8')),
+      color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
       wireframe: true,
       transparent: true,
       opacity: 0.16,
@@ -563,7 +563,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const atmosphere = new THREE.Mesh(
     new THREE.SphereGeometry(1.045, 48, 24),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(cssVar('--color-primary', '#aae8e8')),
+      color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
       transparent: true,
       opacity: 0.1,
       side: THREE.BackSide,
@@ -678,13 +678,13 @@ const createSatelliteGlobe = (): GlobeRenderer => {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     roundedRect(context, 20, 14, 152, 48, 16);
-    context.fillStyle = 'rgba(3, 8, 10, 0.88)';
+    context.fillStyle = cssVar('--color-glass-bg', 'black');
     context.fill();
     context.lineWidth = 3;
     context.strokeStyle = color;
     context.stroke();
-    context.fillStyle = '#ffffff';
-    context.shadowColor = 'rgba(0, 0, 0, 0.92)';
+    context.fillStyle = cssVar('--color-heading', 'white');
+    context.shadowColor = cssVar('--color-background', 'black');
     context.shadowBlur = 7;
     context.fillText(text, 96, 39);
     const texture = new THREE.CanvasTexture(labelCanvas);
@@ -764,8 +764,8 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   ): SatEntry => {
     const satPosition = computeSatPosition(satellite, basis, userPosition);
     const color = satellite.used
-      ? cssVar('--color-accent-green', '#a5e5b6')
-      : cssVar('--color-primary', '#aae8e8');
+      ? cssVar('--color-accent-green', 'limegreen')
+      : cssVar('--color-primary', 'deepskyblue');
     const radius = 0.024 + (satellite.snr / 60) * 0.042;
     const meshMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
@@ -817,7 +817,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const addReceiver = (latitude: number, longitude: number) => {
     const userPosition = latLonVector(latitude, longitude, 1.022);
     const basis = localBasis(latitude, longitude);
-    const receiverColor = cssVar('--color-accent-green', '#a5e5b6');
+    const receiverColor = cssVar('--color-accent-green', 'limegreen');
     const receiver = new THREE.Mesh(
       new THREE.SphereGeometry(0.032, 18, 14),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(receiverColor) }),
@@ -874,8 +874,8 @@ const createSatelliteGlobe = (): GlobeRenderer => {
       const key = satellite.prn;
       const newPos = computeSatPosition(satellite, basis, userPosition);
       const color = satellite.used
-        ? cssVar('--color-accent-green', '#a5e5b6')
-        : cssVar('--color-primary', '#aae8e8');
+        ? cssVar('--color-accent-green', 'limegreen')
+        : cssVar('--color-primary', 'deepskyblue');
       const lineOpacity = satellite.used ? 0.46 : 0.26;
 
       const existing = satelliteEntries.get(key);
@@ -1456,7 +1456,11 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
       color-mix(in srgb, var(--color-primary) 24%, transparent),
       transparent 34%
     ),
-    radial-gradient(circle at 48% 50%, rgba(255, 255, 255, 0.14), transparent 20%),
+    radial-gradient(
+      circle at 48% 50%,
+      color-mix(in srgb, var(--color-surface) 14%, transparent),
+      transparent 20%
+    ),
     linear-gradient(145deg, var(--color-background-soft), var(--color-background));
   overflow: hidden;
   cursor: grab;
@@ -1477,12 +1481,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
   position: absolute;
   z-index: 2;
   min-width: 154px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--color-glass-border);
   border-radius: 12px;
-  background: rgba(5, 10, 12, 0.92);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--color-surface-elevated) 92%, transparent);
+  color: var(--color-heading);
   padding: 10px 11px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36);
+  box-shadow: var(--color-glass-shadow);
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 22px));
 }
@@ -1504,11 +1508,11 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .tooltip-key {
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--color-text-muted);
 }
 
 .tooltip-value {
-  color: #ffffff;
+  color: var(--color-heading);
   font-weight: 700;
   text-align: right;
 }
@@ -1601,7 +1605,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 .page-tabs {
   display: flex;
   gap: 2px;
-  border-bottom: 1px solid var(--color-border-subtle, rgba(0,0,0,0.1));
+  border-bottom: 1px solid var(--color-border-subtle);
   padding-bottom: 0;
 }
 
@@ -1609,7 +1613,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
   padding: 8px 18px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   border-bottom: 2px solid transparent;
   transition: color 0.18s, border-color 0.18s;
   margin-bottom: -1px;
@@ -1621,29 +1625,29 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .page-tab:hover {
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
 }
 
 .page-tab-active {
-  color: var(--color-primary, #aae8e8);
-  border-bottom-color: var(--color-primary, #aae8e8);
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 /* ── Inner (Globe / Table) tabs ───────────────────────────────────────────── */
 .inner-tabs {
   display: flex;
   gap: 2px;
-  border: 1px solid var(--color-border-subtle, rgba(255,255,255,0.1));
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
   padding: 2px;
-  background: rgba(255,255,255,0.04);
+  background: color-mix(in srgb, var(--color-surface) 22%, transparent);
 }
 
 .inner-tab {
   padding: 4px 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   border-radius: 6px;
   border: none;
   background: none;
@@ -1652,12 +1656,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .inner-tab:hover {
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
 }
 
 .inner-tab-active {
-  background: var(--color-primary, #aae8e8);
-  color: #000;
+  background: var(--color-primary);
+  color: var(--color-heading);
 }
 
 /* ── Accordion ────────────────────────────────────────────────────────────── */
@@ -1676,12 +1680,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .accordion-header:hover {
-  background: rgba(255,255,255,0.04);
+  background: color-mix(in srgb, var(--color-surface) 22%, transparent);
 }
 
 .accordion-chevron {
   flex-shrink: 0;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   transition: transform 0.2s ease;
 }
 

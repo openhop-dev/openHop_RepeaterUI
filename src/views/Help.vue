@@ -24,7 +24,7 @@ defineOptions({ name: 'HelpView' });
         </div>
 
         <h2 class="text-content-primary dark:text-content-primary text-xl font-medium mb-3">
-          pyMC Repeater Wiki
+          Repeater Wiki
         </h2>
         <p class="text-content-secondary dark:text-content-muted mb-8 max-w-md mx-auto">
           Access documentation, setup guides, troubleshooting tips, and community resources on our

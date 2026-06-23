@@ -8,6 +8,11 @@ import ChartCard from '@/components/ui/ChartCard.vue';
 
 defineOptions({ name: 'PacketTypesChart' });
 
+const cssVar = (name: string, fallback: string): string => {
+  if (typeof window === 'undefined') return fallback;
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
 interface PacketTypeData {
   name: string;
   type: string;
@@ -52,27 +57,44 @@ const bucketConfig = [
   {
     name: 'Payload',
     types: ['Plain Text Message', 'Group Text Message', 'Group Datagram', 'Multi-part Packet'],
-    subColors: ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE'], // Blue shades
+    subColors: [
+      cssVar('--color-primary', 'deepskyblue'),
+      cssVar('--openhop-blue-light', 'lightskyblue'),
+      cssVar('--color-badge-cyan-text', 'dodgerblue'),
+      cssVar('--color-badge-cyan-bg', 'lightblue'),
+    ],
   },
   {
     name: 'Requests',
     types: ['Request', 'Response', 'Anonymous Request'],
-    subColors: ['#10B981', '#34D399', '#6EE7B7'], // Emerald shades
+    subColors: [
+      cssVar('--color-accent-green', 'limegreen'),
+      cssVar('--color-accent-green-bg', 'lightgreen'),
+      cssVar('--color-glass-green-border', 'mediumseagreen'),
+    ],
   },
   {
     name: 'Control',
     types: ['Node Advertisement', 'Acknowledgment', 'Returned Path'],
-    subColors: ['#F59E0B', '#FBBF24', '#FCD34D'], // Amber shades
+    subColors: [
+      cssVar('--color-accent-cyan', 'cyan'),
+      cssVar('--color-accent-cyan-bg', 'paleturquoise'),
+      cssVar('--color-primary-bg', 'khaki'),
+    ],
   },
   {
     name: 'Routing',
     types: ['Trace'],
-    subColors: ['#8B5CF6'], // Purple
+    subColors: [cssVar('--color-secondary', 'violet')],
   },
   {
     name: 'Reserved',
     types: ['Reserved Type 11', 'Reserved Type 12', 'Reserved Type 13'],
-    subColors: ['#6B7280', '#9CA3AF', '#D1D5DB'], // Gray shades
+    subColors: [
+      cssVar('--color-text-muted', 'gray'),
+      cssVar('--color-border-hover', 'darkgray'),
+      cssVar('--color-border', 'silver'),
+    ],
   },
 ];
 

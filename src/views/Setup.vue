@@ -323,7 +323,7 @@ const stepTitles = [
                 </svg>
               </div>
               <p class="text-content-secondary dark:text-content-primary/70 text-lg">
-                Welcome to your pyMC Repeater! Let's get you set up in just a few steps.
+                Welcome to your Repeater! Let's get you set up in just a few steps.
               </p>
               <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 text-left">
                 <p class="text-primary text-sm font-medium mb-2">You'll configure:</p>
@@ -1025,7 +1025,7 @@ const stepTitles = [
         @click="closeDialog"
       >
         <div
-          class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
+          class="setup-dialog bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/20"
           @click.stop
         >
           <div class="flex justify-center mb-6">
@@ -1075,9 +1075,13 @@ const stepTitles = [
 
 <style scoped>
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.setup-dialog {
+  box-shadow: var(--color-glass-shadow);
 }
 
 /* Modal transition */

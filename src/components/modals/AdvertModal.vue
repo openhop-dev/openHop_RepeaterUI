@@ -136,10 +136,10 @@ const isNetworkTimeoutError = (error: string | null) => {
                     filter: isLoading
                       ? 'drop-shadow(0 0 8px currentColor)'
                       : isSuccess
-                        ? 'drop-shadow(0 0 8px #A5E5B6)'
+                        ? 'drop-shadow(0 0 8px var(--color-accent-green))'
                         : error && !isNetworkTimeoutError(error)
-                          ? 'drop-shadow(0 0 8px #FB787B)'
-                          : 'drop-shadow(0 0 4px #AAE8E8)',
+                          ? 'drop-shadow(0 0 8px var(--color-accent-red))'
+                          : 'drop-shadow(0 0 4px var(--color-primary))',
                   }"
                 />
               </div>
@@ -306,9 +306,9 @@ const isNetworkTimeoutError = (error: string | null) => {
 <style scoped>
 /* Glass card enhancement for modal */
 .glass-card {
-  background: rgba(0, 0, 0, 0.7);
+  background: color-mix(in srgb, var(--color-surface-elevated) 70%, transparent);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-glass-border);
 }
 
 /* Custom ping animation for radio waves */

@@ -74,7 +74,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Noto Sans', '-apple-system', 'Roboto', 'Helvetica', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'Roboto', 'Helvetica', 'sans-serif'],
+        heading: ['Michroma', 'sans-serif'],
       },
       backdropBlur: {
         '50': '50px',

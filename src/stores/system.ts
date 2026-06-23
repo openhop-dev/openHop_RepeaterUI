@@ -53,7 +53,7 @@ export const useSystemStore = defineStore('system', () => {
   // Keep browser tab title in sync with site name
   watchEffect(() => {
     const name = siteName.value;
-    document.title = name ? `${name} — pyMC Repeater` : 'pyMC Repeater Dashboard';
+    document.title = name ? `${name} — Repeater` : 'Repeater Dashboard';
   });
   const pubKey = computed(() => {
     const key = stats.value?.public_key;

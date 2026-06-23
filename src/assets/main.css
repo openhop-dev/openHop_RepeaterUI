@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Michroma:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @import './base.css';
 
 @import 'tailwindcss';
@@ -7,9 +9,15 @@
 @layer utilities {
   .glass-card {
     @apply rounded-[10px] backdrop-blur-[50px];
-    background: var(--color-glass-bg);
-    border: 1px solid var(--color-glass-border);
-    box-shadow: var(--color-glass-shadow);
+    background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-background) 25%, transparent);
+  }
+
+  .dark .glass-card {
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-background) 45%, transparent);
   }
 
   .glass-card-green {
@@ -27,7 +35,7 @@
   }
 
   .bg-mode-segment-forward {
-    background-color: color-mix(in srgb, var(--color-accent-green) 35%, transparent);
+    background-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
   }
   .bg-mode-segment-no-tx {
     background-color: color-mix(in srgb, var(--color-accent-red) 35%, transparent);
@@ -52,6 +60,16 @@
 
   .cfg-btn-secondary {
     @apply px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── Logo styling for light/dark mode ────────────────────────────────── */
+  .logo-image {
+    filter: brightness(0.7) contrast(1.3) saturate(1.2);
+    transition: filter 0.3s ease;
+  }
+
+  .dark .logo-image {
+    filter: brightness(1.1) contrast(1.05) saturate(1);
   }
 
   /* ── TopBar icon buttons ────────────────────────────────────────────────── */

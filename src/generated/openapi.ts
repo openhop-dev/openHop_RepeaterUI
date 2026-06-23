@@ -497,12 +497,12 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title pyMC Repeater API
+ * @title Repeater API
  * @version 1.0.0
  * @baseUrl /api
- * @contact pyMC Repeater (https://github.com/rightup/pyMC_Repeater)
+ * @contact Repeater (https://github.com/rightup/pyMC_Repeater)
  *
- * REST API for pyMC Repeater - LoRa mesh network repeater with room server functionality.
+ * REST API for Repeater - LoRa mesh network repeater with room server functionality.
  *
  * ## Features
  * - System statistics and monitoring

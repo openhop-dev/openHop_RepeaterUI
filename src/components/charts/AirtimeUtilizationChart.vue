@@ -30,18 +30,22 @@ import { useManagedPolling } from '@/composables/useManagedPolling';
 
 defineOptions({ name: 'AirtimeUtilizationChart' });
 
+const cssVar = (name: string, fallback: string): string => {
+  if (typeof window === 'undefined') return fallback;
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
 // Chart palette — fixed vibrant colours, same in both light and dark mode.
 const CHART_COLORS = {
-  rx: '#EBA0FC', // lavender — RX utilization line
-  tx: '#FB787B', // coral   — TX utilization line
+  rx: cssVar('--color-secondary', 'violet'),
+  tx: cssVar('--color-accent-red', 'tomato'),
 } as const;
 
 // Theme-aware chrome colours (grid lines, axis labels).
 const getChartChrome = () => {
-  const isDark = document.documentElement.classList.contains('dark');
   return {
-    gridLine:  isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    axisLabel: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+    gridLine: cssVar('--color-border-subtle', 'lightgray'),
+    axisLabel: cssVar('--color-text-muted', 'gray'),
   };
 };
 

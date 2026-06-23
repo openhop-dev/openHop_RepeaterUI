@@ -474,6 +474,43 @@ const parsePathString = (pathString?: string[] | string | null): string[] => {
   return [];
 };
 
+const getPathRows = (packet: Packet) => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+  const maxLength = Math.max(original.length, forwarded.length);
+
+  return Array.from({ length: maxLength }, (_, index) => {
+    const originalHash = original[index] || '';
+    const forwardedHash = forwarded[index] || '';
+    const normalizedOriginal = originalHash.toUpperCase();
+    const normalizedForwarded = forwardedHash.toUpperCase();
+
+    return {
+      hop: index + 1,
+      original: normalizedOriginal,
+      forwarded: normalizedForwarded,
+      changed: normalizedOriginal !== normalizedForwarded,
+      status:
+        normalizedOriginal && normalizedForwarded
+          ? normalizedOriginal === normalizedForwarded
+            ? 'same'
+            : 'changed'
+          : normalizedOriginal
+            ? 'original-only'
+            : 'forwarded-only',
+      localOriginal: !!props.localHash && normalizedOriginal === props.localHash.toUpperCase(),
+      localForwarded:
+        !!props.localHash && normalizedForwarded === props.localHash.toUpperCase(),
+    };
+  });
+};
+
+const isPathModified = (packet: Packet) => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+  return JSON.stringify(original) !== JSON.stringify(forwarded);
+};
+
 // Parse packet structure using raw packet data or fallback to individual fields
 const parsePacketStructure = (
   packet?: Packet,
@@ -939,7 +976,7 @@ watch(
     <Transition name="modal" appear>
       <div
         v-if="isOpen && packet"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+        class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden"
         @click="handleBackdropClick"
         @keydown="handleKeyDown"
         tabindex="0"
@@ -948,26 +985,31 @@ watch(
         <div class="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
 
         <!-- Modal Content -->
-        <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col" @click.stop>
+        <div class="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
           <div
-            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/20 flex flex-col h-full overflow-hidden"
+            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[16px] sm:rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/20 flex flex-col h-full overflow-hidden"
           >
             <!-- Header -->
-            <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
-              <div>
-                <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between p-4 sm:p-6 lg:p-8 pb-3 sm:pb-4 shrink-0 gap-3 sm:gap-4">
+              <div class="min-w-0 flex-1">
+                <h2 class="text-lg sm:text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
                   Packet Details
                 </h2>
-                <p class="text-content-secondary dark:text-content-muted text-sm">
-                  {{ getPacketTypeName(packet.type) }} - {{ getRouteName(packet.route) }}
-                </p>
+                <div class="flex flex-wrap gap-2 mt-2">
+                  <span class="inline-flex items-center rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                    {{ getPacketTypeName(packet.type) }}
+                  </span>
+                  <span class="inline-flex items-center rounded-full bg-orange-500/15 text-orange-700 dark:text-orange-300 px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                    {{ getRouteName(packet.route) }}
+                  </span>
+                </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0">
                 <!-- Binary Toggle Button -->
                 <button
                   @click="showBinaryValues = !showBinaryValues"
-                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200"
+                  class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200"
                   :class="
                     showBinaryValues
                       ? 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-600 dark:text-cyan-400'
@@ -987,8 +1029,11 @@ watch(
                 </button>
                 <!-- Close Button -->
                 <button
+                  type="button"
                   @click="emit('close')"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/10 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors duration-200 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+                  aria-label="Close packet details"
+                  title="Close"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-background-mute dark:bg-white/10 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors duration-200 text-content-secondary dark:text-content-primary hover:text-content-primary dark:hover:text-content-primary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -1003,17 +1048,17 @@ watch(
             </div>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-8">
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-6 lg:px-8">
               <!-- Section 1: Basic Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-cyan-400 mr-3"></div>
                   Basic Information
                 </h3>
-                <div class="glass-card bg-white/5 rounded-[15px] p-4">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-3">
                       <div
                         class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
@@ -1089,13 +1134,13 @@ watch(
               <!-- Section 2: Payload Data -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-orange-400 mr-3"></div>
                   Payload Data
                 </h3>
                 <div
-                  class="bg-gray-50 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
+                  class="bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
                 >
                   <div class="space-y-3">
                     <div
@@ -1115,7 +1160,7 @@ watch(
 
                       <!-- Raw Hex Display -->
                       <div
-                        class="glass-card bg-background-mute dark:bg-black/30 rounded-[10px] p-4 mb-4"
+                        class="glass-card bg-background-mute dark:bg-white/10 rounded-[10px] p-4 mb-4"
                       >
                         <div
                           class="text-content-secondary dark:text-content-muted text-xs mb-2 font-semibold"
@@ -1133,7 +1178,11 @@ watch(
                       <!-- Packet Structure Analysis -->
                       <div
                         v-for="(section, sectionIndex) in parsePacketStructure(packet).filter(
-                          (s) => !s.name.includes('Parse Error'),
+                          (s) =>
+                            !s.name.includes('Parse Error') &&
+                            !['Path Length', 'Path Data', 'Original Path', 'Forwarded Path'].includes(
+                              s.name,
+                            ),
                         )"
                         :key="sectionIndex"
                         class="mb-4"
@@ -1151,7 +1200,7 @@ watch(
                         </div>
 
                         <!-- Hex Input Display -->
-                        <div class="bg-background-mute dark:bg-black/40 rounded-[8px] p-3 mb-3">
+                        <div class="bg-background-mute dark:bg-white/10 rounded-[8px] p-3 mb-3">
                           <div
                             class="font-mono text-xs text-content-primary dark:text-content-primary break-all whitespace-pre-wrap leading-relaxed"
                           >
@@ -1160,7 +1209,7 @@ watch(
                         </div>
 
                         <!-- Field Breakdown Table -->
-                        <div class="bg-gray-50 dark:bg-white/5 rounded-[10px] overflow-hidden">
+                        <div class="bg-background-mute/50 dark:bg-white/5 rounded-[10px] overflow-hidden">
                           <!-- Desktop Table Header -->
                           <div
                             class="hidden md:grid gap-3 p-3 bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide"
@@ -1277,17 +1326,17 @@ watch(
               <!-- Section 3: Path Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-purple-400 mr-3"></div>
                   Path Information
                 </h3>
                 <div
-                  class="bg-gray-50 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
+                  class="bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
                 >
                   <div class="space-y-4">
                     <!-- Source and Destination -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div
                         class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
                       >
@@ -1324,161 +1373,178 @@ watch(
                       </div>
                     </div>
 
-                    <!-- Original Path -->
-                    <div v-if="parsePathString(packet.original_path).length > 0" class="py-2">
-                      <div class="text-content-secondary dark:text-content-muted text-sm mb-2">
-                        Original Path
-                      </div>
-                      <div class="bg-background-mute dark:bg-black/20 rounded-[10px] p-4">
-                        <div class="flex items-center flex-wrap gap-2">
-                          <template
-                            v-for="(hash, index) in parsePathString(packet.original_path)"
-                            :key="index"
-                          >
-                            <!-- Node Shape -->
-                            <div class="flex items-center">
-                              <div class="relative group">
-                                <!-- Node container with hexagon-like shape -->
-                                <div
-                                  class="relative px-3 py-2 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-cyan-400/40 rounded-lg transform transition-all hover:scale-105"
-                                >
-                                  <!-- Full hop chunk (1/2/4 bytes per segment) -->
-                                  <div
-                                    class="font-mono text-[10px] font-semibold tracking-tight text-content-primary dark:text-content-primary/90 sm:text-xs"
-                                  >
-                                    {{ hash.toUpperCase() }}
-                                  </div>
-                                </div>
-                                <!-- Tooltip: use solid dark surface; do not use bg-content-primary (text token as bg → light “empty” box in dark theme) -->
-                                <div
-                                  class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 font-mono text-xs text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
-                                >
-                                  Node: {{ hash.toUpperCase() }}
-                                </div>
-                              </div>
-                              <!-- Arrow (except for last item) -->
-                              <div
-                                v-if="index < parsePathString(packet.original_path).length - 1"
-                                class="mx-2 text-cyan-600 dark:text-cyan-400/60"
-                              >
-                                <svg
-                                  class="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M9 5l7 7-7 7"
-                                  ></path>
-                                </svg>
-                              </div>
-                            </div>
-                          </template>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Forwarded Path (if transmitted and different) -->
-                    <div
-                      v-if="packet.transmitted && parsePathString(packet.forwarded_path).length > 0"
-                      class="py-2"
-                    >
-                      <div
-                        class="text-content-secondary dark:text-content-muted text-sm mb-2 flex items-center"
-                      >
-                        Forwarded Path
-                        <svg
-                          v-if="
-                            JSON.stringify(parsePathString(packet.original_path)) !==
-                            JSON.stringify(parsePathString(packet.forwarded_path))
-                          "
-                          class="w-4 h-4 ml-2 text-yellow-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          ></path>
-                        </svg>
+                    <!-- Path Comparison Table -->
+                    <div v-if="getPathRows(packet).length > 0" class="py-2">
+                      <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="text-content-secondary dark:text-content-muted text-sm font-medium">
+                          Path Table
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-400/15 text-cyan-600 dark:text-cyan-300">
+                          {{ parsePathString(packet.original_path).length }} original hops
+                        </span>
                         <span
-                          v-if="
-                            JSON.stringify(parsePathString(packet.original_path)) !==
-                            JSON.stringify(parsePathString(packet.forwarded_path))
-                          "
-                          class="text-yellow-500 text-xs ml-1"
-                          >(Modified)</span
+                          v-if="packet.transmitted && parsePathString(packet.forwarded_path).length > 0"
+                          class="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"
                         >
+                          {{ parsePathString(packet.forwarded_path).length }} forwarded hops
+                        </span>
+                        <span
+                          v-if="packet.transmitted && isPathModified(packet)"
+                          class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
+                        >
+                          Modified
+                        </span>
                       </div>
-                      <div class="bg-background-mute dark:bg-black/20 rounded-[10px] p-4">
-                        <div class="flex items-center flex-wrap gap-2">
-                          <template
-                            v-for="(hash, index) in parsePathString(packet.forwarded_path)"
-                            :key="index"
+
+                      <div class="bg-background-mute dark:bg-white/5 rounded-[10px] border border-stroke-subtle dark:border-stroke/10 overflow-hidden">
+                        <div class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 bg-background-mute/80 dark:bg-white/10 text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide">
+                          <div>Hop</div>
+                          <div>Original</div>
+                          <div>Forwarded</div>
+                          <div>Status</div>
+                        </div>
+
+                        <div
+                          v-for="row in getPathRows(packet)"
+                          :key="`desktop-${row.hop}`"
+                          class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 border-t border-stroke-subtle dark:border-stroke/10 items-center"
+                        >
+                          <div class="font-mono text-xs text-content-muted dark:text-content-muted">
+                            #{{ row.hop }}
+                          </div>
+
+                          <div class="min-w-0">
+                            <div
+                              class="font-mono text-xs sm:text-sm rounded-md px-2 py-1 border truncate"
+                              :class="
+                                row.original
+                                  ? row.localOriginal
+                                    ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
+                                    : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary dark:text-content-primary'
+                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                              "
+                              :title="row.original || 'No hop'"
+                            >
+                              {{ row.original || '-' }}
+                            </div>
+                          </div>
+
+                          <div class="min-w-0">
+                            <div
+                              class="font-mono text-xs sm:text-sm rounded-md px-2 py-1 border truncate"
+                              :class="
+                                row.forwarded
+                                  ? row.localForwarded
+                                    ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
+                                    : 'bg-orange-500/10 border-orange-400/25 text-content-primary dark:text-content-primary'
+                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                              "
+                              :title="row.forwarded || 'No hop'"
+                            >
+                              {{ row.forwarded || '-' }}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span
+                              class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                              :class="
+                                row.status === 'same'
+                                  ? 'bg-green-500/20 text-green-700 dark:text-green-300'
+                                  : row.status === 'changed'
+                                    ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                                    : row.status === 'original-only'
+                                      ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300'
+                                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                              "
+                            >
+                              {{
+                                row.status === 'same'
+                                  ? 'Same'
+                                  : row.status === 'changed'
+                                    ? 'Changed'
+                                    : row.status === 'original-only'
+                                      ? 'Original only'
+                                      : 'Forwarded only'
+                              }}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="md:hidden divide-y divide-stroke-subtle dark:divide-stroke/10">
+                          <div
+                            v-for="row in getPathRows(packet)"
+                            :key="`mobile-${row.hop}`"
+                            class="p-3 space-y-2"
                           >
-                            <!-- Node Shape -->
-                            <div class="flex items-center">
-                              <div class="relative group">
-                                <!-- Node container with hexagon-like shape -->
-                                <div
-                                  class="relative px-3 py-2 bg-gradient-to-br from-orange-500/20 to-yellow-500/20 border border-orange-500 dark:border-orange-400/40 rounded-lg transform transition-all hover:scale-105"
-                                  :class="
-                                    props.localHash && hash === props.localHash
-                                      ? 'bg-gradient-to-br from-yellow-400/30 to-orange-400/30 border-yellow-300 shadow-yellow-400/20 shadow-lg'
-                                      : 'hover:border-orange-500 dark:border-orange-400/60'
-                                  "
-                                >
-                                  <!-- Full hop chunk (1/2/4 bytes per segment) -->
-                                  <div
-                                    class="font-mono text-[10px] font-semibold tracking-tight sm:text-xs"
-                                    :class="
-                                      props.localHash && hash === props.localHash
-                                        ? 'text-yellow-200'
-                                        : 'text-white/90'
-                                    "
-                                  >
-                                    {{ hash.toUpperCase() }}
-                                  </div>
-                                  <!-- Local node indicator -->
-                                  <div
-                                    v-if="props.localHash && hash === props.localHash"
-                                    class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"
-                                  ></div>
+                            <div class="flex items-center justify-between">
+                              <span class="font-mono text-xs text-content-muted dark:text-content-muted">
+                                Hop #{{ row.hop }}
+                              </span>
+                              <span
+                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                :class="
+                                  row.status === 'same'
+                                    ? 'bg-green-500/20 text-green-700 dark:text-green-300'
+                                    : row.status === 'changed'
+                                      ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                                      : row.status === 'original-only'
+                                        ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300'
+                                        : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                                "
+                              >
+                                {{
+                                  row.status === 'same'
+                                    ? 'Same'
+                                    : row.status === 'changed'
+                                      ? 'Changed'
+                                      : row.status === 'original-only'
+                                        ? 'Original only'
+                                        : 'Forwarded only'
+                                }}
+                              </span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                              <div class="space-y-1 min-w-0">
+                                <div class="text-[11px] uppercase tracking-wide text-content-muted dark:text-content-muted">
+                                  Original
                                 </div>
-                                <!-- Tooltip: solid dark surface for contrast in light and dark mode -->
                                 <div
-                                  class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 font-mono text-xs text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
+                                  class="font-mono text-xs rounded-md px-2 py-1 border truncate"
+                                  :class="
+                                    row.original
+                                      ? row.localOriginal
+                                        ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
+                                        : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary dark:text-content-primary'
+                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                  "
+                                  :title="row.original || 'No hop'"
                                 >
-                                  {{ hash.toUpperCase() }}
+                                  {{ row.original || '-' }}
                                 </div>
                               </div>
-                              <!-- Arrow (except for last item) -->
-                              <div
-                                v-if="index < parsePathString(packet.forwarded_path).length - 1"
-                                class="mx-1 text-orange-600 dark:text-orange-400/60"
-                              >
-                                <svg
-                                  class="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+
+                              <div class="space-y-1 min-w-0">
+                                <div class="text-[11px] uppercase tracking-wide text-content-muted dark:text-content-muted">
+                                  Forwarded
+                                </div>
+                                <div
+                                  class="font-mono text-xs rounded-md px-2 py-1 border truncate"
+                                  :class="
+                                    row.forwarded
+                                      ? row.localForwarded
+                                        ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
+                                        : 'bg-orange-500/10 border-orange-400/25 text-content-primary dark:text-content-primary'
+                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                  "
+                                  :title="row.forwarded || 'No hop'"
                                 >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 5l7 7-7 7"
-                                  ></path>
-                                </svg>
+                                  {{ row.forwarded || '-' }}
+                                </div>
                               </div>
                             </div>
-                          </template>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1489,16 +1555,16 @@ watch(
               <!-- Section 4: Signal & Processing -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-green-400 mr-3"></div>
                   Signal & Processing
                 </h3>
-                <div class="glass-card bg-gray-50 dark:bg-white/5 rounded-[15px] p-4">
+                <div class="glass-card bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4">
                   <!-- RF Metrics -->
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         RSSI
@@ -1509,7 +1575,7 @@ watch(
                       <div class="text-content-muted dark:text-content-muted text-xs">dBm</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         SNR
@@ -1520,7 +1586,7 @@ watch(
                       <div class="text-content-muted dark:text-content-muted text-xs">dB</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px] col-span-2 md:col-span-1"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         Score
@@ -1568,7 +1634,7 @@ watch(
                       <div
                         v-for="(pathSnr, index) in packet.path_snr_details"
                         :key="index"
-                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-black/20 rounded-[8px]"
+                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-white/5 rounded-[8px]"
                       >
                         <div class="flex items-center gap-3">
                           <span class="text-content-muted dark:text-content-muted text-sm"
@@ -1617,10 +1683,10 @@ watch(
                     </div>
 
                     <!-- LBT Summary Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                       <!-- Attempts Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px] col-span-2 md:col-span-1"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           CAD Attempts
@@ -1634,7 +1700,7 @@ watch(
 
                       <!-- Total Delay Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Total LBT Delay
@@ -1658,7 +1724,7 @@ watch(
 
                       <!-- Channel Status Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Channel Status
@@ -1682,7 +1748,7 @@ watch(
                     <!-- Backoff Pattern Visualization (if there were retries) -->
                     <div
                       v-if="parseLbtDelays(packet.lbt_backoff_delays_ms).length > 0"
-                      class="glass-card bg-background-mute dark:bg-black/20 rounded-[10px] p-4"
+                      class="glass-card bg-background-mute dark:bg-white/5 rounded-[10px] p-4"
                     >
                       <div
                         class="text-content-secondary dark:text-content-muted text-xs mb-3 font-semibold"
@@ -1756,7 +1822,7 @@ watch(
                   </div>
 
                   <!-- Processing Info -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-2">
                       <div
                         class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
@@ -1825,11 +1891,13 @@ watch(
 
             <!-- Footer -->
             <div
-              class="p-8 pt-4 border-t border-stroke-subtle dark:border-stroke/10 flex justify-end flex-shrink-0"
+              class="p-4 sm:p-6 lg:p-8 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/10 flex justify-end flex-shrink-0"
             >
               <button
+                type="button"
                 @click="emit('close')"
-                class="px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary dark:text-content-primary transition-all duration-200 backdrop-blur-sm"
+                aria-label="Close packet details"
+                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary dark:text-content-primary transition-all duration-200 backdrop-blur-sm"
               >
                 Close
               </button>
@@ -1861,7 +1929,7 @@ watch(
 /* Custom scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-surface) 35%, transparent) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -1869,17 +1937,17 @@ watch(
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-surface) 12%, transparent);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
 }
 
 /* Glass card enhancement */

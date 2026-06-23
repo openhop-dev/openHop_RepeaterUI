@@ -697,7 +697,6 @@ export class ApiService {
       timestamp: string;
       level: string;
       logger?: string;
-      raw_message?: string;
       exception?: string;
       module?: string;
       pathname?: string;

@@ -213,8 +213,8 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 
 <style scoped>
 .sparkline-card {
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 12px;
   padding: 12px 14px;
   backdrop-filter: blur(50px);
@@ -224,14 +224,14 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
     border-color 0.3s ease,
     box-shadow 0.3s ease;
   box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.04),
-    0 1px 3px rgba(0, 0, 0, 0.02);
+    0 4px 16px color-mix(in srgb, var(--color-background) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-background) 10%, transparent);
 }
 
 .dark .sparkline-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 .card-header {
@@ -242,7 +242,7 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 }
 
 .card-title {
-  color: rgba(75, 85, 99, 0.7);
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
@@ -251,11 +251,11 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 }
 
 .dark .card-title {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-muted);
 }
 
 .card-subtitle {
-  color: rgba(75, 85, 99, 0.5);
+  color: var(--color-text-muted);
   font-size: 9px;
   font-weight: 400;
   margin-top: 2px;
@@ -263,7 +263,7 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 }
 
 .dark .card-subtitle {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--color-text-muted);
 }
 
 .card-value {
@@ -300,9 +300,9 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 
 .chart-retry-btn {
   font-size: 11px;
-  color: rgba(75, 85, 99, 0.7);
-  background: rgba(75, 85, 99, 0.08);
-  border: 1px solid rgba(75, 85, 99, 0.15);
+  color: var(--color-text-muted);
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 4px;
   padding: 2px 8px;
   cursor: pointer;
@@ -310,17 +310,17 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 }
 
 .chart-retry-btn:hover {
-  background: rgba(75, 85, 99, 0.15);
+  background: var(--color-border-subtle);
 }
 
 .dark .chart-retry-btn {
-  color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text-muted);
+  background: var(--color-background-mute);
+  border-color: var(--color-border-subtle);
 }
 
 .dark .chart-retry-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-border-subtle);
 }
 
 .chart-text {
@@ -333,7 +333,7 @@ const svgId = computed(() => `sparkline-${props.title.replace(/\s+/g, '-').toLow
 .percent-value {
   font-size: 20px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--color-text-muted);
   font-variant-numeric: tabular-nums;
 }
 

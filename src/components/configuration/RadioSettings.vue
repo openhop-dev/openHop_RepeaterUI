@@ -313,7 +313,7 @@ defineExpose({ requestLeave, isEditing });
           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
           @click.self="showPrefillPicker = false"
         >
-          <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/10 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_rgba(0,0,0,0.35)] overflow-hidden">
+          <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/10 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
             <div class="flex items-start justify-between gap-3 p-5 border-b border-stroke-subtle dark:border-white/10">
               <div>
                 <div class="text-content-primary dark:text-content-primary font-semibold text-base">

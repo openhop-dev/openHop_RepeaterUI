@@ -17,8 +17,7 @@ import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
 import { useSidebarPin } from '@/composables/useSidebarPin';
 import { Pin } from '@lucide/vue';
-import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
-import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
+import openHopLogo from '@/assets/logo/openhop_transparent_trim.png';
 
 defineOptions({ name: 'SidebarNav' });
 
@@ -31,7 +30,7 @@ const systemStore = useSystemStore();
 const dataService = useDataService();
 const packetStore = usePacketStore();
 const { theme } = useTheme();
-const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
+const logoSrc = computed(() => openHopLogo);
 const { isPinned, togglePin } = useSidebarPin();
 
 const pinIconClass = computed(() =>
@@ -150,7 +149,7 @@ const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
-    case 'quiet':    return 'bg-accent-green/20 text-accent-green border-accent-green/50';
+    case 'quiet':    return 'bg-primary/20 text-primary border-primary/50';
     case 'normal':   return 'bg-primary/20 text-primary border-primary/50';
     case 'busy':     return 'bg-secondary/20 text-secondary border-secondary/50';
     case 'congested': return 'bg-accent-red/20 text-accent-red border-accent-red/50';
@@ -172,7 +171,7 @@ const dutyCycleBarStyle = computed(() => {
       ? 'var(--color-accent-red)'
       : percentage > 70
         ? 'var(--color-secondary)'
-        : 'var(--color-accent-green)',
+        : 'var(--color-primary)',
   };
 });
 
@@ -232,15 +231,18 @@ const currentTime = computed(() => {
       <div :class="['mb-4', isMobile ? 'flex items-start justify-between' : '']">
         <div>
           <div :class="['flex', isMobile ? 'mb-2' : 'mb-3 justify-center']">
-            <img :src="logoSrc" alt="pyMC" :class="isMobile ? 'h-[5rem]' : 'h-[6.5rem]'" />
+            <img :src="logoSrc" alt="openHop" class="logo-image" :class="isMobile ? 'h-[130px]' : 'h-[154px]'" />
           </div>
+          <h2 class="text-content-primary dark:text-content-primary text-center text-lg sm:text-xl font-heading font-bold mb-3">
+            Repeater
+          </h2>
           <p class="text-content-secondary dark:text-content-muted text-sm">
             {{ systemStore.nodeName }}
             <span
               :class="[
                 'inline-block w-2 h-2 rounded-full ml-2',
                 systemStore.statusBadge.text === 'Active'
-                  ? 'bg-accent-green'
+                  ? 'bg-primary'
                   : systemStore.statusBadge.text === 'Monitor Mode'
                     ? 'bg-secondary'
                     : 'bg-accent-red',
@@ -262,7 +264,7 @@ const currentTime = computed(() => {
                 </div>
               </div>
               <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted dark:text-content-muted">
-                <span class="text-accent-green">OK: {{ advertsAllowed }}</span>
+                <span class="text-primary">OK: {{ advertsAllowed }}</span>
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
                 <span v-if="activePenalties > 0" class="text-secondary">Pen: {{ activePenalties }}</span>
               </div>
@@ -293,7 +295,7 @@ const currentTime = computed(() => {
                   changingMode ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
                   systemStore.currentMode === opt.id
                     ? opt.id === 'forward'
-                      ? 'bg-mode-segment-forward text-accent-green'
+                      ? 'bg-mode-segment-forward text-primary'
                       : opt.id === 'monitor'
                         ? 'bg-secondary/20 text-secondary'
                         : 'bg-mode-segment-no-tx text-accent-red'
@@ -419,8 +421,8 @@ const currentTime = computed(() => {
         <a href="https://discord.gg/qreAsnmJ" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Discord">
           <DiscordIcon class="w-5 h-5 text-white group-hover:text-indigo-500 transition-colors" />
         </a>
-        <a href="https://pymc.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="pyMC Website">
-          <svg class="w-5 h-5 text-white group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <a href="https://pymc.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="pyMC Website">
+          <svg class="w-5 h-5 text-white group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 21a9.004 9.004 0 008.716-6M12 21a9.004 9.004 0 01-8.716-6M12 21c1.656 0 3-4.03 3-9s-1.344-9-3-9m0 18c-1.656 0-3-4.03-3-9s1.344-9 3-9m0 0a9.004 9.004 0 018.716 6M12 3a9.004 9.004 0 00-8.716 6M3.284 9h17.432M3.284 15h17.432" />
           </svg>
         </a>

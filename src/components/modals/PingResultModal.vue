@@ -415,7 +415,7 @@ const close = () => {
                             class="absolute left-1/2 -translate-x-1/2 animate-pulse"
                           >
                             <svg
-                              class="w-3 h-3 text-cyan-500 dark:text-primary drop-shadow-[0_0_6px_rgba(6,182,212,0.8)] dark:drop-shadow-[0_0_6px_rgba(59,130,246,0.8)]"
+                              class="w-3 h-3 text-cyan-500 dark:text-primary drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-accent-cyan)_80%,transparent)] dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-primary)_80%,transparent)]"
                               fill="currentColor"
                               viewBox="0 0 24 24"
                             >

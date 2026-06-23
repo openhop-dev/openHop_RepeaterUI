@@ -7,15 +7,15 @@ import { useDataService } from '@/stores/dataService';
 
 defineOptions({ name: 'StatsCards' });
 
-// Chart palette — fixed vibrant colours, same in both light and dark mode.
+// Chart palette — fixed vibrant colours using OpenHop blue/purple theme
 const CHART_COLORS = {
-  uptime:    '#EBA0FC', // lavender
-  rx:        '#AAE8E8', // teal
-  forward:   '#FFC246', // bright amber
-  dropped:   '#FB787B', // coral
-  policy:    '#7DD3FC', // sky
-  crcErrors: '#F59E0B', // amber
-  hashCache: '#9F7AEA', // purple
+  uptime: 'var(--color-primary)',
+  rx: 'var(--color-primary)',
+  forward: 'var(--color-secondary)',
+  dropped: 'var(--color-accent-red)',
+  policy: 'var(--color-accent-cyan)',
+  crcErrors: 'var(--color-accent-red)',
+  hashCache: 'var(--color-secondary)',
 } as const;
 
 const packetStore = usePacketStore();
