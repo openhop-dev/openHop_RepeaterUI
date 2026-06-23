@@ -58,6 +58,7 @@ type BucketPoint = {
   bucketMs: number;
   noise: number | null;
   crc: number;
+  packets: number;
 };
 
 type PacketStatsPayload = {
@@ -88,6 +89,7 @@ const chartStatus = ref('Connecting...');
 const packetStats = ref<PacketStatsPayload>({});
 const noisePoints = ref<TimeValuePoint[]>([]);
 const crcPoints = ref<TimeValuePoint[]>([]);
+const packetCountPoints = ref<TimeValuePoint[]>([]);
 const alignedBuckets = ref<BucketPoint[]>([]);
 const incidents = ref<Incident[]>([]);
   const selectedIncident = ref<Incident | null>(null);
@@ -107,7 +109,7 @@ const resolveCssColor = (color: string): string => {
 const CHART_COLORS = {
   noise: 'var(--color-primary)',
   crc: 'var(--color-accent-red)',
-  droppedPkts: 'var(--color-accent-orange)',
+  packetCount: 'var(--color-accent-green)',
   grid: 'var(--color-border-subtle)',
   ticks: 'var(--color-text-secondary)',
   tooltipBg: 'var(--color-surface-elevated)',
@@ -256,6 +258,23 @@ const extractMetricSeriesPoints = (raw: unknown, requestedType: string): TimeVal
   return points.sort((a, b) => a.t - b.t);
 };
 
+const extractPacketCountPoints = (raw: unknown): TimeValuePoint[] => {
+  const rx = extractMetricSeriesPoints(raw, 'rx_count');
+  const tx = extractMetricSeriesPoints(raw, 'tx_count');
+  const merged = new Map<number, number>();
+
+  rx.forEach((point) => {
+    merged.set(point.t, (merged.get(point.t) ?? 0) + point.v);
+  });
+  tx.forEach((point) => {
+    merged.set(point.t, (merged.get(point.t) ?? 0) + point.v);
+  });
+
+  return Array.from(merged.entries())
+    .map(([t, v]) => ({ t, v }))
+    .sort((a, b) => a.t - b.t);
+};
+
 const aggregateToBuckets = (
   points: TimeValuePoint[],
   bucketMs: number,
@@ -287,10 +306,12 @@ const computeAlignedBuckets = (): BucketPoint[] => {
 
   const noiseMap = aggregateToBuckets(noisePoints.value, bucketMs, 'avg');
   const crcMap = aggregateToBuckets(crcPoints.value, bucketMs, 'sum');
+  const packetMap = aggregateToBuckets(packetCountPoints.value, bucketMs, 'sum');
 
   const keys = new Set<number>([
     ...noiseMap.keys(),
     ...crcMap.keys(),
+    ...packetMap.keys(),
   ]);
 
   const sortedKeys = Array.from(keys).sort((a, b) => a - b);
@@ -299,6 +320,7 @@ const computeAlignedBuckets = (): BucketPoint[] => {
       bucketMs: bucket,
       noise: noiseMap.has(bucket) ? noiseMap.get(bucket) ?? null : null,
       crc: crcMap.get(bucket) ?? 0,
+      packets: packetMap.has(bucket) ? packetMap.get(bucket) ?? 0 : 0,
     };
   });
 };
@@ -458,15 +480,20 @@ const rfHealthScore = computed(() => {
   return clamp(Math.round(100 - (noisePenalty + crcPenalty + dropPenalty)), 0, 100);
 });
 const qualitySummary = computed(() => {
+  const latestNoiseTs = noisePoints.value.length > 0 ? noisePoints.value[noisePoints.value.length - 1].t : 0;
+  const latestCrcTs = crcPoints.value.length > 0 ? crcPoints.value[crcPoints.value.length - 1].t : 0;
+  const latestPacketTs = packetCountPoints.value.length > 0 ? packetCountPoints.value[packetCountPoints.value.length - 1].t : 0;
   const latestTs = Math.max(
-    noisePoints.value.at(-1)?.t ?? 0,
-    crcPoints.value.at(-1)?.t ?? 0,
+    latestNoiseTs,
+    latestCrcTs,
+    latestPacketTs,
   );
 
   const freshnessSeconds = latestTs > 0 ? Math.max(0, Math.round((Date.now() - latestTs) / 1000)) : null;
   return {
     noiseSamples: noisePoints.value.length,
     crcSamples: crcPoints.value.length,
+    packetSamples: packetCountPoints.value.length,
     freshnessSeconds,
   };
 });
@@ -512,18 +539,27 @@ const correlationRows = computed<CorrelationRow[]>(() => {
 
   const noise = joinedNoise.map((point) => point.noise as number);
   const crc = joinedNoise.map((point) => point.crc);
+  const packets = joinedNoise.map((point) => point.packets);
 
   const baseNoiseCrc = pearson(noise, crc);
+  const baseNoisePackets = pearson(noise, packets);
 
   const maxLag = 3;
   let bestLagCrc = 0;
   let bestLagCrcCorr = baseNoiseCrc;
+  let bestLagPackets = 0;
+  let bestLagPacketsCorr = baseNoisePackets;
 
   for (let lag = 1; lag <= maxLag; lag += 1) {
     const lagCorrCrc = laggedPearson(noise, crc, lag);
+    const lagCorrPackets = laggedPearson(noise, packets, lag);
     if ((lagCorrCrc ?? 0) > (bestLagCrcCorr ?? Number.NEGATIVE_INFINITY)) {
       bestLagCrc = lag;
       bestLagCrcCorr = lagCorrCrc;
+    }
+    if ((lagCorrPackets ?? 0) > (bestLagPacketsCorr ?? Number.NEGATIVE_INFINITY)) {
+      bestLagPackets = lag;
+      bestLagPacketsCorr = lagCorrPackets;
     }
   }
 
@@ -533,6 +569,12 @@ const correlationRows = computed<CorrelationRow[]>(() => {
       correlation: baseNoiseCrc,
       strongestLagBuckets: bestLagCrc,
       strongestLagCorrelation: bestLagCrcCorr,
+    },
+    {
+      label: 'Noise vs packet activity',
+      correlation: baseNoisePackets,
+      strongestLagBuckets: bestLagPackets,
+      strongestLagCorrelation: bestLagPacketsCorr,
     },
   ];
 });
@@ -568,7 +610,7 @@ const fetchAllData = async () => {
   chartError.value = null;
 
   try {
-    const [statsRes, noiseRes, crcRes] = await Promise.all([
+    const [statsRes, noiseRes, crcRes, metricsRes] = await Promise.all([
       streamingGet('/packet_stats', { hours: selectedHours.value }),
       streamingGet('/noise_floor_history', { hours: selectedHours.value }, {
         idleTimeoutMs: 30_000,
@@ -577,6 +619,11 @@ const fetchAllData = async () => {
         },
       }),
       streamingGet('/crc_error_history', { hours: selectedHours.value }),
+      streamingGet('/metrics_graph_data', {
+        hours: selectedHours.value,
+        resolution: 'average',
+        metrics: 'rx_count,tx_count',
+      }),
     ]);
 
     const statsPayload = asRecord(statsRes.data) ?? {};
@@ -590,6 +637,7 @@ const fetchAllData = async () => {
 
     noisePoints.value = extractNoisePoints(noiseRes.data);
     crcPoints.value = extractCrcPoints(crcRes.data);
+    packetCountPoints.value = extractPacketCountPoints(metricsRes.data);
 
     alignedBuckets.value = computeAlignedBuckets();
     incidents.value = buildIncidents(alignedBuckets.value);
@@ -629,6 +677,11 @@ const createOrUpdateChart = () => {
     .map((point) => ({ x: point.bucketMs, y: point.noise as number }));
 
   const crcData = alignedBuckets.value.map((point) => ({ x: point.bucketMs, y: point.crc }));
+  const maxCrc = Math.max(1, ...crcData.map((point) => point.y));
+  const packetBucketData = alignedBuckets.value.map((point) => ({ x: point.bucketMs, y: point.packets }));
+  const packetValues = packetBucketData.map((point) => point.y);
+  const packetP95 = packetValues.length > 0 ? percentile(packetValues, 0.95) : 1;
+  const maxPacketCount = Math.max(1, Math.ceil(packetP95 * 1.25));
 
   const timeUnit = selectedHours.value > 48 ? ('day' as const) : ('hour' as const);
 
@@ -647,7 +700,18 @@ const createOrUpdateChart = () => {
           tension: 0.25,
           pointRadius: 0,
           pointHoverRadius: 3,
-          order: 1,
+        },
+        {
+          type: 'line' as const,
+          label: 'Packet count (bucket)',
+          yAxisID: 'yPacketCount',
+          data: packetBucketData,
+          borderColor: resolveCssColor(CHART_COLORS.packetCount),
+          backgroundColor: resolveCssColor(CHART_COLORS.packetCount),
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 0,
+          pointHoverRadius: 3,
         },
         {
           type: 'bar' as const,
@@ -658,7 +722,6 @@ const createOrUpdateChart = () => {
           backgroundColor: resolveCssColor(CHART_COLORS.crc),
           barPercentage: 0.9,
           categoryPercentage: 1,
-          order: 3,
         },
 
       ],
@@ -720,9 +783,28 @@ const createOrUpdateChart = () => {
           type: 'linear' as const,
           position: 'right' as const,
           beginAtZero: true,
+          max: Math.ceil(maxCrc * 1.2),
           title: {
             display: true,
             text: 'CRC errors',
+            color: resolveCssColor(CHART_COLORS.ticks),
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+          ticks: {
+            color: resolveCssColor(CHART_COLORS.ticks),
+          },
+        },
+        yPacketCount: {
+          type: 'linear' as const,
+          position: 'right' as const,
+          offset: true,
+          beginAtZero: true,
+          max: Math.ceil(maxPacketCount * 1.2),
+          title: {
+            display: true,
+            text: 'Packet count',
             color: resolveCssColor(CHART_COLORS.ticks),
           },
           grid: {
@@ -781,7 +863,7 @@ onBeforeUnmount(() => {
       <div>
         <h2 class="text-xl sm:text-2xl font-bold text-content-primary">RF Health Correlation</h2>
         <p class="text-xs sm:text-sm text-content-secondary mt-1">
-          Live correlation of noise floor, CRC errors, and reported dropped packets (backend counters only).
+          Live correlation of noise floor, CRC errors, and packet activity so you can spot traffic-related peaks.
         </p>
       </div>
    
@@ -919,6 +1001,10 @@ onBeforeUnmount(() => {
         <div class="border border-stroke-subtle rounded-lg p-3">
           <div class="text-content-secondary">CRC samples</div>
           <div class="text-content-primary font-medium">{{ qualitySummary.crcSamples }}</div>
+        </div>
+        <div class="border border-stroke-subtle rounded-lg p-3">
+          <div class="text-content-secondary">Packet events</div>
+          <div class="text-content-primary font-medium">{{ qualitySummary.packetSamples }}</div>
         </div>
         <div class="border border-stroke-subtle rounded-lg p-3">
           <div class="text-content-secondary">Freshness</div>
