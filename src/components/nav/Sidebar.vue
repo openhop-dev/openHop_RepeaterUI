@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, provide, watch, onMounted, onUnmounted } from 'vue';
+import { computed, ref, provide, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NAV_ACTION_HANDLERS_KEY } from '@/config/navActionHandlers';
 import { useSystemStore } from '@/stores/system';
@@ -16,7 +16,7 @@ import { navigationItems, knownCapabilities } from '@/config/navigation';
 import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
 import { useSidebarPin } from '@/composables/useSidebarPin';
-import { Pin } from '@lucide/vue';
+import { Pin, Search, X } from '@lucide/vue';
 import openHopLogo from '@/assets/logo/openhop_transparent_trim.png';
 
 defineOptions({ name: 'SidebarNav' });
@@ -39,8 +39,14 @@ const pinIconClass = computed(() =>
 
 const pinButtonClass = computed(() =>
   isPinned.value
-    ? 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
-    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
+    ? 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
+    : 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
+);
+
+const searchButtonClass = computed(() =>
+  showNavSearch.value
+    ? 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary'
+    : 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
 );
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
@@ -138,7 +144,53 @@ function filterNavItems(items: NavItemConfig[]): NavItemConfig[] {
     );
 }
 
-const visibleNavItems = computed(() => filterNavItems(navigationItems));
+const navSearch = ref('');
+const showNavSearch = ref(false);
+const navSearchInput = ref<HTMLInputElement | null>(null);
+
+function toggleNavSearch() {
+  showNavSearch.value = !showNavSearch.value;
+  if (!showNavSearch.value) {
+    navSearch.value = '';
+    return;
+  }
+  nextTick(() => navSearchInput.value?.focus());
+}
+
+function clearNavSearch() {
+  navSearch.value = '';
+  nextTick(() => navSearchInput.value?.focus());
+}
+
+function filterNavItemsBySearch(items: NavItemConfig[], query: string): NavItemConfig[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+
+  return items.reduce<NavItemConfig[]>((acc, item) => {
+    const matchesSelf =
+      item.label.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      (item.route?.toLowerCase().includes(q) ?? false);
+
+    if (!item.children?.length) {
+      if (matchesSelf) acc.push(item);
+      return acc;
+    }
+
+    const matchedChildren = filterNavItemsBySearch(item.children, q);
+    if (matchesSelf) {
+      acc.push(item);
+      return acc;
+    }
+    if (matchedChildren.length > 0) {
+      acc.push({ ...item, children: matchedChildren });
+    }
+    return acc;
+  }, []);
+}
+
+const capabilityFilteredNavItems = computed(() => filterNavItems(navigationItems));
+const visibleNavItems = computed(() => filterNavItemsBySearch(capabilityFilteredNavItems.value, navSearch.value));
 
 // ── Status card ───────────────────────────────────────────────────────────────
 
@@ -318,18 +370,57 @@ const currentTime = computed(() => {
 
       <!-- Nav items -->
       <div class="relative mb-8 space-y-2">
-        <button
-          @click="togglePin"
-          :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
-          :class="pinButtonClass"
+        <div class="absolute top-[6px] right-0 z-10 flex items-center gap-1">
+          <button
+            @click="toggleNavSearch"
+            :title="showNavSearch ? 'Hide menu search' : 'Search menu items'"
+            :class="searchButtonClass"
+          >
+            <Search class="w-3.5 h-3.5" />
+          </button>
+          <button
+            @click="togglePin"
+            :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
+            :class="pinButtonClass"
+          >
+            <Pin :class="pinIconClass" />
+          </button>
+        </div>
+
+        <div v-if="showNavSearch" class="pr-16">
+          <div class="relative">
+            <input
+              ref="navSearchInput"
+              v-model="navSearch"
+              type="text"
+              placeholder="Search menu..."
+              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/30 bg-white/70 dark:bg-white/5 px-3 pr-8 text-xs text-content-primary dark:text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+            />
+            <button
+              v-if="navSearch"
+              type="button"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center text-content-muted hover:text-content-primary transition-colors"
+              title="Clear search"
+              @click="clearNavSearch"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <p
+          v-if="showNavSearch && navSearch.trim().length > 0 && visibleNavItems.length === 0"
+          class="text-xs text-content-muted px-1"
         >
-          <Pin :class="pinIconClass" />
-        </button>
+          No menu items match "{{ navSearch }}"
+        </p>
+
         <NavItem
           v-for="item in visibleNavItems"
           :key="item.id"
           :item="item"
           :depth="0"
+          :search-active="showNavSearch && navSearch.trim().length > 0"
         />
       </div>
 

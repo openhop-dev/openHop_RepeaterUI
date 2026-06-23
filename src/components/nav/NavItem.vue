@@ -12,6 +12,7 @@ const props = defineProps<{
   item: NavItemConfig
   depth?: number
   precedesActive?: boolean
+  searchActive?: boolean
 }>()
 
 const route = useRoute()
@@ -69,6 +70,7 @@ const { getRestoredFold, recordFold } = useSidebarPin()
 // Initialise from saved pin state when available, otherwise default to closed.
 const restored = isGroup.value ? getRestoredFold(props.item.id) : null
 const expanded = ref(restored !== null ? restored : false)
+const visibleExpanded = computed(() => (props.searchActive && isGroup.value) || expanded.value)
 
 watch(
   hasActiveDescendant,
@@ -129,13 +131,13 @@ const iconClass = computed(() =>
       <span class="nav-label flex-1 text-left">{{ item.label }}</span>
       <ChevronDown
         v-if="isGroup"
-        :class="['w-3 h-3 flex-shrink-0 transition-transform duration-200 text-content-muted', expanded ? 'rotate-180' : '']"
+        :class="['w-3 h-3 flex-shrink-0 transition-transform duration-200 text-content-muted', visibleExpanded ? 'rotate-180' : '']"
       />
     </button>
 
     <Transition name="nav-expand">
       <div
-        v-if="isGroup && expanded"
+        v-if="isGroup && visibleExpanded"
         :class="['nav-children mt-0 space-y-0', depth === 0 ? 'nav-root-children ml-[23px]' : 'nav-nested-children ml-[15px]']"
       >
         <NavItem
@@ -144,6 +146,7 @@ const iconClass = computed(() =>
           :item="child"
           :depth="depth + 1"
           :precedes-active="activeChildIndex >= 0 && i < activeChildIndex"
+          :search-active="searchActive"
         />
       </div>
     </Transition>
