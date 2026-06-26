@@ -13,7 +13,7 @@ import { getPreference, setPreference } from '@/utils/preferences';
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
-const { getSignalQuality } = useSignalQuality();
+const { getSignalQualityFromSNR } = useSignalQuality();
 const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -618,7 +618,7 @@ onBeforeUnmount(() => {
                 {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs flex items-center gap-1">
-                <SignalBars v-if="packet.rssi != null" :bars="getSignalQuality(packet.rssi).bars" :color="getSignalQuality(packet.rssi).color" />
+                <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
                 {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
@@ -927,7 +927,7 @@ onBeforeUnmount(() => {
               <div class="flex items-center gap-3">
                 <!-- Signal bars on mobile, hidden on desktop -->
                 <div class="md:hidden flex items-center gap-1">
-                  <SignalBars v-if="packet.rssi != null" :bars="getSignalQuality(packet.rssi).bars" :color="getSignalQuality(packet.rssi).color" />
+                  <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
                   <span class="text-content-primary dark:text-content-primary text-xs">{{
                     packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
                   }}</span>

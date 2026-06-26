@@ -141,8 +141,27 @@ export function useSignalQuality() {
     return mapSNRToQuality(clampedSNR, minSNR.value);
   };
 
+  /**
+   * Calculate signal quality directly from a pre-calculated SNR value
+   * Use this when the packet already contains an SNR field.
+   */
+  const getSignalQualityFromSNR = (snr: number | null): SignalQuality => {
+    if (snr === null || !Number.isFinite(snr)) {
+      return {
+        bars: 0,
+        color: 'text-gray-400 dark:text-gray-500',
+        bgColor: 'bg-gray-400 dark:bg-gray-500',
+        snr: -999,
+        quality: 'None',
+      };
+    }
+    const clamped = Math.max(-30, Math.min(20, snr));
+    return mapSNRToQuality(clamped, minSNR.value);
+  };
+
   return {
     getSignalQuality,
+    getSignalQualityFromSNR,
     noiseFloor,
     spreadingFactor,
     minSNR,
