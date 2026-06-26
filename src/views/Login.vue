@@ -109,9 +109,9 @@
           <!-- Error Message -->
           <div
             v-if="errorMessage"
-            class="bg-red-500/10 border border-red-500/30 rounded-[12px] p-2.5 sm:p-3.5 backdrop-blur-sm animate-shake"
+            class="bg-accent-red/10 border border-accent-red/30 rounded-[12px] p-2.5 sm:p-3.5 backdrop-blur-sm animate-shake"
           >
-            <p class="text-red-600 dark:text-red-400 text-xs sm:text-sm font-medium">
+            <p class="text-accent-red text-xs sm:text-sm font-medium">
               {{ errorMessage }}
             </p>
           </div>
@@ -174,11 +174,11 @@
             <a
               href="https://buymeacoffee.com/rightup"
               target="_blank"
-              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-yellow-50 dark:hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
               title="Buy Me a Coffee"
             >
               <CoffeeIcon
-                class="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-yellow-500 transition-colors"
+                class="w-5 h-5 sm:w-6 sm:h-6 text-white group-hover:text-secondary transition-colors"
               />
             </a>
           </div>
