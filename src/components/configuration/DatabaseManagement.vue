@@ -40,7 +40,7 @@
       <!-- Size summary -->
       <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Database Size</p>
           <p class="text-lg font-semibold text-content-primary font-mono">
@@ -48,7 +48,7 @@
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">RRD Metrics</p>
           <p class="text-lg font-semibold text-content-primary font-mono">
@@ -56,7 +56,7 @@
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Total Size</p>
           <p class="text-lg font-semibold text-content-primary font-mono">
@@ -64,7 +64,7 @@
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Total Rows</p>
           <p class="text-lg font-semibold text-content-primary font-mono">
@@ -84,7 +84,7 @@
       <!-- Error state -->
       <div
         v-if="error"
-        class="rounded-lg border border-accent-red/30 dark:border-accent-red/30 bg-accent-red/10 dark:bg-accent-red/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium dark:border-accent-red/opacity-medium bg-accent-red/opacity-light dark:bg-accent-red/opacity-light p-3 mb-4"
       >
         <p class="text-xs text-accent-red">{{ error }}</p>
       </div>
@@ -94,7 +94,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-stroke-subtle dark:border-stroke/10">
+              <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
                 <th
                   class="text-left py-2 pr-4 text-xs font-medium text-content-muted uppercase tracking-wider"
                 >
@@ -121,7 +121,7 @@
               <tr
                 v-for="table in stats.tables"
                 :key="table.name"
-                class="border-b border-stroke-subtle/50 dark:border-stroke/5"
+                class="border-b border-stroke-subtle/50 dark:border-stroke/opacity-light"
               >
                 <td class="py-2.5 pr-4">
                   <span class="font-mono text-content-primary">{{
@@ -140,21 +140,21 @@
                   >
                     {{ formatDateShort(table.oldest_timestamp) }} —
                     {{ formatDateShort(table.newest_timestamp) }}
-                    <span class="text-content-muted/60 ml-1"
+                    <span class="text-content-muted/opacity-heavy ml-1"
                       >({{ dateDays(table.oldest_timestamp, table.newest_timestamp) }}d)</span
                     >
                   </span>
-                  <span v-else-if="table.row_count === 0" class="text-xs text-content-muted/50"
+                  <span v-else-if="table.row_count === 0" class="text-xs text-content-muted/opacity-heavy"
                     >—</span
                   >
-                  <span v-else class="text-xs text-content-muted/50">n/a</span>
+                  <span v-else class="text-xs text-content-muted/opacity-heavy">n/a</span>
                 </td>
                 <td class="py-2.5 text-right">
                   <button
                     v-if="isUnlocked && isPurgeable(table.name) && table.row_count > 0"
                     @click="confirmPurge(table.name, table.row_count)"
                     :disabled="purging[table.name]"
-                    class="px-2.5 py-1 bg-accent-red/10 dark:bg-accent-red/10 hover:bg-accent-red/20 dark:hover:bg-accent-red/20 text-accent-red rounded border border-accent-red/30 dark:border-accent-red/20 transition-colors text-xs disabled:opacity-50"
+                    class="px-2.5 py-1 bg-accent-red/opacity-light dark:bg-accent-red/opacity-light hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded border border-accent-red/opacity-medium dark:border-accent-red/opacity-medium transition-colors text-xs disabled:opacity-50"
                   >
                     <span v-if="purging[table.name]" class="flex items-center gap-1">
                       <Spinner size="xs" color="current" class="inline-block" />
@@ -162,7 +162,7 @@
                     </span>
                     <span v-else>Empty</span>
                   </button>
-                  <span v-else-if="!isPurgeable(table.name)" class="text-xs text-content-muted/50"
+                  <span v-else-if="!isPurgeable(table.name)" class="text-xs text-content-muted/opacity-heavy"
                     >—</span
                   >
                 </td>
@@ -185,7 +185,7 @@
           @click.stop
         >
           <div class="flex items-start gap-3 mb-5">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-red/15 flex items-center justify-center">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-red/opacity-light flex items-center justify-center">
               <svg class="w-5 h-5 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
@@ -208,14 +208,14 @@
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary rounded-lg transition-colors"
+              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               @click="executePurge"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red rounded-lg transition-colors font-medium disabled:opacity-50"
+              class="flex-1 px-4 py-3 bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
             </button>
@@ -234,7 +234,7 @@
         <button
           @click="confirmPurge('all', totalRows)"
           :disabled="!stats || totalRows === 0 || !isUnlocked"
-          class="px-4 py-2 bg-accent-red/20 dark:bg-accent-red/20 hover:bg-accent-red/30 dark:hover:bg-accent-red/30 text-accent-red rounded-lg border border-accent-red/50 dark:border-accent-red/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-accent-red/opacity-medium dark:bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded-lg border border-accent-red/opacity-heavy dark:border-accent-red/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

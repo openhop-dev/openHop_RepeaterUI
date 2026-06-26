@@ -187,11 +187,11 @@ onUnmounted(() => {
     @click.self="handleClose"
   >
     <div
-      class="glass-card border border-stroke-subtle dark:border-white/20 rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
+      class="glass-card border border-stroke-subtle dark:border-white/opacity-medium rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/10"
+        class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/opacity-light"
       >
         <h3 class="text-xl font-semibold text-content-primary">
           Select Location
@@ -217,7 +217,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Coordinates Display & Actions -->
-      <div class="p-6 border-t border-stroke-subtle dark:border-stroke/10 space-y-4">
+      <div class="p-6 border-t border-stroke-subtle dark:border-stroke/opacity-light space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label
@@ -250,7 +250,7 @@ onUnmounted(() => {
         <div class="flex gap-3">
           <button
             @click="getCurrentLocation"
-            class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm flex items-center justify-center gap-2"
+            class="modal-btn-cancel flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -270,13 +270,13 @@ onUnmounted(() => {
           </button>
           <button
             @click="handleClose"
-            class="px-6 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
+            class="px-6 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm"
           >
             Cancel
           </button>
           <button
             @click="handleSelect"
-            class="px-6 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
+            class="px-6 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-sm"
           >
             Select Location
           </button>

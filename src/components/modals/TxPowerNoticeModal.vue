@@ -39,10 +39,10 @@ function onConfirm() {
         class="modal-backdrop"
         @click.self="closeModal"
       >
-      <div class="w-full max-w-2xl rounded-3xl border border-accent-amber/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
-        <div class="p-5 border-b border-accent-amber/20 bg-accent-amber/5">
+      <div class="w-full max-w-2xl rounded-3xl border border-accent-amber/opacity-medium bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
+        <div class="p-5 border-b border-accent-amber/opacity-medium bg-accent-amber/opacity-light">
           <div class="flex items-start gap-3">
-            <div class="rounded-full bg-accent-amber/15 text-accent-amber p-2">
+            <div class="rounded-full bg-accent-amber/opacity-light text-accent-amber p-2">
               <AlertTriangle class="w-5 h-5" />
             </div>
             <div>
@@ -69,7 +69,7 @@ function onConfirm() {
           <p class="leading-relaxed">
             Do not assume all boards support the same maximum power levels or PA configuration methods.
           </p>
-          <div class="rounded-xl border border-stroke-subtle dark:border-white/10 bg-background-mute/60 dark:bg-white/5 p-3">
+          <div class="rounded-xl border border-stroke-subtle dark:border-white/opacity-light bg-background-mute/opacity-heavy dark:bg-white/opacity-light p-3">
             <p class="text-content-primary font-medium mb-2">Recommended checks before applying changes:</p>
             <ul class="list-disc pl-5 space-y-1">
               <li>Verify whether your board includes an external PA/LNA stage</li>
@@ -95,13 +95,13 @@ function onConfirm() {
           </label>
         </div>
 
-        <div class="p-5 border-t border-stroke-subtle dark:border-white/10 flex items-center justify-end gap-2">
-          <button type="button" class="cfg-btn-secondary" @click="closeModal">
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-cancel" @click="closeModal">
             Cancel
           </button>
           <button
             type="button"
-            class="cfg-btn-primary"
+            class="modal-btn-primary"
             :disabled="!confirmed || busy"
             @click="onConfirm"
           >

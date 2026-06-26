@@ -23,16 +23,16 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const variantColors = {
-  danger: 'bg-accent-red/10 dark:bg-accent-red/20 border-accent-red/30 text-accent-red',
+  danger: 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border-accent-red/opacity-medium text-accent-red',
   warning:
-    'bg-accent-amber/10 dark:bg-accent-amber/20 border-accent-amber/30 text-accent-amber',
-  info: 'bg-primary/20 border-primary/30 text-primary',
+    'bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-medium border-accent-amber/opacity-medium text-accent-amber',
+  info: 'bg-primary/opacity-medium border-primary/opacity-medium text-primary',
 };
 
 const buttonColors = {
-  danger: 'bg-accent-red/10 hover:bg-accent-red/10',
-  warning: 'bg-accent-amber/10 hover:bg-accent-amber/10',
-  info: 'bg-primary/10 hover:bg-primary/10',
+  danger: 'bg-accent-red/opacity-light hover:bg-accent-red/opacity-light',
+  warning: 'bg-accent-amber/opacity-light hover:bg-accent-amber/opacity-light',
+  info: 'bg-primary/opacity-light hover:bg-primary/opacity-light',
 };
 </script>
 
@@ -111,7 +111,7 @@ const buttonColors = {
             />
           </svg>
         </div>
-        <p class="text-content-secondary dark:text-content-primary/80 text-base leading-relaxed">
+        <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-base leading-relaxed">
           {{ props.message }}
         </p>
       </div>
@@ -120,7 +120,7 @@ const buttonColors = {
       <div class="flex gap-3">
         <button
           @click="emit('close')"
-          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/10"
+          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           {{ props.cancelText }}
         </button>

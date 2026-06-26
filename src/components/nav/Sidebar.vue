@@ -16,7 +16,7 @@ import { navigationItems, knownCapabilities } from '@/config/navigation';
 import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
 import { useSidebarPin } from '@/composables/useSidebarPin';
-import { Pin, Search, X } from '@lucide/vue';
+import { Pin, X } from '@lucide/vue';
 import openHopLogo from '@/assets/logo/openhop_transparent_trim.png';
 
 defineOptions({ name: 'SidebarNav' });
@@ -43,11 +43,6 @@ const pinButtonClass = computed(() =>
     : 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
 );
 
-const searchButtonClass = computed(() =>
-  showNavSearch.value
-    ? 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary'
-    : 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
-);
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
 
@@ -145,17 +140,7 @@ function filterNavItems(items: NavItemConfig[]): NavItemConfig[] {
 }
 
 const navSearch = ref('');
-const showNavSearch = ref(false);
 const navSearchInput = ref<HTMLInputElement | null>(null);
-
-function toggleNavSearch() {
-  showNavSearch.value = !showNavSearch.value;
-  if (!showNavSearch.value) {
-    navSearch.value = '';
-    return;
-  }
-  nextTick(() => navSearchInput.value?.focus());
-}
 
 function clearNavSearch() {
   navSearch.value = '';
@@ -201,10 +186,10 @@ const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
-    case 'quiet':    return 'bg-primary/20 text-primary border-primary/50';
-    case 'normal':   return 'bg-primary/20 text-primary border-primary/50';
-    case 'busy':     return 'bg-accent-amber/20 text-accent-amber border-accent-amber/50';
-    case 'congested': return 'bg-accent-red/20 text-accent-red border-accent-red/50';
+    case 'quiet':    return 'bg-primary/opacity-medium text-primary border-primary/opacity-heavy';
+    case 'normal':   return 'bg-primary/opacity-medium text-primary border-primary/opacity-heavy';
+    case 'busy':     return 'bg-accent-amber/opacity-medium text-accent-amber border-accent-amber/opacity-heavy';
+    case 'congested': return 'bg-accent-red/opacity-medium text-accent-red border-accent-red/opacity-heavy';
     default:         return 'bg-surface-elevated text-content-muted border-stroke-subtle';
   }
 });
@@ -256,7 +241,7 @@ const currentTime = computed(() => {
     <Transition name="backdrop">
       <div
         v-if="isMobile && mobileOpen"
-        class="fixed inset-0 z-[249] bg-black/30 backdrop-blur-sm"
+        class="fixed inset-0 z-[249] bg-black/opacity-heavy backdrop-blur-sm"
         @click="emit('close')"
       />
     </Transition>
@@ -275,7 +260,7 @@ const currentTime = computed(() => {
       :class="[
         'h-full p-6 overflow-y-auto overscroll-contain scrollbar-hide',
         isMobile
-          ? 'bg-white/95 dark:bg-black/20 backdrop-blur-xl border border-stroke dark:border-white/10 rounded-2xl shadow-2xl'
+          ? 'bg-surface dark:bg-black/opacity-medium backdrop-blur-xl border border-stroke dark:border-white/opacity-light rounded-2xl shadow-2xl'
           : 'glass-card',
       ]"
     >
@@ -307,7 +292,7 @@ const currentTime = computed(() => {
           </p>
 
           <!-- Status card -->
-          <div class="mt-3 rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
+          <div class="mt-3 rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-white dark:bg-white/opacity-light overflow-hidden">
             <div class="p-2">
               <div class="flex items-center justify-between">
                 <span class="text-content-muted text-[10px] uppercase tracking-wide">Adaptive</span>
@@ -320,21 +305,21 @@ const currentTime = computed(() => {
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
                 <span v-if="activePenalties > 0" class="text-accent-amber">Pen: {{ activePenalties }}</span>
               </div>
-              <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
+              <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/opacity-light">
                 <div class="flex items-center justify-between text-[10px] text-content-muted mb-1">
                   <span>Duty Cycle</span>
                   <span class="text-content-primary">
                     {{ systemStore.dutyCycleUtilization.toFixed(1) }}% / {{ systemStore.dutyCycleMax.toFixed(1) }}%
                   </span>
                 </div>
-                <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                <div class="w-full h-1 bg-white/opacity-light rounded-full overflow-hidden">
                   <div class="h-full rounded-full transition-all duration-300" :style="dutyCycleBarStyle" />
                 </div>
               </div>
               <NoiseFloorSparkline />
             </div>
             <!-- Mode -->
-            <div class="flex border-t border-stroke-subtle dark:border-white/10">
+            <div class="flex border-t border-stroke-subtle dark:border-white/opacity-light">
               <button
                 v-for="opt in modeOptions"
                 :key="opt.id"
@@ -343,15 +328,15 @@ const currentTime = computed(() => {
                 :disabled="changingMode"
                 @click="handleSetMode(opt.id as 'forward' | 'monitor' | 'no_tx')"
                 :class="[
-                  'flex-1 py-2 text-xs font-medium transition-all duration-200 border-r border-stroke-subtle dark:border-white/10 last:border-r-0',
+                  'flex-1 py-2 text-xs font-medium transition-all duration-200 border-r border-stroke-subtle dark:border-white/opacity-light last:border-r-0',
                   changingMode ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
                   systemStore.currentMode === opt.id
                     ? opt.id === 'forward'
                       ? 'bg-mode-segment-forward text-primary'
                       : opt.id === 'monitor'
-                        ? 'bg-accent-amber/20 text-accent-amber'
+                        ? 'bg-accent-amber/opacity-medium text-accent-amber'
                         : 'bg-mode-segment-no-tx text-accent-red'
-                    : 'text-content-primary hover:bg-white/5 dark:hover:bg-white/5',
+                    : 'text-content-primary hover:bg-white/opacity-light dark:hover:bg-white/opacity-light',
                 ]"
               >
                 {{ changingMode && systemStore.currentMode !== opt.id ? '…' : opt.label }}
@@ -369,32 +354,15 @@ const currentTime = computed(() => {
       </div>
 
       <!-- Nav items -->
-      <div class="relative mb-8 space-y-2">
-        <div class="absolute top-[6px] right-0 z-10 flex items-center gap-1">
-          <button
-            @click="toggleNavSearch"
-            :title="showNavSearch ? 'Hide menu search' : 'Search menu items'"
-            :class="searchButtonClass"
-          >
-            <Search class="w-3.5 h-3.5" />
-          </button>
-          <button
-            @click="togglePin"
-            :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
-            :class="pinButtonClass"
-          >
-            <Pin :class="pinIconClass" />
-          </button>
-        </div>
-
-        <div v-if="showNavSearch" class="pr-16">
-          <div class="relative">
+      <div class="mb-8 space-y-2">
+        <div class="flex items-center gap-1 mb-2">
+          <div class="relative flex-1">
             <input
               ref="navSearchInput"
               v-model="navSearch"
               type="text"
               placeholder="Search menu..."
-              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/30 bg-white/70 dark:bg-white/5 px-3 pr-8 text-xs text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-medium bg-surface dark:bg-white/opacity-light px-3 pr-8 text-xs text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/opacity-heavy"
             />
             <button
               v-if="navSearch"
@@ -406,10 +374,17 @@ const currentTime = computed(() => {
               <X class="w-3.5 h-3.5" />
             </button>
           </div>
+          <button
+            @click="togglePin"
+            :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
+            :class="pinButtonClass"
+          >
+            <Pin :class="pinIconClass" />
+          </button>
         </div>
 
         <p
-          v-if="showNavSearch && navSearch.trim().length > 0 && visibleNavItems.length === 0"
+          v-if="navSearch.trim().length > 0 && visibleNavItems.length === 0"
           class="text-xs text-content-muted px-1"
         >
           No menu items match "{{ navSearch }}"
@@ -420,7 +395,7 @@ const currentTime = computed(() => {
           :key="item.id"
           :item="item"
           :depth="0"
-          :search-active="showNavSearch && navSearch.trim().length > 0"
+          :search-active="navSearch.trim().length > 0"
         />
       </div>
 
@@ -428,7 +403,7 @@ const currentTime = computed(() => {
       <button
         v-if="isMobile"
         @click="handleLogout"
-        class="w-full glass-card-orange hover:bg-accent-red/10 rounded-[10px] py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-content-primary dark:text-white transition-all mb-6"
+        class="w-full glass-card-orange hover:bg-accent-red/opacity-light rounded-[10px] py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-content-primary transition-all mb-6"
       >
         <svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
           <path d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13" stroke-linecap="round" stroke-linejoin="round" />
@@ -438,7 +413,7 @@ const currentTime = computed(() => {
 
       <!-- Version badges -->
       <div class="mb-4">
-        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-accent-cyan/30 bg-accent-cyan/10">
+        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-accent-cyan/opacity-medium bg-accent-cyan/opacity-light">
           <div class="flex items-center justify-center gap-2">
             <svg class="w-4 h-4 text-accent-cyan flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
@@ -449,10 +424,10 @@ const currentTime = computed(() => {
 
         <div @click="showVersionDetails = !showVersionDetails" class="cursor-pointer transition-all duration-200 hover:scale-[1.02]">
           <div class="flex items-center gap-2">
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-accent-amber border-accent-amber/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-accent-amber border-accent-amber/opacity-medium' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               R:v{{ repeaterVersion.base }}{{ repeaterVersion.isDev ? '-dev' + repeaterVersion.devNumber : '' }}
             </span>
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-accent-amber border-accent-amber/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-accent-amber border-accent-amber/opacity-medium' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               Core:v{{ coreVersion.base }}{{ coreVersion.isDev ? '-dev' + coreVersion.devNumber : '' }}
             </span>
             <svg :class="['w-3 h-3 text-content-muted transition-transform duration-200', showVersionDetails ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +435,7 @@ const currentTime = computed(() => {
             </svg>
           </div>
 
-          <div v-if="showVersionDetails" class="mt-2 glass-card px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/30 space-y-2 text-xs animate-fade-in">
+          <div v-if="showVersionDetails" class="mt-2 glass-card px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium space-y-2 text-xs animate-fade-in">
             <div class="space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-content-muted font-medium">Repeater:</span>
@@ -470,11 +445,11 @@ const currentTime = computed(() => {
                 <div>Dev Build: {{ repeaterVersion.devNumber }}</div>
                 <div v-if="repeaterVersion.commit" class="flex items-center gap-1">
                   <span>Commit:</span>
-                  <code class="bg-white/5 dark:bg-black/20 px-1 py-0.5 rounded">{{ repeaterVersion.commit }}</code>
+                  <code class="bg-white/opacity-light dark:bg-black/opacity-medium px-1 py-0.5 rounded">{{ repeaterVersion.commit }}</code>
                 </div>
               </div>
             </div>
-            <div class="border-t border-stroke-subtle dark:border-stroke/20" />
+            <div class="border-t border-stroke-subtle dark:border-stroke/opacity-medium" />
             <div class="space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-content-muted font-medium">Core:</span>
@@ -484,7 +459,7 @@ const currentTime = computed(() => {
                 <div>Dev Build: {{ coreVersion.devNumber }}</div>
                 <div v-if="coreVersion.commit" class="flex items-center gap-1">
                   <span>Commit:</span>
-                  <code class="bg-white/5 dark:bg-black/20 px-1 py-0.5 rounded">{{ coreVersion.commit }}</code>
+                  <code class="bg-white/opacity-light dark:bg-black/opacity-medium px-1 py-0.5 rounded">{{ coreVersion.commit }}</code>
                 </div>
               </div>
             </div>
@@ -509,18 +484,18 @@ const currentTime = computed(() => {
       </div>
 
       <div class="flex items-center justify-center gap-3">
-        <a href="https://discord.gg/qreAsnmJ" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Discord">
+        <a href="https://discord.gg/6dYjGpPSK" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Discord">
           <DiscordIcon class="w-5 h-5 text-white group-hover:text-indigo-500 transition-colors" />
         </a>
-        <a href="https://openhop.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="openHop Website">
+        <a href="https://openhop.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-primary/opacity-medium dark:hover:bg-primary/opacity-medium hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="openHop Website">
           <svg class="w-5 h-5 text-white group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 21a9.004 9.004 0 008.716-6M12 21a9.004 9.004 0 01-8.716-6M12 21c1.656 0 3-4.03 3-9s-1.344-9-3-9m0 18c-1.656 0-3-4.03-3-9s1.344-9 3-9m0 0a9.004 9.004 0 018.716 6M12 3a9.004 9.004 0 00-8.716 6M3.284 9h17.432M3.284 15h17.432" />
           </svg>
         </a>
-        <a href="https://github.com/openhop-dev/openhope-repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
+        <a href="https://github.com/openhop-dev/openhope-repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-primary/opacity-medium dark:hover:bg-primary/opacity-medium hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
           <GitHubIcon class="w-5 h-5 text-white group-hover:text-primary transition-colors" />
         </a>
-        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 dark:hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
+        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-secondary/opacity-light hover:border-secondary/opacity-heavy dark:hover:border-secondary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
           <CoffeeIcon class="w-5 h-5 text-white group-hover:text-secondary transition-colors" />
         </a>
       </div>

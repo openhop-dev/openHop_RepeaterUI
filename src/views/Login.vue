@@ -21,11 +21,11 @@
 
     <!-- Login Card with enhanced glass effect -->
     <div
-      class="login-card relative z-10 w-full max-w-md p-6 sm:p-10 rounded-[16px] sm:rounded-[24px] border-0 sm:border sm:border-stroke-subtle dark:sm:border-stroke/20 backdrop-blur-xl"
+      class="login-card relative z-10 w-full max-w-md p-6 sm:p-10 rounded-[16px] sm:rounded-[24px] border-0 sm:border sm:border-stroke-subtle dark:sm:border-stroke/opacity-medium backdrop-blur-xl"
     >
       <!-- Decorative glow effect -->
       <div
-        class="absolute inset-0 rounded-[24px] bg-gradient-to-br from-primary/3 dark:from-primary/5 to-transparent pointer-events-none"
+        class="absolute inset-0 rounded-[24px] bg-gradient-to-br from-primary/3 dark:from-primary/opacity-subtle to-transparent pointer-events-none"
       ></div>
 
       <!-- Content -->
@@ -56,7 +56,7 @@
           <div class="form-group">
             <label
               for="username"
-              class="block text-content-secondary dark:text-content-primary/90 text-xs sm:text-sm font-medium mb-2"
+              class="block text-content-secondary dark:text-content-primary/opacity-heavy text-xs sm:text-sm font-medium mb-2"
             >
               Username
             </label>
@@ -71,7 +71,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy transition-all duration-300"
                 placeholder="Enter username"
                 :disabled="loading || isRateLimited"
               />
@@ -83,7 +83,7 @@
           <div class="form-group">
             <label
               for="password"
-              class="block text-content-secondary dark:text-content-primary/90 text-xs sm:text-sm font-medium mb-2"
+              class="block text-content-secondary dark:text-content-primary/opacity-heavy text-xs sm:text-sm font-medium mb-2"
             >
               Password
             </label>
@@ -98,7 +98,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy transition-all duration-300"
                 placeholder="Enter password"
                 :disabled="loading || isRateLimited"
               />
@@ -109,7 +109,7 @@
           <!-- Error Message -->
           <div
             v-if="errorMessage"
-            class="bg-accent-red/10 border border-accent-red/30 rounded-[12px] p-2.5 sm:p-3.5 backdrop-blur-sm animate-shake"
+            class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-[12px] p-2.5 sm:p-3.5 backdrop-blur-sm animate-shake"
           >
             <p class="text-accent-red text-xs sm:text-sm font-medium">
               {{ errorMessage }}
@@ -120,7 +120,7 @@
           <button
             type="submit"
             :disabled="loading || isRateLimited"
-            class="button-glass w-full relative overflow-hidden bg-primary/20 hover:bg-primary/30 active:scale-[0.98] text-primary dark:text-white font-semibold py-3 sm:py-4 px-4 rounded-[12px] border border-primary/50 hover:border-primary/60 transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-2.5 group mt-6 sm:mt-8 text-sm sm:text-base backdrop-blur-sm"
+            class="button-glass w-full relative overflow-hidden bg-primary/opacity-medium hover:bg-primary/opacity-medium active:scale-[0.98] text-primary font-semibold py-3 sm:py-4 px-4 rounded-[12px] border border-primary/opacity-heavy hover:border-primary/opacity-heavy transition-all duration-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 sm:gap-2.5 group mt-6 sm:mt-8 text-sm sm:text-base backdrop-blur-sm"
           >
             <Spinner v-if="loading" size="sm" color="white" />
             <svg
@@ -150,7 +150,7 @@
         </form>
 
         <!-- Footer Info -->
-        <div class="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/10">
+        <div class="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light">
           <!-- Powered by MeshCore -->
           <div class="flex flex-col items-center justify-center mb-4">
             <p class="text-content-muted text-[10px] sm:text-xs mb-1.5 tracking-wide uppercase opacity-60">Powered by</p>
@@ -164,7 +164,7 @@
             <a
               href="https://github.com/rightup"
               target="_blank"
-              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-primary/opacity-medium dark:hover:bg-primary/opacity-medium hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
               title="GitHub"
             >
               <GitHubIcon
@@ -174,7 +174,7 @@
             <a
               href="https://buymeacoffee.com/rightup"
               target="_blank"
-              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 dark:hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-secondary/opacity-light hover:border-secondary/opacity-heavy dark:hover:border-secondary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
               title="Buy Me a Coffee"
             >
               <CoffeeIcon

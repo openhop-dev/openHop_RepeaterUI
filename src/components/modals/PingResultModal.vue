@@ -191,11 +191,11 @@ const close = () => {
         >
           <!-- Header -->
           <div
-            class="bg-gradient-to-r from-primary/20 to-accent-cyan/20 border-b border-stroke-subtle dark:border-stroke/10 px-6 py-4"
+            class="bg-gradient-to-r from-primary/20 to-accent-cyan/20 border-b border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4"
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-accent-cyan/20 dark:bg-primary/20 rounded-lg">
+                <div class="p-2 bg-accent-cyan/opacity-medium dark:bg-primary/opacity-medium rounded-lg">
                   <svg
                     class="w-5 h-5 text-accent-cyan dark:text-primary"
                     fill="none"
@@ -221,7 +221,7 @@ const close = () => {
               </div>
               <button
                 @click="close"
-                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -249,7 +249,7 @@ const close = () => {
             <!-- Error State -->
             <div v-else-if="error" class="text-center py-8">
               <div
-                class="p-3 bg-accent-red/10 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
+                class="p-3 bg-accent-red/opacity-light rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
               >
                 <svg
                   class="w-8 h-8 text-accent-red"
@@ -336,7 +336,7 @@ const close = () => {
               <!-- Multi-byte hash mode firmware warning -->
               <div
                 v-if="isMultiByteMode"
-                class="flex items-start gap-3 bg-accent-amber/10 border border-accent-amber/30 rounded-[12px] p-3"
+                class="flex items-start gap-3 bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-[12px] p-3"
               >
                 <svg
                   class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
@@ -379,9 +379,9 @@ const close = () => {
                     >
                       <div
                         :class="[
-                          'bg-accent-cyan/20 dark:bg-primary/20 text-accent-cyan dark:text-primary border border-accent-cyan/40 dark:border-primary/30 px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
+                          'bg-accent-cyan/opacity-medium dark:bg-primary/opacity-medium text-accent-cyan dark:text-primary border border-accent-cyan/opacity-heavy dark:border-primary/opacity-medium px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
                           isAnimating && Math.floor(getPacketPosition) === index
-                            ? 'ring-2 ring-cyan-400/50 dark:ring-primary/50 scale-105'
+                            ? 'ring-2 ring-cyan-400/50 dark:ring-primary/opacity-heavy scale-105'
                             : '',
                         ]"
                       >
@@ -448,7 +448,7 @@ const close = () => {
           </div>
 
           <!-- Footer -->
-          <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
+          <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
             <div class="modal-actions">
               <button type="button" class="modal-btn-primary" @click="close">Close</button>
             </div>

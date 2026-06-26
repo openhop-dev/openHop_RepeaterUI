@@ -147,13 +147,13 @@ const saveChanges = async () => {
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
-      class="bg-accent-green/10 dark:bg-accent-green/20 border border-accent-green dark:border-accent-green/50 rounded-lg p-3 text-accent-green text-sm"
+      class="bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium border border-accent-green dark:border-accent-green/opacity-heavy rounded-lg p-3 text-accent-green text-sm"
     >
       {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
@@ -161,7 +161,7 @@ const saveChanges = async () => {
     <!-- Duty Cycle Settings -->
     <div class="cfg-section"><div class="space-y-3">
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Max Airtime %</span

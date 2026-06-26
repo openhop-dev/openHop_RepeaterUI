@@ -67,10 +67,10 @@ const incidentDetails = computed(() => {
     totalCrc: inc.totalCrc.toLocaleString(),
     severityColor:
       inc.severity === 'high'
-        ? 'bg-danger/10 text-danger'
+        ? 'bg-accent-red/opacity-light text-accent-red'
         : inc.severity === 'medium'
-          ? 'bg-warning/10 text-warning'
-          : 'bg-success/10 text-success',
+          ? 'bg-accent-amber/opacity-light text-accent-amber'
+          : 'bg-accent-green/opacity-light text-accent-green',
   };
 });
 
@@ -310,10 +310,10 @@ const handleBackdropClick = (event: MouseEvent) => {
           @click.stop
         >
           <!-- Header -->
-          <div class="bg-gradient-to-r from-accent-amber/20 to-accent-red/20 border-b border-stroke-subtle dark:border-stroke/10 px-6 py-4">
+          <div class="bg-gradient-to-r from-accent-amber/20 to-accent-red/20 border-b border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-accent-amber/20 rounded-lg">
+                <div class="p-2 bg-accent-amber/opacity-medium rounded-lg">
                   <svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -325,7 +325,7 @@ const handleBackdropClick = (event: MouseEvent) => {
               </div>
               <button
                 @click="emit('close')"
-                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -432,7 +432,7 @@ const handleBackdropClick = (event: MouseEvent) => {
               </div>
 
               <div v-if="nearbyLoading" class="text-sm text-content-secondary mt-3">Loading nearby packets...</div>
-              <div v-else-if="nearbyError" class="text-sm text-danger mt-3">{{ nearbyError }}</div>
+              <div v-else-if="nearbyError" class="text-sm text-accent-red mt-3">{{ nearbyError }}</div>
               <div v-else class="mt-3 space-y-3">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <div class="rounded-md border border-stroke-subtle px-2 py-2">
@@ -516,7 +516,7 @@ const handleBackdropClick = (event: MouseEvent) => {
                     <div
                       v-for="packet in nearbyPacketsPreview"
                       :key="`${packet.packet_hash}-${packet.timestamp}`"
-                      class="packet-context-row grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-2 border-b border-stroke-subtle dark:border-dark-border/50 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150"
+                      class="packet-context-row grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-2 border-b border-stroke-subtle dark:border-dark-border/50 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150"
                     >
                       <div class="md:col-span-2 text-content-secondary text-xs">
                         <span class="md:hidden text-content-tertiary font-semibold uppercase tracking-wide mr-1">Time:</span>
@@ -531,9 +531,9 @@ const handleBackdropClick = (event: MouseEvent) => {
                       <div
                         class="md:col-span-2 text-xs font-medium"
                         :class="{
-                          'text-warning': packetStatus(packet) === 'Duplicate',
-                          'text-danger': packetStatus(packet) === 'Dropped',
-                          'text-success': packetStatus(packet) === 'Forwarded',
+                          'text-accent-amber': packetStatus(packet) === 'Duplicate',
+                          'text-accent-red': packetStatus(packet) === 'Dropped',
+                          'text-accent-green': packetStatus(packet) === 'Forwarded',
                         }"
                       >
                         <span class="md:hidden text-content-tertiary font-semibold uppercase tracking-wide mr-1">Status:</span>
@@ -550,7 +550,7 @@ const handleBackdropClick = (event: MouseEvent) => {
 
                       <div class="md:col-span-2 md:text-right">
                         <button
-                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
                           @click="openPacketDetails(packet)"
                         >
                           Open
@@ -565,7 +565,7 @@ const handleBackdropClick = (event: MouseEvent) => {
 
           </div>
           <!-- Footer -->
-          <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
+          <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
             <div class="modal-actions">
               <button type="button" class="modal-btn-primary" @click="emit('close')">Close</button>
             </div>

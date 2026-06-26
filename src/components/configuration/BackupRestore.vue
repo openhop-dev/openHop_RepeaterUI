@@ -11,7 +11,7 @@
     <!-- HTTP Security Warning -->
     <div
       v-if="isInsecure"
-      class="rounded-lg border-2 border-accent-red/50 bg-accent-red/10 p-4"
+      class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
     >
       <div class="flex items-start gap-3">
         <svg
@@ -99,7 +99,7 @@
       </div>
 
       <div
-        class="rounded-lg border border-accent-red/30 bg-accent-red/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium bg-accent-red/opacity-light p-3 mb-4"
       >
         <p class="text-xs text-accent-red">
           <strong>Contains sensitive data.</strong> The backup file will include plain-text
@@ -128,7 +128,7 @@
 
       <div
         v-if="showFullBackupConfirm"
-        class="rounded-lg border-2 border-accent-red/50 bg-accent-red/10 p-4"
+        class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
       >
         <div class="flex items-start gap-3">
           <svg
@@ -200,7 +200,7 @@
       <!-- File picker -->
       <div class="space-y-3">
         <label
-          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/50 hover:border-primary/50 dark:hover:border-primary/50 transition-colors"
+          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/opacity-heavy hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-colors"
         >
           <svg
             class="w-5 h-5 text-content-secondary dark:text-content-muted"
@@ -230,7 +230,7 @@
         <!-- Preview after file selected -->
         <div
           v-if="importPreview"
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <h4 class="text-sm font-medium text-content-primary mb-2">
             Import Preview
@@ -267,7 +267,7 @@
         <div v-if="importPreview && !showImportConfirm">
           <button
             @click="showImportConfirm = true"
-            class="px-4 py-2 bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber rounded-lg border border-accent-amber/50 transition-colors text-sm"
+            class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium text-accent-amber rounded-lg border border-accent-amber/opacity-heavy transition-colors text-sm"
           >
             Review &amp; Import
           </button>
@@ -276,7 +276,7 @@
         <!-- Confirm dialog -->
         <div
           v-if="showImportConfirm"
-          class="rounded-lg border-2 border-accent-amber/50 bg-accent-amber/10 p-4"
+          class="rounded-lg border-2 border-accent-amber/opacity-heavy bg-accent-amber/opacity-light p-4"
         >
           <div class="flex items-start gap-3">
             <svg
@@ -312,7 +312,7 @@
                 <button
                   @click="importConfig"
                   :disabled="importing"
-                  class="px-4 py-2 bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber rounded-lg border border-accent-amber/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium text-accent-amber rounded-lg border border-accent-amber/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {{ importing ? 'Importing…' : 'Yes, Import' }}
                 </button>
@@ -353,7 +353,7 @@
 
       <!-- Danger warning -->
       <div
-        class="rounded-lg border border-accent-red/30 bg-accent-red/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium bg-accent-red/opacity-light p-3 mb-4"
       >
         <p class="text-xs text-accent-red">
           <strong>Sensitive data.</strong> The identity key is the repeater's private key. Anyone
@@ -384,7 +384,7 @@
       <!-- Identity confirm -->
       <div
         v-if="showIdentityConfirm && !identityData"
-        class="rounded-lg border-2 border-accent-red/50 bg-accent-red/10 p-4"
+        class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
       >
         <div class="flex items-start gap-3">
           <svg
@@ -430,7 +430,7 @@
       <!-- Identity result (show details before download) -->
       <div
         v-if="identityData"
-        class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10 space-y-2"
+        class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/opacity-light space-y-2"
       >
         <div class="flex items-center justify-between">
           <h4 class="text-sm font-medium text-content-primary">

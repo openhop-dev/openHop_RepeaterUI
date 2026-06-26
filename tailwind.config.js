@@ -80,6 +80,12 @@ export default {
         sans: ['Inter', '-apple-system', 'Roboto', 'Helvetica', 'sans-serif'],
         heading: ['Michroma', 'sans-serif'],
       },
+      opacity: {
+        'opacity-subtle': '0.05',
+        'opacity-light':  '0.10',
+        'opacity-medium': '0.25',
+        'opacity-heavy':  '0.50',
+      },
       backdropBlur: {
         '50': '50px',
       },

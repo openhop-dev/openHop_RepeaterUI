@@ -36,8 +36,8 @@
             :disabled="toggling"
             class="px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-50"
             :class="tracing
-              ? 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border-accent-red/50'
-              : 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border-accent-green/50'"
+              ? 'bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red border-accent-red/opacity-heavy'
+              : 'bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium text-accent-green border-accent-green/opacity-heavy'"
           >
             <span v-if="toggling" class="flex items-center gap-1.5">
               <Spinner size="xs" color="current" class="inline-block" />
@@ -51,14 +51,14 @@
       <!-- Error -->
       <div
         v-if="error"
-        class="mb-4 p-3 rounded-lg bg-accent-red/10 border border-accent-red/30 text-accent-red text-sm"
+        class="mb-4 p-3 rounded-lg bg-accent-red/opacity-light border border-accent-red/opacity-medium text-accent-red text-sm"
       >
         {{ error }}
       </div>
 
       <!-- RSS when tracing is off -->
       <div v-if="!tracing && rssMb !== null && !loading" class="mb-4">
-        <div class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10 inline-block">
+        <div class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light inline-block">
           <p class="text-xs text-content-muted mb-1">Current Memory (RSS)</p>
           <p class="text-lg font-semibold text-content-primary font-mono">{{ rssMb }} MB</p>
         </div>
@@ -67,7 +67,7 @@
       <!-- Tracing active, no data yet -->
       <div
         v-if="tracing && !hasData && !loading"
-        class="p-4 rounded-lg bg-accent-cyan/10 dark:bg-primary/10 border border-accent-cyan/30 dark:border-primary/30"
+        class="p-4 rounded-lg bg-accent-cyan/opacity-light dark:bg-primary/opacity-light border border-accent-cyan/opacity-medium dark:border-primary/opacity-medium"
       >
         <div class="flex items-center gap-2 text-accent-cyan dark:text-primary">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +75,7 @@
           </svg>
           <span class="font-medium">Tracing active</span>
         </div>
-        <p class="mt-2 text-sm text-accent-cyan dark:text-primary/80">
+        <p class="mt-2 text-sm text-accent-cyan dark:text-primary/opacity-heavy">
           Memory tracing is running. Let the repeater run for a few minutes, then click
           <strong>Check Again</strong> to see which parts of the code are using more memory.
         </p>
@@ -93,15 +93,15 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-          <div v-if="data.rss_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
+          <div v-if="data.rss_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light">
             <p class="text-xs text-content-muted mb-1">Total Memory Used</p>
             <p class="text-lg font-semibold text-content-primary font-mono">{{ data.rss_mb }} MB</p>
           </div>
-          <div v-if="data.traced_current_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
+          <div v-if="data.traced_current_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light">
             <p class="text-xs text-content-muted mb-1">Tracked Now</p>
             <p class="text-lg font-semibold text-content-primary font-mono">{{ data.traced_current_mb }} MB</p>
           </div>
-          <div v-if="data.traced_peak_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
+          <div v-if="data.traced_peak_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light">
             <p class="text-xs text-content-muted mb-1">Peak Tracked</p>
             <p class="text-lg font-semibold text-content-primary font-mono">{{ data.traced_peak_mb }} MB</p>
           </div>
@@ -146,7 +146,7 @@
         <!-- No growth -->
         <div
           v-else-if="data.growth_since_baseline && data.growth_since_baseline.length === 0"
-          class="mb-6 p-4 rounded-lg bg-accent-green/10 border border-accent-green/30 text-sm flex items-center gap-3"
+          class="mb-6 p-4 rounded-lg bg-accent-green/opacity-light border border-accent-green/opacity-medium text-sm flex items-center gap-3"
         >
           <svg class="w-5 h-5 text-accent-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -166,7 +166,7 @@
             Advanced: Current Top Allocations
           </button>
           <Transition name="expand">
-            <div v-if="showCurrent" class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/10">
+            <div v-if="showCurrent" class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="bg-background-mute dark:bg-background/30 text-left">
@@ -180,7 +180,7 @@
                   <tr
                     v-for="(row, i) in data.current_top_20"
                     :key="i"
-                    class="border-t border-stroke-subtle/50 dark:border-stroke/5 hover:bg-background-mute/50 dark:hover:bg-background/20 transition-colors"
+                    class="border-t border-stroke-subtle/50 dark:border-stroke/opacity-light hover:bg-background-mute/opacity-heavy dark:hover:bg-background/20 transition-colors"
                   >
                     <td class="px-3 py-2 text-content-muted font-mono text-xs">{{ i + 1 }}</td>
                     <td class="px-3 py-2 text-content-primary font-mono text-xs break-all">{{ simplifyPath(row.file) }}</td>
@@ -309,18 +309,18 @@ function severityLabel(row: GrowthStat): string {
 
 function severityBadgeClass(row: GrowthStat): string {
   const s = getSeverity(row);
-  if (s === 'critical') return 'bg-accent-red/20 text-accent-red border border-accent-red/30';
-  if (s === 'warning') return 'bg-accent-amber/20 text-accent-amber border border-accent-amber/30';
-  if (s === 'low') return 'bg-primary/15 text-primary border border-primary/20';
-  return 'bg-accent-green/15 text-accent-green border border-accent-green/20';
+  if (s === 'critical') return 'bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-medium';
+  if (s === 'warning') return 'bg-accent-amber/opacity-medium text-accent-amber border border-accent-amber/opacity-medium';
+  if (s === 'low') return 'bg-primary/opacity-light text-primary border border-primary/opacity-medium';
+  return 'bg-accent-green/opacity-light text-accent-green border border-accent-green/opacity-medium';
 }
 
 function severityCardClass(row: GrowthStat): string {
   const s = getSeverity(row);
-  if (s === 'critical') return 'border-accent-red/40 dark:border-accent-red/30 bg-accent-red/5 dark:bg-accent-red/5';
-  if (s === 'warning') return 'border-accent-amber/40 dark:border-accent-amber/30 bg-accent-amber/5 dark:bg-accent-amber/5';
-  if (s === 'low') return 'border-stroke-subtle dark:border-stroke/10 bg-background-mute/50 dark:bg-background/20';
-  return 'border-stroke-subtle/50 dark:border-stroke/5 bg-background-mute/30 dark:bg-background/10 opacity-60';
+  if (s === 'critical') return 'border-accent-red/opacity-heavy dark:border-accent-red/opacity-medium bg-accent-red/opacity-light dark:bg-accent-red/opacity-light';
+  if (s === 'warning') return 'border-accent-amber/opacity-heavy dark:border-accent-amber/opacity-medium bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-light';
+  if (s === 'low') return 'border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute/opacity-heavy dark:bg-background/20';
+  return 'border-stroke-subtle/50 dark:border-stroke/opacity-light bg-background-mute/opacity-medium dark:bg-background/10 opacity-60';
 }
 
 function severityTextClass(row: GrowthStat): string {
@@ -358,10 +358,10 @@ const overallHealthLevel = computed((): Severity => {
 
 const overallHealthClass = computed(() => {
   const s = overallHealthLevel.value;
-  if (s === 'critical') return 'border-accent-red/40 dark:border-accent-red/30 bg-accent-red/10 dark:bg-accent-red/10 text-accent-red';
-  if (s === 'warning') return 'border-accent-amber/40 dark:border-accent-amber/30 bg-accent-amber/10 dark:bg-accent-amber/10 text-accent-amber';
-  if (s === 'low') return 'border-primary/30 bg-primary/10 dark:bg-primary/10 text-primary';
-  return 'border-accent-green/30 bg-accent-green/10 dark:bg-accent-green/10 text-accent-green';
+  if (s === 'critical') return 'border-accent-red/opacity-heavy dark:border-accent-red/opacity-medium bg-accent-red/opacity-light dark:bg-accent-red/opacity-light text-accent-red';
+  if (s === 'warning') return 'border-accent-amber/opacity-heavy dark:border-accent-amber/opacity-medium bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-light text-accent-amber';
+  if (s === 'low') return 'border-primary/opacity-medium bg-primary/opacity-light dark:bg-primary/opacity-light text-primary';
+  return 'border-accent-green/opacity-medium bg-accent-green/opacity-light dark:bg-accent-green/opacity-light text-accent-green';
 });
 
 const overallHealthIcon = computed(() => {

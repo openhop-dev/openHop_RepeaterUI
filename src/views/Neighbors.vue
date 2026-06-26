@@ -321,7 +321,7 @@ onMounted(() => {
     <!-- Error State -->
     <div
       v-else-if="error"
-      class="bg-accent-red/10 dark:bg-accent-red/10 border border-accent-red dark:border-accent-red/20 rounded-[15px] p-6"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-light border border-accent-red dark:border-accent-red/opacity-medium rounded-[15px] p-6"
     >
       <div class="flex items-center gap-3">
         <svg
@@ -339,7 +339,7 @@ onMounted(() => {
         </svg>
         <div>
           <h3 class="text-accent-red dark:text-accent-red font-medium">Error Loading Neighbors</h3>
-          <p class="text-accent-red dark:text-accent-red/80 text-sm">{{ error }}</p>
+          <p class="text-accent-red dark:text-accent-red/opacity-heavy text-sm">{{ error }}</p>
         </div>
       </div>
     </div>
@@ -364,7 +364,7 @@ onMounted(() => {
           <div class="flex items-center gap-3">
             <!-- View Toggle Buttons -->
             <div
-              class="hidden lg:flex bg-background-mute dark:bg-surface-elevated/30 backdrop-blur rounded-lg border border-stroke-subtle dark:border-stroke/10 mb p-1"
+              class="hidden lg:flex bg-background-mute dark:bg-surface-elevated/30 backdrop-blur rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light mb p-1"
             >
               <!-- Comfortable View Button -->
               <button
@@ -372,8 +372,8 @@ onMounted(() => {
                 :class="[
                   'p-2 rounded-md transition-colors',
                   !isCompactView
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+                    ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
                 ]"
                 title="Comfortable view"
               >
@@ -411,8 +411,8 @@ onMounted(() => {
                 :class="[
                   'p-2 rounded-md transition-colors',
                   isCompactView
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+                    ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
                 ]"
                 title="Compact view"
               >
@@ -460,7 +460,7 @@ onMounted(() => {
                 :value="selectedHours"
                 @change="changeHours(+($event.target as HTMLSelectElement).value)"
                 :disabled="loading"
-                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/20 focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium focus:outline-none focus:border-primary/opacity-heavy disabled:opacity-50"
               >
                 <option v-for="opt in hoursOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
@@ -475,8 +475,8 @@ onMounted(() => {
                 :class="[
                   'px-3 py-1.5 text-xs rounded-lg transition-colors border',
                   showAllMapContacts
-                    ? 'bg-primary/20 text-primary border-primary/30'
-                    : 'bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20',
+                    ? 'bg-primary/opacity-medium text-primary border-primary/opacity-medium'
+                    : 'bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium',
                 ]"
               >
                 Map: {{ showAllMapContacts ? 'All Contacts' : 'Zero Hop' }}
@@ -487,8 +487,8 @@ onMounted(() => {
                 :class="[
                   'px-3 py-1.5 text-xs rounded-lg transition-colors border',
                   hasActiveFilters
-                    ? 'bg-primary/20 text-primary border-primary/30'
-                    : 'bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20',
+                    ? 'bg-primary/opacity-medium text-primary border-primary/opacity-medium'
+                    : 'bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium',
                 ]"
               >
                 <svg
@@ -507,7 +507,7 @@ onMounted(() => {
                 Filters
                 <span
                   v-if="hasActiveFilters"
-                  class="ml-1 bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30 text-xs px-1.5 py-0.5 rounded-full font-medium"
+                  class="ml-1 bg-accent-cyan/opacity-medium text-accent-cyan border border-accent-cyan/opacity-medium text-xs px-1.5 py-0.5 rounded-full font-medium"
                 >
                   Active
                 </span>
@@ -516,7 +516,7 @@ onMounted(() => {
               <button
                 v-if="hasActiveFilters"
                 @click="resetFilters"
-                class="px-3 py-1.5 text-xs rounded-lg bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors"
+                class="px-3 py-1.5 text-xs rounded-lg bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium transition-colors"
               >
                 Clear Filters
               </button>
@@ -527,7 +527,7 @@ onMounted(() => {
         <!-- Filter Panel -->
         <div
           v-show="showFilters"
-          class="bg-background dark:bg-background/30 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4 mt-4 space-y-4"
+          class="bg-background dark:bg-background/30 border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-4 mt-4 space-y-4"
         >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Zero Hop Filter -->
@@ -538,7 +538,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.zeroHop"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none"
               >
                 <option value="all">All Nodes</option>
                 <option value="true">Zero Hop Only</option>
@@ -554,7 +554,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.routeType"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none"
               >
                 <option value="all">All Types</option>
                 <option value="direct">Direct</option>
@@ -574,7 +574,7 @@ onMounted(() => {
                 v-model="filters.searchText"
                 type="text"
                 placeholder="Node name or pubkey..."
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-content-muted dark:placeholder-content-muted"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none placeholder-content-muted dark:placeholder-content-muted"
               />
             </div>
           </div>
@@ -634,7 +634,7 @@ onMounted(() => {
         </p>
         <button
           @click="loadAllAdverts"
-          class="mt-4 px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors"
+          class="mt-4 px-4 py-2 bg-primary/opacity-medium text-primary border border-primary/opacity-medium rounded-lg hover:bg-primary/opacity-medium transition-colors"
         >
           Refresh
         </button>
@@ -668,7 +668,7 @@ onMounted(() => {
         </p>
         <button
           @click="resetFilters"
-          class="px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors"
+          class="px-4 py-2 bg-primary/opacity-medium text-primary border border-primary/opacity-medium rounded-lg hover:bg-primary/opacity-medium transition-colors"
         >
           Clear Filters
         </button>

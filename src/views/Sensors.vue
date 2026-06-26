@@ -93,13 +93,13 @@ useManagedPolling(
     <div class="glass-card rounded-[15px] p-4 sm:p-6">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <h1 class="text-xl sm:text-2xl font-semibold text-content-heading dark:text-white">Sensors</h1>
+          <h1 class="text-xl sm:text-2xl font-semibold text-content-heading">Sensors</h1>
           <p class="mt-1 text-sm text-content-muted">
             Live sensor summary from the existing stats API.
           </p>
         </div>
         <button
-          class="rounded-[10px] border border-stroke-subtle dark:border-white/10 px-3 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5"
+          class="rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light px-3 py-2 text-sm hover:bg-black/opacity-light dark:hover:bg-white/opacity-light"
           @click="refreshNow"
         >
           Refresh
@@ -110,10 +110,10 @@ useManagedPolling(
         <div
           v-for="card in summaryCards"
           :key="card.label"
-          class="rounded-[12px] border border-stroke-subtle dark:border-white/10 p-3"
+          class="rounded-[12px] border border-stroke-subtle dark:border-white/opacity-light p-3"
         >
           <p class="text-xs uppercase tracking-wide text-content-muted">{{ card.label }}</p>
-          <p class="mt-2 text-lg font-semibold text-content-heading dark:text-white">{{ card.value }}</p>
+          <p class="mt-2 text-lg font-semibold text-content-heading">{{ card.value }}</p>
         </div>
       </div>
     </div>
@@ -129,14 +129,14 @@ useManagedPolling(
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 class="text-lg font-semibold text-content-heading dark:text-white">
+          <h2 class="text-lg font-semibold text-content-heading">
             {{ reading.name || `Sensor ${idx + 1}` }}
           </h2>
           <p class="text-sm text-content-muted">Type: {{ reading.type || 'unknown' }}</p>
         </div>
         <span
           class="rounded-full px-3 py-1 text-xs font-semibold"
-          :class="reading.ok ? 'bg-accent-green/10 text-accent-green dark:bg-accent-green/20 dark:text-accent-green' : 'bg-accent-red/10 text-accent-red dark:bg-accent-red/20 dark:text-accent-red'"
+          :class="reading.ok ? 'bg-accent-green/opacity-light text-accent-green dark:bg-accent-green/opacity-medium dark:text-accent-green' : 'bg-accent-red/opacity-light text-accent-red dark:bg-accent-red/opacity-medium dark:text-accent-red'"
         >
           {{ reading.ok ? 'OK' : 'Error' }}
         </span>
@@ -145,7 +145,7 @@ useManagedPolling(
       <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div class="text-sm">
           <span class="text-content-muted">Timestamp:</span>
-          <span class="ml-2 text-content-heading dark:text-white">{{ formatTime(reading.timestamp) }}</span>
+          <span class="ml-2 text-content-heading">{{ formatTime(reading.timestamp) }}</span>
         </div>
         <div v-if="reading.error" class="text-sm">
           <span class="text-content-muted">Error:</span>
@@ -153,9 +153,9 @@ useManagedPolling(
         </div>
       </div>
 
-      <div class="mt-4 overflow-x-auto rounded-[12px] border border-stroke-subtle dark:border-white/10">
+      <div class="mt-4 overflow-x-auto rounded-[12px] border border-stroke-subtle dark:border-white/opacity-light">
         <table class="min-w-full text-sm">
-          <thead class="bg-black/5 dark:bg-white/5">
+          <thead class="bg-black/opacity-light dark:bg-white/opacity-light">
             <tr>
               <th class="px-3 py-2 text-left text-content-muted">Field</th>
               <th class="px-3 py-2 text-left text-content-muted">Value</th>
@@ -165,9 +165,9 @@ useManagedPolling(
             <tr
               v-for="(value, key) in (reading.data || {})"
               :key="String(key)"
-              class="border-t border-stroke-subtle dark:border-white/10"
+              class="border-t border-stroke-subtle dark:border-white/opacity-light"
             >
-              <td class="px-3 py-2 font-medium text-content-heading dark:text-white">{{ key }}</td>
+              <td class="px-3 py-2 font-medium text-content-heading">{{ key }}</td>
               <td class="px-3 py-2 text-content-muted break-all">{{ formatValue(value) }}</td>
             </tr>
             <tr v-if="!reading.data || Object.keys(reading.data).length === 0">

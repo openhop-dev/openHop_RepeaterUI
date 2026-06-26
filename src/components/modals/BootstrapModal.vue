@@ -122,7 +122,7 @@ onUnmounted(() => {
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <span v-else class="w-3 h-3 rounded-full border border-stroke-subtle dark:border-white/20" />
+                <span v-else class="w-3 h-3 rounded-full border border-stroke-subtle dark:border-white/opacity-medium" />
               </span>
 
               <!-- Label -->
@@ -135,13 +135,13 @@ onUnmounted(() => {
                       ? 'text-content-primary font-medium'
                       : dataService.loadProgress[step.key] === 'error'
                         ? 'text-accent-red'
-                        : 'text-content-muted/60',
+                        : 'text-content-muted/opacity-heavy',
                 ]"
               >
                 {{ step.label }}
                 <span
                   v-if="step.key === 'stats' && dataService.statsSubStatus !== null"
-                  class="text-xs font-normal text-content-muted/60"
+                  class="text-xs font-normal text-content-muted/opacity-heavy"
                 >
                   {{ dataService.statsSubStatus === 'reading' ? 'Receiving data' : 'Requesting' }}
                 </span>
@@ -150,7 +150,7 @@ onUnmounted(() => {
           </ul>
 
           <!-- Divider -->
-          <div class="border-t border-stroke-subtle dark:border-white/10 mb-5" />
+          <div class="border-t border-stroke-subtle dark:border-white/opacity-light mb-5" />
 
           <!-- WebSocket step -->
           <div class="flex items-center gap-3">
@@ -165,7 +165,7 @@ onUnmounted(() => {
               >
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
               </svg>
-              <span v-else class="w-3 h-3 rounded-full border border-stroke-subtle dark:border-white/20" />
+              <span v-else class="w-3 h-3 rounded-full border border-stroke-subtle dark:border-white/opacity-medium" />
             </span>
             <span
               :class="[
@@ -174,7 +174,7 @@ onUnmounted(() => {
                   ? 'text-accent-green font-medium'
                   : phase === 'connecting'
                     ? 'text-content-primary font-medium'
-                    : 'text-content-muted/60',
+                    : 'text-content-muted/opacity-heavy',
               ]"
             >
               {{

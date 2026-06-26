@@ -277,7 +277,7 @@ useManagedPolling(fetchChartData, {
         <!-- Tooltip -->
         <div
           v-if="hoveredBucket"
-          class="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke rounded-lg px-3 py-2 z-10 pointer-events-none min-w-48"
+          class="absolute top-2 left-1/2 -translate-x-1/2 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke rounded-lg px-3 py-2 z-10 pointer-events-none min-w-48"
         >
           <div class="text-content-primary text-sm font-medium mb-1">
             {{ hoveredBucket.name }} · {{ hoveredBucket.total.toLocaleString() }}

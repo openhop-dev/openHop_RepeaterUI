@@ -22,12 +22,12 @@ defineEmits<{
     >
       <div
         v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/opacity-heavy backdrop-blur-sm"
       >
         <div class="modal-card max-w-md">
           <div class="flex items-start gap-3 mb-4">
             <div
-              class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-amber/10 dark:bg-accent-amber/30 flex items-center justify-center"
+              class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-medium flex items-center justify-center"
             >
               <svg
                 class="w-5 h-5 text-accent-amber"

@@ -1101,7 +1101,7 @@ onBeforeUnmount(() => {
               >
                 {{ route }}
               </div>
-              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/10 rounded overflow-hidden">
+              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/opacity-subtle rounded overflow-hidden">
                 <div
                   class="h-full rounded transition-all duration-300"
                   :style="{

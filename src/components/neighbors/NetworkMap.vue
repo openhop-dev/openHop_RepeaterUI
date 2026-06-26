@@ -866,7 +866,7 @@ onUnmounted(() => {
     <button
       v-if="hasValidCoordinates && adverts.length > 0"
       @click="toggleLegend"
-      class="absolute bottom-3 right-3 z-200 flex items-center gap-2 px-3 py-2 bg-surface/80 border border-stroke-subtle rounded-lg text-content-secondary hover:bg-background-mute hover:text-content-primary transition-colors text-sm backdrop-blur-sm"
+      class="absolute bottom-3 right-3 z-200 flex items-center gap-2 px-3 py-2 bg-surface/opacity-heavy border border-stroke-subtle rounded-lg text-content-secondary hover:bg-background-mute hover:text-content-primary transition-colors text-sm backdrop-blur-sm"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path

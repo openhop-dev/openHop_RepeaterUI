@@ -261,15 +261,14 @@ const toggleMobileSidebar = () => {
             </p>
             <div
               v-if="trackedBreakdown.length > 0"
-              class="text-xs text-content-muted/80"
-              class="min-h-4"
+              class="text-xs text-content-muted/opacity-heavy min-h-4"
             >
               <span v-for="(item, index) in trackedBreakdown" :key="item.type" class="inline">
                 {{ item.count }} {{ item.type }}{{ item.count === 1 ? '' : 's'
                 }}<span v-if="index < trackedBreakdown.length - 1">, </span>
               </span>
             </div>
-            <!-- <div v-if="lastUpdateTime" class="text-xs text-content-muted/60 hidden sm:block" style="min-height: 16px;">
+            <!-- <div v-if="lastUpdateTime" class="text-xs text-content-muted/opacity-heavy hidden sm:block" style="min-height: 16px;">
               Updated {{ lastUpdateTime.toLocaleTimeString() }}
             </div> -->
           </div>
@@ -279,8 +278,7 @@ const toggleMobileSidebar = () => {
             </p>
             <div
               v-if="lastUpdateTime"
-              class="text-xs text-content-muted/60 hidden sm:block"
-              class="min-h-4"
+              class="text-xs text-content-muted/opacity-heavy hidden sm:block min-h-4"
             >
               Last checked {{ lastUpdateTime.toLocaleTimeString() }}
             </div>
@@ -381,7 +379,7 @@ const toggleMobileSidebar = () => {
                   ? 'bg-secondary animate-pulse'
                   : updateInfo.currentVersion
                     ? 'bg-accent-green'
-                    : 'bg-content-muted/50'
+                    : 'bg-content-muted/opacity-heavy'
             "
           ></span>
         </button>
@@ -390,7 +388,7 @@ const toggleMobileSidebar = () => {
           v-if="notif.isOpen.value"
           :ref="notif.panelRef"
           :style="notif.panelStyle.value"
-          class="fixed z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm overflow-y-auto max-h-[calc(100vh-4rem)]"
+          class="fixed z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] p-4 shadow-2xl backdrop-blur-sm overflow-y-auto max-h-[calc(100vh-4rem)]"
         >
           <div class="flex items-center justify-between mb-3">
             <p class="text-content-primary font-semibold">
@@ -400,7 +398,7 @@ const toggleMobileSidebar = () => {
               <button
                 @click="() => checkForUpdates()"
                 :disabled="updateInfo.isChecking"
-                class="text-xs text-primary hover:text-primary/80 disabled:opacity-50"
+                class="text-xs text-primary hover:text-primary/opacity-heavy disabled:opacity-50"
                 title="Check for updates"
               >
                 {{ updateInfo.isChecking ? 'Checking...' : 'Check Updates' }}
@@ -409,7 +407,7 @@ const toggleMobileSidebar = () => {
               <button
                 @click="() => neighborStore.fetchAll()"
                 :disabled="loading"
-                class="text-xs text-primary hover:text-primary/80 disabled:opacity-50"
+                class="text-xs text-primary hover:text-primary/opacity-heavy disabled:opacity-50"
               >
                 {{ loading ? 'Updating...' : 'Refresh' }}
               </button>
@@ -420,7 +418,7 @@ const toggleMobileSidebar = () => {
             <!-- Update Information -->
             <div
               v-if="updateInfo.hasUpdate"
-              class="bg-accent-red/10 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
+              class="bg-accent-red/opacity-light dark:bg-background-mute p-3 rounded-lg border border-accent-red/opacity-medium border-l-2 border-l-accent-red"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -437,7 +435,7 @@ const toggleMobileSidebar = () => {
                     showUpdateModal = true;
                     notif.close();
                   "
-                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red"
+                  class="text-xs px-3 py-1.5 rounded-lg font-medium transition-colors bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red"
                 >
                   Install Update
                 </button>
@@ -461,7 +459,7 @@ const toggleMobileSidebar = () => {
             <!-- Rate limit warning in dropdown -->
             <div
               v-if="updateInfo.rateLimitUntil && !updateInfo.isChecking"
-              class="flex items-start gap-2 bg-accent-amber/10 dark:bg-accent-amber/10 border border-accent-amber dark:border-accent-amber/30 border-l-2 border-l-amber-500 rounded-lg p-3 text-xs text-accent-amber"
+              class="flex items-start gap-2 bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-light border border-accent-amber dark:border-accent-amber/opacity-medium border-l-2 border-l-amber-500 rounded-lg p-3 text-xs text-accent-amber"
             >
               <svg
                 class="w-3.5 h-3.5 shrink-0 mt-0.5"
@@ -490,7 +488,7 @@ const toggleMobileSidebar = () => {
             <!-- Version Information (when no update) -->
             <div
               v-else-if="updateInfo.currentVersion && !updateInfo.isChecking"
-              class="bg-accent-green/10 dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-accent-green"
+              class="bg-accent-green/opacity-light dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light border-l-2 border-l-accent-green"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -510,7 +508,7 @@ const toggleMobileSidebar = () => {
                     showUpdateModal = true;
                     notif.close();
                   "
-                  class="text-xs bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg font-medium transition-colors"
+                  class="text-xs bg-primary/opacity-light hover:bg-primary/opacity-medium text-primary px-3 py-1.5 rounded-lg font-medium transition-colors"
                 >
                   Manage / Switch Branch
                 </button>
@@ -527,7 +525,7 @@ const toggleMobileSidebar = () => {
             <!-- Update Check Loading -->
             <div
               v-else-if="updateInfo.isChecking"
-              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10"
+              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light"
             >
               <div class="flex items-center justify-center gap-2">
                 <Spinner size="sm" />
@@ -540,7 +538,7 @@ const toggleMobileSidebar = () => {
             <!-- Update Check Error -->
             <div
               v-else-if="updateInfo.error"
-              class="bg-accent-red/10 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
+              class="bg-accent-red/opacity-light dark:bg-background-mute p-3 rounded-lg border border-accent-red/opacity-medium border-l-2 border-l-accent-red"
             >
               <div class="text-content-primary font-medium mb-1">
                 Update Check Failed
@@ -551,7 +549,7 @@ const toggleMobileSidebar = () => {
             </div>
 
             <!-- Separator -->
-            <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
+            <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light"></div>
 
             <!-- Mesh Network Status Header -->
             <div class="text-content-primary font-medium text-sm mb-2">
@@ -560,7 +558,7 @@ const toggleMobileSidebar = () => {
 
             <!-- Tracking Summary -->
             <div
-              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-primary"
+              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light border-l-2 border-l-primary"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -580,7 +578,7 @@ const toggleMobileSidebar = () => {
             <div
               v-for="item in trackedBreakdown"
               :key="item.type"
-              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10"
+              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -603,7 +601,7 @@ const toggleMobileSidebar = () => {
             <!-- Empty state -->
             <div
               v-if="totalTrackedNodes === 0 && !loading"
-              class="bg-background-mute dark:bg-background-mute p-4 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-center"
+              class="bg-background-mute dark:bg-background-mute p-4 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light text-center"
             >
               <div class="text-content-secondary dark:text-content-muted">
                 <svg
@@ -626,7 +624,7 @@ const toggleMobileSidebar = () => {
             <!-- Error or loading states -->
             <div
               v-if="loading"
-              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-center"
+              class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light text-center"
             >
               <div class="flex items-center justify-center gap-2">
                 <Spinner size="sm" />
@@ -670,7 +668,7 @@ const toggleMobileSidebar = () => {
             v-if="userMenu.isOpen.value"
             :ref="userMenu.panelRef"
             :style="userMenu.panelStyle.value"
-            class="fixed z-[250] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-xl shadow-2xl p-1"
+            class="fixed z-[250] w-48 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-xl shadow-2xl p-1"
           >
             <button
               @click="showChangePasswordModal = true; userMenu.close()"
@@ -686,7 +684,7 @@ const toggleMobileSidebar = () => {
               </svg>
               <span>Change Password</span>
             </button>
-            <div class="border-t border-stroke-subtle dark:border-stroke/40 my-1 mx-2"></div>
+            <div class="border-t border-stroke-subtle dark:border-stroke/opacity-heavy my-1 mx-2"></div>
             <button
               @click="showRestartModal = true; userMenu.close()"
               class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary rounded-lg transition-colors"
@@ -736,7 +734,7 @@ const toggleMobileSidebar = () => {
 
     <div
       v-if="radioWarning"
-      class="mt-4 rounded-xl border border-accent-amber/40 bg-accent-amber/10 px-4 py-3 text-accent-amber"
+      class="mt-4 rounded-xl border border-accent-amber/opacity-heavy bg-accent-amber/opacity-light px-4 py-3 text-accent-amber"
       role="alert"
     >
       <div class="flex items-start gap-3">

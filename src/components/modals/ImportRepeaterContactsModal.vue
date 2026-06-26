@@ -191,7 +191,7 @@ function handleKeydown(e: KeyboardEvent) {
     <div
       role="dialog"
       aria-describedby="import-modal-description"
-      class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+      class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto"
     >
       <h2 class="text-xl font-bold text-content-primary mb-4">
         Import repeater contacts
@@ -206,7 +206,7 @@ function handleKeydown(e: KeyboardEvent) {
 
       <!-- Contact types -->
       <div class="mb-4">
-        <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
+        <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2">
           Contact types
         </label>
         <label class="flex items-center gap-2 mb-2">
@@ -214,7 +214,7 @@ function handleKeydown(e: KeyboardEvent) {
             ref="firstFocusRef"
             v-model="allTypes"
             type="checkbox"
-            class="rounded border-stroke-subtle dark:border-stroke/20 text-primary focus:ring-primary/50"
+            class="rounded border-stroke-subtle dark:border-stroke/opacity-medium text-primary focus:ring-primary/opacity-heavy"
           />
           <span class="text-content-primary text-sm">All types</span>
         </label>
@@ -227,7 +227,7 @@ function handleKeydown(e: KeyboardEvent) {
               v-model="selectedTypes"
               type="checkbox"
               :value="t"
-              class="rounded border-stroke-subtle dark:border-stroke/20 text-primary focus:ring-primary/50"
+              class="rounded border-stroke-subtle dark:border-stroke/opacity-medium text-primary focus:ring-primary/opacity-heavy"
             />
             <span class="text-content-primary text-sm capitalize">{{
               t.replace('_', ' ')
@@ -237,8 +237,8 @@ function handleKeydown(e: KeyboardEvent) {
       </div>
 
       <!-- Recency -->
-      <div class="border-t border-stroke-subtle dark:border-white/10 pt-4 mt-4 mb-4">
-        <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
+      <div class="border-t border-stroke-subtle dark:border-white/opacity-light pt-4 mt-4 mb-4">
+        <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2">
           Recency
         </label>
         <div class="flex flex-wrap gap-3 mb-2">
@@ -251,7 +251,7 @@ function handleKeydown(e: KeyboardEvent) {
               v-model="recencyPreset"
               type="radio"
               :value="preset.value"
-              class="border-stroke-subtle dark:border-stroke/20 text-primary focus:ring-primary/50"
+              class="border-stroke-subtle dark:border-stroke/opacity-medium text-primary focus:ring-primary/opacity-heavy"
             />
             <span class="text-content-primary text-sm">{{
               preset.label
@@ -264,7 +264,7 @@ function handleKeydown(e: KeyboardEvent) {
               v-model="recencyPreset"
               type="radio"
               value="custom"
-              class="border-stroke-subtle dark:border-stroke/20 text-primary focus:ring-primary/50"
+              class="border-stroke-subtle dark:border-stroke/opacity-medium text-primary focus:ring-primary/opacity-heavy"
             />
             <span class="text-content-primary text-sm">Custom:</span>
           </label>
@@ -275,7 +275,7 @@ function handleKeydown(e: KeyboardEvent) {
             type="number"
             min="1"
             placeholder="e.g. 48"
-            class="w-24 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50"
+            class="w-24 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
           />
           <span
             v-if="recencyPreset === 'custom'"
@@ -286,8 +286,8 @@ function handleKeydown(e: KeyboardEvent) {
       </div>
 
       <!-- Limit -->
-      <div class="border-t border-stroke-subtle dark:border-white/10 pt-4 mt-4 mb-4">
-        <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
+      <div class="border-t border-stroke-subtle dark:border-white/opacity-light pt-4 mt-4 mb-4">
+        <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2">
           Max contacts (optional)
         </label>
         <div class="flex flex-wrap items-center gap-2">
@@ -298,7 +298,7 @@ function handleKeydown(e: KeyboardEvent) {
             inputmode="numeric"
             min="1"
             placeholder="No limit"
-            class="w-32 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-2 text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50"
+            class="w-32 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-2 text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
           />
           <span class="text-content-muted text-sm">contacts</span>
         </div>
@@ -311,7 +311,7 @@ function handleKeydown(e: KeyboardEvent) {
       <div
         v-if="errorMessage"
         role="alert"
-        class="mb-4 p-3 rounded-lg bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red/30 text-accent-red text-sm"
+        class="mb-4 p-3 rounded-lg bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red/opacity-medium text-accent-red text-sm"
       >
         {{ errorMessage }}
       </div>
@@ -324,7 +324,7 @@ function handleKeydown(e: KeyboardEvent) {
         <button
           type="button"
           :disabled="loading"
-          class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg transition-colors disabled:opacity-50"
+          class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors disabled:opacity-50"
           @click="emit('close')"
         >
           Cancel

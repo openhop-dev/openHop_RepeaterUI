@@ -85,13 +85,13 @@ const isNetworkTimeoutError = (error: string | null) => {
     >
       <!-- Backdrop -->
       <div
-        class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+        class="absolute inset-0 bg-black/opacity-heavy backdrop-blur-sm transition-opacity duration-300"
         :class="showContent ? 'opacity-100' : 'opacity-0'"
       ></div>
 
       <!-- Modal -->
       <div
-        class="relative bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-8 max-w-md w-full transform transition-all duration-300 border border-stroke-subtle dark:border-white/10"
+        class="relative bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-8 max-w-md w-full transform transition-all duration-300 border border-stroke-subtle dark:border-white/opacity-light"
         :class="showContent ? 'scale-100 opacity-100' : 'scale-95 opacity-0'"
       >
         <!-- Close button -->
@@ -152,19 +152,19 @@ const isNetworkTimeoutError = (error: string | null) => {
                 <!-- Wave 1 -->
                 <div
                   class="absolute w-16 h-16 rounded-full border-2 animate-ping"
-                  :class="[isSuccess ? 'border-accent-green/60' : 'border-primary/60']"
+                  :class="[isSuccess ? 'border-accent-green/opacity-heavy' : 'border-primary/opacity-heavy']"
                   style="animation-duration: 1.5s"
                 ></div>
                 <!-- Wave 2 -->
                 <div
                   class="absolute w-24 h-24 rounded-full border-2 animate-ping"
-                  :class="[isSuccess ? 'border-accent-green/40' : 'border-primary/40']"
+                  :class="[isSuccess ? 'border-accent-green/opacity-heavy' : 'border-primary/opacity-heavy']"
                   style="animation-duration: 2s; animation-delay: 0.3s"
                 ></div>
                 <!-- Wave 3 -->
                 <div
                   class="absolute w-32 h-32 rounded-full border-2 animate-ping"
-                  :class="[isSuccess ? 'border-accent-green/20' : 'border-primary/20']"
+                  :class="[isSuccess ? 'border-accent-green/opacity-medium' : 'border-primary/opacity-medium']"
                   style="animation-duration: 2.5s; animation-delay: 0.6s"
                 ></div>
               </div>
@@ -176,15 +176,15 @@ const isNetworkTimeoutError = (error: string | null) => {
                   class="absolute w-8 h-8 rounded-full border-4 border-secondary animate-ping-fast"
                 ></div>
                 <div
-                  class="absolute w-16 h-16 rounded-full border-3 border-secondary/70 animate-ping-fast"
+                  class="absolute w-16 h-16 rounded-full border-3 border-secondary/opacity-heavy animate-ping-fast"
                   style="animation-delay: 0.1s"
                 ></div>
                 <div
-                  class="absolute w-24 h-24 rounded-full border-2 border-secondary/50 animate-ping-fast"
+                  class="absolute w-24 h-24 rounded-full border-2 border-secondary/opacity-heavy animate-ping-fast"
                   style="animation-delay: 0.2s"
                 ></div>
                 <div
-                  class="absolute w-32 h-32 rounded-full border-2 border-secondary/30 animate-ping-fast"
+                  class="absolute w-32 h-32 rounded-full border-2 border-secondary/opacity-medium animate-ping-fast"
                   style="animation-delay: 0.3s"
                 ></div>
               </div>
@@ -197,7 +197,7 @@ const isNetworkTimeoutError = (error: string | null) => {
                   :class="[
                     isSuccess
                       ? 'bg-accent-green shadow-lg shadow-accent-green/50'
-                      : 'bg-primary/70 shadow-lg shadow-primary/30',
+                      : 'bg-primary/opacity-heavy shadow-lg shadow-primary/30',
                   ]"
                   style="animation-delay: 0.5s"
                 >
@@ -210,7 +210,7 @@ const isNetworkTimeoutError = (error: string | null) => {
                   :class="[
                     isSuccess
                       ? 'bg-accent-green shadow-lg shadow-accent-green/50'
-                      : 'bg-primary/70 shadow-lg shadow-primary/30',
+                      : 'bg-primary/opacity-heavy shadow-lg shadow-primary/30',
                   ]"
                   style="animation-delay: 1s"
                 >
@@ -223,7 +223,7 @@ const isNetworkTimeoutError = (error: string | null) => {
                   :class="[
                     isSuccess
                       ? 'bg-accent-green shadow-lg shadow-accent-green/50'
-                      : 'bg-primary/70 shadow-lg shadow-primary/30',
+                      : 'bg-primary/opacity-heavy shadow-lg shadow-primary/30',
                   ]"
                   style="animation-delay: 1.5s; transform: translateY(-50%)"
                 >
@@ -236,7 +236,7 @@ const isNetworkTimeoutError = (error: string | null) => {
                   :class="[
                     isSuccess
                       ? 'bg-accent-green shadow-lg shadow-accent-green/50'
-                      : 'bg-primary/70 shadow-lg shadow-primary/30',
+                      : 'bg-primary/opacity-heavy shadow-lg shadow-primary/30',
                   ]"
                   style="animation-delay: 2s"
                 >
@@ -278,7 +278,7 @@ const isNetworkTimeoutError = (error: string | null) => {
           <div v-if="!isLoading && !isSuccess" class="flex gap-3">
             <button
               @click="handleClose"
-              class="flex-1 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 hover:border-primary dark:hover:border-primary rounded-[10px] px-6 py-3 text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 transition-all duration-200"
+              class="flex-1 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light hover:border-primary dark:hover:border-primary rounded-[10px] px-6 py-3 text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-all duration-200"
             >
               Cancel
             </button>
@@ -287,8 +287,8 @@ const isNetworkTimeoutError = (error: string | null) => {
               class="flex-1 rounded-[10px] px-6 py-3 font-medium transition-all duration-200 shadow-lg"
               :class="[
                 error && isNetworkTimeoutError(error)
-                  ? 'bg-secondary hover:bg-secondary/90 text-background hover:shadow-secondary/20'
-                  : 'bg-primary hover:bg-primary/90 text-background hover:shadow-primary/20',
+                  ? 'bg-secondary hover:bg-secondary/opacity-heavy text-background hover:shadow-secondary/opacity-medium'
+                  : 'bg-primary hover:bg-primary/opacity-heavy text-background hover:shadow-primary/opacity-medium',
               ]"
             >
               {{ error && isNetworkTimeoutError(error) ? 'Try Again' : 'Send Advertisement' }}

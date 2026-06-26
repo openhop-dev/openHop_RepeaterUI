@@ -868,7 +868,7 @@ onBeforeUnmount(() => {
           <!-- Temperature if available -->
           <div
             v-if="hardwareStats.temperatures && Object.keys(hardwareStats.temperatures).length > 0"
-            class="pt-4 border-t border-stroke-subtle dark:border-stroke/10"
+            class="pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light"
           >
             <div class="text-content-secondary dark:text-content-muted mb-2">
               System Temperatures
@@ -898,7 +898,7 @@ onBeforeUnmount(() => {
       >
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-stroke-subtle dark:border-stroke/10">
+            <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
               <th class="text-left text-content-secondary dark:text-content-muted py-2">PID</th>
               <th class="text-left text-content-secondary dark:text-content-muted py-2">Name</th>
               <th class="text-center text-content-secondary dark:text-content-muted py-2">CPU %</th>
@@ -912,10 +912,10 @@ onBeforeUnmount(() => {
             <tr
               v-for="process in processesData.processes.slice(0, 10)"
               :key="process.pid"
-              class="border-b border-stroke-subtle dark:border-white/5 process-row"
+              class="border-b border-stroke-subtle dark:border-white/opacity-light process-row"
             >
               <td
-                class="text-content-secondary dark:text-content-primary/80 py-2 transition-all duration-300"
+                class="text-content-secondary dark:text-content-primary/opacity-heavy py-2 transition-all duration-300"
               >
                 {{ process.pid }}
               </td>
@@ -945,7 +945,7 @@ onBeforeUnmount(() => {
                 </span>
               </td>
               <td
-                class="text-right text-content-secondary dark:text-content-primary/80 py-2 transition-all duration-300"
+                class="text-right text-content-secondary dark:text-content-primary/opacity-heavy py-2 transition-all duration-300"
               >
                 <span :class="{ 'value-updated': hasProcessValueChanged(process, 'memory_mb') }">
                   {{ process.memory_mb.toFixed(1) }} MB

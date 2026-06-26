@@ -43,15 +43,15 @@ const closeMobileSidebar = () => {
 
     <!-- Dark mode background gradient ellipses with OpenHop blue/purple brand colors -->
     <div
-      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-blue-400/15 to-blue-300/5 blur-[120px] opacity-80 -top-[79px] left-[575px] mix-blend-screen pointer-events-none"
+      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-blue-400/15 to-blue-300/opacity-subtle blur-[120px] opacity-80 -top-[79px] left-[575px] mix-blend-screen pointer-events-none"
     ></div>
 
     <div
-      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-purple-400/15 to-purple-300/5 blur-[120px] opacity-75 -top-[94px] -left-[92px] mix-blend-screen pointer-events-none"
+      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-purple-400/15 to-purple-300/opacity-subtle blur-[120px] opacity-75 -top-[94px] -left-[92px] mix-blend-screen pointer-events-none"
     ></div>
 
     <div
-      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-indigo-400/15 to-indigo-300/5 blur-[120px] opacity-80 top-[373px] left-[246px] mix-blend-screen pointer-events-none"
+      class="hidden lg:dark:block absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-indigo-400/15 to-indigo-300/opacity-subtle blur-[120px] opacity-80 top-[373px] left-[246px] mix-blend-screen pointer-events-none"
     ></div>
 
     <div class="relative flex h-full">

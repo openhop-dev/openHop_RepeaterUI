@@ -104,10 +104,10 @@ function isCompanion(identity: { type?: string }): boolean {
 
 function identityTypeBadgeClass(type: string | undefined): string {
   if (type === 'repeater')
-    return 'bg-primary/20 text-primary';
+    return 'bg-primary/opacity-medium text-primary';
   if (type === 'companion')
-    return 'bg-accent-purple/20 text-accent-purple';
-  return 'bg-secondary/20 text-secondary';
+    return 'bg-accent-purple/opacity-medium text-accent-purple';
+  return 'bg-secondary/opacity-medium text-secondary';
 }
 
 function formatOptionalAcl(value: unknown): string {
@@ -167,7 +167,7 @@ function formatOptionalAcl(value: unknown): string {
     <!-- Main Content -->
     <div class="glass-card rounded-[15px] p-6">
       <!-- Tab Navigation -->
-      <div class="flex flex-wrap border-b border-stroke-subtle dark:border-stroke/10 mb-6">
+      <div class="flex flex-wrap border-b border-stroke-subtle dark:border-stroke/opacity-light mb-6">
         <button
           v-for="tab in tabs"
           :key="tab.id"
@@ -176,7 +176,7 @@ function formatOptionalAcl(value: unknown): string {
             'px-4 py-2 text-sm font-medium transition-colors duration-200 border-b-2 mr-6 mb-2',
             activeTab === tab.id
               ? 'text-primary border-primary'
-              : 'text-content-secondary dark:text-content-muted border-transparent hover:text-content-primary dark:hover:text-content-primary hover:border-stroke-subtle dark:hover:border-stroke/30',
+              : 'text-content-secondary dark:text-content-muted border-transparent hover:text-content-primary dark:hover:text-content-primary hover:border-stroke-subtle dark:hover:border-stroke/opacity-medium',
           ]"
         >
           <div class="flex items-center gap-2">
@@ -265,7 +265,7 @@ function formatOptionalAcl(value: unknown): string {
             <div
               v-for="identity in identityList"
               :key="identity.hash"
-              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 transition-colors"
+              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/opacity-light hover:border-primary/opacity-medium dark:hover:border-primary/opacity-medium transition-colors"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1 min-w-0">
@@ -436,7 +436,7 @@ function formatOptionalAcl(value: unknown): string {
           <div v-else class="overflow-x-auto">
             <table class="w-full">
               <thead>
-                <tr class="border-b border-stroke-subtle dark:border-stroke/10">
+                <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
                   <th
                     class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
                   >
@@ -473,7 +473,7 @@ function formatOptionalAcl(value: unknown): string {
                 <tr
                   v-for="client in aclClients"
                   :key="client.public_key_full"
-                  class="border-b border-stroke-subtle dark:border-white/5 hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors"
+                  class="border-b border-stroke-subtle dark:border-white/opacity-light hover:bg-background-mute/opacity-heavy dark:hover:bg-white/opacity-light transition-colors"
                 >
                   <td class="py-3">
                     <div class="font-mono text-sm text-content-primary">
@@ -498,8 +498,8 @@ function formatOptionalAcl(value: unknown): string {
                       :class="[
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
-                          ? 'bg-accent-green/20 text-accent-green'
-                          : 'bg-secondary/20 text-secondary',
+                          ? 'bg-accent-green/opacity-medium text-accent-green'
+                          : 'bg-secondary/opacity-medium text-secondary',
                       ]"
                     >
                       {{ client.permissions }}
@@ -533,7 +533,7 @@ function formatOptionalAcl(value: unknown): string {
             >
             <select
               v-model="selectedIdentity"
-              class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+              class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/opacity-heavy transition-colors"
             >
               <option :value="null">All Identities</option>
               <option v-for="identity in identityList" :key="identity.name" :value="identity.name">
@@ -553,7 +553,7 @@ function formatOptionalAcl(value: unknown): string {
             <div
               v-for="client in filteredClients"
               :key="client.public_key_full"
-              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10"
+              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/opacity-light"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1">
@@ -562,8 +562,8 @@ function formatOptionalAcl(value: unknown): string {
                       :class="[
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
-                          ? 'bg-accent-green/20 text-accent-green'
-                          : 'bg-secondary/20 text-secondary',
+                          ? 'bg-accent-green/opacity-medium text-accent-green'
+                          : 'bg-secondary/opacity-medium text-secondary',
                       ]"
                     >
                       {{ client.permissions }}
@@ -578,13 +578,13 @@ function formatOptionalAcl(value: unknown): string {
                     <div>
                       <span class="text-content-secondary dark:text-content-muted">Address:</span>
                       <span
-                        class="text-content-primary/90 font-mono ml-2"
+                        class="text-content-primary/opacity-heavy font-mono ml-2"
                         >{{ client.address }}</span
                       >
                     </div>
                     <div>
                       <span class="text-content-secondary dark:text-content-muted">Identity:</span>
-                      <span class="text-content-primary/90 ml-2"
+                      <span class="text-content-primary/opacity-heavy ml-2"
                         >{{ client.identity_name }} ({{ client.identity_hash }})</span
                       >
                     </div>
@@ -592,7 +592,7 @@ function formatOptionalAcl(value: unknown): string {
                       <span class="text-content-secondary dark:text-content-muted"
                         >Last Activity:</span
                       >
-                      <span class="text-content-primary/90 ml-2">{{
+                      <span class="text-content-primary/opacity-heavy ml-2">{{
                         formatTimestamp(client.last_activity)
                       }}</span>
                     </div>
@@ -600,7 +600,7 @@ function formatOptionalAcl(value: unknown): string {
                       <span class="text-content-secondary dark:text-content-muted"
                         >Last Login:</span
                       >
-                      <span class="text-content-primary/90 ml-2">{{
+                      <span class="text-content-primary/opacity-heavy ml-2">{{
                         formatTimestamp(client.last_login_success)
                       }}</span>
                     </div>

@@ -17,15 +17,15 @@ const emit = defineEmits<Emits>();
 
 const variantColors = {
   success:
-    'bg-accent-green/10 dark:bg-accent-green/20 border-accent-green/40 dark:border-accent-green/30 text-accent-green',
-  error: 'bg-accent-red/10 dark:bg-accent-red/20 border-accent-red/30 text-accent-red',
-  info: 'bg-primary/20 border-primary/30 text-primary',
+    'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium border-accent-green/opacity-heavy dark:border-accent-green/opacity-medium text-accent-green',
+  error: 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border-accent-red/opacity-medium text-accent-red',
+  info: 'bg-primary/opacity-medium border-primary/opacity-medium text-primary',
 };
 
 const buttonColors = {
-  success: 'bg-accent-green/10 hover:bg-accent-green/10',
-  error: 'bg-accent-red/10 hover:bg-accent-red/10',
-  info: 'bg-primary/10 hover:bg-primary/10',
+  success: 'bg-accent-green/opacity-light hover:bg-accent-green/opacity-light',
+  error: 'bg-accent-red/opacity-light hover:bg-accent-red/opacity-light',
+  info: 'bg-primary/opacity-light hover:bg-primary/opacity-light',
 };
 </script>
 
@@ -84,7 +84,7 @@ const buttonColors = {
             />
           </svg>
         </div>
-        <p class="text-content-secondary dark:text-content-primary/80 text-base leading-relaxed">
+        <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-base leading-relaxed">
           {{ props.message }}
         </p>
       </div>

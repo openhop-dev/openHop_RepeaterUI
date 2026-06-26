@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import NeighborMenu from '@/components/ui/NeighborMenu.vue';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import SignalBars from '@/components/ui/SignalBars.vue';
 import {
@@ -14,6 +15,7 @@ import {
 
 // Reactive state
 const copiedPubkey = ref<string | null>(null);
+const { copy: _clipboardCopy } = useCopyToClipboard();
 
 // Signal quality utilities
 const { getSignalQuality } = useSignalQuality();
@@ -107,22 +109,7 @@ const getDistanceFromBase = (advert: Advert) => {
   return formatDistance(distance);
 };
 
-// Copy to clipboard utility
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return true;
-  }
-};
+const copyToClipboard = (text: string) => _clipboardCopy(text);
 
 // Relative time utility
 const getRelativeTime = (timestamp: number): string => {
@@ -292,8 +279,8 @@ const sortedAdverts = computed(() => {
           :class="[
             'p-2 rounded-md transition-colors',
             !isCompactView
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+              ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+              : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
           ]"
           title="Comfortable view"
         >
@@ -323,8 +310,8 @@ const sortedAdverts = computed(() => {
           :class="[
             'p-2 rounded-md transition-colors',
             isCompactView
-              ? 'bg-primary/20 text-primary border border-primary/30'
-              : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+              ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+              : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
           ]"
           title="Compact view"
         >
@@ -365,11 +352,11 @@ const sortedAdverts = computed(() => {
         <thead>
           <tr class="bg-background-mute dark:bg-transparent">
             <th
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light`"
             ></th>
             <th
               @click="sortColumn('node_name')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Node Name
@@ -390,7 +377,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('pubkey')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Public Key
@@ -410,18 +397,18 @@ const sortedAdverts = computed(() => {
               </div>
             </th>
             <th
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light`"
             >
               Location
             </th>
             <th
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light`"
             >
               Distance
             </th>
             <th
               @click="sortColumn('route_type')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Route Type
@@ -442,7 +429,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('zero_hop')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Zero Hop
@@ -463,7 +450,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('rssi')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 RSSI
@@ -484,7 +471,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('snr')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 SNR
@@ -505,7 +492,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('last_seen')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Last Seen
@@ -526,7 +513,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('first_seen')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 First Seen
@@ -547,7 +534,7 @@ const sortedAdverts = computed(() => {
             </th>
             <th
               @click="sortColumn('advert_count')"
-              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/5 cursor-pointer hover:text-primary transition-colors select-none`"
+              :class="`text-left text-content-secondary dark:text-content-muted text-xs font-medium py-3 ${getCellPadding().split(' ')[1]} border-b border-stroke-subtle dark:border-white/opacity-light cursor-pointer hover:text-primary transition-colors select-none`"
             >
               <div class="flex items-center gap-1">
                 Advert Count
@@ -569,11 +556,11 @@ const sortedAdverts = computed(() => {
           </tr>
         </thead>
 
-        <tbody class="bg-surface/50 dark:bg-transparent">
+        <tbody class="bg-surface/opacity-heavy dark:bg-transparent">
           <tr
             v-for="advert in sortedAdverts"
             :key="advert.id"
-            class="hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+            class="hover:bg-background-mute/opacity-heavy dark:hover:bg-white/opacity-light transition-colors cursor-pointer"
             @mouseenter="handleHighlight(advert.pubkey)"
             @mouseleave="handleUnhighlight(advert.pubkey)"
             @click="handleMenuShowDetails(advert)"
@@ -702,8 +689,8 @@ const sortedAdverts = computed(() => {
                 :class="[
                   'inline-block px-2 py-1 rounded-full text-xs border transition-colors',
                   advert.zero_hop
-                    ? 'bg-primary/20 border-primary/50 text-primary'
-                    : 'bg-accent-amber/20 border-accent-amber/50 text-accent-amber',
+                    ? 'bg-primary/opacity-medium border-primary/opacity-heavy text-primary'
+                    : 'bg-accent-amber/opacity-medium border-accent-amber/opacity-heavy text-accent-amber',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -776,7 +763,7 @@ const sortedAdverts = computed(() => {
       <div
         v-for="advert in sortedAdverts"
         :key="advert.id"
-        class="bg-surface/50 dark:bg-transparent border border-stroke-subtle rounded-lg p-4 hover:bg-background-mute/50 dark:hover:bg-stroke/10 transition-colors"
+        class="bg-surface/opacity-heavy dark:bg-transparent border border-stroke-subtle rounded-lg p-4 hover:bg-background-mute/opacity-heavy dark:hover:bg-stroke/opacity-subtle transition-colors"
         @click="handleHighlight(advert.pubkey)"
       >
         <!-- Card Header -->
@@ -800,8 +787,8 @@ const sortedAdverts = computed(() => {
                 :class="[
                   'inline-block px-2 py-1 rounded-full text-xs border',
                   advert.zero_hop
-                    ? 'bg-primary/20 border-primary/50 text-primary'
-                    : 'bg-accent-amber/20 border-accent-amber/50 text-accent-amber',
+                    ? 'bg-primary/opacity-medium border-primary/opacity-heavy text-primary'
+                    : 'bg-accent-amber/opacity-medium border-accent-amber/opacity-heavy text-accent-amber',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -906,7 +893,7 @@ const sortedAdverts = computed(() => {
               <div class="flex gap-2">
                 <button
                   @click="copyCoordinates(advert.latitude!, advert.longitude!)"
-                  class="text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg"
+                  class="text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors p-2 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light rounded-lg"
                   title="Copy coordinates"
                 >
                   <svg
@@ -935,7 +922,7 @@ const sortedAdverts = computed(() => {
                 </button>
                 <button
                   @click="openInMaps(advert.latitude!, advert.longitude!)"
-                  class="text-content-muted hover:text-primary transition-colors p-2 hover:bg-stroke/10 rounded-lg"
+                  class="text-content-muted hover:text-primary transition-colors p-2 hover:bg-stroke/opacity-light rounded-lg"
                   title="Open in Maps"
                 >
                   <svg

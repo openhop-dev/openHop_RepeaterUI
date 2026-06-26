@@ -69,7 +69,7 @@ const getContactTypeColor = (contactType: string) => {
     Unknown: 'text-content-muted',
     'Chat Node': 'text-primary',
     Repeater: 'text-accent-green',
-    'Room Server': 'text-purple-600 dark:text-purple-400',
+    'Room Server': 'text-secondary',
     'Hybrid Node': 'text-accent-amber',
   };
   return colors[contactType] || 'text-content-muted';
@@ -177,7 +177,7 @@ const initMap = () => {
 
     const baseIcon = L.divIcon({
       className: 'custom-marker',
-      html: '<div class="w-8 h-8 rounded-full bg-accent-green/10 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
+      html: '<div class="w-8 h-8 rounded-full bg-accent-green/opacity-light border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
@@ -269,7 +269,7 @@ const signalQuality = computed(() => {
         <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
           <div
-            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/10 flex flex-col h-full overflow-hidden"
+            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/opacity-light flex flex-col h-full overflow-hidden"
           >
             <!-- Header -->
             <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
@@ -287,7 +287,7 @@ const signalQuality = computed(() => {
                 <!-- Close Button -->
                 <button
                   @click="emit('close')"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/10 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors duration-200 text-content-secondary dark:text-content-primary"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium transition-colors duration-200 text-content-secondary dark:text-content-primary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -311,7 +311,7 @@ const signalQuality = computed(() => {
                   Basic Information
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -322,7 +322,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -333,7 +333,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -351,7 +351,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -372,7 +372,7 @@ const signalQuality = computed(() => {
                   Signal Quality
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -383,7 +383,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -396,7 +396,7 @@ const signalQuality = computed(() => {
 
                   <div
                     v-if="signalQuality"
-                    class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]"
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
                   >
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
@@ -421,7 +421,7 @@ const signalQuality = computed(() => {
                   Timeline
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -432,7 +432,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -454,7 +454,7 @@ const signalQuality = computed(() => {
                 </h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -465,7 +465,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -476,7 +476,7 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
                       class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
@@ -491,7 +491,7 @@ const signalQuality = computed(() => {
                     <button
                       v-else
                       @click="copyCoordinates"
-                      class="w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
+                      class="w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -509,16 +509,16 @@ const signalQuality = computed(() => {
                 <!-- Map -->
                 <div
                   ref="mapContainer"
-                  class="w-full h-96 rounded-[12px] overflow-hidden border border-stroke-subtle dark:border-white/10"
+                  class="w-full h-96 rounded-[12px] overflow-hidden border border-stroke-subtle dark:border-white/opacity-light"
                 ></div>
               </div>
             </div>
 
             <!-- Footer -->
-            <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/10 flex-shrink-0">
+            <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/opacity-light flex-shrink-0">
               <button
                 @click="emit('close')"
-                class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
+                class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"
               >
                 Close
               </button>

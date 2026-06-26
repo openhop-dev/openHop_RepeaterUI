@@ -445,7 +445,7 @@ onUnmounted(() => {
           <button
             @click="cancelGlobalEditing"
             :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-3 sm:cfg-btn-secondary"
           >
             Cancel
           </button>
@@ -463,7 +463,7 @@ onUnmounted(() => {
     <!-- Global error message -->
     <div
       v-if="errorMsg"
-      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMsg }}
     </div>
@@ -481,21 +481,21 @@ onUnmounted(() => {
       <div v-else class="space-y-3">
         <div class="flex items-center gap-2">
           <span class="text-sm text-content-secondary dark:text-content-muted w-36">Handler</span>
-          <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', status.handler_active ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : 'bg-background-mute dark:bg-background-mute/50 text-content-muted']">
-            <span class="w-1.5 h-1.5 rounded-full" :class="status.handler_active ? 'bg-accent-green/10' : 'bg-background-mute'"></span>
+          <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', status.handler_active ? 'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium text-accent-green' : 'bg-background-mute dark:bg-background-mute/opacity-heavy text-content-muted']">
+            <span class="w-1.5 h-1.5 rounded-full" :class="status.handler_active ? 'bg-accent-green/opacity-light' : 'bg-background-mute'"></span>
             {{ status.handler_active ? 'Active' : 'Inactive' }}
           </span>
         </div>
         <div v-if="status.brokers.length" class="space-y-2">
           <div v-for="broker in status.brokers" :key="broker.host" class="flex items-center gap-2">
             <span class="text-sm text-content-secondary dark:text-content-muted w-36 truncate" :title="broker.name">{{ broker.name }}</span>
-            <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', broker.status.connected ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : broker.status.reconnecting ? 'bg-accent-amber/10 dark:bg-accent-amber/30 text-accent-amber' : 'bg-accent-red/10 dark:bg-accent-red/30 text-accent-red']">
-              <span class="w-1.5 h-1.5 rounded-full" :class="broker.status.connected ? 'bg-accent-green/10' : broker.status.reconnecting ? 'bg-accent-amber/10' : 'bg-accent-red/10'"></span>
+            <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', broker.status.connected ? 'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium text-accent-green' : broker.status.reconnecting ? 'bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-medium text-accent-amber' : 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium text-accent-red']">
+              <span class="w-1.5 h-1.5 rounded-full" :class="broker.status.connected ? 'bg-accent-green/opacity-light' : broker.status.reconnecting ? 'bg-accent-amber/opacity-light' : 'bg-accent-red/opacity-light'"></span>
               {{ broker.status.connected ? 'Connected' : broker.status.reconnecting ? 'Reconnecting…' : 'Disconnected' }}
             </span>
           </div>
         </div>
-        <div v-else class="text-sm text-content-muted/60 italic">No broker connections configured.</div>
+        <div v-else class="text-sm text-content-muted/opacity-heavy italic">No broker connections configured.</div>
       </div>
     </div>
 
@@ -509,11 +509,11 @@ onUnmounted(() => {
       <div>
         <!-- View mode -->
         <div v-if="!isGlobalEditing" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/10">
+          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IATA Code</span>
             <span class="text-content-primary font-mono text-sm mt-0.5">{{ mqttConfig.iata_code || '—' }}</span>
           </div>
-          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/10">
+          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Status Interval</span>
             <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.status_interval ?? 300 }}s</span>
           </div>
@@ -532,14 +532,14 @@ onUnmounted(() => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
-                IATA Code <span class="text-content-muted/60 text-xs">(e.g. SFO, LHR)</span>
+                IATA Code <span class="text-content-muted/opacity-heavy text-xs">(e.g. SFO, LHR)</span>
               </label>
               <input v-model="iataCodeInput" type="text" maxlength="10" placeholder="TEST"
                 class="cfg-input font-mono" />
             </div>
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
-                Status Interval <span class="text-content-muted/60 text-xs">(seconds, min 60)</span>
+                Status Interval <span class="text-content-muted/opacity-heavy text-xs">(seconds, min 60)</span>
               </label>
               <input v-model.number="statusIntervalInput" type="number" min="60" max="3600"
                 class="cfg-input font-mono" />
@@ -571,7 +571,7 @@ onUnmounted(() => {
           <div class="relative">
             <button
               @click="showTemplateMenu = !showTemplateMenu"
-              class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
+              class="inline-flex items-center gap-1.5 px-3 sm:cfg-btn-secondary"
             >
               From Template
               <svg class="w-3 h-3 transition-transform" :class="showTemplateMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -581,9 +581,9 @@ onUnmounted(() => {
             <Transition name="dropdown">
               <div
                 v-if="showTemplateMenu"
-                class="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg shadow-lg border border-stroke-subtle dark:border-stroke/20 bg-white dark:bg-[var(--color-surface)] overflow-hidden"
+                class="absolute right-0 top-full mt-1 z-20 w-72 rounded-lg shadow-lg border border-stroke-subtle dark:border-stroke/opacity-medium bg-white dark:bg-[var(--color-surface)] overflow-hidden"
               >
-                <div class="px-3 py-2 border-b border-stroke-subtle dark:border-stroke/10">
+                <div class="px-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
                   <p class="text-xs font-medium text-content-secondary dark:text-content-muted uppercase tracking-wide">Known Networks</p>
                 </div>
                 <!-- Loading / empty / error states.  We keep all three in the
@@ -599,7 +599,7 @@ onUnmounted(() => {
                   No bundled presets. Use "Add" to configure manually.
                 </div>
                 <div v-else class="py-1">
-                  <div v-for="tpl in BROKER_TEMPLATES" :key="tpl.id" class="border-b border-stroke-subtle dark:border-stroke/10 last:border-b-0">
+                  <div v-for="tpl in BROKER_TEMPLATES" :key="tpl.id" class="border-b border-stroke-subtle dark:border-stroke/opacity-light last:border-b-0">
                     <!-- Template row.  Click anywhere on the row (outside the
                          chevron / website link) adds every broker in the
                          template, preserving the pre-existing default. -->
@@ -618,14 +618,14 @@ onUnmounted(() => {
                         v-if="tpl.brokers.length > 1"
                         @click.stop="toggleTemplateExpansion(tpl.id)"
                         :title="expandedTemplateId === tpl.id ? 'Hide individual brokers' : 'Pick individual brokers'"
-                        class="flex-shrink-0 p-1 rounded hover:bg-primary/10 text-content-secondary dark:text-content-muted hover:text-primary transition-colors"
+                        class="flex-shrink-0 p-1 rounded hover:bg-primary/opacity-light text-content-secondary dark:text-content-muted hover:text-primary transition-colors"
                       >
                         <svg class="w-3.5 h-3.5 transition-transform" :class="expandedTemplateId === tpl.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
                       <a v-if="tpl.website" :href="tpl.website" target="_blank" rel="noopener noreferrer" title="Visit website"
-                        class="flex-shrink-0 p-1 rounded hover:bg-primary/10 text-content-secondary dark:text-content-muted hover:text-primary transition-colors"
+                        class="flex-shrink-0 p-1 rounded hover:bg-primary/opacity-light text-content-secondary dark:text-content-muted hover:text-primary transition-colors"
                         @click.stop>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -638,7 +638,7 @@ onUnmounted(() => {
                          template flow. -->
                     <div
                       v-if="expandedTemplateId === tpl.id && tpl.brokers.length > 1"
-                      class="bg-background-mute/40 dark:bg-background/20 border-t border-stroke-subtle dark:border-stroke/10"
+                      class="bg-background-mute/opacity-heavy dark:bg-background/20 border-t border-stroke-subtle dark:border-stroke/opacity-light"
                     >
                       <div
                         v-for="(broker, idx) in tpl.brokers"
@@ -650,7 +650,7 @@ onUnmounted(() => {
                           <p class="text-xs font-medium text-content-primary truncate">{{ broker.name }}</p>
                           <p class="text-[11px] font-mono text-content-secondary dark:text-content-muted truncate">{{ broker.host }}:{{ broker.port }}</p>
                         </div>
-                        <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-primary text-xs font-bold" title="Add only this broker">+</span>
+                        <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-primary/opacity-light text-primary text-xs font-bold" title="Add only this broker">+</span>
                       </div>
                     </div>
                   </div>
@@ -674,7 +674,7 @@ onUnmounted(() => {
       <!-- Empty state -->
       <div
         v-if="!customBrokers.length"
-        class="flex flex-col items-center justify-center py-8 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted"
+        class="flex flex-col items-center justify-center py-8 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted"
       >
         <svg class="w-7 h-7 mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12l4-4m-4 4l4 4" />
@@ -693,8 +693,8 @@ onUnmounted(() => {
           <!-- Summary row — always visible, Edit button changes to Done when expanded -->
           <div class="flex items-center gap-3 px-4 py-2.5">
             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : 'bg-accent-red/10 dark:bg-accent-red/30 text-accent-red']">
-                <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-accent-green/10' : 'bg-accent-red/10'"></span>
+              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium text-accent-green' : 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium text-accent-red']">
+                <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-accent-green/opacity-light' : 'bg-accent-red/opacity-light'"></span>
                 {{ broker.enabled ? 'Enabled' : 'Disabled' }}
               </span>
               <span class="text-sm font-medium text-content-primary">{{ broker.name || '(unnamed)' }}</span>
@@ -703,14 +703,14 @@ onUnmounted(() => {
             <div v-if="isGlobalEditing" class="flex items-center gap-1.5 flex-shrink-0">
               <button
                 @click="openBrokerEdit(broker)"
-                class="px-2.5 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-content-primary rounded border border-primary/50 transition-colors"
+                class="px-2.5 py-1 text-xs bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded border border-primary/opacity-heavy transition-colors"
               >
                 Edit
               </button>
               <button
                 @click="removeBrokerLocal(broker._id)"
                 title="Remove"
-                class="p-1.5 rounded hover:bg-accent-red/10 dark:hover:bg-accent-red/20 text-content-secondary dark:text-content-muted hover:text-accent-red dark:hover:text-accent-red transition-colors"
+                class="p-1.5 rounded hover:bg-accent-red/opacity-light dark:hover:bg-accent-red/opacity-medium text-content-secondary dark:text-content-muted hover:text-accent-red dark:hover:text-accent-red transition-colors"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

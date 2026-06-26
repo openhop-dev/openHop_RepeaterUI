@@ -476,13 +476,13 @@ watch(
 
     <div
       v-if="errorMessage"
-      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
 
     <div class="cfg-section space-y-3">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Radio Type</span>
         <div
           v-if="!isEditing"
@@ -504,7 +504,7 @@ watch(
       </div>
 
       <template v-if="showSerialFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
             Serial Port
           </span>
@@ -594,7 +594,7 @@ watch(
           </template>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
             Baud Rate
           </span>
@@ -621,7 +621,7 @@ watch(
       </template>
 
       <template v-if="showTcpFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Host</span>
           <div v-if="!isEditing" class="text-content-primary font-mono text-sm break-all">
             {{ pymcTcpHost || 'Not set' }}
@@ -635,7 +635,7 @@ watch(
           />
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Port</span>
           <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
             {{ pymcTcpPort }}
@@ -650,7 +650,7 @@ watch(
           />
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Token</span>
           <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
             {{ pymcTcpToken ? 'Configured' : 'Not set' }}
@@ -666,7 +666,7 @@ watch(
       </template>
 
       <template v-if="showSx1262Fields && isEditing">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Board Preset (Quick Apply)</span>
           <div class="w-full sm:w-96 space-y-2">
             <div class="flex gap-2">
@@ -700,7 +700,7 @@ watch(
 
         <div class="pt-2 text-xs text-content-muted">SX1262 Board Pin Configuration</div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/10">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI Bus ID
             <input v-if="isEditing" v-model.number="sxBusId" type="number" class="cfg-input mt-1" />
             <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxBusId }}</span>
@@ -761,35 +761,35 @@ watch(
       </template>
 
       <div v-else-if="showSx1262Fields" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current SPI bus</div>
           <div class="text-content-primary font-mono">{{ sxBusId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current SPI CS</div>
           <div class="text-content-primary font-mono">{{ sxCsId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current CS pin</div>
           <div class="text-content-primary font-mono">{{ sxCsPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current reset pin</div>
           <div class="text-content-primary font-mono">{{ sxResetPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current busy pin</div>
           <div class="text-content-primary font-mono">{{ sxBusyPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current IRQ pin</div>
           <div class="text-content-primary font-mono">{{ sxIrqPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current power enable pin</div>
           <div class="text-content-primary font-mono">{{ sxEnPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
           <div class="text-content-muted text-xs mb-1">Current power enable pins</div>
           <div class="text-content-primary font-mono">
             {{ sxEnPinsInput || 'Not set' }}
@@ -799,7 +799,7 @@ watch(
 
       <template v-if="showCh341Fields">
         <div class="pt-2 text-xs text-content-muted">CH341 Adapter Configuration</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/10">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 VID
             <input v-if="isEditing" v-model.number="ch341Vid" type="number" class="cfg-input mt-1" />
             <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ ch341Vid }}</span>

@@ -142,14 +142,14 @@ onMounted(async () => {
       <router-link
         v-if="initialLoadComplete && !(systemStore.stats?.config?.radio as any)?.cad?.peak_threshold"
         to="/cad-calibration"
-        class="flex-shrink-0 flex items-center gap-4 px-5 py-3 min-w-[280px] rounded-xl border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+        class="flex-shrink-0 flex items-center gap-4 px-5 py-3 min-w-[280px] rounded-xl border border-primary/opacity-medium bg-primary/opacity-light text-primary hover:bg-primary/opacity-medium transition-colors"
       >
         <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
         <div>
           <div class="text-sm font-semibold">CAD Calibration Available</div>
-          <div class="text-xs text-primary/70">Optimise CAD settings →</div>
+          <div class="text-xs text-primary/opacity-heavy">Optimise CAD settings →</div>
         </div>
       </router-link>
     </div>

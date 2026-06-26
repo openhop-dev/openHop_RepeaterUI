@@ -453,7 +453,7 @@ onBeforeUnmount(() => {
         </span>
         <span
           v-if="showOnlyNewPackets"
-          class="text-primary text-xs sm:text-sm bg-primary/10 px-2 py-1 rounded-md border border-primary/20 live-mode-badge whitespace-nowrap"
+          class="text-primary text-xs sm:text-sm bg-primary/opacity-light px-2 py-1 rounded-md border border-primary/opacity-medium live-mode-badge whitespace-nowrap"
           :title="`Filter activated at ${formatFilterTime}`"
         >
           <span class="hidden sm:inline">Live Mode (since {{ formatFilterTime }})</span>
@@ -476,7 +476,7 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Type</label>
           <select
             v-model="selectedType"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="type in packetTypes"
@@ -496,7 +496,7 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Route</label>
           <select
             v-model="selectedRoute"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="route in routeTypes"
@@ -518,10 +518,10 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Filter</label>
           <button
             @click="toggleNewPacketsFilter"
-            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 min-w-[120px]"
+            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium min-w-[120px]"
             :class="{
-              'border-primary bg-primary/10 text-primary': showOnlyNewPackets,
-              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary dark:hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': showOnlyNewPackets,
+              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary dark:hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/opacity-light':
                 !showOnlyNewPackets,
             }"
           >
@@ -534,12 +534,12 @@ onBeforeUnmount(() => {
           <label class="text-transparent text-xs mb-1">.</label>
           <button
             @click="resetFilters"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium"
             :disabled="selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets"
             :class="{
               'opacity-50 cursor-not-allowed hover:border-stroke-subtle dark:hover:border-stroke hover:text-content-secondary dark:hover:text-content-muted':
                 selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets,
-              'hover:bg-primary/10':
+              'hover:bg-primary/opacity-light':
                 selectedType !== 'all' || selectedRoute !== 'all' || showOnlyNewPackets,
             }"
           >
@@ -564,7 +564,7 @@ onBeforeUnmount(() => {
         <div class="col-span-1">TX Delay</div>
         <div class="col-span-3">Status</div>
       </div>
-      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/50">
+      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
         <div class="col-span-12">Path/Hashes</div>
       </div>
     </div>
@@ -575,7 +575,7 @@ onBeforeUnmount(() => {
         <div
           v-for="(packet, index) in paginatedPackets"
           :key="`${packet.packet_hash}_${packet.timestamp}_${index}`"
-          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
+          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
           :class="[getPacketTypeColor(packet.type), getPacketRowClass(packet)]"
           @click="openPacketDetails(packet)"
         >
@@ -596,7 +596,7 @@ onBeforeUnmount(() => {
                   }}</span>
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                    class="text-accent-red/70 text-[10px] font-medium max-w-[80px] truncate"
+                    class="text-accent-red/opacity-heavy text-[10px] font-medium max-w-[80px] truncate"
                     :title="getAdvertNodeName(packet) || undefined"
                   >
                     {{ getAdvertNodeName(packet) }}
@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
                           :class="
                             idx === 0
                               ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                              : 'bg-background-mute/20 text-content-muted'
+                              : 'bg-background-mute/opacity-medium text-content-muted'
                           "
                           :title="node"
                         >
@@ -714,7 +714,7 @@ onBeforeUnmount(() => {
                         {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
                       </span>
                       <svg
-                        class="w-3 h-3 text-content-muted/60"
+                        class="w-3 h-3 text-content-muted/opacity-heavy"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -731,7 +731,7 @@ onBeforeUnmount(() => {
                         :class="
                           packet.dst_hash
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-accent-amber/20 text-accent-amber'
+                            : 'bg-accent-amber/opacity-medium text-accent-amber'
                         "
                       >
                         {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
@@ -760,7 +760,7 @@ onBeforeUnmount(() => {
                   <!-- Node name for ADVERT packets -->
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                    class="text-accent-red/70 text-[10px] font-medium leading-tight"
+                    class="text-accent-red/opacity-heavy text-[10px] font-medium leading-tight"
                     :title="getAdvertNodeName(packet) || undefined"
                   >
                     {{ getAdvertNodeName(packet) }}
@@ -827,7 +827,7 @@ onBeforeUnmount(() => {
                         :class="
                           idx === 0
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-background-mute/20 text-content-muted'
+                            : 'bg-background-mute/opacity-medium text-content-muted'
                         "
                         :title="node"
                       >
@@ -864,7 +864,7 @@ onBeforeUnmount(() => {
 
                   <!-- Path Arrow/Indicator -->
                   <div
-                    class="flex items-center gap-0.5 text-content-muted/60"
+                    class="flex items-center gap-0.5 text-content-muted/opacity-heavy"
                   >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -902,7 +902,7 @@ onBeforeUnmount(() => {
                       :class="
                         packet.dst_hash
                           ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-accent-amber/20 text-accent-amber'
+                          : 'bg-accent-amber/opacity-medium text-accent-amber'
                       "
                     >
                       {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
@@ -971,7 +971,7 @@ onBeforeUnmount(() => {
           <button
             @click="loadMoreRecords"
             :disabled="isLoadingMore"
-            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 hover:bg-primary/5"
+            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium hover:bg-primary/opacity-light"
             :class="{
               'text-primary border-primary cursor-pointer': !isLoadingMore,
               'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke cursor-not-allowed opacity-50':
@@ -993,11 +993,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage - 1"
           :disabled="currentPage <= 1"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
             'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage <= 1,
-            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage > 1,
           }"
         >
@@ -1011,7 +1011,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage > 3"
             @click="currentPage = 1"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             1
           </button>
@@ -1031,10 +1031,10 @@ onBeforeUnmount(() => {
             }).filter((p) => p <= totalPages)"
             :key="page"
             @click="currentPage = page"
-            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 page-number"
+            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium page-number"
             :class="{
-              'border-primary bg-primary/10 text-primary': currentPage === page,
-              'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': currentPage === page,
+              'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
                 currentPage !== page,
             }"
           >
@@ -1052,7 +1052,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage < totalPages - 2"
             @click="currentPage = totalPages"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             {{ totalPages }}
           </button>
@@ -1062,11 +1062,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage + 1"
           :disabled="currentPage >= totalPages"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
             'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage >= totalPages,
-            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage < totalPages,
           }"
         >
@@ -1088,7 +1088,7 @@ onBeforeUnmount(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs">•</span>
         <button
           @click="loadMoreRecords"
-          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
         >
           Load {{ Math.min(200, maxLimit - currentLimit) }} more records
         </button>

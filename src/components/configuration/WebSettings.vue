@@ -34,7 +34,7 @@
             type="text"
             maxlength="80"
             placeholder="e.g. Base Station Alpha"
-            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-colors"
+            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/opacity-medium text-sm text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy transition-colors"
             @change="saveSettings"
             :disabled="saving"
           />
@@ -112,8 +112,8 @@
             :class="[
               'flex items-start space-x-3 p-4 bg-background-mute dark:bg-background/30 rounded-lg border-2 cursor-pointer transition-all',
               localConfig.use_default_frontend
-                ? 'border-accent-cyan bg-accent-cyan/10'
-                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50 dark:hover:border-accent-cyan/50',
+                ? 'border-accent-cyan bg-accent-cyan/opacity-light'
+                : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-accent-cyan/opacity-heavy dark:hover:border-accent-cyan/opacity-heavy',
             ]"
           >
             <input
@@ -131,7 +131,7 @@
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
                 Built-in Repeater web interface
               </div>
-              <div class="text-xs text-content-muted/60 mt-1 font-mono">
+              <div class="text-xs text-content-muted/opacity-heavy mt-1 font-mono">
                 Built-in
               </div>
             </div>
@@ -143,8 +143,8 @@
               'flex items-start space-x-3 p-4 bg-background-mute dark:bg-background/30 rounded-lg border-2 transition-all',
               !pymcConsoleExists ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               !localConfig.use_default_frontend
-                ? 'border-accent-cyan bg-accent-cyan/10'
-                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50 dark:hover:border-accent-cyan/50',
+                ? 'border-accent-cyan bg-accent-cyan/opacity-light'
+                : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-accent-cyan/opacity-heavy dark:hover:border-accent-cyan/opacity-heavy',
             ]"
           >
             <input
@@ -161,14 +161,14 @@
                   openHop Console
                 </div>
                 <span
-                  class="text-xs bg-accent-amber/15 text-accent-amber px-2 py-0.5 rounded-full border border-accent-amber/30 font-medium"
+                  class="text-xs bg-accent-amber/opacity-light text-accent-amber px-2 py-0.5 rounded-full border border-accent-amber/opacity-medium font-medium"
                   >@Treehouse⚡</span
                 >
               </div>
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
                 Alternative web interface for Repeater
               </div>
-              <div class="text-xs text-content-muted/60 mt-1 font-mono">
+              <div class="text-xs text-content-muted/opacity-heavy mt-1 font-mono">
                 /opt/pymc_console/web/html
               </div>
             </div>
@@ -181,8 +181,8 @@
           class="p-4 rounded-lg border"
           :class="
             pymcConsoleExists
-              ? 'bg-accent-green/5 border-accent-green/20'
-              : 'bg-accent-cyan/5 border-accent-cyan/20'
+              ? 'bg-accent-green/opacity-light border-accent-green/opacity-medium'
+              : 'bg-accent-cyan/opacity-light border-accent-cyan/opacity-medium'
           "
         >
           <div class="flex items-start gap-3">
@@ -236,7 +236,7 @@
                   href="https://github.com/dmduran12/pymc_console-dist"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent-cyan/20 hover:bg-accent-cyan/30 border border-accent-cyan/50 text-accent-cyan rounded-lg text-sm font-medium transition-colors"
+                  class="inline-flex items-center gap-2 px-4 py-2 bg-accent-cyan/opacity-medium hover:bg-accent-cyan/opacity-medium border border-accent-cyan/opacity-heavy text-accent-cyan rounded-lg text-sm font-medium transition-colors"
                 >
                   <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                     <path
@@ -251,7 +251,7 @@
         </div>
 
         <!-- Restart Notice -->
-        <div v-if="needsRestart" class="p-4 bg-accent-amber/10 border border-accent-amber/30 rounded-lg">
+        <div v-if="needsRestart" class="p-4 bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-start space-x-3 flex-1">
               <svg
@@ -279,23 +279,9 @@
             <button
               @click="restartService"
               :disabled="restarting"
-              class="px-4 py-2 bg-accent-amber/20 hover:bg-accent-amber/30 disabled:opacity-50 text-accent-amber font-medium rounded-lg border border-accent-amber/50 transition-colors disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+              class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium disabled:opacity-50 text-accent-amber font-medium rounded-lg border border-accent-amber/opacity-heavy transition-colors disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
             >
-              <svg v-if="restarting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <Spinner v-if="restarting" size="sm" color="current" />
               <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   stroke-linecap="round"
@@ -357,6 +343,7 @@
 import { ref, reactive, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import ApiService from '@/utils/api';
+import Spinner from '@/components/ui/Spinner.vue';
 import { useSystemStore } from '@/stores/system';
 
 defineOptions({ name: 'WebSettings' });
@@ -385,8 +372,8 @@ const localConfig = reactive<WebConfig>({
 
 const saveMessageClass = computed(() => {
   return saveSuccess.value
-    ? 'bg-accent-green/10 border-accent-green/30'
-    : 'bg-accent-red/10 border-accent-red/30';
+    ? 'bg-accent-green/opacity-light border-accent-green/opacity-medium'
+    : 'bg-accent-red/opacity-light border-accent-red/opacity-medium';
 });
 
 async function checkPymcConsole() {

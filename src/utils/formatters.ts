@@ -45,29 +45,29 @@ export function getRouteTypeBadge(routeType?: number | null): {
     case 2:
       return {
         text: 'Direct',
-        bgColor: 'bg-accent-green/10',
-        borderColor: 'border-accent-green/30',
+        bgColor: 'bg-accent-green/opacity-light',
+        borderColor: 'border-accent-green/opacity-medium',
         textColor: 'text-accent-green',
       };
     case 3:
       return {
         text: 'Transport Direct',
-        bgColor: 'bg-accent-green/20',
-        borderColor: 'border-accent-green/30',
+        bgColor: 'bg-accent-green/opacity-medium',
+        borderColor: 'border-accent-green/opacity-medium',
         textColor: 'text-accent-green',
       };
     case 1:
       return {
         text: 'Flood',
-        bgColor: 'bg-accent-amber/20',
-        borderColor: 'border-accent-amber/30',
+        bgColor: 'bg-accent-amber/opacity-medium',
+        borderColor: 'border-accent-amber/opacity-medium',
         textColor: 'text-accent-amber',
       };
     case 0:
       return {
         text: 'Transport Flood',
-        bgColor: 'bg-accent-orange/20',
-        borderColor: 'border-accent-orange/30',
+        bgColor: 'bg-accent-orange/opacity-medium',
+        borderColor: 'border-accent-orange/opacity-medium',
         textColor: 'text-accent-orange',
       };
     default:

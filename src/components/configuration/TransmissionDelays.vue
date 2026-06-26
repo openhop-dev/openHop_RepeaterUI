@@ -159,20 +159,20 @@ defineExpose({ requestLeave, isEditing });
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
-      class="bg-accent-green/10 dark:bg-accent-green/20 border border-accent-green dark:border-accent-green/50 rounded-lg p-3 text-accent-green text-sm"
+      class="bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium border border-accent-green dark:border-accent-green/opacity-heavy rounded-lg p-3 text-accent-green text-sm"
     >
       {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
 
     <!-- Transmission Delays Settings -->
     <div class="cfg-section space-y-3">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-3">
         <div class="flex flex-col gap-1">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Flood TX Delay Factor</span>
           <span class="text-content-muted text-xs">Scales the airtime-based random transmit window for flood packets. Higher values increase delay spread for collision avoidance.</span>

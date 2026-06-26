@@ -352,7 +352,7 @@ defineExpose({ requestLeave, isEditing });
     </div>
 
     <!-- Save Error -->
-    <div v-if="saveError" class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red/50 rounded-lg p-3">
+    <div v-if="saveError" class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy rounded-lg p-3">
       <p class="text-accent-red text-sm">{{ saveError }}</p>
     </div>
 
@@ -369,7 +369,7 @@ defineExpose({ requestLeave, isEditing });
         </div>
         <div
           :class="[
-            'flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5 sm:p-1',
+            'flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5 sm:p-1',
             !isEditing ? 'opacity-50 pointer-events-none' : '',
           ]"
         >
@@ -378,7 +378,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'deny'
-                ? 'bg-accent-red/20 text-accent-red border border-accent-red/50'
+                ? 'bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -389,7 +389,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'allow'
-                ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -424,7 +424,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Empty State -->
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
         <div class="text-content-muted mb-2">No regions found</div>
-        <div class="text-content-muted/60 text-sm">
+        <div class="text-content-muted/opacity-heavy text-sm">
           Click "Edit Settings" then "Add Region" to get started
         </div>
       </div>
