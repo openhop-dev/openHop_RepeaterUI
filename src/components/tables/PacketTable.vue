@@ -614,7 +614,13 @@ onBeforeUnmount(() => {
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
                 {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs flex items-center gap-1">
+                <div v-if="packet.snr != null" class="flex items-end gap-0.5">
+                  <div class="w-1 h-3 rounded-sm" :class="packet.snr >= -10 ? 'status-dot-green' : 'bg-stroke/20'"></div>
+                  <div class="w-1 h-4 rounded-sm" :class="packet.snr >= -5 ? 'status-dot-green' : 'bg-stroke/20'"></div>
+                  <div class="w-1 h-5 rounded-sm" :class="packet.snr >= 0 ? 'status-dot-green' : 'bg-stroke/20'"></div>
+                  <div class="w-1 h-6 rounded-sm" :class="packet.snr >= 10 ? 'status-dot-green' : 'bg-stroke/20'"></div>
+                </div>
                 {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
