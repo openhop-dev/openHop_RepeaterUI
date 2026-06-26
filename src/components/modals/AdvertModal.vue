@@ -83,12 +83,6 @@ const isNetworkTimeoutError = (error: string | null) => {
       class="modal-backdrop"
       @click.self="handleClose"
     >
-      <!-- Backdrop -->
-      <div
-        class="absolute inset-0 bg-black/opacity-heavy backdrop-blur-sm transition-opacity duration-300"
-        :class="showContent ? 'opacity-100' : 'opacity-0'"
-      ></div>
-
       <!-- Modal -->
       <div
         class="relative bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-8 max-w-md w-full transform transition-all duration-300 border border-stroke-subtle dark:border-white/opacity-light"

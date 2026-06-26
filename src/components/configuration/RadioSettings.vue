@@ -310,7 +310,7 @@ defineExpose({ requestLeave, isEditing });
       <Transition name="fade">
         <div
           v-if="isEditing && showPrefillPicker"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/opacity-heavy backdrop-blur-sm"
+          class="modal-backdrop"
           @click.self="showPrefillPicker = false"
         >
           <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/opacity-light bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">

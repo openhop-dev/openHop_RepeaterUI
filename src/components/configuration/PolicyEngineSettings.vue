@@ -1628,7 +1628,7 @@ onMounted(loadPolicy);
 
     <div
       v-if="showRuleModal && ruleDraft"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/opacity-heavy backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeRuleModal"
     >
       <div class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">

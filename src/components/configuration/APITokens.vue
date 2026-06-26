@@ -295,7 +295,7 @@ onMounted(() => {
     <!-- Create Token Modal -->
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/opacity-heavy backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeCreateModal"
     >
       <div
@@ -346,7 +346,7 @@ onMounted(() => {
     <!-- Show Token Modal -->
     <div
       v-if="showToken && createdToken"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/opacity-heavy backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeTokenModal"
     >
       <div

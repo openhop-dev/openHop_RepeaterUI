@@ -163,9 +163,9 @@
     @apply fixed inset-0 bg-black/opacity-heavy backdrop-blur-sm z-[300] flex items-center justify-center p-4;
   }
 
-  /* Heavy backdrop for irreversible / destructive operations */
+  /* Heavy backdrop for irreversible / destructive operations — slightly stronger blur to signal importance */
   .modal-backdrop-heavy {
-    @apply fixed inset-0 bg-black/opacity-heavy backdrop-blur-sm z-[300] flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/opacity-heavy backdrop-blur-md z-[300] flex items-center justify-center p-4;
   }
 
   /* Inner card — combine with max-w-md / max-w-lg / max-w-2xl in the template */

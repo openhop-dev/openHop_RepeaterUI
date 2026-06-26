@@ -981,9 +981,6 @@ watch(
         @keydown="handleKeyDown"
         tabindex="0"
       >
-        <!-- Backdrop with blur -->
-        <div class="absolute inset-0 bg-black/opacity-heavy backdrop-blur-md pointer-events-none"></div>
-
         <!-- Modal Content -->
         <div class="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
