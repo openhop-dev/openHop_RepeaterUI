@@ -121,12 +121,12 @@ const connectionFilters: Array<{ key: ConnectionType; title: string; description
   {
     key: 'usb',
     title: 'USB Connection',
-    description: 'USB-attached modems including CH341 and pyMC USB modem.',
+    description: 'USB-attached modems including CH341 and openHop USB modem.',
   },
   {
     key: 'network',
     title: 'Network Wi-Fi Based',
-    description: 'Remote modem reached over LAN/Wi-Fi using pyMC TCP.',
+    description: 'Remote modem reached over LAN/Wi-Fi using openHop TCP.',
   },
 ];
 
@@ -619,7 +619,7 @@ const stepTitles = [
                           </p>
                         </div>
                         <p class="text-content-muted dark:text-content-muted text-xs mt-2">
-                          The USB-CDC device path for your modem. If you have the pyMC udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
+                          The USB-CDC device path for your modem. If you have the openHop udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
                         </p>
                       </div>
                     </div>
@@ -642,7 +642,7 @@ const stepTitles = [
                           placeholder="pymc-3e2834.local"
                         />
                         <p class="text-content-muted dark:text-content-muted text-xs mt-2">
-                          mDNS hostname, LAN IP, or domain name of the pyMC Wi-Fi modem.
+                          mDNS hostname, LAN IP, or domain name of the openHop Wi-Fi modem.
                         </p>
                       </div>
                       <div class="grid grid-cols-2 gap-4">

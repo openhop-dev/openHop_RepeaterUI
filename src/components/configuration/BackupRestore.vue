@@ -495,7 +495,7 @@ async function exportConfig() {
     const a = document.createElement('a');
     a.href = url;
     const ts = (res.data.meta?.exported_at || new Date().toISOString()).replace(/[:.]/g, '-');
-    a.download = `pymc-repeater-settings-${ts}.json`;
+    a.download = `openhop-repeater-settings-${ts}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -529,7 +529,7 @@ async function exportFullBackup() {
     const a = document.createElement('a');
     a.href = url;
     const ts = (res.data.meta?.exported_at || new Date().toISOString()).replace(/[:.]/g, '-');
-    a.download = `pymc-repeater-full-backup-${ts}.json`;
+    a.download = `openhop-repeater-full-backup-${ts}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -661,7 +661,7 @@ async function exportIdentity() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pymc-identity-${res.data.node_address || 'key'}.hex`;
+    a.download = `openhop-identity-${res.data.node_address || 'key'}.hex`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
