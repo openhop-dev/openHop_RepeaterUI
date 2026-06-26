@@ -113,7 +113,7 @@
               'flex items-start space-x-3 p-4 bg-background-mute dark:bg-background/30 rounded-lg border-2 cursor-pointer transition-all',
               localConfig.use_default_frontend
                 ? 'border-accent-cyan bg-accent-cyan/10'
-                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50',
+                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50 dark:hover:border-accent-cyan/50',
             ]"
           >
             <input
@@ -144,7 +144,7 @@
               !pymcConsoleExists ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               !localConfig.use_default_frontend
                 ? 'border-accent-cyan bg-accent-cyan/10'
-                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50',
+                : 'border-stroke-subtle dark:border-stroke/10 hover:border-accent-cyan/50 dark:hover:border-accent-cyan/50',
             ]"
           >
             <input

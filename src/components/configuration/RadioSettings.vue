@@ -343,7 +343,7 @@ defineExpose({ requestLeave, isEditing });
                     'w-full text-left rounded-[18px] border px-4 py-3 transition-all duration-200 flex items-center justify-between gap-4',
                     selectedPrefillPreset === preset.title
                       ? 'border-primary/60 bg-primary/10 shadow-sm shadow-primary/10'
-                      : 'border-stroke-subtle dark:border-white/10 bg-white/60 dark:bg-white/5 hover:border-primary/30 hover:bg-stroke-subtle/60 dark:hover:bg-white/10',
+                      : 'border-stroke-subtle dark:border-white/10 bg-white/60 dark:bg-white/5 hover:border-primary/30 dark:hover:border-primary/30 hover:bg-stroke-subtle/60 dark:hover:bg-white/10',
                   ]"
                 >
                   <div class="min-w-0">

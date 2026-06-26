@@ -338,7 +338,7 @@ function handleCancel() {
                     'px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors',
                     draft.disallowedInput?.includes(type)
                       ? 'bg-accent-red/15 border-accent-red/50 text-accent-red'
-                      : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 text-content-secondary dark:text-content-muted hover:border-primary/40',
+                      : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 text-content-secondary dark:text-content-muted hover:border-primary/40 dark:hover:border-primary/40',
                   ]"
                 >
                   {{ type }}

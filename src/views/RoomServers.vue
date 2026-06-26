@@ -1315,7 +1315,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           <div
             v-for="(message, index) in roomMessages"
             :key="message.id || index"
-            class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[12px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-accent-amber/30 transition-all duration-300 hover:shadow-lg hover:shadow-secondary/10"
+            class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[12px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-accent-amber/30 dark:hover:border-accent-amber/30 transition-all duration-300 hover:shadow-lg hover:shadow-secondary/10"
           >
             <!-- Subtle gradient on hover -->
             <div

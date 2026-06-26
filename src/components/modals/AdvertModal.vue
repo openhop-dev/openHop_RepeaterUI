@@ -278,7 +278,7 @@ const isNetworkTimeoutError = (error: string | null) => {
           <div v-if="!isLoading && !isSuccess" class="flex gap-3">
             <button
               @click="handleClose"
-              class="flex-1 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 hover:border-primary rounded-[10px] px-6 py-3 text-content-primary dark:text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 transition-all duration-200"
+              class="flex-1 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 hover:border-primary dark:hover:border-primary rounded-[10px] px-6 py-3 text-content-primary dark:text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 transition-all duration-200"
             >
               Cancel
             </button>
