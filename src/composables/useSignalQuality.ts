@@ -67,32 +67,14 @@ function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
   // 5 equal 4 dB steps above minSNR. bar = floor((snr - minSNR) / 4) + 1, capped at 5.
   const bars = Math.min(SNR_STEPS, Math.floor((snr - minSNR) / SNR_STEP) + 1) as 1 | 2 | 3 | 4 | 5;
 
-  // Colour: 1–2 red→amber (marginal), 3 amber (acceptable), 4–5 green (good/excellent)
-  if (bars <= 2) {
-    return {
-      bars,
-      color: 'text-accent-red',
-      bgColor: 'bg-accent-red',
-      snr,
-      quality: 'Poor',
-    };
-  }
-  if (bars === 3) {
-    return {
-      bars,
-      color: 'text-accent-amber',
-      bgColor: 'bg-accent-amber',
-      snr,
-      quality: 'Fair',
-    };
-  }
-  return {
-    bars,
-    color: 'text-accent-green',
-    bgColor: 'bg-accent-green',
-    snr,
-    quality: bars === 5 ? 'Excellent' : 'Good',
+  const BAR_STYLES: Record<1|2|3|4|5, { color: string; bgColor: string; quality: SignalQuality['quality'] }> = {
+    1: { color: 'text-accent-red',         bgColor: 'bg-accent-red',         quality: 'Poor'      },
+    2: { color: 'text-accent-orange',      bgColor: 'bg-accent-orange',      quality: 'Poor'      },
+    3: { color: 'text-accent-amber',       bgColor: 'bg-accent-amber',       quality: 'Fair'      },
+    4: { color: 'text-accent-green-light', bgColor: 'bg-accent-green-light', quality: 'Good'      },
+    5: { color: 'text-accent-green',       bgColor: 'bg-accent-green',       quality: 'Excellent' },
   };
+  return { bars, snr, ...BAR_STYLES[bars] };
 }
 
 /**

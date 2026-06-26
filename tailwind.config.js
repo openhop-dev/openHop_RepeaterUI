@@ -35,6 +35,8 @@ export default {
         secondary: 'var(--color-secondary)',
         accent: {
           green: 'var(--color-accent-green)',
+          'green-light': 'var(--color-accent-green-light)',
+          orange: 'var(--color-accent-orange)',
           amber: 'var(--color-accent-amber)',
           purple: 'var(--color-accent-purple)',
           red: 'var(--color-accent-red)',
