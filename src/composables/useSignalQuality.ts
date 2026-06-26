@@ -21,7 +21,11 @@ const MIN_SNR_BY_SF: Record<number, number> = {
 // Default values for fallback
 const DEFAULT_NOISE_FLOOR = -116.0; // Typical quiet RF environment
 const DEFAULT_SF = 8;
-const GOOD_SNR_MARGIN = 5.0; // dB above minimum for "good" signal
+
+// Signal bar scale: 20 dB range above minSNR, 4 dB per bar (bars 1–5)
+// Bar 5 (full strength) kicks in at minSNR + 16 dB; anything above minSNR + 20 is comfortably full
+const SNR_STEP = 4.0;
+const SNR_STEPS = 5;
 
 export interface SignalQuality {
   bars: number; // 0-5 signal bars
@@ -49,47 +53,42 @@ function getMinSNR(spreadingFactor: number): number {
  * Map SNR to signal quality with color and bars
  */
 function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
-  const yellowThreshold = minSNR + GOOD_SNR_MARGIN; // 5 dB above minimum
-
-  // Red: SNR <= minSNR (unreliable link)
-  if (snr <= minSNR) {
-    const bars = snr <= minSNR - 5 ? 0 : 1;
+  // Below minimum — not reliably decodable
+  if (snr < minSNR) {
     return {
-      bars,
-      color: 'text-red-600 dark:text-red-400',
+      bars: 0,
+      color: 'text-accent-red',
       bgColor: 'bg-accent-red',
       snr,
-      quality: bars === 0 ? 'None' : 'Poor',
+      quality: 'None',
     };
   }
 
-  // Yellow: minSNR < SNR < (minSNR + 5 dB) (marginal link)
-  if (snr < yellowThreshold) {
-    // Linear interpolation between red and yellow zones
-    const progress = (snr - minSNR) / GOOD_SNR_MARGIN;
-    const bars = progress < 0.5 ? 2 : 3;
+  // 5 equal 4 dB steps above minSNR. bar = floor((snr - minSNR) / 4) + 1, capped at 5.
+  const bars = Math.min(SNR_STEPS, Math.floor((snr - minSNR) / SNR_STEP) + 1) as 1 | 2 | 3 | 4 | 5;
+
+  // Colour: 1–2 red→amber (marginal), 3 amber (acceptable), 4–5 green (good/excellent)
+  if (bars <= 2) {
     return {
       bars,
-      color:
-        bars === 2
-          ? 'text-orange-600 dark:text-orange-400'
-          : 'text-yellow-600 dark:text-yellow-400',
-      bgColor:
-        bars === 2
-          ? 'bg-orange-600 dark:bg-orange-400'
-          : 'bg-yellow-600 dark:bg-yellow-400',
+      color: 'text-accent-red',
+      bgColor: 'bg-accent-red',
+      snr,
+      quality: 'Poor',
+    };
+  }
+  if (bars === 3) {
+    return {
+      bars,
+      color: 'text-accent-amber',
+      bgColor: 'bg-accent-amber',
       snr,
       quality: 'Fair',
     };
   }
-
-  // Green: SNR >= (minSNR + 5 dB) (reliable link)
-  // Scale bars 4-5 based on how much above good threshold
-  const excessSNR = snr - yellowThreshold;
-  const bars = excessSNR >= 10 ? 5 : 4;
   return {
     bars,
-    color: bars === 5 ? 'text-green-600 dark:text-green-400' : 'text-green-600 dark:text-green-300',
+    color: 'text-accent-green',
     bgColor: 'bg-accent-green',
     snr,
     quality: bars === 5 ? 'Excellent' : 'Good',
