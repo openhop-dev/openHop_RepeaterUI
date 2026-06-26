@@ -150,7 +150,7 @@ const initMap = () => {
   // Add neighbor marker
   const neighborIcon = L.divIcon({
     className: 'custom-marker',
-    html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">${props.neighbor.node_name?.charAt(0) || '?'}</div>`,
+    html: `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--color-primary);border:2px solid white;box-shadow:0 4px 6px -1px rgb(0 0 0/0.1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.75rem">${props.neighbor.node_name?.charAt(0) || '?'}</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });

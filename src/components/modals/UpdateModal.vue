@@ -786,7 +786,7 @@ function reloadPage() {
                     line.includes('error') ||
                     line.includes('ERROR') ||
                     line.includes('Failed'),
-                  'text-yellow-400': line.includes('WARNING') || line.includes('⚠'),
+                  'text-accent-amber': line.includes('WARNING') || line.includes('⚠'),
                   'text-accent-green': line.includes('✓') || line.includes('Successfully'),
                   'text-content-muted/60': line.includes('keepalive'),
                 }"
