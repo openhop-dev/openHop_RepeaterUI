@@ -306,22 +306,34 @@ const handleBackdropClick = (event: MouseEvent) => {
         @click="handleBackdropClick"
       >
         <div
-          class="bg-white dark:bg-surface-elevated rounded-[20px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl border border-stroke-subtle dark:border-white/10"
+          class="modal-card-glass max-w-2xl overflow-hidden"
           @click.stop
         >
           <!-- Header -->
-          <div class="sticky top-0 z-20 border-b border-stroke px-6 py-4 flex items-center justify-between shadow-sm backdrop-blur-md bg-surface-primary/95 dark:bg-surface-elevated/92 supports-backdrop-filter:bg-surface-primary/80 supports-backdrop-filter:dark:bg-surface-elevated/78">
-            <div>
-              <h3 class="text-lg font-semibold text-content-primary">RF Degradation Event</h3>
-              <p class="text-sm text-content-secondary mt-1">{{ incidentDetails?.startTime }}</p>
+          <div class="bg-gradient-to-r from-accent-amber/20 to-accent-red/20 border-b border-stroke-subtle dark:border-stroke/10 px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-accent-amber/20 rounded-lg">
+                  <svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-content-primary">RF Degradation Event</h2>
+                  <p class="text-sm text-content-secondary dark:text-content-muted">{{ incidentDetails?.startTime }}</p>
+                </div>
+              </div>
+              <button
+                @click="emit('close')"
+                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <button
-              @click="emit('close')"
-              class="text-content-tertiary hover:text-content-secondary transition-colors text-2xl leading-none"
-            >
-              ×
-            </button>
           </div>
+          <div class="max-h-[75vh] overflow-y-auto">
 
           <!-- Content -->
           <div class="px-6 py-4 space-y-6">
@@ -551,14 +563,12 @@ const handleBackdropClick = (event: MouseEvent) => {
             </div>
           </div>
 
+          </div>
           <!-- Footer -->
-          <div class="sticky bottom-0 z-10 bg-white dark:bg-surface-elevated border-t border-stroke-subtle px-6 py-4 flex justify-end gap-3">
-            <button
-              @click="emit('close')"
-              class="px-4 py-2 rounded-lg bg-surface-primary text-content-primary hover:bg-surface-hover transition-colors font-medium"
-            >
-              Close
-            </button>
+          <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
+            <div class="modal-actions">
+              <button type="button" class="modal-btn-primary" @click="emit('close')">Close</button>
+            </div>
           </div>
         </div>
       </div>
