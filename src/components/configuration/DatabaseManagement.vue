@@ -208,7 +208,7 @@
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
+              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
             >
               Cancel
             </button>

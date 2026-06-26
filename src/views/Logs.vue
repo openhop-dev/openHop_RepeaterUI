@@ -103,7 +103,7 @@ const getLevelClass = (level: string): string => {
 
 const getLevelFilterClass = (level: string, enabled: boolean): string => {
   if (!enabled) {
-    return 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted bg-background-mute/opacity-heavy dark:bg-white/opacity-light hover:bg-background-mute dark:hover:bg-white/opacity-light';
+    return 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle hover:bg-background-mute dark:hover:bg-white/opacity-light';
   }
 
   const enabledMap: Record<string, string> = {
@@ -549,22 +549,22 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-3">
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
           <div class="text-xs uppercase tracking-wide text-content-muted">Visible</div>
           <div class="mt-1 text-xl font-semibold text-content-primary">{{ filteredLogCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ totalLogCount }} retained lines</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-3">
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
           <div class="text-xs uppercase tracking-wide text-content-muted">Logger Filters</div>
           <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLoggerCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLoggers.size }} selected</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-3">
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
           <div class="text-xs uppercase tracking-wide text-content-muted">Level Filters</div>
           <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLevelCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLevels.size }} selected</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-3">
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
           <div class="text-xs uppercase tracking-wide text-content-muted">Last Activity</div>
           <div class="mt-1 text-sm font-semibold text-content-primary">
             {{ lastEventAt ? formatDateTime(lastEventAt) : 'Waiting for stream' }}
@@ -669,7 +669,7 @@ onBeforeUnmount(() => {
                       'px-3 py-1.5 text-xs border rounded-full transition-colors',
                       enabledLoggers.has(logger)
                         ? 'bg-primary/opacity-light border-primary/opacity-heavy text-primary'
-                        : 'bg-background-main dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light',
+                        : 'bg-background-main dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light',
                     ]"
                   >
                     {{ logger }}
@@ -718,13 +718,13 @@ onBeforeUnmount(() => {
               v-for="(log, index) in filteredLogs"
               :key="log.id ?? `${log.timestamp}-${index}`"
               class="px-3 py-1 transition-colors cursor-pointer"
-              :class="selectedLogId === log.id ? 'bg-stroke-subtle dark:bg-white/opacity-light' : 'hover:bg-stroke-subtle/50 dark:hover:bg-white/opacity-light'"
+              :class="selectedLogId === log.id ? 'bg-stroke-subtle dark:bg-white/opacity-subtle' : 'hover:bg-stroke-subtle/50 dark:hover:bg-white/opacity-light'"
               @click="selectLog(log)"
             >
               <div class="flex flex-col gap-0.5 xl:flex-row xl:items-start">
                 <div class="flex flex-wrap items-center gap-1.5 xl:min-w-[260px] xl:max-w-[260px] xl:flex-none">
                   <span class="text-[11px] text-content-muted">{{ formatTime(log.timestamp) }}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/opacity-light bg-stroke-subtle/50 dark:bg-white/opacity-light text-content-secondary dark:text-content-muted">
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/opacity-light bg-stroke-subtle/50 dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted">
                     {{ extractLoggerName(log) }}
                   </span>
                   <span :class="['px-1.5 py-0.5 text-[10px] font-semibold rounded-full border', getLevelClass(log.level)]">

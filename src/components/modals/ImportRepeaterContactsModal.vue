@@ -275,7 +275,7 @@ function handleKeydown(e: KeyboardEvent) {
             type="number"
             min="1"
             placeholder="e.g. 48"
-            class="w-24 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
+            class="w-24 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
           />
           <span
             v-if="recencyPreset === 'custom'"
@@ -298,7 +298,7 @@ function handleKeydown(e: KeyboardEvent) {
             inputmode="numeric"
             min="1"
             placeholder="No limit"
-            class="w-32 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-2 text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
+            class="w-32 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-3 py-2 text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy"
           />
           <span class="text-content-muted text-sm">contacts</span>
         </div>
@@ -324,7 +324,7 @@ function handleKeydown(e: KeyboardEvent) {
         <button
           type="button"
           :disabled="loading"
-          class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors disabled:opacity-50"
+          class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors disabled:opacity-50"
           @click="emit('close')"
         >
           Cancel

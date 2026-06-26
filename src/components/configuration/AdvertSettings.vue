@@ -334,7 +334,7 @@ const tierBadgeClass = computed(() => {
       <!-- Stats Grid -->
       <template v-else>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-content-muted">Mesh Tier</div>
             <div
               :class="[
@@ -345,19 +345,19 @@ const tierBadgeClass = computed(() => {
               {{ currentTier.toUpperCase() }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-content-muted">Adverts/min</div>
             <div class="text-lg font-mono text-content-primary">
               {{ rateLimitStats.metrics?.adverts_per_min_ewma?.toFixed(2) || '0.00' }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-content-muted">Allowed</div>
             <div class="text-lg font-mono text-accent-green">
               {{ rateLimitStats.stats?.adverts_allowed || 0 }}
             </div>
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-content-muted">Dropped</div>
             <div class="text-lg font-mono text-accent-red">
               {{ rateLimitStats.stats?.adverts_dropped || 0 }}
@@ -797,7 +797,7 @@ const tierBadgeClass = computed(() => {
           >Activity Tier Thresholds (adverts/min)</span
         >
         <div class="grid grid-cols-3 gap-2 mt-2">
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-accent-green mb-1">Quiet Max</div>
             <div
               v-if="!isEditing"
@@ -815,7 +815,7 @@ const tierBadgeClass = computed(() => {
               class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-accent-cyan mb-1">Normal Max</div>
             <div
               v-if="!isEditing"
@@ -833,7 +833,7 @@ const tierBadgeClass = computed(() => {
               class="cfg-input w-full py-1 text-center"
             />
           </div>
-          <div class="text-center p-2 bg-white dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
+          <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-secondary mb-1">Busy Max</div>
             <div
               v-if="!isEditing"
@@ -942,7 +942,7 @@ const tierBadgeClass = computed(() => {
               </li>
             </ul>
             <div
-              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-light rounded text-xs font-mono text-content-muted"
+              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-subtle rounded text-xs font-mono text-content-muted"
             >
               Example (capacity 2):<br />
               - Copy 1 forwarded (2 → 1 tokens)<br />
@@ -998,7 +998,7 @@ const tierBadgeClass = computed(() => {
               Adaptive mode adjusts limits based on recent advert activity.
             </p>
             <div
-              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-light rounded-lg text-sm text-content-secondary dark:text-content-muted"
+              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-subtle rounded-lg text-sm text-content-secondary dark:text-content-muted"
             >
               <span class="font-semibold">How Congestion is Measured:</span>
               <ul class="mt-1 space-y-1 list-disc list-inside ml-2">
@@ -1045,7 +1045,7 @@ const tierBadgeClass = computed(() => {
               </div>
             </div>
             <div
-              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-light rounded text-xs font-mono text-content-muted"
+              class="mt-2 p-3 bg-background-mute dark:bg-white/opacity-subtle rounded text-xs font-mono text-content-muted"
             >
               Quick examples:<br />
               - 0.02 adverts/min →

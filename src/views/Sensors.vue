@@ -155,7 +155,7 @@ useManagedPolling(
 
       <div class="mt-4 overflow-x-auto rounded-[12px] border border-stroke-subtle dark:border-white/opacity-light">
         <table class="min-w-full text-sm">
-          <thead class="bg-black/opacity-light dark:bg-white/opacity-light">
+          <thead class="bg-black/opacity-light dark:bg-white/opacity-subtle">
             <tr>
               <th class="px-3 py-2 text-left text-content-muted">Field</th>
               <th class="px-3 py-2 text-left text-content-muted">Value</th>

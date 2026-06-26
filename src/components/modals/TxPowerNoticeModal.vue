@@ -69,7 +69,7 @@ function onConfirm() {
           <p class="leading-relaxed">
             Do not assume all boards support the same maximum power levels or PA configuration methods.
           </p>
-          <div class="rounded-xl border border-stroke-subtle dark:border-white/opacity-light bg-background-mute/opacity-heavy dark:bg-white/opacity-light p-3">
+          <div class="rounded-xl border border-stroke-subtle dark:border-white/opacity-light bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle p-3">
             <p class="text-content-primary font-medium mb-2">Recommended checks before applying changes:</p>
             <ul class="list-disc pl-5 space-y-1">
               <li>Verify whether your board includes an external PA/LNA stage</li>

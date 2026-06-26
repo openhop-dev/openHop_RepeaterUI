@@ -1013,7 +1013,7 @@ watch(
                   :class="
                     showBinaryValues
                       ? 'bg-accent-cyan/opacity-medium border border-accent-cyan/opacity-medium text-accent-cyan'
-                      : 'bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted'
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted'
                   "
                   :title="showBinaryValues ? 'Hide binary values' : 'Show binary values'"
                 >
@@ -1057,7 +1057,7 @@ watch(
                   <div class="w-2 h-2 rounded-full bg-accent-cyan/opacity-light mr-3"></div>
                   Basic Information
                 </h3>
-                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-light rounded-[15px] p-4">
+                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4">
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-3">
                       <div
@@ -1140,7 +1140,7 @@ watch(
                   Payload Data
                 </h3>
                 <div
-                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-light rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
                 >
                   <div class="space-y-3">
                     <div
@@ -1160,7 +1160,7 @@ watch(
 
                       <!-- Raw Hex Display -->
                       <div
-                        class="glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px] p-4 mb-4"
+                        class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-4 mb-4"
                       >
                         <div
                           class="text-content-secondary dark:text-content-muted text-xs mb-2 font-semibold"
@@ -1200,7 +1200,7 @@ watch(
                         </div>
 
                         <!-- Hex Input Display -->
-                        <div class="bg-background-mute dark:bg-white/opacity-light rounded-[8px] p-3 mb-3">
+                        <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[8px] p-3 mb-3">
                           <div
                             class="font-mono text-xs text-content-primary break-all whitespace-pre-wrap leading-relaxed"
                           >
@@ -1209,10 +1209,10 @@ watch(
                         </div>
 
                         <!-- Field Breakdown Table -->
-                        <div class="bg-background-mute/opacity-heavy dark:bg-white/opacity-light rounded-[10px] overflow-hidden">
+                        <div class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[10px] overflow-hidden">
                           <!-- Desktop Table Header -->
                           <div
-                            class="hidden md:grid gap-3 p-3 bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide"
+                            class="hidden md:grid gap-3 p-3 bg-background-mute dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide"
                             :class="showBinaryValues ? 'grid-cols-4' : 'grid-cols-3'"
                           >
                             <div class="min-w-0">Bits</div>
@@ -1332,7 +1332,7 @@ watch(
                   Path Information
                 </h3>
                 <div
-                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-light rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
                 >
                   <div class="space-y-4">
                     <!-- Source and Destination -->
@@ -1396,8 +1396,8 @@ watch(
                         </span>
                       </div>
 
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-light overflow-hidden">
-                        <div class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 bg-background-mute/opacity-heavy dark:bg-white/opacity-light text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-light overflow-hidden">
+                        <div class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide">
                           <div>Hop</div>
                           <div>Original</div>
                           <div>Forwarded</div>
@@ -1560,11 +1560,11 @@ watch(
                   <div class="w-2 h-2 rounded-full bg-accent-green/opacity-light mr-3"></div>
                   Signal & Processing
                 </h3>
-                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-light rounded-[15px] p-4">
+                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4">
                   <!-- RF Metrics -->
                   <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         RSSI
@@ -1575,7 +1575,7 @@ watch(
                       <div class="text-content-muted text-xs">dBm</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         SNR
@@ -1586,7 +1586,7 @@ watch(
                       <div class="text-content-muted text-xs">dB</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px] col-span-2 md:col-span-1"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] col-span-2 md:col-span-1"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         Score
@@ -1634,7 +1634,7 @@ watch(
                       <div
                         v-for="(pathSnr, index) in packet.path_snr_details"
                         :key="index"
-                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[8px]"
+                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[8px]"
                       >
                         <div class="flex items-center gap-3">
                           <span class="text-content-muted text-sm"
@@ -1686,7 +1686,7 @@ watch(
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                       <!-- Attempts Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px] col-span-2 md:col-span-1"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] col-span-2 md:col-span-1"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           CAD Attempts
@@ -1700,7 +1700,7 @@ watch(
 
                       <!-- Total Delay Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Total LBT Delay
@@ -1724,7 +1724,7 @@ watch(
 
                       <!-- Channel Status Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Channel Status
@@ -1748,7 +1748,7 @@ watch(
                     <!-- Backoff Pattern Visualization (if there were retries) -->
                     <div
                       v-if="parseLbtDelays(packet.lbt_backoff_delays_ms).length > 0"
-                      class="glass-card bg-background-mute dark:bg-white/opacity-light rounded-[10px] p-4"
+                      class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-4"
                     >
                       <div
                         class="text-content-secondary dark:text-content-muted text-xs mb-3 font-semibold"

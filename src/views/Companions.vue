@@ -320,7 +320,7 @@ function onImportDone(imported: number) {
               {{ companionConfiguredCount }}
             </div>
           </div>
-          <div class="bg-background-mute dark:bg-white/opacity-light p-3 rounded-[12px]">
+          <div class="bg-background-mute dark:bg-white/opacity-subtle p-3 rounded-[12px]">
             <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/opacity-heavy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -637,7 +637,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -739,7 +739,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>

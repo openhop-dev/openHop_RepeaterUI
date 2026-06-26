@@ -46,12 +46,12 @@
   }
 
   .cfg-section {
-    @apply bg-transparent dark:bg-white/opacity-light rounded-lg p-8 border border-stroke-subtle dark:border-stroke/opacity-light;
+    @apply bg-transparent dark:bg-white/opacity-subtle rounded-lg p-8 border border-stroke-subtle dark:border-stroke/opacity-light;
   }
 
   /* Padding-free variant — use when the caller controls padding/overflow */
   .cfg-card {
-    @apply bg-transparent dark:bg-white/opacity-light rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light;
+    @apply bg-transparent dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light;
   }
 
   .cfg-btn-primary {
@@ -59,7 +59,7 @@
   }
 
   .cfg-btn-secondary {
-    @apply px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* ── Logo styling for light/dark mode ────────────────────────────────── */
@@ -101,7 +101,7 @@
 
   .btn-secondary {
     @apply px-4 py-2 rounded-lg text-sm transition-colors
-           bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
@@ -129,7 +129,7 @@
 
   .btn-secondary-xs {
     @apply px-3 py-1.5 rounded-lg text-xs transition-colors
-           bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
@@ -138,11 +138,11 @@
   /* ── Config form inputs ─────────────────────────────────────────────────── */
 
   .cfg-input {
-    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
   }
 
   .cfg-select {
-    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
   }
 
   .dark .cfg-select,
@@ -199,7 +199,7 @@
 
   /* Text / number / password / mono inputs */
   .modal-input {
-    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-light
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
            border border-stroke-subtle dark:border-stroke/opacity-light
            text-content-primary dark:text-content-primary
            placeholder-content-muted dark:placeholder-content-muted/opacity-heavy
@@ -208,7 +208,7 @@
 
   /* <select> elements (no placeholder token needed) */
   .modal-select {
-    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-light
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
            border border-stroke-subtle dark:border-stroke/opacity-light
            text-content-primary dark:text-content-primary
            focus:outline-none focus:border-primary transition-colors;
@@ -226,14 +226,14 @@
 
   /* Block-level monospace code/command display (curl examples, config snippets) */
   .code-block {
-    @apply block bg-background-mute dark:bg-white/opacity-light px-3 py-2 rounded
+    @apply block bg-background-mute dark:bg-white/opacity-subtle px-3 py-2 rounded
            text-xs text-content-primary dark:text-content-primary
            font-mono overflow-x-auto;
   }
 
   /* Read-only value display fields (tokens, coordinates, derived keys) */
   .modal-input-readonly {
-    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-light
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
            border border-stroke-subtle dark:border-stroke/opacity-light
            text-content-primary dark:text-content-primary
            font-mono cursor-default focus:outline-none focus:ring-0 focus:border-stroke-subtle dark:focus:border-stroke/opacity-light;
@@ -249,7 +249,7 @@
   /* Cancel / secondary muted action (safe to reuse for "Save Only" in 3-button rows) */
   .modal-btn-cancel {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors
-           bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary;
   }

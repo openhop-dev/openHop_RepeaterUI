@@ -156,7 +156,7 @@ function handleCancel() {
                 <button
                   type="button"
                   @click="draft.enabled = !draft.enabled"
-                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.enabled ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-light']"
+                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.enabled ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-subtle']"
                 >
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.enabled ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
@@ -196,7 +196,7 @@ function handleCancel() {
                 <button
                   type="button"
                   @click="draft.use_jwt_auth = !draft.use_jwt_auth"
-                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.use_jwt_auth ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-light']"
+                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.use_jwt_auth ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-subtle']"
                 >
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.use_jwt_auth ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
@@ -288,7 +288,7 @@ function handleCancel() {
                 <button
                   type="button"
                   @click="draft.retain_status = !draft.retain_status"
-                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.retain_status ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-light']"
+                  :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.retain_status ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-subtle']"
                 >
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.retain_status ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
@@ -302,7 +302,7 @@ function handleCancel() {
                   <button
                     type="button"
                     @click="draft.tls.enabled = !draft.tls.enabled"
-                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.enabled ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-light']"
+                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.enabled ? 'bg-primary' : 'bg-background-mute dark:bg-white/opacity-subtle']"
                   >
                     <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.tls.enabled ? 'translate-x-4' : 'translate-x-0']" />
                   </button>
@@ -312,7 +312,7 @@ function handleCancel() {
                   <button
                     type="button"
                     @click="draft.tls.insecure = !draft.tls.insecure"
-                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.insecure ? 'bg-accent-amber' : 'bg-background-mute dark:bg-white/opacity-light']"
+                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.insecure ? 'bg-accent-amber' : 'bg-background-mute dark:bg-white/opacity-subtle']"
                   >
                     <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.tls.insecure ? 'translate-x-4' : 'translate-x-0']" />
                   </button>
@@ -338,7 +338,7 @@ function handleCancel() {
                     'px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors',
                     draft.disallowedInput?.includes(type)
                       ? 'bg-accent-red/opacity-light border-accent-red/opacity-heavy text-accent-red'
-                      : 'bg-background-mute dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-light text-content-secondary dark:text-content-muted hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy',
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light text-content-secondary dark:text-content-muted hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy',
                   ]"
                 >
                   {{ type }}
@@ -365,7 +365,7 @@ function handleCancel() {
                   'flex-1 px-4 py-3 rounded-lg transition-colors font-medium',
                   draftIsValid
                     ? 'bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green'
-                    : 'bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted/opacity-heavy cursor-not-allowed',
+                    : 'bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted/opacity-heavy cursor-not-allowed',
                 ]"
               >
                 Done

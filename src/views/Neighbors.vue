@@ -460,7 +460,7 @@ onMounted(() => {
                 :value="selectedHours"
                 @change="changeHours(+($event.target as HTMLSelectElement).value)"
                 :disabled="loading"
-                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium focus:outline-none focus:border-primary/opacity-heavy disabled:opacity-50"
+                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/opacity-subtle text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium focus:outline-none focus:border-primary/opacity-heavy disabled:opacity-50"
               >
                 <option v-for="opt in hoursOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}

@@ -185,7 +185,7 @@ onMounted(() => {
         <div class="text-xs sm:text-sm text-content-secondary dark:text-content-muted">
           <p>
             <strong>API tokens</strong> are used for machine-to-machine authentication. Include the
-            token in the <code class="bg-background-mute dark:bg-white/opacity-light px-1 rounded font-mono">X-API-Key</code> header when
+            token in the <code class="bg-background-mute dark:bg-white/opacity-subtle px-1 rounded font-mono">X-API-Key</code> header when
             making API requests.
           </p>
           <p class="mt-2">Tokens are only shown once at creation. Store them securely.</p>
@@ -221,7 +221,7 @@ onMounted(() => {
       <div
         v-for="token in tokens"
         :key="token.id"
-        class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3 sm:p-4 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-colors"
+        class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3 sm:p-4 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-colors"
       >
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div class="flex-1">
@@ -327,7 +327,7 @@ onMounted(() => {
             <button
               @click="closeCreateModal"
               :disabled="isLoading"
-              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors disabled:opacity-50"
             >
               Cancel
             </button>

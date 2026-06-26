@@ -533,7 +533,7 @@ function formatOptionalAcl(value: unknown): string {
             >
             <select
               v-model="selectedIdentity"
-              class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/opacity-heavy transition-colors"
+              class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/opacity-heavy transition-colors"
             >
               <option :value="null">All Identities</option>
               <option v-for="identity in identityList" :key="identity.name" :value="identity.name">

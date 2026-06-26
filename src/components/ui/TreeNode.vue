@@ -201,7 +201,7 @@ function copyToClipboard(event: Event) {
           <!-- Truncated key display -->
           <span
             v-if="!showFullKey"
-            class="text-xs font-mono text-content-secondary dark:text-on-dark-secondary bg-stroke-subtle/40 dark:bg-white/opacity-light px-1.5 py-0.5 rounded border border-stroke-subtle dark:border-white/opacity-light"
+            class="text-xs font-mono text-content-secondary dark:text-on-dark-secondary bg-stroke-subtle/40 dark:bg-white/opacity-subtle px-1.5 py-0.5 rounded border border-stroke-subtle dark:border-white/opacity-light"
           >
             {{ getTruncatedKey(node.transport_key) }}
           </span>
@@ -306,7 +306,7 @@ function copyToClipboard(event: Event) {
         <!-- Children Count Badge -->
         <span
           v-if="hasChildren && !props.unlocked"
-          class="hidden sm:inline-block px-2 py-1 bg-stroke-subtle dark:bg-white/opacity-light text-content-secondary dark:text-on-dark-secondary text-xs rounded-full ml-1"
+          class="hidden sm:inline-block px-2 py-1 bg-stroke-subtle dark:bg-white/opacity-subtle text-content-secondary dark:text-on-dark-secondary text-xs rounded-full ml-1"
         >
           {{ node.children.length }}
         </span>

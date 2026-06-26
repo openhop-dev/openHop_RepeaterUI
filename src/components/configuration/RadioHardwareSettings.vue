@@ -761,35 +761,35 @@ watch(
       </template>
 
       <div v-else-if="showSx1262Fields" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current SPI bus</div>
           <div class="text-content-primary font-mono">{{ sxBusId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current SPI CS</div>
           <div class="text-content-primary font-mono">{{ sxCsId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current CS pin</div>
           <div class="text-content-primary font-mono">{{ sxCsPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current reset pin</div>
           <div class="text-content-primary font-mono">{{ sxResetPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current busy pin</div>
           <div class="text-content-primary font-mono">{{ sxBusyPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current IRQ pin</div>
           <div class="text-content-primary font-mono">{{ sxIrqPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current power enable pin</div>
           <div class="text-content-primary font-mono">{{ sxEnPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-light p-3">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
           <div class="text-content-muted text-xs mb-1">Current power enable pins</div>
           <div class="text-content-primary font-mono">
             {{ sxEnPinsInput || 'Not set' }}

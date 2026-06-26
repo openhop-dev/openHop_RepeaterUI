@@ -96,7 +96,7 @@ const handleClose = () => {
 
       <!-- Neighbor Info -->
       <div
-        class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-4 mb-6"
+        class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-4 mb-6"
       >
         <div class="flex items-center gap-3">
           <div class="flex-1 min-w-0">
@@ -134,7 +134,7 @@ const handleClose = () => {
       <div class="flex gap-3">
         <button
           @click="handleClose"
-          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
+          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
         >
           Cancel
         </button>

@@ -435,7 +435,7 @@ const stepTitles = [
                   'p-6 rounded-[16px] border transition-all duration-300 text-left backdrop-blur-sm min-h-[220px] flex flex-col',
                   setupStore.selectedHardwareConnection === connection.key
                     ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
-                    : 'bg-background-mute dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                    : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                 ]"
               >
                 <div
@@ -443,7 +443,7 @@ const stepTitles = [
                     'mb-5 w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-300',
                     setupStore.selectedHardwareConnection === connection.key
                       ? 'bg-primary/opacity-medium border-primary/opacity-heavy shadow-md shadow-primary/20'
-                      : 'bg-white/60 dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-medium',
+                      : 'bg-white/60 dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-medium',
                   ]"
                 >
                   <Cpu v-if="connection.key === 'gpio'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
@@ -512,7 +512,7 @@ const stepTitles = [
                       'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
                       setupStore.selectedHardware?.key === hardware.key
                         ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
-                        : 'bg-background-mute dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                        : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                     ]"
                   >
                     <div class="flex items-start justify-between gap-2">
@@ -562,7 +562,7 @@ const stepTitles = [
                     "
                     class="pl-10"
                   >
-                    <div class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
+                    <div class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
                       <div>
                         <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
                           Serial Port
@@ -590,7 +590,7 @@ const stepTitles = [
                             </select>
                             <button
                               type="button"
-                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light text-sm text-content-primary bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light disabled:opacity-50"
+                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light text-sm text-content-primary bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light disabled:opacity-50"
                               :disabled="serialDevicesLoading"
                               @click="loadSerialDevices"
                             >
@@ -630,7 +630,7 @@ const stepTitles = [
                     v-else-if="setupStore.selectedHardware.key.toLowerCase() === 'pymc_tcp'"
                     class="pl-10"
                   >
-                    <div class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
+                    <div class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
                       <div>
                         <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
                           Modem Hostname or IP Address <span class="text-accent-red">*</span>
@@ -713,7 +713,7 @@ const stepTitles = [
                     !setupStore.useCustomRadio &&
                     setupStore.selectedRadioPreset?.title === preset.title
                       ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
-                      : 'bg-background-mute dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                   ]"
                 >
                   <div class="relative z-10">
@@ -744,31 +744,31 @@ const stepTitles = [
                       {{ preset.description }}
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
                         <div class="text-content-muted">Freq</div>
                         <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.frequency }}
                         </div>
                       </div>
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
                         <div class="text-content-muted">BW</div>
                         <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.bandwidth }}
                         </div>
                       </div>
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
                         <div class="text-content-muted">SF</div>
                         <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.spreading_factor }}
                         </div>
                       </div>
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
                         <div class="text-content-muted">CR</div>
                         <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.coding_rate }}
                         </div>
                       </div>
-                      <div class="bg-background-mute dark:bg-white/opacity-light rounded px-2 py-1 col-span-2">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1 col-span-2">
                         <div class="text-content-muted">TX Power</div>
                         <div class="text-content-primary/opacity-heavy font-medium">
                           {{ setupStore.selectedHardware?.config?.tx_power ?? (preset.tx_power || '14') }} dBm
@@ -790,7 +790,7 @@ const stepTitles = [
                     'w-full p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
                     setupStore.useCustomRadio
                       ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
-                      : 'bg-background-mute dark:bg-white/opacity-light border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                   ]"
                 >
                   <div class="flex items-center justify-between mb-2">
@@ -967,7 +967,7 @@ const stepTitles = [
           <button
             v-if="setupStore.canGoBack"
             @click="handleBack"
-            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium transition-all duration-300 font-medium"
+            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium transition-all duration-300 font-medium"
           >
             Back
           </button>

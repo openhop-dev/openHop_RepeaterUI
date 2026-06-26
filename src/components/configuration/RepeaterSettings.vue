@@ -675,7 +675,7 @@ defineExpose({ requestLeave, isEditing });
             <button
               @click="showKeygenDialog = false"
               :disabled="keygenGenerating"
-              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors"
+              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors"
             >
               Close
             </button>

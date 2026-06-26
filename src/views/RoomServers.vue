@@ -524,7 +524,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
               {{ roomServerConfiguredCount }}
             </div>
           </div>
-          <div class="bg-background-mute dark:bg-white/opacity-light p-3 rounded-[12px]">
+          <div class="bg-background-mute dark:bg-white/opacity-subtle p-3 rounded-[12px]">
             <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/opacity-heavy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -714,7 +714,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   'group px-4 py-2 rounded-[10px] text-xs font-medium transition-all duration-200 flex items-center gap-2',
                   identity.registered
                     ? 'bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium text-accent-amber border border-accent-amber/opacity-medium hover:scale-105 hover:shadow-lg hover:shadow-secondary/opacity-medium'
-                    : 'bg-background-mute dark:bg-white/opacity-light text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
+                    : 'bg-background-mute dark:bg-white/opacity-subtle text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
                 ]"
                 :title="
                   identity.registered
@@ -744,7 +744,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   'group px-4 py-2 rounded-[10px] text-xs font-medium transition-all duration-200 flex items-center gap-2',
                   identity.registered
                     ? 'bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-medium hover:scale-105 hover:shadow-lg hover:shadow-accent-green/opacity-medium'
-                    : 'bg-background-mute dark:bg-white/opacity-light text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
+                    : 'bg-background-mute dark:bg-white/opacity-subtle text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
                 ]"
                 :title="
                   identity.registered
@@ -904,7 +904,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             <button
               type="button"
               @click="showLocationPickerCreate = true"
-              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors"
+              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors"
               title="Pick location on map"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1072,7 +1072,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             <button
               type="button"
               @click="showLocationPickerEdit = true"
-              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors"
+              class="flex items-center gap-1.5 px-2.5 py-1 mb-3 text-xs bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-secondary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors"
               title="Pick location on map"
             >
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1188,7 +1188,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
     >
       <!-- Enhanced Header with Gradient -->
       <div
-        class="relative overflow-hidden rounded-[15px] mb-6 p-5 bg-white/opacity-heavy dark:bg-white/opacity-light border border-stroke-subtle dark:border-white/opacity-light"
+        class="relative overflow-hidden rounded-[15px] mb-6 p-5 bg-white/opacity-heavy dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-white/opacity-light"
       >
         <!-- Gradient Background -->
         <div
@@ -1373,7 +1373,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                     </span>
                     <span
                       v-if="message.id"
-                      class="text-content-muted/opacity-heavy text-[10px] font-mono bg-background-mute dark:bg-white/opacity-light px-1.5 py-0.5 rounded"
+                      class="text-content-muted/opacity-heavy text-[10px] font-mono bg-background-mute dark:bg-white/opacity-subtle px-1.5 py-0.5 rounded"
                     >
                       #{{ message.id }}
                     </span>
@@ -1382,7 +1382,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
                 <!-- Message Content -->
                 <div
-                  class="text-content-primary/opacity-heavy text-sm leading-relaxed break-words whitespace-pre-wrap bg-background-mute dark:bg-white/opacity-light p-3 rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light"
+                  class="text-content-primary/opacity-heavy text-sm leading-relaxed break-words whitespace-pre-wrap bg-background-mute dark:bg-white/opacity-subtle p-3 rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light"
                 >
                   {{ message.message_text }}
                 </div>
@@ -1505,7 +1505,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 'group px-6 py-3 rounded-[12px] transition-all duration-200 flex items-center justify-center gap-2 font-medium',
                 newMessage.trim()
                   ? 'bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary border border-primary/opacity-heavy hover:scale-105 hover:shadow-lg hover:shadow-primary/opacity-medium'
-                  : 'bg-background-mute dark:bg-white/opacity-light text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
+                  : 'bg-background-mute dark:bg-white/opacity-subtle text-content-muted/opacity-heavy cursor-not-allowed border border-stroke-subtle dark:border-stroke/opacity-light',
               ]"
             >
               <svg

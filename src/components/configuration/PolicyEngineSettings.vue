@@ -1366,7 +1366,7 @@ onMounted(loadPolicy);
       <div v-if="activeView === 'policy'" class="space-y-4">
         <div class="cfg-section space-y-4">
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
-            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-4 flex items-center justify-between gap-4">
+            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-4 flex items-center justify-between gap-4">
               <div>
                 <label class="cfg-label">Policy Engine Enabled</label>
                 <p class="mt-1 text-xs text-content-muted">Enable policy enforcement for incoming packets.</p>
@@ -1381,7 +1381,7 @@ onMounted(loadPolicy);
                 <span>Enable policy enforcement</span>
               </label>
             </div>
-            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-light px-4 py-4 flex flex-col justify-between gap-3">
+            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-4 flex flex-col justify-between gap-3">
               <div>
                 <label class="cfg-label">Default Action</label>
                 <p class="mt-1 text-xs text-content-muted">Applied when no policy rule matches.</p>
@@ -1409,7 +1409,7 @@ onMounted(loadPolicy);
 
             <div class="overflow-x-auto rounded-2xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-main dark:bg-surface-900 shadow-sm">
               <table class="w-full min-w-[980px] table-fixed text-sm">
-                <thead class="bg-background-mute/opacity-heavy dark:bg-white/opacity-light backdrop-blur">
+                <thead class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle backdrop-blur">
                   <tr>
                     <th class="w-16 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Order</th>
                     <th class="w-14 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">On</th>
@@ -1431,7 +1431,7 @@ onMounted(loadPolicy);
                         class="inline-flex h-5 w-5 items-center justify-center rounded-md border text-[10px] font-semibold"
                         :class="rule.enabled
                           ? 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green'
-                          : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/opacity-medium dark:bg-white/opacity-light dark:text-content-muted'"
+                          : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/opacity-medium dark:bg-white/opacity-subtle dark:text-content-muted'"
                         :title="rule.enabled ? 'Enabled' : 'Disabled'"
                       >
                         {{ rule.enabled ? '✓' : '—' }}
@@ -1532,7 +1532,7 @@ onMounted(loadPolicy);
                 class="w-full text-left rounded-lg border p-3 transition-colors"
                 :class="selectedGroupId === group.id
                   ? 'border-primary/opacity-heavy bg-primary/opacity-light'
-                  : 'border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light'"
+                  : 'border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light'"
                 @click="selectedGroupId = group.id"
               >
                 <div class="flex items-start justify-between gap-2">
@@ -1576,7 +1576,7 @@ onMounted(loadPolicy);
 
             <div v-if="selectedGroup" class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
               <table class="w-full text-sm">
-                <thead class="bg-background-mute dark:bg-white/opacity-light">
+                <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                   <tr>
                     <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Name</th>
                     <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Value</th>
@@ -1664,7 +1664,7 @@ onMounted(loadPolicy);
           </div>
           <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[840px] text-xs">
-              <thead class="bg-background-mute dark:bg-white/opacity-light">
+              <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                 <tr>
                   <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Field</th>
                   <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Value Types</th>
@@ -1728,7 +1728,7 @@ onMounted(loadPolicy);
 
           <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[980px] text-sm">
-              <thead class="bg-background-mute dark:bg-white/opacity-light">
+              <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                 <tr>
                   <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Drag</th>
                   <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Field</th>

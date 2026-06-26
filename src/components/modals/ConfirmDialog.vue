@@ -120,7 +120,7 @@ const buttonColors = {
       <div class="flex gap-3">
         <button
           @click="emit('close')"
-          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/opacity-light"
+          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           {{ props.cancelText }}
         </button>

@@ -269,7 +269,7 @@ const handleCancel = () => {
           </div>
 
           <!-- Last Used (edit mode) -->
-          <div v-if="!isAddMode && node?.last_used" class="bg-background-mute dark:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3">
+          <div v-if="!isAddMode && node?.last_used" class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">

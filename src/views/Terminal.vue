@@ -944,7 +944,7 @@ const handleMobileBackspace = () => {
         />
         <button
           @click="searchPrev"
-          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
           title="Previous (Shift+Enter)"
         >
           ↑
@@ -958,7 +958,7 @@ const handleMobileBackspace = () => {
         </button>
         <button
           @click="closeSearch"
-          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
         >
           ✕
         </button>
