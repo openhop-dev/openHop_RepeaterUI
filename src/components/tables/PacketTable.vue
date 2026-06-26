@@ -6,11 +6,14 @@ import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import HopConnector from '@/components/ui/HopConnector.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
+import { useSignalQuality } from '@/composables/useSignalQuality';
 import { getPreference, setPreference } from '@/utils/preferences';
 
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
+const { getSignalQuality } = useSignalQuality();
 const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -615,12 +618,7 @@ onBeforeUnmount(() => {
                 {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs flex items-center gap-1">
-                <div v-if="packet.snr != null" class="flex items-end gap-0.5">
-                  <div class="w-1 h-3 rounded-sm" :class="packet.snr >= -10 ? 'status-dot-green' : 'bg-stroke/20'"></div>
-                  <div class="w-1 h-4 rounded-sm" :class="packet.snr >= -5 ? 'status-dot-green' : 'bg-stroke/20'"></div>
-                  <div class="w-1 h-5 rounded-sm" :class="packet.snr >= 0 ? 'status-dot-green' : 'bg-stroke/20'"></div>
-                  <div class="w-1 h-6 rounded-sm" :class="packet.snr >= 10 ? 'status-dot-green' : 'bg-stroke/20'"></div>
-                </div>
+                <SignalBars v-if="packet.rssi != null" :bars="getSignalQuality(packet.rssi).bars" :color="getSignalQuality(packet.rssi).color" />
                 {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
               <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
@@ -929,24 +927,7 @@ onBeforeUnmount(() => {
               <div class="flex items-center gap-3">
                 <!-- Signal bars on mobile, hidden on desktop -->
                 <div class="md:hidden flex items-center gap-1">
-                  <div v-if="packet.snr != null" class="flex gap-0.5">
-                    <div
-                      class="w-1 h-3 rounded-sm"
-                      :class="packet.snr >= -10 ? 'status-dot-green' : 'bg-stroke/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-4 rounded-sm"
-                      :class="packet.snr >= -5 ? 'status-dot-green' : 'bg-stroke/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-5 rounded-sm"
-                      :class="packet.snr >= 0 ? 'status-dot-green' : 'bg-stroke/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-6 rounded-sm"
-                      :class="packet.snr >= 10 ? 'status-dot-green' : 'bg-stroke/20'"
-                    ></div>
-                  </div>
+                  <SignalBars v-if="packet.rssi != null" :bars="getSignalQuality(packet.rssi).bars" :color="getSignalQuality(packet.rssi).color" />
                   <span class="text-content-primary dark:text-content-primary text-xs">{{
                     packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
                   }}</span>
