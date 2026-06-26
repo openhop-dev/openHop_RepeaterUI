@@ -95,7 +95,7 @@ const getLevelClass = (level: string): string => {
     ERROR: 'text-accent-red bg-accent-red/10 border-accent-red/20',
     WARNING: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
     WARN: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
-    INFO: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/20',
+    INFO: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/20',
     DEBUG: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20',
   };
   return levelMap[level] || 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20';
@@ -110,7 +110,7 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
     ERROR: 'border-accent-red/40 bg-accent-red/10 text-accent-red',
     WARNING: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
     WARN: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
-    INFO: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300',
+    INFO: 'border-accent-cyan/40 bg-accent-cyan/10 text-accent-cyan',
     DEBUG: 'border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   };
   return enabledMap[level] || 'border-primary/40 bg-primary/10 text-primary';

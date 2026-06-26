@@ -449,10 +449,10 @@ const currentTime = computed(() => {
 
         <div @click="showVersionDetails = !showVersionDetails" class="cursor-pointer transition-all duration-200 hover:scale-[1.02]">
           <div class="flex items-center gap-2">
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-yellow-600 dark:text-yellow-400 border-yellow-500/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-accent-amber border-accent-amber/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               R:v{{ repeaterVersion.base }}{{ repeaterVersion.isDev ? '-dev' + repeaterVersion.devNumber : '' }}
             </span>
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-yellow-600 dark:text-yellow-400 border-yellow-500/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-accent-amber border-accent-amber/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               Core:v{{ coreVersion.base }}{{ coreVersion.isDev ? '-dev' + coreVersion.devNumber : '' }}
             </span>
             <svg :class="['w-3 h-3 text-content-muted transition-transform duration-200', showVersionDetails ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
