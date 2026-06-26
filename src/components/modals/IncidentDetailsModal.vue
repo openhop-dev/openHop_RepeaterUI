@@ -369,14 +369,14 @@ const handleBackdropClick = (event: MouseEvent) => {
 
             <!-- Metrics Grid -->
             <div class="grid grid-cols-2 gap-4">
-              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-sky-500">
+              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-accent-red">
                 <div class="text-xs text-content-tertiary uppercase tracking-wide mb-1">Peak Noise Delta</div>
-                <div class="text-3xl text-content-primary font-bold">+{{ incidentDetails?.peakNoise }}</div>
+                <div class="text-3xl text-accent-red font-bold">+{{ incidentDetails?.peakNoise }}</div>
                 <div class="text-xs text-content-secondary mt-1">dB above baseline</div>
               </div>
-              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-secondary">
+              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-accent-amber">
                 <div class="text-xs text-content-tertiary uppercase tracking-wide mb-1">Total CRC Errors</div>
-                <div class="text-3xl text-content-primary font-bold">{{ incidentDetails?.totalCrc }}</div>
+                <div class="text-3xl text-accent-amber font-bold">{{ incidentDetails?.totalCrc }}</div>
                 <div class="text-xs text-content-secondary mt-1">detected during event</div>
               </div>
             </div>
