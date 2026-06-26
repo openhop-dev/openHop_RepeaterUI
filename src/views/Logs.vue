@@ -705,26 +705,26 @@ onBeforeUnmount(() => {
       <div v-else class="relative">
         <div
           ref="logContainer"
-          class="max-h-[70vh] overflow-y-auto bg-slate-950/95 text-slate-100"
+          class="max-h-[70vh] overflow-y-auto bg-background-mute dark:bg-slate-950/95 text-content-primary"
           @scroll="handleLogScroll"
         >
-          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-slate-300">
-            <h3 class="text-lg font-medium text-white mb-2">No Logs to Display</h3>
-            <p class="text-sm text-slate-400">The current search and filter settings removed every retained line.</p>
+          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-content-secondary">
+            <h3 class="text-lg font-medium text-content-primary mb-2">No Logs to Display</h3>
+            <p class="text-sm text-content-muted">The current search and filter settings removed every retained line.</p>
           </div>
 
-          <div v-else class="divide-y divide-white/5">
+          <div v-else class="divide-y divide-stroke-subtle dark:divide-white/5">
             <div
               v-for="(log, index) in filteredLogs"
               :key="log.id ?? `${log.timestamp}-${index}`"
               class="px-3 py-1 transition-colors cursor-pointer"
-              :class="selectedLogId === log.id ? 'bg-white/10' : 'hover:bg-white/5'"
+              :class="selectedLogId === log.id ? 'bg-stroke-subtle dark:bg-white/10' : 'hover:bg-stroke-subtle/50 dark:hover:bg-white/5'"
               @click="selectLog(log)"
             >
               <div class="flex flex-col gap-0.5 xl:flex-row xl:items-start">
                 <div class="flex flex-wrap items-center gap-1.5 xl:min-w-[260px] xl:max-w-[260px] xl:flex-none">
-                  <span class="text-[11px] text-slate-400">{{ formatTime(log.timestamp) }}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-white/10 bg-white/5 text-slate-200">
+                  <span class="text-[11px] text-content-muted">{{ formatTime(log.timestamp) }}</span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/10 bg-stroke-subtle/50 dark:bg-white/5 text-content-secondary dark:text-slate-200">
                     {{ extractLoggerName(log) }}
                   </span>
                   <span :class="['px-1.5 py-0.5 text-[10px] font-semibold rounded-full border', getLevelClass(log.level)]">
@@ -732,37 +732,37 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-xs leading-4 break-words text-slate-100">
+                  <div class="text-xs leading-4 break-words text-content-primary">
                     {{ cleanLogMessage(log) }}
                   </div>
 
-                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 space-y-3 text-xs text-slate-300">
+                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-stroke-subtle dark:border-white/10 bg-background-mute dark:bg-black/20 p-3 space-y-3 text-xs text-content-secondary">
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Timestamp</div>
-                        <div class="mt-1 text-slate-200">{{ formatDateTime(log.timestamp) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Timestamp</div>
+                        <div class="mt-1 text-content-primary">{{ formatDateTime(log.timestamp) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Logger</div>
-                        <div class="mt-1 text-slate-200">{{ extractLoggerName(log) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Logger</div>
+                        <div class="mt-1 text-content-primary">{{ extractLoggerName(log) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Module</div>
-                        <div class="mt-1 text-slate-200">{{ log.module || '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Module</div>
+                        <div class="mt-1 text-content-primary">{{ log.module || '—' }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Line</div>
-                        <div class="mt-1 text-slate-200">{{ log.line ?? '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Line</div>
+                        <div class="mt-1 text-content-primary">{{ log.line ?? '—' }}</div>
                       </div>
                     </div>
 
                     <div>
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Full Message</div>
-                      <pre class="whitespace-pre-wrap break-words text-slate-100">{{ log.message }}</pre>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Full Message</div>
+                      <pre class="whitespace-pre-wrap break-words text-content-primary">{{ log.message }}</pre>
                     </div>
 
                     <div v-if="log.exception">
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Exception</div>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Exception</div>
                       <pre class="whitespace-pre-wrap break-words text-accent-red/80">{{ log.exception }}</pre>
                     </div>
                   </div>
