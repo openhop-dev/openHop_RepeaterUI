@@ -32,12 +32,13 @@ function onConfirm() {
 </script>
 
 <template>
-  <Transition name="fade">
-    <div
-      v-if="show"
-      class="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      @click.self="closeModal"
-    >
+  <Teleport to="body">
+    <Transition name="fade">
+      <div
+        v-if="show"
+        class="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+        @click.self="closeModal"
+      >
       <div class="w-full max-w-2xl rounded-3xl border border-accent-amber/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
         <div class="p-5 border-b border-accent-amber/20 bg-accent-amber/5">
           <div class="flex items-start gap-3">
@@ -109,5 +110,6 @@ function onConfirm() {
         </div>
       </div>
     </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
