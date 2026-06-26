@@ -148,7 +148,7 @@ const getLastSeenStatus = (timestamp: number): { color: string } => {
   const diff = now - time;
   const hours = Math.floor(diff / (1000 * 60 * 60));
 
-  if (hours < 1) return { color: 'text-primary' }; // Recent (less than 1 hour)
+  if (hours < 1) return { color: 'text-accent-green' }; // Recent (less than 1 hour)
   if (hours < 26) return { color: 'text-accent-amber' }; // Moderate (1-25 hours)
   return { color: 'text-accent-red' }; // Stale (26+ hours)
 };
