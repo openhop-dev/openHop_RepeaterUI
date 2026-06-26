@@ -386,7 +386,7 @@ const handleBackdropClick = (event: MouseEvent) => {
               <div class="text-sm font-medium text-content-primary mb-3">What This Means</div>
               <ul class="space-y-2 text-sm text-content-secondary">
                 <li class="flex gap-2">
-                  <span class="text-sky-500 font-bold">•</span>
+                  <span class="text-accent-red font-bold">•</span>
                   <span>Noise floor increased {{ incidentDetails?.peakNoise }} dB above baseline, indicating RF interference or environmental factors.</span>
                 </li>
                 <li class="flex gap-2">
