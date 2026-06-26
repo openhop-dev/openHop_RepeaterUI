@@ -520,8 +520,8 @@ const currentTime = computed(() => {
         <a href="https://github.com/pyMC-dev/pyMC_Repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
           <GitHubIcon class="w-5 h-5 text-white group-hover:text-primary transition-colors" />
         </a>
-        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-accent-amber/10 hover:border-accent-amber/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
-          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-accent-amber transition-colors" />
+        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
+          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-secondary transition-colors" />
         </a>
       </div>
     </div>
