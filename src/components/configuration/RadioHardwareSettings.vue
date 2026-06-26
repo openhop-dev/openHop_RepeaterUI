@@ -476,7 +476,7 @@ watch(
 
     <div
       v-if="errorMessage"
-      class="bg-red-100 dark:bg-red-500/20 border border-red-500 dark:border-red-500/50 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm"
+      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
@@ -586,7 +586,7 @@ watch(
 
               <p
                 v-if="serialDevicesError"
-                class="text-xs text-red-600 dark:text-red-400"
+                class="text-xs text-accent-red"
               >
                 {{ serialDevicesError }}
               </p>
@@ -689,7 +689,7 @@ watch(
                 {{ hardwareOptionsLoading ? '...' : 'Refresh' }}
               </button>
             </div>
-            <p v-if="hardwareOptionsError" class="text-xs text-red-600 dark:text-red-400">
+            <p v-if="hardwareOptionsError" class="text-xs text-accent-red">
               {{ hardwareOptionsError }}
             </p>
             <p class="text-xs text-content-muted">

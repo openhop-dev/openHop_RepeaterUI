@@ -27,10 +27,10 @@ defineEmits<{
         <div class="modal-card max-w-md">
           <div class="flex items-start gap-3 mb-4">
             <div
-              class="flex-shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center"
+              class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-amber/10 dark:bg-accent-amber/30 flex items-center justify-center"
             >
               <svg
-                class="w-5 h-5 text-amber-600 dark:text-amber-400"
+                class="w-5 h-5 text-accent-amber"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

@@ -45,37 +45,37 @@ export function getRouteTypeBadge(routeType?: number | null): {
     case 2:
       return {
         text: 'Direct',
-        bgColor: 'bg-green-100 dark:bg-green-500/20',
-        borderColor: 'border-green-500 dark:border-green-400/30',
-        textColor: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-accent-green/10',
+        borderColor: 'border-accent-green/30',
+        textColor: 'text-accent-green',
       };
     case 3:
       return {
         text: 'Transport Direct',
-        bgColor: 'bg-green-100 dark:bg-green-600/20',
-        borderColor: 'border-green-600/40 dark:border-green-500/30',
-        textColor: 'text-green-700 dark:text-green-500',
+        bgColor: 'bg-accent-green/20',
+        borderColor: 'border-accent-green/30',
+        textColor: 'text-accent-green',
       };
     case 1:
       return {
         text: 'Flood',
-        bgColor: 'bg-yellow-100 dark:bg-yellow-500/20',
-        borderColor: 'border-yellow-500 dark:border-yellow-400/30',
-        textColor: 'text-yellow-600 dark:text-yellow-400',
+        bgColor: 'bg-accent-amber/20',
+        borderColor: 'border-accent-amber/30',
+        textColor: 'text-accent-amber',
       };
     case 0:
       return {
         text: 'Transport Flood',
-        bgColor: 'bg-orange-100 dark:bg-orange-500/20',
-        borderColor: 'border-orange-500 dark:border-orange-400/30',
-        textColor: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-accent-orange/20',
+        borderColor: 'border-accent-orange/30',
+        textColor: 'text-accent-orange',
       };
     default:
       return {
         text: 'Unknown',
-        bgColor: 'bg-gray-500/20',
-        borderColor: 'border-gray-400/30',
-        textColor: 'text-gray-400',
+        bgColor: 'bg-background-mute',
+        borderColor: 'border-stroke-subtle',
+        textColor: 'text-content-muted',
       };
   }
 }

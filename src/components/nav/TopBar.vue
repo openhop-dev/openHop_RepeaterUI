@@ -178,11 +178,11 @@ const radioWarning = computed(() => {
 // Utility functions
 const getContactTypeColor = (contactType: string) => {
   const colors = {
-    'Chat Node': 'text-blue-600 dark:text-blue-400',
+    'Chat Node': 'text-primary',
     Repeater: 'text-accent-green',
     'Room Server': 'text-accent-purple',
   };
-  return colors[contactType as keyof typeof colors] || 'text-gray-400';
+  return colors[contactType as keyof typeof colors] || 'text-content-muted';
 };
 
 const getLatestNodeName = (contactType: string) => {
@@ -262,7 +262,7 @@ const toggleMobileSidebar = () => {
             <div
               v-if="trackedBreakdown.length > 0"
               class="text-xs text-content-muted/80"
-              style="min-height: 16px"
+              class="min-h-4"
             >
               <span v-for="(item, index) in trackedBreakdown" :key="item.type" class="inline">
                 {{ item.count }} {{ item.type }}{{ item.count === 1 ? '' : 's'
@@ -280,7 +280,7 @@ const toggleMobileSidebar = () => {
             <div
               v-if="lastUpdateTime"
               class="text-xs text-content-muted/60 hidden sm:block"
-              style="min-height: 16px"
+              class="min-h-4"
             >
               Last checked {{ lastUpdateTime.toLocaleTimeString() }}
             </div>
@@ -420,7 +420,7 @@ const toggleMobileSidebar = () => {
             <!-- Update Information -->
             <div
               v-if="updateInfo.hasUpdate"
-              class="bg-red-50 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
+              class="bg-accent-red/10 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -461,7 +461,7 @@ const toggleMobileSidebar = () => {
             <!-- Rate limit warning in dropdown -->
             <div
               v-if="updateInfo.rateLimitUntil && !updateInfo.isChecking"
-              class="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 border-l-2 border-l-amber-500 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300"
+              class="flex items-start gap-2 bg-accent-amber/10 dark:bg-accent-amber/10 border border-accent-amber dark:border-accent-amber/30 border-l-2 border-l-amber-500 rounded-lg p-3 text-xs text-accent-amber"
             >
               <svg
                 class="w-3.5 h-3.5 shrink-0 mt-0.5"
@@ -490,7 +490,7 @@ const toggleMobileSidebar = () => {
             <!-- Version Information (when no update) -->
             <div
               v-else-if="updateInfo.currentVersion && !updateInfo.isChecking"
-              class="bg-green-50 dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-accent-green"
+              class="bg-accent-green/10 dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-accent-green"
             >
               <div class="flex items-center justify-between">
                 <span class="text-content-primary font-medium"
@@ -540,7 +540,7 @@ const toggleMobileSidebar = () => {
             <!-- Update Check Error -->
             <div
               v-else-if="updateInfo.error"
-              class="bg-red-50 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
+              class="bg-accent-red/10 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
             >
               <div class="text-content-primary font-medium mb-1">
                 Update Check Failed
@@ -736,12 +736,12 @@ const toggleMobileSidebar = () => {
 
     <div
       v-if="radioWarning"
-      class="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-800 dark:text-amber-200"
+      class="mt-4 rounded-xl border border-accent-amber/40 bg-accent-amber/10 px-4 py-3 text-accent-amber"
       role="alert"
     >
       <div class="flex items-start gap-3">
         <svg
-          class="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-300 shrink-0"
+          class="w-5 h-5 mt-0.5 text-accent-amber shrink-0"
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"

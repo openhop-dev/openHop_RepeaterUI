@@ -34,7 +34,7 @@
             type="text"
             maxlength="80"
             placeholder="e.g. Base Station Alpha"
-            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-colors"
+            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-colors"
             @change="saveSettings"
             :disabled="saving"
           />

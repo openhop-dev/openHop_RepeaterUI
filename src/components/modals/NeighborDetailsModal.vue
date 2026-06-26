@@ -66,13 +66,13 @@ const formatContactType = (contactType: string) => {
 
 const getContactTypeColor = (contactType: string) => {
   const colors: Record<string, string> = {
-    Unknown: 'text-gray-600 dark:text-gray-400',
-    'Chat Node': 'text-blue-600 dark:text-blue-400',
-    Repeater: 'text-emerald-600 dark:text-emerald-400',
+    Unknown: 'text-content-muted',
+    'Chat Node': 'text-primary',
+    Repeater: 'text-accent-green',
     'Room Server': 'text-purple-600 dark:text-purple-400',
-    'Hybrid Node': 'text-amber-600 dark:text-amber-400',
+    'Hybrid Node': 'text-accent-amber',
   };
-  return colors[contactType] || 'text-gray-600 dark:text-gray-400';
+  return colors[contactType] || 'text-content-muted';
 };
 
 const copyCoordinates = () => {
@@ -177,7 +177,7 @@ const initMap = () => {
 
     const baseIcon = L.divIcon({
       className: 'custom-marker',
-      html: '<div class="w-8 h-8 rounded-full bg-green-500 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
+      html: '<div class="w-8 h-8 rounded-full bg-accent-green/10 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
@@ -343,8 +343,8 @@ const signalQuality = computed(() => {
                       class="font-medium"
                       :class="
                         neighbor.zero_hop
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-gray-600 dark:text-gray-400'
+                          ? 'text-accent-green'
+                          : 'text-content-muted'
                       "
                     >
                       {{ neighbor.zero_hop ? 'Yes' : 'No' }}

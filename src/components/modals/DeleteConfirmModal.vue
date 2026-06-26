@@ -258,7 +258,7 @@ const handleClose = () => {
 
         <!-- Region List -->
         <div
-          class="space-y-2 max-h-40 overflow-y-auto border border-stroke-subtle dark:border-stroke/20 rounded-lg p-3 bg-gray-50 dark:bg-white/5"
+          class="space-y-2 max-h-40 overflow-y-auto border border-stroke-subtle dark:border-stroke/20 rounded-lg p-3 bg-background-mute dark:bg-white/5"
         >
           <div
             v-if="filteredMoveTargets.length === 0"

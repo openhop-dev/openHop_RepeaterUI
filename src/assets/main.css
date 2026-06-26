@@ -266,6 +266,21 @@
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* ── Alert / notice boxes ───────────────────────────────────────────────── */
+  /* Coloured notice boxes — bg fill + border + text in one class */
+  .alert-info    { @apply bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg p-3 text-accent-cyan; }
+  .alert-success { @apply bg-accent-green/10 border border-accent-green/30 rounded-lg p-3 text-accent-green; }
+  .alert-warning { @apply bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3 text-accent-amber; }
+  .alert-error   { @apply bg-accent-red/10 border border-accent-red/30 rounded-lg p-3 text-accent-red; }
+
+  /* ── Status badge pills ──────────────────────────────────────────────────── */
+  /* Small pill badges for handler/broker status, enabled state etc. */
+  .status-badge       { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium; }
+  .status-badge-green { @apply status-badge bg-accent-green/15 text-accent-green; }
+  .status-badge-amber { @apply status-badge bg-accent-amber/15 text-accent-amber; }
+  .status-badge-red   { @apply status-badge bg-accent-red/15 text-accent-red; }
+  .status-badge-muted { @apply status-badge bg-background-mute text-content-muted; }
+
   /* ── Status indicator dots ──────────────────────────────────────────────── */
   /* Inline status dots — use alongside w-1.5 h-1.5 rounded-full */
   .status-dot-green  { background-color: var(--color-accent-green); }

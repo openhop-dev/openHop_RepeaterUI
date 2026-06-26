@@ -1382,7 +1382,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
                 <!-- Message Content -->
                 <div
-                  class="text-content-primary/90 text-sm leading-relaxed break-words whitespace-pre-wrap bg-gray-50 dark:bg-white/5 p-3 rounded-[10px] border border-stroke-subtle dark:border-white/5"
+                  class="text-content-primary/90 text-sm leading-relaxed break-words whitespace-pre-wrap bg-background-mute dark:bg-white/5 p-3 rounded-[10px] border border-stroke-subtle dark:border-white/5"
                 >
                   {{ message.message_text }}
                 </div>

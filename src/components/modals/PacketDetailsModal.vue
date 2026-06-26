@@ -57,10 +57,10 @@ const formatFullTime = (timestamp: number) => {
 
 // Get status styling
 const getStatusClass = (packet: Packet) => {
-  if (!packet.transmitted) return 'text-red-600 dark:text-red-400';
-  if (packet.is_duplicate) return 'text-amber-600 dark:text-amber-400';
-  if (packet.drop_reason) return 'text-red-600 dark:text-red-400';
-  return 'text-green-600 dark:text-green-400';
+  if (!packet.transmitted) return 'text-accent-red';
+  if (packet.is_duplicate) return 'text-accent-amber';
+  if (packet.drop_reason) return 'text-accent-red';
+  return 'text-accent-green';
 };
 
 const getStatusText = (packet: Packet) => {
@@ -911,28 +911,28 @@ const getLbtCongestionLevel = (attempts: number) => {
   if (attempts === 0)
     return {
       level: 'none',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-400/20',
+      color: 'text-accent-green',
+      bgColor: 'bg-accent-green/20',
       label: 'Clear Channel',
     };
   if (attempts <= 1)
     return {
       level: 'low',
-      color: 'text-cyan-600 dark:text-cyan-400',
-      bgColor: 'bg-cyan-400/20',
+      color: 'text-accent-cyan',
+      bgColor: 'bg-accent-cyan/20',
       label: 'Light Traffic',
     };
   if (attempts <= 2)
     return {
       level: 'moderate',
-      color: 'text-yellow-600 dark:text-yellow-400',
-      bgColor: 'bg-yellow-400/20',
+      color: 'text-accent-amber',
+      bgColor: 'bg-accent-amber/20',
       label: 'Moderate Congestion',
     };
   return {
     level: 'high',
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-400/20',
+    color: 'text-accent-orange',
+    bgColor: 'bg-accent-orange/20',
     label: 'Heavy Congestion',
   };
 };
@@ -997,10 +997,10 @@ watch(
                   Packet Details
                 </h2>
                 <div class="flex flex-wrap gap-2 mt-2">
-                  <span class="inline-flex items-center rounded-full bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                  <span class="inline-flex items-center rounded-full bg-accent-cyan/15 text-accent-cyan px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
                     {{ getPacketTypeName(packet.type) }}
                   </span>
-                  <span class="inline-flex items-center rounded-full bg-orange-500/15 text-orange-700 dark:text-orange-300 px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                  <span class="inline-flex items-center rounded-full bg-accent-orange/15 text-accent-orange px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
                     {{ getRouteName(packet.route) }}
                   </span>
                 </div>
@@ -1012,7 +1012,7 @@ watch(
                   class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200"
                   :class="
                     showBinaryValues
-                      ? 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-600 dark:text-cyan-400'
+                      ? 'bg-accent-cyan/20 border border-accent-cyan/30 text-accent-cyan'
                       : 'bg-background-mute dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted'
                   "
                   :title="showBinaryValues ? 'Hide binary values' : 'Show binary values'"
@@ -1054,7 +1054,7 @@ watch(
                 <h3
                   class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-cyan-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-cyan/10 mr-3"></div>
                   Basic Information
                 </h3>
                 <div class="glass-card bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4">
@@ -1136,7 +1136,7 @@ watch(
                 <h3
                   class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-orange-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-orange/10 mr-3"></div>
                   Payload Data
                 </h3>
                 <div
@@ -1228,7 +1228,7 @@ watch(
                             class="hidden md:grid gap-3 p-3 border-b border-stroke-subtle dark:border-stroke/5 last:border-b-0 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors"
                             :class="showBinaryValues ? 'grid-cols-4' : 'grid-cols-3'"
                           >
-                            <div class="text-cyan-500 text-sm font-mono break-words min-w-0">
+                            <div class="text-accent-cyan text-sm font-mono break-words min-w-0">
                               {{ field.bits }}
                             </div>
                             <div
@@ -1243,7 +1243,7 @@ watch(
                             </div>
                             <div
                               v-if="showBinaryValues"
-                              class="text-orange-500 text-xs font-mono break-all min-w-0 overflow-hidden"
+                              class="text-accent-orange text-xs font-mono break-all min-w-0 overflow-hidden"
                             >
                               <span class="block" :title="field.binary">{{ field.binary }}</span>
                             </div>
@@ -1261,7 +1261,7 @@ watch(
                                   class="text-content-secondary dark:text-content-muted text-xs uppercase tracking-wide"
                                   >Bits:</span
                                 >
-                                <div class="text-cyan-500 text-sm font-mono break-words">
+                                <div class="text-accent-cyan text-sm font-mono break-words">
                                   {{ field.bits }}
                                 </div>
                               </div>
@@ -1295,7 +1295,7 @@ watch(
                                 >Binary:</span
                               >
                               <div
-                                class="text-orange-500 text-xs font-mono break-all"
+                                class="text-accent-orange text-xs font-mono break-all"
                                 :title="field.binary"
                               >
                                 {{ field.binary }}
@@ -1347,7 +1347,7 @@ watch(
                           class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.src_hash === props.localHash
-                              ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                              ? 'bg-accent-cyan/20 text-accent-cyan px-1 rounded'
                               : ''
                           "
                         >
@@ -1364,7 +1364,7 @@ watch(
                           class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.dst_hash === props.localHash
-                              ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                              ? 'bg-accent-cyan/20 text-accent-cyan px-1 rounded'
                               : ''
                           "
                         >
@@ -1379,18 +1379,18 @@ watch(
                         <span class="text-content-secondary dark:text-content-muted text-sm font-medium">
                           Path Table
                         </span>
-                        <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-400/15 text-cyan-600 dark:text-cyan-300">
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-accent-cyan/15 text-accent-cyan">
                           {{ parsePathString(packet.original_path).length }} original hops
                         </span>
                         <span
                           v-if="packet.transmitted && parsePathString(packet.forwarded_path).length > 0"
-                          class="text-xs px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-300"
+                          class="text-xs px-2 py-0.5 rounded-full bg-accent-orange/15 text-accent-orange"
                         >
                           {{ parsePathString(packet.forwarded_path).length }} forwarded hops
                         </span>
                         <span
                           v-if="packet.transmitted && isPathModified(packet)"
-                          class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-700 dark:text-yellow-300"
+                          class="text-xs px-2 py-0.5 rounded-full bg-accent-amber/20 text-accent-amber"
                         >
                           Modified
                         </span>
@@ -1419,8 +1419,8 @@ watch(
                               :class="
                                 row.original
                                   ? row.localOriginal
-                                    ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
-                                    : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary'
+                                    ? 'bg-accent-cyan/20 border-accent-cyan/40 text-accent-cyan'
+                                    : 'bg-accent-cyan/10 border-accent-cyan/25 text-content-primary'
                                   : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                               "
                               :title="row.original || 'No hop'"
@@ -1435,8 +1435,8 @@ watch(
                               :class="
                                 row.forwarded
                                   ? row.localForwarded
-                                    ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
-                                    : 'bg-orange-500/10 border-orange-400/25 text-content-primary'
+                                    ? 'bg-accent-amber/20 border-accent-amber/40 text-accent-amber'
+                                    : 'bg-accent-orange/10 border-accent-orange/25 text-content-primary'
                                   : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                               "
                               :title="row.forwarded || 'No hop'"
@@ -1450,12 +1450,12 @@ watch(
                               class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                               :class="
                                 row.status === 'same'
-                                  ? 'bg-green-500/20 text-green-700 dark:text-green-300'
+                                  ? 'bg-accent-green/20 text-accent-green'
                                   : row.status === 'changed'
-                                    ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                                    ? 'bg-accent-amber/20 text-accent-amber'
                                     : row.status === 'original-only'
-                                      ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300'
-                                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                                      ? 'bg-accent-cyan/20 text-accent-cyan'
+                                      : 'bg-accent-orange/20 text-accent-orange'
                               "
                             >
                               {{
@@ -1485,12 +1485,12 @@ watch(
                                 class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
                                 :class="
                                   row.status === 'same'
-                                    ? 'bg-green-500/20 text-green-700 dark:text-green-300'
+                                    ? 'bg-accent-green/20 text-accent-green'
                                     : row.status === 'changed'
-                                      ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                                      ? 'bg-accent-amber/20 text-accent-amber'
                                       : row.status === 'original-only'
-                                        ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300'
-                                        : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                                        ? 'bg-accent-cyan/20 text-accent-cyan'
+                                        : 'bg-accent-orange/20 text-accent-orange'
                                 "
                               >
                                 {{
@@ -1515,8 +1515,8 @@ watch(
                                   :class="
                                     row.original
                                       ? row.localOriginal
-                                        ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
-                                        : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary'
+                                        ? 'bg-accent-cyan/20 border-accent-cyan/40 text-accent-cyan'
+                                        : 'bg-accent-cyan/10 border-accent-cyan/25 text-content-primary'
                                       : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                                   "
                                   :title="row.original || 'No hop'"
@@ -1534,8 +1534,8 @@ watch(
                                   :class="
                                     row.forwarded
                                       ? row.localForwarded
-                                        ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
-                                        : 'bg-orange-500/10 border-orange-400/25 text-content-primary'
+                                        ? 'bg-accent-amber/20 border-accent-amber/40 text-accent-amber'
+                                        : 'bg-accent-orange/10 border-accent-orange/25 text-content-primary'
                                       : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                                   "
                                   :title="row.forwarded || 'No hop'"
@@ -1557,7 +1557,7 @@ watch(
                 <h3
                   class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-green-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-green/10 mr-3"></div>
                   Signal & Processing
                 </h3>
                 <div class="glass-card bg-background-mute/60 dark:bg-white/5 rounded-[15px] p-4">
@@ -1644,7 +1644,7 @@ watch(
                             class="font-mono text-xs text-content-primary"
                             :class="
                               props.localHash && pathSnr.hash === props.localHash
-                                ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                                ? 'bg-accent-cyan/20 text-accent-cyan px-1 rounded'
                                 : ''
                             "
                           >
@@ -1733,8 +1733,8 @@ watch(
                           class="text-lg font-bold"
                           :class="
                             packet.lbt_channel_busy
-                              ? 'text-yellow-600 dark:text-yellow-400'
-                              : 'text-green-600 dark:text-green-400'
+                              ? 'text-accent-amber'
+                              : 'text-accent-green'
                           "
                         >
                           {{ packet.lbt_channel_busy ? 'BUSY' : 'CLEAR' }}
@@ -1847,8 +1847,8 @@ watch(
                         <span
                           :class="
                             packet.transmitted
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
+                              ? 'text-accent-green'
+                              : 'text-accent-red'
                           "
                         >
                           {{ packet.transmitted ? 'Yes' : 'No' }}
@@ -1865,7 +1865,7 @@ watch(
                         <span
                           :class="
                             packet.is_duplicate
-                              ? 'text-amber-600 dark:text-amber-400'
+                              ? 'text-accent-amber'
                               : 'text-content-muted'
                           "
                         >
@@ -1879,7 +1879,7 @@ watch(
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Drop Reason</span
                         >
-                        <span class="text-red-600 dark:text-red-400 text-sm">{{
+                        <span class="text-accent-red text-sm">{{
                           packet.drop_reason
                         }}</span>
                       </div>
@@ -1897,7 +1897,7 @@ watch(
                 type="button"
                 @click="emit('close')"
                 aria-label="Close packet details"
-                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary transition-all duration-200 backdrop-blur-sm"
+                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-accent-cyan/30 rounded-[10px] text-content-primary transition-all duration-200 backdrop-blur-sm"
               >
                 Close
               </button>

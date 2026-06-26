@@ -555,7 +555,7 @@ onUnmounted(() => {
           <button
             @click="startCalibration"
             :disabled="isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-green/10 hover:bg-accent-green/20 disabled:bg-gray-500/10 text-accent-green disabled:text-gray-400 rounded-lg border border-accent-green/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-green/10 hover:bg-accent-green/20 disabled:bg-background-mute/10 text-accent-green disabled:text-content-muted rounded-lg border border-accent-green/30 disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -569,7 +569,7 @@ onUnmounted(() => {
           <button
             @click="stopCalibration"
             :disabled="!isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-red/10 hover:bg-accent-red/20 disabled:bg-gray-500/10 text-accent-red disabled:text-gray-400 rounded-lg border border-accent-red/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-red/10 hover:bg-accent-red/20 disabled:bg-background-mute/10 text-accent-red disabled:text-content-muted rounded-lg border border-accent-red/30 disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="6" y="6" width="12" height="12"></rect>

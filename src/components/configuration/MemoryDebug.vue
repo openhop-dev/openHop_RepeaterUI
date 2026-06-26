@@ -36,8 +36,8 @@
             :disabled="toggling"
             class="px-3 py-1.5 rounded-lg border text-sm transition-colors disabled:opacity-50"
             :class="tracing
-              ? 'bg-red-500/20 hover:bg-red-500/30 text-red-700 dark:text-red-400 border-red-500/50'
-              : 'bg-green-500/20 hover:bg-green-500/30 text-green-700 dark:text-green-400 border-green-500/50'"
+              ? 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border-accent-red/50'
+              : 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border-accent-green/50'"
           >
             <span v-if="toggling" class="flex items-center gap-1.5">
               <Spinner size="xs" color="current" class="inline-block" />
@@ -51,7 +51,7 @@
       <!-- Error -->
       <div
         v-if="error"
-        class="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-sm"
+        class="mb-4 p-3 rounded-lg bg-accent-red/10 border border-accent-red/30 text-accent-red text-sm"
       >
         {{ error }}
       </div>
@@ -67,15 +67,15 @@
       <!-- Tracing active, no data yet -->
       <div
         v-if="tracing && !hasData && !loading"
-        class="p-4 rounded-lg bg-cyan-500/10 dark:bg-primary/10 border border-cyan-400/30 dark:border-primary/30"
+        class="p-4 rounded-lg bg-accent-cyan/10 dark:bg-primary/10 border border-accent-cyan/30 dark:border-primary/30"
       >
-        <div class="flex items-center gap-2 text-cyan-700 dark:text-primary">
+        <div class="flex items-center gap-2 text-accent-cyan dark:text-primary">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <span class="font-medium">Tracing active</span>
         </div>
-        <p class="mt-2 text-sm text-cyan-600 dark:text-primary/80">
+        <p class="mt-2 text-sm text-accent-cyan dark:text-primary/80">
           Memory tracing is running. Let the repeater run for a few minutes, then click
           <strong>Check Again</strong> to see which parts of the code are using more memory.
         </p>
@@ -146,12 +146,12 @@
         <!-- No growth -->
         <div
           v-else-if="data.growth_since_baseline && data.growth_since_baseline.length === 0"
-          class="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-sm flex items-center gap-3"
+          class="mb-6 p-4 rounded-lg bg-accent-green/10 border border-accent-green/30 text-sm flex items-center gap-3"
         >
-          <svg class="w-5 h-5 text-green-600 dark:text-green-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-5 h-5 text-accent-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span class="text-green-700 dark:text-green-400">No memory growth detected. Everything looks healthy.</span>
+          <span class="text-accent-green">No memory growth detected. Everything looks healthy.</span>
         </div>
 
         <!-- Advanced: current allocations -->
@@ -309,26 +309,26 @@ function severityLabel(row: GrowthStat): string {
 
 function severityBadgeClass(row: GrowthStat): string {
   const s = getSeverity(row);
-  if (s === 'critical') return 'bg-red-500/20 text-red-700 dark:text-red-400 border border-red-500/30';
-  if (s === 'warning') return 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30';
-  if (s === 'low') return 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20';
-  return 'bg-green-500/15 text-green-700 dark:text-green-400 border border-green-500/20';
+  if (s === 'critical') return 'bg-accent-red/20 text-accent-red border border-accent-red/30';
+  if (s === 'warning') return 'bg-accent-amber/20 text-accent-amber border border-accent-amber/30';
+  if (s === 'low') return 'bg-primary/15 text-primary border border-primary/20';
+  return 'bg-accent-green/15 text-accent-green border border-accent-green/20';
 }
 
 function severityCardClass(row: GrowthStat): string {
   const s = getSeverity(row);
-  if (s === 'critical') return 'border-red-500/40 dark:border-red-500/30 bg-red-500/5 dark:bg-red-500/5';
-  if (s === 'warning') return 'border-amber-500/40 dark:border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/5';
+  if (s === 'critical') return 'border-accent-red/40 dark:border-accent-red/30 bg-accent-red/5 dark:bg-accent-red/5';
+  if (s === 'warning') return 'border-accent-amber/40 dark:border-accent-amber/30 bg-accent-amber/5 dark:bg-accent-amber/5';
   if (s === 'low') return 'border-stroke-subtle dark:border-stroke/10 bg-background-mute/50 dark:bg-background/20';
   return 'border-stroke-subtle/50 dark:border-stroke/5 bg-background-mute/30 dark:bg-background/10 opacity-60';
 }
 
 function severityTextClass(row: GrowthStat): string {
   const s = getSeverity(row);
-  if (s === 'critical') return 'text-red-600 dark:text-red-400';
-  if (s === 'warning') return 'text-amber-600 dark:text-amber-400';
-  if (s === 'low') return 'text-blue-600 dark:text-blue-400';
-  return 'text-green-600 dark:text-green-500';
+  if (s === 'critical') return 'text-accent-red';
+  if (s === 'warning') return 'text-accent-amber';
+  if (s === 'low') return 'text-primary';
+  return 'text-accent-green';
 }
 
 function formatSize(kb: number): string {
@@ -358,21 +358,21 @@ const overallHealthLevel = computed((): Severity => {
 
 const overallHealthClass = computed(() => {
   const s = overallHealthLevel.value;
-  if (s === 'critical') return 'border-red-500/40 dark:border-red-500/30 bg-red-500/10 dark:bg-red-500/10 text-red-800 dark:text-red-300';
-  if (s === 'warning') return 'border-amber-500/40 dark:border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300';
-  if (s === 'low') return 'border-blue-500/30 bg-blue-500/10 dark:bg-blue-500/10 text-blue-800 dark:text-blue-300';
-  return 'border-green-500/30 bg-green-500/10 dark:bg-green-500/10 text-green-800 dark:text-green-300';
+  if (s === 'critical') return 'border-accent-red/40 dark:border-accent-red/30 bg-accent-red/10 dark:bg-accent-red/10 text-accent-red';
+  if (s === 'warning') return 'border-accent-amber/40 dark:border-accent-amber/30 bg-accent-amber/10 dark:bg-accent-amber/10 text-accent-amber';
+  if (s === 'low') return 'border-primary/30 bg-primary/10 dark:bg-primary/10 text-primary';
+  return 'border-accent-green/30 bg-accent-green/10 dark:bg-accent-green/10 text-accent-green';
 });
 
 const overallHealthIcon = computed(() => {
   const s = overallHealthLevel.value;
   if (s === 'critical')
-    return '<svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+    return '<svg class="w-5 h-5 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
   if (s === 'warning')
-    return '<svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
+    return '<svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>';
   if (s === 'low')
-    return '<svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-  return '<svg class="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+    return '<svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+  return '<svg class="w-5 h-5 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
 });
 
 const overallHealthLabel = computed(() => {

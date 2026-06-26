@@ -463,7 +463,7 @@ onUnmounted(() => {
     <!-- Global error message -->
     <div
       v-if="errorMsg"
-      class="bg-red-100 dark:bg-red-500/20 border border-red-500 dark:border-red-500/50 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm"
+      class="bg-accent-red/10 dark:bg-accent-red/20 border border-accent-red dark:border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMsg }}
     </div>
@@ -481,16 +481,16 @@ onUnmounted(() => {
       <div v-else class="space-y-3">
         <div class="flex items-center gap-2">
           <span class="text-sm text-content-secondary dark:text-content-muted w-36">Handler</span>
-          <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', status.handler_active ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400']">
-            <span class="w-1.5 h-1.5 rounded-full" :class="status.handler_active ? 'bg-green-500' : 'bg-gray-400'"></span>
+          <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', status.handler_active ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : 'bg-background-mute dark:bg-background-mute/50 text-content-muted']">
+            <span class="w-1.5 h-1.5 rounded-full" :class="status.handler_active ? 'bg-accent-green/10' : 'bg-background-mute'"></span>
             {{ status.handler_active ? 'Active' : 'Inactive' }}
           </span>
         </div>
         <div v-if="status.brokers.length" class="space-y-2">
           <div v-for="broker in status.brokers" :key="broker.host" class="flex items-center gap-2">
             <span class="text-sm text-content-secondary dark:text-content-muted w-36 truncate" :title="broker.name">{{ broker.name }}</span>
-            <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', broker.status.connected ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : broker.status.reconnecting ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400']">
-              <span class="w-1.5 h-1.5 rounded-full" :class="broker.status.connected ? 'bg-green-500' : broker.status.reconnecting ? 'bg-amber-500' : 'bg-red-500'"></span>
+            <span :class="['inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium', broker.status.connected ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : broker.status.reconnecting ? 'bg-accent-amber/10 dark:bg-accent-amber/30 text-accent-amber' : 'bg-accent-red/10 dark:bg-accent-red/30 text-accent-red']">
+              <span class="w-1.5 h-1.5 rounded-full" :class="broker.status.connected ? 'bg-accent-green/10' : broker.status.reconnecting ? 'bg-accent-amber/10' : 'bg-accent-red/10'"></span>
               {{ broker.status.connected ? 'Connected' : broker.status.reconnecting ? 'Reconnecting…' : 'Disconnected' }}
             </span>
           </div>
@@ -592,7 +592,7 @@ onUnmounted(() => {
                 <div v-if="templatesLoading" class="px-3 py-3 text-xs text-content-secondary dark:text-content-muted italic">
                   Loading presets…
                 </div>
-                <div v-else-if="templatesError" class="px-3 py-3 text-xs text-red-600 dark:text-red-400">
+                <div v-else-if="templatesError" class="px-3 py-3 text-xs text-accent-red">
                   {{ templatesError }}
                 </div>
                 <div v-else-if="!BROKER_TEMPLATES.length" class="px-3 py-3 text-xs text-content-secondary dark:text-content-muted italic">
@@ -693,8 +693,8 @@ onUnmounted(() => {
           <!-- Summary row — always visible, Edit button changes to Done when expanded -->
           <div class="flex items-center gap-3 px-4 py-2.5">
             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400']">
-                <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-green-500' : 'bg-red-500'"></span>
+              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-accent-green/10 dark:bg-accent-green/30 text-accent-green' : 'bg-accent-red/10 dark:bg-accent-red/30 text-accent-red']">
+                <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-accent-green/10' : 'bg-accent-red/10'"></span>
                 {{ broker.enabled ? 'Enabled' : 'Disabled' }}
               </span>
               <span class="text-sm font-medium text-content-primary">{{ broker.name || '(unnamed)' }}</span>
@@ -710,7 +710,7 @@ onUnmounted(() => {
               <button
                 @click="removeBrokerLocal(broker._id)"
                 title="Remove"
-                class="p-1.5 rounded hover:bg-red-500/10 dark:hover:bg-red-900/20 text-content-secondary dark:text-content-muted hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                class="p-1.5 rounded hover:bg-accent-red/10 dark:hover:bg-accent-red/20 text-content-secondary dark:text-content-muted hover:text-accent-red dark:hover:text-accent-red transition-colors"
               >
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

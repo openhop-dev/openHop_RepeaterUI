@@ -167,10 +167,10 @@ onMounted(() => {
     </div>
 
     <!-- Info Box -->
-    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 sm:p-4">
+    <div class="bg-primary/10 border border-primary/30 rounded-lg p-3 sm:p-4">
       <div class="flex gap-2 sm:gap-3">
         <svg
-          class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
+          class="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -194,8 +194,8 @@ onMounted(() => {
     </div>
 
     <!-- Error Message -->
-    <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-      <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+    <div v-if="error" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4">
+      <div class="flex items-center gap-2 text-accent-red">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -257,7 +257,7 @@ onMounted(() => {
           <button
             @click="openRevokeConfirm(token.id, token.name)"
             :disabled="isLoading"
-            class="w-full sm:w-auto px-3 py-1.5 bg-red-100 dark:bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg border border-red-500/50 transition-colors disabled:opacity-50 text-sm"
+            class="w-full sm:w-auto px-3 py-1.5 bg-accent-red/10 dark:bg-accent-red/20 hover:bg-accent-red/30 text-accent-red rounded-lg border border-accent-red/50 transition-colors disabled:opacity-50 text-sm"
           >
             Revoke
           </button>
@@ -315,7 +315,7 @@ onMounted(() => {
               v-model="newTokenName"
               type="text"
               placeholder="e.g., Production Server, CI/CD Pipeline"
-              class="cfg-input placeholder-gray-400 dark:placeholder-white/40"
+              class="cfg-input placeholder-content-muted dark:placeholder-content-muted"
               @keydown.enter="createToken"
             />
             <p class="text-xs text-content-muted mt-1">
@@ -357,10 +357,10 @@ onMounted(() => {
         </h3>
 
         <div class="space-y-4">
-          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div class="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-4">
             <div class="flex gap-3">
               <svg
-                class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+                class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

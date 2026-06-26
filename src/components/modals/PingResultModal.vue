@@ -62,7 +62,7 @@ const calculateToA = computed(() => {
 });
 
 const getRTTStatus = computed(() => {
-  if (!props.result) return { color: 'text-gray-400', label: 'Unknown' };
+  if (!props.result) return { color: 'text-content-muted', label: 'Unknown' };
 
   const rtt = props.result.rtt_ms;
   const toaMs = calculateToA.value;
@@ -76,17 +76,17 @@ const getRTTStatus = computed(() => {
 
   // Very lenient thresholds for LoRa mesh networks with potential congestion
   if (rtt < expectedRTT * 2.5)
-    return { color: 'text-green-600 dark:text-green-400', label: 'Fast' };
+    return { color: 'text-accent-green', label: 'Fast' };
   if (rtt < expectedRTT * 4)
-    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Normal' };
+    return { color: 'text-accent-amber', label: 'Normal' };
   if (rtt < expectedRTT * 7)
-    return { color: 'text-orange-600 dark:text-orange-400', label: 'Slow' };
-  return { color: 'text-red-600 dark:text-red-400', label: 'Very Slow' };
+    return { color: 'text-accent-orange', label: 'Slow' };
+  return { color: 'text-accent-red', label: 'Very Slow' };
 });
 
 
 const getSignalStrength = computed(() => {
-  if (!props.result) return { bars: 0, color: 'text-gray-400 dark:text-gray-500', quality: 'None' as const };
+  if (!props.result) return { bars: 0, color: 'text-content-muted', quality: 'None' as const };
 
   const quality = getSignalQuality(props.result.rssi);
   return {
@@ -195,9 +195,9 @@ const close = () => {
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-cyan-400/20 dark:bg-primary/20 rounded-lg">
+                <div class="p-2 bg-accent-cyan/20 dark:bg-primary/20 rounded-lg">
                   <svg
-                    class="w-5 h-5 text-cyan-500 dark:text-primary"
+                    class="w-5 h-5 text-accent-cyan dark:text-primary"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -336,10 +336,10 @@ const close = () => {
               <!-- Multi-byte hash mode firmware warning -->
               <div
                 v-if="isMultiByteMode"
-                class="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-[12px] p-3"
+                class="flex items-start gap-3 bg-accent-amber/10 border border-accent-amber/30 rounded-[12px] p-3"
               >
                 <svg
-                  class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                  class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -352,7 +352,7 @@ const close = () => {
                   />
                 </svg>
                 <div class="text-xs leading-relaxed">
-                  <p class="font-semibold text-amber-600 dark:text-amber-400 mb-0.5">
+                  <p class="font-semibold text-accent-amber mb-0.5">
                     {{ hashModeLabel }} path hashes active
                   </p>
                   <p class="text-content-secondary dark:text-content-muted">
@@ -379,7 +379,7 @@ const close = () => {
                     >
                       <div
                         :class="[
-                          'bg-cyan-400/20 dark:bg-primary/20 text-cyan-600 dark:text-primary border border-cyan-400/40 dark:border-primary/30 px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
+                          'bg-accent-cyan/20 dark:bg-primary/20 text-accent-cyan dark:text-primary border border-accent-cyan/40 dark:border-primary/30 px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
                           isAnimating && Math.floor(getPacketPosition) === index
                             ? 'ring-2 ring-cyan-400/50 dark:ring-primary/50 scale-105'
                             : '',
@@ -415,7 +415,7 @@ const close = () => {
                             class="absolute left-1/2 -translate-x-1/2 animate-pulse"
                           >
                             <svg
-                              class="w-3 h-3 text-cyan-500 dark:text-primary drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-accent-cyan)_80%,transparent)] dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-primary)_80%,transparent)]"
+                              class="w-3 h-3 text-accent-cyan dark:text-primary drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-accent-cyan)_80%,transparent)] dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-primary)_80%,transparent)]"
                               fill="currentColor"
                               viewBox="0 0 24 24"
                             >
@@ -431,7 +431,7 @@ const close = () => {
                   class="text-content-muted text-xs mt-2 flex items-center justify-between"
                 >
                   <span>{{ result.path.length }} hop{{ result.path.length !== 1 ? 's' : '' }}</span>
-                  <span v-if="isAnimating" class="text-cyan-500 dark:text-primary animate-pulse"
+                  <span v-if="isAnimating" class="text-accent-cyan dark:text-primary animate-pulse"
                     >● Tracing route...</span
                   >
                 </div>

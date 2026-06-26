@@ -105,8 +105,8 @@ export function useSignalQuality() {
     if (!rssi || rssi > 0 || rssi < -120) {
       return {
         bars: 0,
-        color: 'text-gray-400 dark:text-gray-500',
-        bgColor: 'bg-gray-400 dark:bg-gray-500',
+        color: 'text-content-muted',
+        bgColor: 'bg-content-muted',
         snr: -999,
         quality: 'None',
       };
@@ -130,8 +130,8 @@ export function useSignalQuality() {
     if (snr === null || !Number.isFinite(snr)) {
       return {
         bars: 0,
-        color: 'text-gray-400 dark:text-gray-500',
-        bgColor: 'bg-gray-400 dark:bg-gray-500',
+        color: 'text-content-muted',
+        bgColor: 'bg-content-muted',
         snr: -999,
         quality: 'None',
       };
@@ -160,7 +160,7 @@ export function getRSSIStrength(rssi: number | null): { bars: number; color: str
   const minSNR = getMinSNR(sf);
 
   if (!rssi || rssi > 0 || rssi < -120) {
-    return { bars: 0, color: 'text-gray-400' };
+    return { bars: 0, color: 'text-content-muted' };
   }
 
   const snr = calculateSNR(rssi, noiseFloor);

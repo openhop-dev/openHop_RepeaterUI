@@ -473,7 +473,7 @@ function formatOptionalAcl(value: unknown): string {
                 <tr
                   v-for="client in aclClients"
                   :key="client.public_key_full"
-                  class="border-b border-stroke-subtle dark:border-white/5 hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors"
+                  class="border-b border-stroke-subtle dark:border-white/5 hover:bg-background-mute/50 dark:hover:bg-white/5 transition-colors"
                 >
                   <td class="py-3">
                     <div class="font-mono text-sm text-content-primary">

@@ -275,7 +275,7 @@ function handleKeydown(e: KeyboardEvent) {
             type="number"
             min="1"
             placeholder="e.g. 48"
-            class="w-24 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50"
+            class="w-24 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-1.5 text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50"
           />
           <span
             v-if="recencyPreset === 'custom'"
@@ -298,7 +298,7 @@ function handleKeydown(e: KeyboardEvent) {
             inputmode="numeric"
             min="1"
             placeholder="No limit"
-            class="w-32 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-2 text-content-primary placeholder-gray-500 dark:placeholder-white/40 focus:outline-none focus:border-primary/50"
+            class="w-32 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-3 py-2 text-content-primary placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50"
           />
           <span class="text-content-muted text-sm">contacts</span>
         </div>

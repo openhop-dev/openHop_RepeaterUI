@@ -96,9 +96,9 @@ const getLevelClass = (level: string): string => {
     WARNING: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
     WARN: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
     INFO: 'text-accent-cyan bg-accent-cyan/10 border-accent-cyan/20',
-    DEBUG: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20',
+    DEBUG: 'text-content-muted bg-background-mute/10 border-slate-500/20',
   };
-  return levelMap[level] || 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20';
+  return levelMap[level] || 'text-content-muted bg-background-mute/10 border-slate-500/20';
 };
 
 const getLevelFilterClass = (level: string, enabled: boolean): string => {
@@ -111,7 +111,7 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
     WARNING: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
     WARN: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
     INFO: 'border-accent-cyan/40 bg-accent-cyan/10 text-accent-cyan',
-    DEBUG: 'border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+    DEBUG: 'border-slate-500/40 bg-background-mute/10 text-content-muted',
   };
   return enabledMap[level] || 'border-primary/40 bg-primary/10 text-primary';
 };
@@ -705,7 +705,7 @@ onBeforeUnmount(() => {
       <div v-else class="relative">
         <div
           ref="logContainer"
-          class="max-h-[70vh] overflow-y-auto bg-background-mute dark:bg-slate-950/95 text-content-primary"
+          class="max-h-[70vh] overflow-y-auto bg-background-mute dark:bg-background-mute/95 text-content-primary"
           @scroll="handleLogScroll"
         >
           <div v-if="filteredLogs.length === 0" class="p-10 text-center text-content-secondary">
@@ -724,7 +724,7 @@ onBeforeUnmount(() => {
               <div class="flex flex-col gap-0.5 xl:flex-row xl:items-start">
                 <div class="flex flex-wrap items-center gap-1.5 xl:min-w-[260px] xl:max-w-[260px] xl:flex-none">
                   <span class="text-[11px] text-content-muted">{{ formatTime(log.timestamp) }}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/10 bg-stroke-subtle/50 dark:bg-white/5 text-content-secondary dark:text-slate-200">
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/10 bg-stroke-subtle/50 dark:bg-white/5 text-content-secondary dark:text-content-muted">
                     {{ extractLoggerName(log) }}
                   </span>
                   <span :class="['px-1.5 py-0.5 text-[10px] font-semibold rounded-full border', getLevelClass(log.level)]">

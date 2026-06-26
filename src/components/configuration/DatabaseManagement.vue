@@ -84,9 +84,9 @@
       <!-- Error state -->
       <div
         v-if="error"
-        class="rounded-lg border border-red-500/30 dark:border-red-400/30 bg-red-50 dark:bg-red-500/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/30 dark:border-accent-red/30 bg-accent-red/10 dark:bg-accent-red/10 p-3 mb-4"
       >
-        <p class="text-xs text-red-700 dark:text-red-400">{{ error }}</p>
+        <p class="text-xs text-accent-red">{{ error }}</p>
       </div>
 
       <!-- Table list -->
@@ -154,7 +154,7 @@
                     v-if="isUnlocked && isPurgeable(table.name) && table.row_count > 0"
                     @click="confirmPurge(table.name, table.row_count)"
                     :disabled="purging[table.name]"
-                    class="px-2.5 py-1 bg-red-500/10 dark:bg-red-400/10 hover:bg-red-500/20 dark:hover:bg-red-400/20 text-red-700 dark:text-red-400 rounded border border-red-500/30 dark:border-red-400/20 transition-colors text-xs disabled:opacity-50"
+                    class="px-2.5 py-1 bg-accent-red/10 dark:bg-accent-red/10 hover:bg-accent-red/20 dark:hover:bg-accent-red/20 text-accent-red rounded border border-accent-red/30 dark:border-accent-red/20 transition-colors text-xs disabled:opacity-50"
                   >
                     <span v-if="purging[table.name]" class="flex items-center gap-1">
                       <Spinner size="xs" color="current" class="inline-block" />
@@ -185,8 +185,8 @@
           @click.stop
         >
           <div class="flex items-start gap-3 mb-5">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center">
-              <svg class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-red/15 flex items-center justify-center">
+              <svg class="w-5 h-5 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
@@ -215,7 +215,7 @@
             <button
               @click="executePurge"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-600 dark:text-red-400 rounded-lg transition-colors font-medium disabled:opacity-50"
+              class="flex-1 px-4 py-3 bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
             </button>
@@ -234,7 +234,7 @@
         <button
           @click="confirmPurge('all', totalRows)"
           :disabled="!stats || totalRows === 0 || !isUnlocked"
-          class="px-4 py-2 bg-red-500/20 dark:bg-red-400/20 hover:bg-red-500/30 dark:hover:bg-red-400/30 text-red-900 dark:text-red-200 rounded-lg border border-red-500/50 dark:border-red-400/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-accent-red/20 dark:bg-accent-red/20 hover:bg-accent-red/30 dark:hover:bg-accent-red/30 text-accent-red rounded-lg border border-accent-red/50 dark:border-accent-red/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,10 +269,10 @@
         </button>
       </div>
 
-      <p v-if="vacuumResult" class="text-xs text-green-600 dark:text-green-400 mt-3">
+      <p v-if="vacuumResult" class="text-xs text-accent-green mt-3">
         {{ vacuumResult }}
       </p>
-      <p v-if="purgeSuccess" class="text-xs text-green-600 dark:text-green-400 mt-3">
+      <p v-if="purgeSuccess" class="text-xs text-accent-green mt-3">
         {{ purgeSuccess }}
       </p>
     </div>

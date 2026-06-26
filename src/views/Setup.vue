@@ -613,7 +613,7 @@ const stepTitles = [
 
                           <p
                             v-if="serialDevicesError"
-                            class="text-xs text-red-600 dark:text-red-400"
+                            class="text-xs text-accent-red"
                           >
                             {{ serialDevicesError }}
                           </p>
@@ -633,7 +633,7 @@ const stepTitles = [
                     <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
                       <div>
                         <label class="block text-content-primary/90 text-sm font-medium mb-1.5">
-                          Modem Hostname or IP Address <span class="text-red-500">*</span>
+                          Modem Hostname or IP Address <span class="text-accent-red">*</span>
                         </label>
                         <input
                           v-model="setupStore.tcpHost"
@@ -744,31 +744,31 @@ const stepTitles = [
                       {{ preset.description }}
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/5 rounded px-2 py-1">
                         <div class="text-content-muted">Freq</div>
                         <div class="text-content-primary/80 font-medium">
                           {{ preset.frequency }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/5 rounded px-2 py-1">
                         <div class="text-content-muted">BW</div>
                         <div class="text-content-primary/80 font-medium">
                           {{ preset.bandwidth }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/5 rounded px-2 py-1">
                         <div class="text-content-muted">SF</div>
                         <div class="text-content-primary/80 font-medium">
                           {{ preset.spreading_factor }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
+                      <div class="bg-background-mute dark:bg-white/5 rounded px-2 py-1">
                         <div class="text-content-muted">CR</div>
                         <div class="text-content-primary/80 font-medium">
                           {{ preset.coding_rate }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1 col-span-2">
+                      <div class="bg-background-mute dark:bg-white/5 rounded px-2 py-1 col-span-2">
                         <div class="text-content-muted">TX Power</div>
                         <div class="text-content-primary/80 font-medium">
                           {{ setupStore.selectedHardware?.config?.tx_power ?? (preset.tx_power || '14') }} dBm
@@ -940,12 +940,12 @@ const stepTitles = [
                   setupStore.confirmPassword &&
                   setupStore.adminPassword !== setupStore.confirmPassword
                 "
-                class="text-red-600 dark:text-red-400 text-sm"
+                class="text-accent-red text-sm"
               >
                 Passwords do not match
               </div>
               <div
-                class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200"
+                class="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3 text-sm text-accent-amber"
               >
                 <strong>Important:</strong> Remember this password - you'll need it to access the
                 dashboard.
@@ -957,7 +957,7 @@ const stepTitles = [
         <!-- Error Message -->
         <div
           v-if="setupStore.error"
-          class="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-600 dark:text-red-200"
+          class="mb-6 bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-accent-red"
         >
           {{ setupStore.error }}
         </div>
@@ -1030,10 +1030,10 @@ const stepTitles = [
         >
           <div class="flex justify-center mb-6">
             <div
-              class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center"
+              class="w-16 h-16 rounded-full bg-accent-red/10 dark:bg-accent-red/20 flex items-center justify-center"
             >
               <svg
-                class="w-8 h-8 text-red-600 dark:text-red-400"
+                class="w-8 h-8 text-accent-red"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

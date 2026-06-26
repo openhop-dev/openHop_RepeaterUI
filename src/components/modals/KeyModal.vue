@@ -262,7 +262,7 @@ const handleCancel = () => {
                 readonly
                 class="modal-input-readonly w-full text-xs"
               />
-              <p v-if="nameChanged" class="text-xs text-amber-500 dark:text-amber-400 mt-1">
+              <p v-if="nameChanged" class="text-xs text-accent-amber mt-1">
                 Updated for "{{ liveDisplayName }}"
               </p>
             </div>

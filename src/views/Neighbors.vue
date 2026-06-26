@@ -321,11 +321,11 @@ onMounted(() => {
     <!-- Error State -->
     <div
       v-else-if="error"
-      class="bg-red-50 dark:bg-accent-red/10 border border-red-300 dark:border-accent-red/20 rounded-[15px] p-6"
+      class="bg-accent-red/10 dark:bg-accent-red/10 border border-accent-red dark:border-accent-red/20 rounded-[15px] p-6"
     >
       <div class="flex items-center gap-3">
         <svg
-          class="w-5 h-5 text-red-600 dark:text-accent-red"
+          class="w-5 h-5 text-accent-red dark:text-accent-red"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -338,8 +338,8 @@ onMounted(() => {
           />
         </svg>
         <div>
-          <h3 class="text-red-600 dark:text-accent-red font-medium">Error Loading Neighbors</h3>
-          <p class="text-red-500 dark:text-accent-red/80 text-sm">{{ error }}</p>
+          <h3 class="text-accent-red dark:text-accent-red font-medium">Error Loading Neighbors</h3>
+          <p class="text-accent-red dark:text-accent-red/80 text-sm">{{ error }}</p>
         </div>
       </div>
     </div>
@@ -574,7 +574,7 @@ onMounted(() => {
                 v-model="filters.searchText"
                 type="text"
                 placeholder="Node name or pubkey..."
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-gray-400 dark:placeholder-white/40"
+                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-content-muted dark:placeholder-content-muted"
               />
             </div>
           </div>

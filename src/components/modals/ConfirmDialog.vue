@@ -23,16 +23,16 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const variantColors = {
-  danger: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
+  danger: 'bg-accent-red/10 dark:bg-accent-red/20 border-accent-red/30 text-accent-red',
   warning:
-    'bg-yellow-100 dark:bg-yellow-500/20 border-yellow-500/30 text-yellow-600 dark:text-yellow-400',
-  info: 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400',
+    'bg-accent-amber/10 dark:bg-accent-amber/20 border-accent-amber/30 text-accent-amber',
+  info: 'bg-primary/20 border-primary/30 text-primary',
 };
 
 const buttonColors = {
-  danger: 'bg-red-500 hover:bg-red-600',
-  warning: 'bg-yellow-500 hover:bg-yellow-600',
-  info: 'bg-blue-500 hover:bg-blue-600',
+  danger: 'bg-accent-red/10 hover:bg-accent-red/10',
+  warning: 'bg-accent-amber/10 hover:bg-accent-amber/10',
+  info: 'bg-primary/10 hover:bg-primary/10',
 };
 </script>
 

@@ -96,7 +96,7 @@ const handleClose = () => {
 
       <!-- Neighbor Info -->
       <div
-        class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4 mb-6"
+        class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4 mb-6"
       >
         <div class="flex items-center gap-3">
           <div class="flex-1 min-w-0">

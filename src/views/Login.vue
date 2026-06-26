@@ -71,7 +71,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter username"
                 :disabled="loading || isRateLimited"
               />
@@ -98,7 +98,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter password"
                 :disabled="loading || isRateLimited"
               />

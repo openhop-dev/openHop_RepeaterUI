@@ -219,7 +219,7 @@ const getPacketTypeIndicatorColor = (type: number) => {
     8: 'bg-accent-green', // PATH - Green (reuse)
     9: 'bg-secondary', // TRACE - Yellow (reuse)
   };
-  return colors[type] || 'bg-gray-500';
+  return colors[type] || 'bg-background-mute';
 };
 
 const getPacketTypeColor = (type: number) => {
@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
                           :class="
                             idx === 0
                               ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                              : 'bg-gray-500/20 text-content-muted'
+                              : 'bg-background-mute/20 text-content-muted'
                           "
                           :title="node"
                         >
@@ -827,7 +827,7 @@ onBeforeUnmount(() => {
                         :class="
                           idx === 0
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted'
+                            : 'bg-background-mute/20 text-content-muted'
                         "
                         :title="node"
                       >

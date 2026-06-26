@@ -17,15 +17,15 @@ const emit = defineEmits<Emits>();
 
 const variantColors = {
   success:
-    'bg-green-100 dark:bg-green-500/20 border-green-600/40 dark:border-green-500/30 text-green-600 dark:text-green-400',
-  error: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
-  info: 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400',
+    'bg-accent-green/10 dark:bg-accent-green/20 border-accent-green/40 dark:border-accent-green/30 text-accent-green',
+  error: 'bg-accent-red/10 dark:bg-accent-red/20 border-accent-red/30 text-accent-red',
+  info: 'bg-primary/20 border-primary/30 text-primary',
 };
 
 const buttonColors = {
-  success: 'bg-green-500 hover:bg-green-600',
-  error: 'bg-red-500 hover:bg-red-600',
-  info: 'bg-blue-500 hover:bg-blue-600',
+  success: 'bg-accent-green/10 hover:bg-accent-green/10',
+  error: 'bg-accent-red/10 hover:bg-accent-red/10',
+  info: 'bg-primary/10 hover:bg-primary/10',
 };
 </script>
 
