@@ -92,9 +92,9 @@ const formatDateTime = (timestamp: string): string => {
 
 const getLevelClass = (level: string): string => {
   const levelMap: Record<string, string> = {
-    ERROR: 'text-red-600 dark:text-red-300 bg-red-500/10 border-red-500/20',
-    WARNING: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
-    WARN: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
+    ERROR: 'text-accent-red bg-accent-red/10 border-accent-red/20',
+    WARNING: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
+    WARN: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
     INFO: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/20',
     DEBUG: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20',
   };
@@ -107,9 +107,9 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
   }
 
   const enabledMap: Record<string, string> = {
-    ERROR: 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
-    WARNING: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    WARN: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    ERROR: 'border-accent-red/40 bg-accent-red/10 text-accent-red',
+    WARNING: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
+    WARN: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
     INFO: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300',
     DEBUG: 'border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   };
@@ -118,11 +118,11 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
 
 const streamStatusClass = computed(() => {
   const classMap: Record<StreamState, string> = {
-    connecting: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    live: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    paused: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-    reconnecting: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-    offline: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300',
+    connecting: 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber',
+    live: 'border-accent-green/30 bg-accent-green/10 text-accent-green',
+    paused: 'border-stroke/30 bg-background-mute text-content-muted',
+    reconnecting: 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber',
+    offline: 'border-accent-red/30 bg-accent-red/10 text-accent-red',
   };
   return classMap[streamState.value];
 });
@@ -692,7 +692,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else-if="error && allLogs.length === 0" class="p-8 text-center">
-        <div class="text-red-600 dark:text-red-400 mb-4">
+        <div class="text-accent-red mb-4">
           <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -763,7 +763,7 @@ onBeforeUnmount(() => {
 
                     <div v-if="log.exception">
                       <div class="uppercase tracking-wide text-slate-500 mb-1">Exception</div>
-                      <pre class="whitespace-pre-wrap break-words text-red-200">{{ log.exception }}</pre>
+                      <pre class="whitespace-pre-wrap break-words text-accent-red/80">{{ log.exception }}</pre>
                     </div>
                   </div>
                 </div>
@@ -773,7 +773,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="!followTail && pendingNewLogs" class="absolute bottom-4 right-4">
-          <button @click="jumpToLatest" class="rounded-full border border-primary/40 bg-primary text-white px-4 py-2 shadow-lg">
+          <button @click="jumpToLatest" class="rounded-full border border-primary/50 bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 shadow-lg">
             {{ pendingNewLogs }} new line{{ pendingNewLogs === 1 ? '' : 's' }}
           </button>
         </div>

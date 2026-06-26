@@ -107,7 +107,7 @@ const cssVar = (name: string, fallback: string): string => {
 const getChartChrome = () => {
   return {
     labelColor: cssVar('--color-text-muted', 'gray'),
-    textColor: cssVar('--color-text-secondary', 'gainsboro'),
+    textColor: cssVar('--color-text-accent-amber', 'gainsboro'),
   };
 };
 
@@ -925,7 +925,7 @@ onBeforeUnmount(() => {
                 {{ process.name }}
               </td>
               <td
-                class="text-center text-secondary py-2 transition-all duration-300"
+                class="text-center text-accent-amber py-2 transition-all duration-300"
               >
                 <span
                   class="cpu-value"

@@ -222,7 +222,7 @@ const stateToneClass = computed(() => {
     case 'stale':
     case 'no_data':
     case 'disabled':
-      return 'text-secondary';
+      return 'text-accent-amber';
     default:
       return 'text-content-muted';
   }
@@ -254,7 +254,7 @@ const summaryCards = computed(() => [
         ? 'n/a'
         : `${formatValue(status.value.age_seconds)}s`,
     note: status.value.last_update || 'last update unknown',
-    valueClass: status.value.stale ? 'text-secondary' : 'text-content-heading dark:text-white',
+    valueClass: status.value.stale ? 'text-accent-amber' : 'text-content-heading dark:text-white',
   },
   {
     label: 'GPS Time',

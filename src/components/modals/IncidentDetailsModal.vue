@@ -362,7 +362,7 @@ const handleBackdropClick = (event: MouseEvent) => {
                 <div class="text-3xl text-content-primary font-bold">+{{ incidentDetails?.peakNoise }}</div>
                 <div class="text-xs text-content-secondary mt-1">dB above baseline</div>
               </div>
-              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-amber-500">
+              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-secondary">
                 <div class="text-xs text-content-tertiary uppercase tracking-wide mb-1">Total CRC Errors</div>
                 <div class="text-3xl text-content-primary font-bold">{{ incidentDetails?.totalCrc }}</div>
                 <div class="text-xs text-content-secondary mt-1">detected during event</div>
@@ -378,7 +378,7 @@ const handleBackdropClick = (event: MouseEvent) => {
                   <span>Noise floor increased {{ incidentDetails?.peakNoise }} dB above baseline, indicating RF interference or environmental factors.</span>
                 </li>
                 <li class="flex gap-2">
-                  <span class="text-amber-500 font-bold">•</span>
+                  <span class="text-accent-amber font-bold">•</span>
                   <span>{{ incidentDetails?.totalCrc }} CRC errors occurred during this period, suggesting packet corruption.</span>
                 </li>
                 <li class="flex gap-2">

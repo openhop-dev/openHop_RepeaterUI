@@ -16,16 +16,15 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const variantColors = {
-  success:
-    'bg-green-100 dark:bg-green-500/20 border-green-600/40 dark:border-green-500/30 text-green-600 dark:text-green-400',
-  error: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
-  info: 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400',
+  success: 'bg-accent-green/15 border-accent-green/30 text-accent-green',
+  error: 'bg-accent-red/15 border-accent-red/30 text-accent-red',
+  info: 'bg-accent-cyan/15 border-accent-cyan/30 text-accent-cyan',
 };
 
 const buttonColors = {
-  success: 'bg-green-500 hover:bg-green-600',
-  error: 'bg-red-500 hover:bg-red-600',
-  info: 'bg-blue-500 hover:bg-blue-600',
+  success: 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border border-accent-green/50',
+  error: 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border border-accent-red/50',
+  info: 'bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan border border-accent-cyan/50',
 };
 </script>
 
@@ -94,7 +93,7 @@ const buttonColors = {
         <button
           @click="emit('close')"
           :class="[
-            'flex-1 px-4 py-3 rounded-xl text-white transition-all duration-200',
+            'flex-1 px-4 py-3 rounded-xl transition-all duration-200',
             buttonColors[props.variant],
           ]"
         >

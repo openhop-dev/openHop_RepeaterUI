@@ -23,16 +23,15 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const variantColors = {
-  danger: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
-  warning:
-    'bg-yellow-100 dark:bg-yellow-500/20 border-yellow-500/30 text-yellow-600 dark:text-yellow-400',
-  info: 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400',
+  danger: 'bg-accent-red/15 border-accent-red/30 text-accent-red',
+  warning: 'bg-accent-amber/15 border-accent-amber/30 text-accent-amber',
+  info: 'bg-accent-cyan/15 border-accent-cyan/30 text-accent-cyan',
 };
 
 const buttonColors = {
-  danger: 'bg-red-500 hover:bg-red-600',
-  warning: 'bg-yellow-500 hover:bg-yellow-600',
-  info: 'bg-blue-500 hover:bg-blue-600',
+  danger: 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border border-accent-red/50',
+  warning: 'bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber border border-accent-amber/50',
+  info: 'bg-accent-cyan/20 hover:bg-accent-cyan/30 text-accent-cyan border border-accent-cyan/50',
 };
 </script>
 
@@ -127,7 +126,7 @@ const buttonColors = {
         <button
           @click="emit('confirm')"
           :class="[
-            'flex-1 px-4 py-3 rounded-xl text-white transition-all duration-200',
+            'flex-1 px-4 py-3 rounded-xl transition-all duration-200',
             buttonColors[props.variant],
           ]"
         >

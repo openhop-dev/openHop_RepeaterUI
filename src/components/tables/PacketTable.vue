@@ -223,14 +223,14 @@ const getPacketTypeColor = (type: number) => {
   const colors: Record<number, string> = {
     0: 'border-l-primary', // REQ - Primary cyan
     1: 'border-l-accent-green', // RESPONSE - Green
-    2: 'border-l-secondary', // TXT_MSG - Yellow
+    2: 'border-l-accent-amber', // TXT_MSG - Yellow
     3: 'border-l-accent-purple', // ACK - Purple
     4: 'border-l-accent-red', // ADVERT - Red
     5: 'border-l-accent-cyan', // GRP_TXT - Cyan
     6: 'border-l-primary', // GRP_DATA - Primary (reuse)
     7: 'border-l-accent-purple', // ANON_REQ - Purple (reuse)
     8: 'border-l-accent-green', // PATH - Green (reuse)
-    9: 'border-l-secondary', // TRACE - Yellow (reuse)
+    9: 'border-l-accent-amber', // TRACE - Yellow (reuse)
   };
   return colors[type] || 'border-l-gray-500';
 };
@@ -238,15 +238,15 @@ const getPacketTypeColor = (type: number) => {
 // Get LBT indicator color based on attempts
 const getLbtIndicatorColor = (packet: RecentPacket) => {
   if (!packet.transmitted || !packet.lbt_attempts || packet.lbt_attempts === 0) {
-    return 'bg-green-400'; // Clear channel or no LBT needed
+    return 'status-dot-green'; // Clear channel or no LBT needed
   }
   if (packet.lbt_attempts === 1) {
-    return 'bg-cyan-400'; // Light congestion
+    return 'status-dot-muted'; // Light congestion
   }
   if (packet.lbt_attempts === 2) {
-    return 'bg-yellow-400'; // Moderate congestion
+    return 'status-dot-amber'; // Moderate congestion
   }
-  return 'bg-orange-400'; // Heavy congestion (3+)
+  return 'status-dot-red'; // Heavy congestion (3+)
 };
 
 // Format delay value - convert to seconds if >= 1000ms
@@ -638,7 +638,7 @@ onBeforeUnmount(() => {
                     }}</span>
                     <span
                       v-if="isPolicyBlockedPacket(packet)"
-                      class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                      class="inline-flex items-center text-[10px] font-medium text-accent-amber"
                       title="Policy blocked"
                     >
                       <svg
@@ -727,7 +727,7 @@ onBeforeUnmount(() => {
                         :class="
                           packet.dst_hash
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                            : 'bg-accent-amber/20 text-accent-amber'
                         "
                       >
                         {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
@@ -779,7 +779,7 @@ onBeforeUnmount(() => {
                   }}</span>
                   <span
                     v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                    class="inline-flex items-center text-[10px] font-medium text-accent-amber"
                     title="Policy blocked"
                   >
                     <svg
@@ -898,7 +898,7 @@ onBeforeUnmount(() => {
                       :class="
                         packet.dst_hash
                           ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                          : 'bg-accent-amber/20 text-accent-amber'
                       "
                     >
                       {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
@@ -926,19 +926,19 @@ onBeforeUnmount(() => {
                   <div v-if="packet.snr != null" class="flex gap-0.5">
                     <div
                       class="w-1 h-3 rounded-sm"
-                      :class="packet.snr >= -10 ? 'bg-green-400' : 'bg-white/20'"
+                      :class="packet.snr >= -10 ? 'status-dot-green' : 'bg-stroke/20'"
                     ></div>
                     <div
                       class="w-1 h-4 rounded-sm"
-                      :class="packet.snr >= -5 ? 'bg-green-400' : 'bg-white/20'"
+                      :class="packet.snr >= -5 ? 'status-dot-green' : 'bg-stroke/20'"
                     ></div>
                     <div
                       class="w-1 h-5 rounded-sm"
-                      :class="packet.snr >= 0 ? 'bg-green-400' : 'bg-white/20'"
+                      :class="packet.snr >= 0 ? 'status-dot-green' : 'bg-stroke/20'"
                     ></div>
                     <div
                       class="w-1 h-6 rounded-sm"
-                      :class="packet.snr >= 10 ? 'bg-green-400' : 'bg-white/20'"
+                      :class="packet.snr >= 10 ? 'status-dot-green' : 'bg-stroke/20'"
                     ></div>
                   </div>
                   <span class="text-content-primary dark:text-content-primary text-xs">{{

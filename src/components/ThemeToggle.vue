@@ -15,7 +15,7 @@ const { theme, toggleTheme } = useTheme();
     <svg
       v-if="theme === 'dark'"
       xmlns="http://www.w3.org/2000/svg"
-      class="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+      class="w-5 h-5 text-accent-amber"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

@@ -857,12 +857,12 @@ function actionLabel(action: PolicyAction): string {
 
 function actionBadgeClasses(action: PolicyAction): string {
   if (action === 'drop') {
-    return 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300';
+    return 'border-accent-red/30 bg-accent-red/10 text-accent-red';
   }
   if (action === 'log_only') {
-    return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    return 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber';
   }
-  return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+  return 'border-accent-green/30 bg-accent-green/10 text-accent-green';
 }
 
 function openAddRuleModal() {
@@ -1322,15 +1322,15 @@ onMounted(loadPolicy);
         </template>
       </div>
     </div>
-    <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
+    <div v-if="error" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3 text-accent-red text-sm">
       {{ error }}
     </div>
 
-    <div v-if="message" class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-emerald-700 dark:text-emerald-400 text-sm">
+    <div v-if="message" class="bg-accent-green/10 border border-accent-green/30 rounded-lg p-3 text-accent-green text-sm">
       {{ message }}
     </div>
 
-    <div v-if="validationInfo" class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-blue-700 dark:text-blue-300 text-sm">
+    <div v-if="validationInfo" class="bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg p-3 text-accent-cyan text-sm">
       {{ validationInfo }}
     </div>
 
@@ -1430,7 +1430,7 @@ onMounted(loadPolicy);
                       <span
                         class="inline-flex h-5 w-5 items-center justify-center rounded-md border text-[10px] font-semibold"
                         :class="rule.enabled
-                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                          ? 'border-accent-green/30 bg-accent-green/10 text-accent-green'
                           : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/20 dark:bg-white/5 dark:text-content-muted'"
                         :title="rule.enabled ? 'Enabled' : 'Disabled'"
                       >
@@ -1457,7 +1457,7 @@ onMounted(loadPolicy);
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, -1)">▲</button>
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, 1)">▼</button>
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="openEditRuleModal(idx)">Edit</button>
-                        <button class="text-xs px-2 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 disabled:opacity-40" :disabled="!isEditing || saving" @click="removeRule(idx)">Del</button>
+                        <button class="btn-danger-xs" :disabled="!isEditing || saving" @click="removeRule(idx)">Del</button>
                       </div>
                     </td>
                   </tr>
@@ -1566,7 +1566,7 @@ onMounted(loadPolicy);
               </h4>
               <button
                 v-if="selectedGroup"
-                class="text-xs px-2.5 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                class="btn-danger-xs"
                 :disabled="!isEditing || saving"
                 @click="deleteGroup(selectedGroup.id)"
               >
@@ -1589,7 +1589,7 @@ onMounted(loadPolicy);
                     <td class="px-3 py-2 font-mono text-xs text-content-secondary dark:text-content-secondary">{{ entry.value }}</td>
                     <td class="px-3 py-2 text-right">
                       <button
-                        class="text-xs px-2.5 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                        class="btn-danger-xs"
                         :disabled="!isEditing || saving"
                         @click="removeEntry(entry.id)"
                       >
@@ -1684,7 +1684,7 @@ onMounted(loadPolicy);
           </div>
         </div>
 
-        <div v-if="ruleModalError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-600 dark:text-red-400 text-xs">
+        <div v-if="ruleModalError" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-2 text-accent-red text-xs">
           {{ ruleModalError }}
         </div>
 
@@ -1721,7 +1721,7 @@ onMounted(loadPolicy);
 
           <div
             v-if="getChannelBodyGuardWarning(ruleDraft)"
-            class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+            class="rounded-lg border border-accent-amber/30 bg-accent-amber/10 px-3 py-2 text-xs text-accent-amber"
           >
             {{ getChannelBodyGuardWarning(ruleDraft) }}
           </div>
@@ -1847,7 +1847,7 @@ onMounted(loadPolicy);
                       >
                         ▼
                       </button>
-                      <button class="text-xs px-2 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10" @click="removeDraftCondition(cIdx)">Del</button>
+                      <button class="btn-danger-xs" @click="removeDraftCondition(cIdx)">Del</button>
                     </div>
                   </td>
                 </tr>

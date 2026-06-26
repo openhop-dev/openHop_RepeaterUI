@@ -38,10 +38,10 @@ function onConfirm() {
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       @click.self="closeModal"
     >
-      <div class="w-full max-w-2xl rounded-3xl border border-amber-300/70 dark:border-amber-400/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
-        <div class="p-5 border-b border-amber-200/70 dark:border-amber-400/20 bg-amber-50/70 dark:bg-amber-500/10">
+      <div class="w-full max-w-2xl rounded-3xl border border-accent-amber/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
+        <div class="p-5 border-b border-accent-amber/20 bg-accent-amber/5">
           <div class="flex items-start gap-3">
-            <div class="rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 p-2">
+            <div class="rounded-full bg-accent-amber/15 text-accent-amber p-2">
               <AlertTriangle class="w-5 h-5" />
             </div>
             <div>
@@ -79,7 +79,7 @@ function onConfirm() {
               <li>Never transmit without a correctly connected antenna or suitable load</li>
             </ul>
           </div>
-          <p class="leading-relaxed text-amber-700 dark:text-amber-300 font-medium">
+          <p class="leading-relaxed text-accent-amber font-medium">
             Incorrect PA configuration can damage hardware, lock the radio into a busy state, or cause illegal RF output levels.
           </p>
 

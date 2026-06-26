@@ -55,7 +55,7 @@ const getChartColors = () => {
   const dark = isDarkMode.value;
   const heading = cssVar('--color-text-primary', dark ? '#f9fafb' : '#111827');
   const muted = cssVar('--color-text-muted', dark ? '#9ca3af' : '#6b7280');
-  const secondary = cssVar('--color-text-secondary', dark ? '#d1d5db' : '#374151');
+  const secondary = cssVar('--color-text-accent-amber', dark ? '#d1d5db' : '#374151');
   const border = cssVar('--color-border-subtle', dark ? '#4b5563' : '#d1d5db');
   const cyan = cssVar('--color-accent-cyan', '#06b6d4');
   const green = cssVar('--color-accent-green', '#10b981');

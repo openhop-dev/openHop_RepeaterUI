@@ -386,7 +386,7 @@ function onImportDone(imported: number) {
 
       <div v-else-if="error" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div class="text-red-600 dark:text-red-400 mb-2">Failed to load companions</div>
+          <div class="text-accent-red mb-2">Failed to load companions</div>
           <div class="text-content-secondary dark:text-content-muted text-sm mb-4">{{ error }}</div>
           <button
             @click="fetchIdentities"

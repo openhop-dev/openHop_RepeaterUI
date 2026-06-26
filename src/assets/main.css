@@ -257,4 +257,20 @@
     @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
            bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red;
   }
+
+  /* ── Config page danger button ──────────────────────────────────────────── */
+  /* Matches cfg-btn-primary sizing (py-2) but in the red/danger colour scheme */
+  .cfg-btn-danger {
+    @apply px-4 py-2 bg-accent-red/20 hover:bg-accent-red/30 text-accent-red rounded-lg
+           border border-accent-red/50 transition-colors text-sm
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── Status indicator dots ──────────────────────────────────────────────── */
+  /* Inline status dots — use alongside w-1.5 h-1.5 rounded-full */
+  .status-dot-green  { background-color: var(--color-accent-green); }
+  .status-dot-amber  { background-color: var(--color-accent-amber); }
+  .status-dot-red    { background-color: var(--color-accent-red); }
+  .status-dot-cyan   { background-color: var(--color-accent-cyan); }
+  .status-dot-muted  { background-color: var(--color-border); }
 }

@@ -352,8 +352,8 @@ defineExpose({ requestLeave, isEditing });
     </div>
 
     <!-- Save Error -->
-    <div v-if="saveError" class="bg-red-100 dark:bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-      <p class="text-red-600 dark:text-red-400 text-sm">{{ saveError }}</p>
+    <div v-if="saveError" class="bg-accent-red/10 border border-accent-red/50 rounded-lg p-3">
+      <p class="text-accent-red text-sm">{{ saveError }}</p>
     </div>
 
     <!-- Unscoped Flood Control -->

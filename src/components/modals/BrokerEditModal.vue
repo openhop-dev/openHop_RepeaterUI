@@ -122,7 +122,7 @@ function handleCancel() {
             <!-- Name (full width) -->
             <div>
               <label class="modal-field-label">
-                Name <span class="text-red-500">*</span>
+                Name <span class="text-accent-red">*</span>
               </label>
               <input
                 v-model="draft.name"
@@ -136,7 +136,7 @@ function handleCancel() {
             <div class="grid grid-cols-2 gap-5 items-end">
               <div>
                 <label class="modal-field-label">
-                  Format <span class="text-red-500">*</span>
+                  Format <span class="text-accent-red">*</span>
                 </label>
                 <!-- The first three values belong to the MC2MQTT (MeshCoreToMQTT)
                      protocol family - all share the canonical topic
@@ -185,7 +185,7 @@ function handleCancel() {
             <div class="grid grid-cols-2 gap-5 items-end">
               <div>
                 <label class="modal-field-label">
-                  Transport <span class="text-red-500">*</span>
+                  Transport <span class="text-accent-red">*</span>
                 </label>
                 <select v-model="draft.transport" class="modal-select">
                   <option value="websockets">Websockets</option>
@@ -209,7 +209,7 @@ function handleCancel() {
               <!-- Host -->
               <div>
                 <label class="modal-field-label">
-                  Host <span class="text-red-500">*</span>
+                  Host <span class="text-accent-red">*</span>
                 </label>
                 <input
                   v-model="draft.host"
@@ -224,7 +224,7 @@ function handleCancel() {
               <div>
                 <template v-if="draft.use_jwt_auth">
                   <label class="modal-field-label">
-                    Audience <span class="text-red-500">*</span>
+                    Audience <span class="text-accent-red">*</span>
                     <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(usually same as host)</span>
                   </label>
                   <input
@@ -253,7 +253,7 @@ function handleCancel() {
               <!-- Port -->
               <div>
                 <label class="modal-field-label">
-                  Port <span class="text-red-500">*</span>
+                  Port <span class="text-accent-red">*</span>
                   <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(443 WS, 1883 TCP)</span>
                 </label>
                 <input
@@ -312,7 +312,7 @@ function handleCancel() {
                   <button
                     type="button"
                     @click="draft.tls.insecure = !draft.tls.insecure"
-                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.insecure ? 'bg-amber-500' : 'bg-gray-200 dark:bg-white/15']"
+                    :class="['relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none', draft.tls.insecure ? 'bg-secondary' : 'bg-background-mute dark:bg-white/15']"
                   >
                     <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.tls.insecure ? 'translate-x-4' : 'translate-x-0']" />
                   </button>
@@ -337,7 +337,7 @@ function handleCancel() {
                   :class="[
                     'px-2.5 py-1 rounded text-xs font-mono font-medium border transition-colors',
                     draft.disallowedInput?.includes(type)
-                      ? 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700/50 text-red-700 dark:text-red-400'
+                      ? 'bg-accent-red/15 border-accent-red/50 text-accent-red'
                       : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 text-content-secondary dark:text-content-muted hover:border-primary/40',
                   ]"
                 >
@@ -345,7 +345,7 @@ function handleCancel() {
                 </button>
               </div>
               <p class="mt-2 text-xs text-content-secondary dark:text-content-muted">
-                <span class="text-red-600 dark:text-red-400 font-medium">Red = blocked.</span> Leave all unselected to publish all packet types.
+                <span class="text-accent-red font-medium">Red = blocked.</span> Leave all unselected to publish all packet types.
               </p>
             </div>
 

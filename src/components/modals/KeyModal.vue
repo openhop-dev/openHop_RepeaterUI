@@ -207,7 +207,7 @@ const handleCancel = () => {
                 :class="[
                   'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
                   entryType === 'region'
-                    ? 'bg-secondary/20 text-secondary border border-secondary/50'
+                    ? 'bg-accent-amber/20 text-accent-amber border border-accent-amber/50'
                     : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
                 ]"
               >REGION</button>
@@ -228,7 +228,7 @@ const handleCancel = () => {
           <div>
             <label class="modal-field-label">{{ keyType.type }} Name</label>
             <div class="flex items-center">
-              <span v-if="isRegion" class="px-3 py-2 bg-secondary/10 border border-r-0 border-secondary/30 rounded-l-md text-secondary text-sm font-mono">#</span>
+              <span v-if="isRegion" class="px-3 py-2 bg-accent-amber/10 border border-r-0 border-accent-amber/30 rounded-l-md text-accent-amber text-sm font-mono">#</span>
               <input
                 v-model="keyName"
                 type="text"
@@ -262,7 +262,7 @@ const handleCancel = () => {
                 readonly
                 class="modal-input-readonly w-full text-xs"
               />
-              <p v-if="nameChanged" class="text-xs text-amber-500 dark:text-amber-400 mt-1">
+              <p v-if="nameChanged" class="text-xs text-accent-amber mt-1">
                 Updated for "{{ liveDisplayName }}"
               </p>
             </div>

@@ -75,8 +75,8 @@
             :class="[
               'relative inline-flex h-6 w-11 items-center rounded-full transition-colors border-2',
               localConfig.cors_enabled
-                ? 'bg-cyan-600 dark:bg-teal-500 border-cyan-600 dark:border-teal-500'
-                : 'bg-gray-400 dark:bg-gray-600 border-gray-400 dark:border-gray-600',
+                ? 'bg-accent-cyan border-accent-cyan'
+                : 'bg-background-mute border-background-mute',
               saving ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
             ]"
           >
@@ -161,7 +161,7 @@
                   PyMC Console
                 </div>
                 <span
-                  class="text-xs bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full border border-orange-500/30 font-medium"
+                  class="text-xs bg-accent-amber/15 text-accent-amber px-2 py-0.5 rounded-full border border-accent-amber/30 font-medium"
                   >@Treehouse⚡</span
                 >
               </div>
@@ -181,14 +181,14 @@
           class="p-4 rounded-lg border"
           :class="
             pymcConsoleExists
-              ? 'bg-green-500/5 border-green-500/20'
+              ? 'bg-accent-green/5 border-accent-green/20'
               : 'bg-accent-cyan/5 border-accent-cyan/20'
           "
         >
           <div class="flex items-start gap-3">
             <svg
               v-if="pymcConsoleExists"
-              class="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5"
+              class="w-5 h-5 text-accent-green flex-shrink-0 mt-0.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -222,9 +222,9 @@
                     : 'PyMC Console Not Installed'
                 }}
               </h4>
-              <p v-if="pymcConsoleExists" class="text-xs text-green-600 dark:text-green-400 mt-1">
+              <p v-if="pymcConsoleExists" class="text-xs text-accent-green mt-1">
                 PyMC Console is installed at
-                <code class="text-green-700 dark:text-green-300">/opt/pymc_console/web/html</code>
+                <code class="text-accent-green">/opt/pymc_console/web/html</code>
               </p>
               <template v-else>
                 <p class="text-xs text-content-secondary dark:text-content-muted mt-1 mb-3">
@@ -251,11 +251,11 @@
         </div>
 
         <!-- Restart Notice -->
-        <div v-if="needsRestart" class="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+        <div v-if="needsRestart" class="p-4 bg-accent-amber/10 border border-accent-amber/30 rounded-lg">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-start space-x-3 flex-1">
               <svg
-                class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5"
+                class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -268,10 +268,10 @@
                 />
               </svg>
               <div class="flex-1">
-                <h4 class="text-sm font-medium text-amber-600 dark:text-amber-400">
+                <h4 class="text-sm font-medium text-accent-amber">
                   Service restart required
                 </h4>
-                <p class="text-xs text-amber-700 dark:text-amber-400/80 mt-1">
+                <p class="text-xs text-accent-amber mt-1">
                   Web frontend changes will take effect after restarting the pymc-repeater service.
                 </p>
               </div>
@@ -279,7 +279,7 @@
             <button
               @click="restartService"
               :disabled="restarting"
-              class="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-white font-medium rounded-lg transition-colors disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+              class="px-4 py-2 bg-accent-amber/20 hover:bg-accent-amber/30 disabled:opacity-50 text-accent-amber font-medium rounded-lg border border-accent-amber/50 transition-colors disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
             >
               <svg v-if="restarting" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
                 <circle
@@ -316,7 +316,7 @@
       <div class="flex items-center space-x-2">
         <svg
           v-if="saveSuccess"
-          class="w-5 h-5 text-green-600 dark:text-green-400"
+          class="w-5 h-5 text-accent-green"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -330,7 +330,7 @@
         </svg>
         <svg
           v-else
-          class="w-5 h-5 text-red-600 dark:text-red-400"
+          class="w-5 h-5 text-accent-red"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -344,7 +344,7 @@
         </svg>
         <span
           :class="
-            saveSuccess ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+            saveSuccess ? 'text-accent-green' : 'text-accent-red'
           "
           >{{ saveMessage }}</span
         >
@@ -385,8 +385,8 @@ const localConfig = reactive<WebConfig>({
 
 const saveMessageClass = computed(() => {
   return saveSuccess.value
-    ? 'bg-green-500/10 border-green-600/40 dark:border-green-500/30'
-    : 'bg-red-500/10 border-red-500/30';
+    ? 'bg-accent-green/10 border-accent-green/30'
+    : 'bg-accent-red/10 border-accent-red/30';
 });
 
 async function checkPymcConsole() {

@@ -231,7 +231,7 @@ const tierBadgeClass = computed(() => {
     case 'normal':
       return 'bg-accent-cyan/20 text-accent-cyan border-accent-cyan/50';
     case 'busy':
-      return 'bg-secondary/20 text-secondary border-secondary/50';
+      return 'bg-accent-amber/20 text-accent-amber border-accent-amber/50';
     case 'congested':
       return 'bg-accent-red/20 text-accent-red border-accent-red/50';
     default:
@@ -383,15 +383,15 @@ const tierBadgeClass = computed(() => {
 
         <div
           v-if="rateLimitStats.recent_drops && rateLimitStats.recent_drops.length > 0"
-          class="mt-2 p-2 bg-secondary/10 rounded-lg border border-secondary/20"
+          class="mt-2 p-2 bg-accent-amber/10 rounded-lg border border-accent-amber/20"
         >
-          <div class="text-xs font-medium text-secondary mb-1">
+          <div class="text-xs font-medium text-accent-amber mb-1">
             Recently Dropped Adverts
           </div>
           <div
             v-for="(drop, idx) in rateLimitStats.recent_drops"
             :key="idx"
-            class="text-xs text-secondary py-0.5"
+            class="text-xs text-accent-amber py-0.5"
           >
             <span class="font-medium">{{ drop.name }}</span>
             <span class="font-mono text-[10px] opacity-70">({{ drop.pubkey }}...)</span>
@@ -431,7 +431,7 @@ const tierBadgeClass = computed(() => {
           limiting) →
           <span class="text-accent-cyan font-medium">Normal</span> (lighter: 0.5x
           intervals) →
-          <span class="text-secondary font-medium">Busy</span> (base: 1.0x
+          <span class="text-accent-amber font-medium">Busy</span> (base: 1.0x
           intervals) →
           <span class="text-accent-red font-medium">Congested</span> (stricter: 2.0x
           intervals)
@@ -834,7 +834,7 @@ const tierBadgeClass = computed(() => {
             />
           </div>
           <div class="text-center p-2 bg-white dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-white/10">
-            <div class="text-xs text-secondary mb-1">Busy Max</div>
+            <div class="text-xs text-accent-amber mb-1">Busy Max</div>
             <div
               v-if="!isEditing"
               class="font-mono text-sm text-content-primary dark:text-content-primary"
@@ -1027,12 +1027,12 @@ const tierBadgeClass = computed(() => {
                   Light limiting (50%)
                 </div>
               </div>
-              <div class="p-2 bg-secondary/10 rounded border border-secondary/30">
-                <div class="text-xs font-semibold text-secondary">BUSY</div>
-                <div class="text-xs text-secondary/80">
+              <div class="p-2 bg-accent-amber/10 rounded border border-accent-amber/30">
+                <div class="text-xs font-semibold text-accent-amber">BUSY</div>
+                <div class="text-xs text-accent-amber/80">
                   Activity 0.20-0.50/min
                 </div>
-                <div class="text-xs text-secondary font-medium mt-1">
+                <div class="text-xs text-accent-amber font-medium mt-1">
                   Standard limiting (100%)
                 </div>
               </div>
@@ -1052,7 +1052,7 @@ const tierBadgeClass = computed(() => {
               <span class="text-accent-green font-semibold">QUIET</span>
               (bypass)<br />
               - 0.35 adverts/min →
-              <span class="text-secondary font-semibold">BUSY</span> (tighter
+              <span class="text-accent-amber font-semibold">BUSY</span> (tighter
               limits)<br />
               - 0.68 adverts/min →
               <span class="text-accent-red font-semibold">CONGESTED</span> (strict

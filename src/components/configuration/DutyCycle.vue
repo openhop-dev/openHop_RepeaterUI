@@ -147,13 +147,13 @@ const saveChanges = async () => {
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 rounded-lg p-3 text-green-700 dark:text-green-400 text-sm"
+      class="bg-accent-green/10 border border-accent-green/50 rounded-lg p-3 text-accent-green text-sm"
     >
       {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="bg-red-100 dark:bg-red-500/20 border border-red-500 dark:border-red-500/50 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm"
+      class="bg-accent-red/10 border border-accent-red/50 rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>

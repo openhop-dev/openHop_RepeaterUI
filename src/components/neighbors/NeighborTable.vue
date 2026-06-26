@@ -149,7 +149,7 @@ const getLastSeenStatus = (timestamp: number): { color: string } => {
   const hours = Math.floor(diff / (1000 * 60 * 60));
 
   if (hours < 1) return { color: 'text-primary' }; // Recent (less than 1 hour)
-  if (hours < 26) return { color: 'text-secondary' }; // Moderate (1-25 hours)
+  if (hours < 26) return { color: 'text-accent-amber' }; // Moderate (1-25 hours)
   return { color: 'text-accent-red' }; // Stale (26+ hours)
 };
 
@@ -703,7 +703,7 @@ const sortedAdverts = computed(() => {
                   'inline-block px-2 py-1 rounded-full text-xs border transition-colors',
                   advert.zero_hop
                     ? 'bg-primary/20 border-primary/50 text-primary'
-                    : 'bg-secondary/20 border-secondary/50 text-secondary',
+                    : 'bg-accent-amber/20 border-accent-amber/50 text-accent-amber',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -737,7 +737,7 @@ const sortedAdverts = computed(() => {
                     getLastSeenStatus(advert.last_seen).color === 'text-primary'
                       ? 'bg-primary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color === 'text-secondary'
+                    getLastSeenStatus(advert.last_seen).color === 'text-accent-amber'
                       ? 'bg-secondary'
                       : '',
                     getLastSeenStatus(advert.last_seen).color === 'text-accent-red'
@@ -801,7 +801,7 @@ const sortedAdverts = computed(() => {
                   'inline-block px-2 py-1 rounded-full text-xs border',
                   advert.zero_hop
                     ? 'bg-primary/20 border-primary/50 text-primary'
-                    : 'bg-secondary/20 border-secondary/50 text-secondary',
+                    : 'bg-accent-amber/20 border-accent-amber/50 text-accent-amber',
                 ]"
               >
                 {{ advert.zero_hop ? 'Zero Hop' : 'Multi-Hop' }}
@@ -866,7 +866,7 @@ const sortedAdverts = computed(() => {
                     getLastSeenStatus(advert.last_seen).color === 'text-primary'
                       ? 'bg-primary'
                       : '',
-                    getLastSeenStatus(advert.last_seen).color === 'text-secondary'
+                    getLastSeenStatus(advert.last_seen).color === 'text-accent-amber'
                       ? 'bg-secondary'
                       : '',
                     getLastSeenStatus(advert.last_seen).color === 'text-accent-red'

@@ -295,8 +295,8 @@ onBeforeUnmount(() => {
           <!-- Failed state: error + dismiss -->
           <template v-else-if="hasFailed">
             <div class="flex items-start gap-3 mb-4">
-              <div class="shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="shrink-0 w-10 h-10 rounded-full bg-accent-red/15 flex items-center justify-center">
+                <svg class="w-5 h-5 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
@@ -318,8 +318,8 @@ onBeforeUnmount(() => {
           <!-- Idle state: warning + buttons -->
           <template v-else>
             <div class="flex items-start gap-3 mb-4">
-              <div class="shrink-0 w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                <svg class="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="shrink-0 w-10 h-10 rounded-full bg-accent-amber/15 flex items-center justify-center">
+                <svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
@@ -339,14 +339,14 @@ onBeforeUnmount(() => {
               class="mb-4 rounded-lg border px-3 py-3"
               :class="validationPassed
                 ? (validationWarnings.length
-                  ? 'border-amber-300/80 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700/60'
-                  : 'border-emerald-300/80 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-700/60')
-                : 'border-red-300/80 bg-red-50 dark:bg-red-900/20 dark:border-red-700/60'"
+                  ? 'border-accent-amber/50 bg-accent-amber/10'
+                  : 'border-accent-green/50 bg-accent-green/10')
+                : 'border-accent-red/50 bg-accent-red/10'"
             >
               <div class="flex items-start gap-2">
                 <svg
                   v-if="validationPassed && !validationWarnings.length"
-                  class="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5"
+                  class="w-5 h-5 text-accent-green mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -355,7 +355,7 @@ onBeforeUnmount(() => {
                 </svg>
                 <svg
                   v-else-if="validationPassed && validationWarnings.length"
-                  class="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5"
+                  class="w-5 h-5 text-accent-amber mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
                 </svg>
                 <svg
                   v-else
-                  class="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5"
+                  class="w-5 h-5 text-accent-red mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -388,32 +388,32 @@ onBeforeUnmount(() => {
 
               <div
                 v-if="!validationPassed && validationErrors.length"
-                class="mt-3 max-h-44 overflow-auto rounded border border-red-200/70 dark:border-red-800/60 bg-white/60 dark:bg-black/10"
+                class="mt-3 max-h-44 overflow-auto rounded border border-accent-red/30 bg-accent-red/5"
               >
-                <ul class="text-xs divide-y divide-red-100/70 dark:divide-red-800/40">
+                <ul class="text-xs divide-y divide-accent-red/15">
                   <li
                     v-for="(issue, idx) in validationErrors"
                     :key="`err-${idx}-${issue.path}-${issue.message}`"
                     class="px-2 py-2"
                   >
-                    <p class="font-semibold text-red-700 dark:text-red-300">{{ issue.path || 'config' }}</p>
-                    <p class="text-red-700/90 dark:text-red-200">{{ issue.message }}</p>
+                    <p class="font-semibold text-accent-red">{{ issue.path || 'config' }}</p>
+                    <p class="text-accent-red/80">{{ issue.message }}</p>
                   </li>
                 </ul>
               </div>
 
               <div
                 v-if="validationWarnings.length"
-                class="mt-3 max-h-32 overflow-auto rounded border border-amber-200/70 dark:border-amber-800/60 bg-white/60 dark:bg-black/10"
+                class="mt-3 max-h-32 overflow-auto rounded border border-accent-amber/30 bg-accent-amber/5"
               >
-                <ul class="text-xs divide-y divide-amber-100/70 dark:divide-amber-800/40">
+                <ul class="text-xs divide-y divide-accent-amber/15">
                   <li
                     v-for="(issue, idx) in validationWarnings"
                     :key="`warn-${idx}-${issue.path}-${issue.message}`"
                     class="px-2 py-2"
                   >
-                    <p class="font-semibold text-amber-700 dark:text-amber-300">{{ issue.path || 'config' }}</p>
-                    <p class="text-amber-700/90 dark:text-amber-200">{{ issue.message }}</p>
+                    <p class="font-semibold text-accent-amber">{{ issue.path || 'config' }}</p>
+                    <p class="text-accent-amber/80">{{ issue.message }}</p>
                   </li>
                 </ul>
               </div>

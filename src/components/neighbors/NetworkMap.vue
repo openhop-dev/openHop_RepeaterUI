@@ -100,7 +100,7 @@ const MAP_COLORS = {
   floodLine: 'var(--color-accent-cyan)',
   transportFloodLine: 'var(--color-accent-red)',
   cluster: 'var(--color-primary)',
-  popupText: 'var(--color-text-secondary)',
+  popupText: 'var(--color-text-accent-amber)',
   popupSubtle: 'var(--color-text-muted)',
   popupHeading: 'var(--color-text-primary)',
 };
@@ -995,7 +995,7 @@ onUnmounted(() => {
 .legend-subtitle {
   font-weight: 600;
   margin-bottom: 6px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-accent-amber);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;

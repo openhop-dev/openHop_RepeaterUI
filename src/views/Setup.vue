@@ -283,7 +283,7 @@ const stepTitles = [
               :class="[
                 'w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all',
                 step === setupStore.currentStep
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary/20 border border-primary/50 text-primary'
                   : step < setupStore.currentStep
                     ? 'bg-primary/30 text-content-secondary dark:text-content-primary/70'
                     : 'bg-background-mute dark:bg-stroke/10 text-content-muted dark:text-content-muted',
@@ -489,8 +489,8 @@ const stepTitles = [
                     :class="[
                       'w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-all',
                       setupStore.selectedHardware
-                        ? 'bg-primary text-white'
-                        : 'bg-primary text-white',
+                        ? 'bg-primary/20 border border-primary/50 text-primary'
+                        : 'bg-primary/20 border border-primary/50 text-primary',
                     ]"
                   >
                     <svg v-if="setupStore.selectedHardware" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -546,7 +546,7 @@ const stepTitles = [
                 >
                   <!-- Step divider -->
                   <div class="flex items-center gap-3 mb-4">
-                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-primary/20 border border-primary/50 text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0">
                       2
                     </div>
                     <h3 class="font-semibold text-content-primary dark:text-content-primary">
@@ -613,7 +613,7 @@ const stepTitles = [
 
                           <p
                             v-if="serialDevicesError"
-                            class="text-xs text-red-600 dark:text-red-400"
+                            class="text-xs text-accent-red"
                           >
                             {{ serialDevicesError }}
                           </p>
@@ -633,7 +633,7 @@ const stepTitles = [
                     <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
                       <div>
                         <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
-                          Modem Hostname or IP Address <span class="text-red-500">*</span>
+                          Modem Hostname or IP Address <span class="text-accent-red">*</span>
                         </label>
                         <input
                           v-model="setupStore.tcpHost"
@@ -940,12 +940,12 @@ const stepTitles = [
                   setupStore.confirmPassword &&
                   setupStore.adminPassword !== setupStore.confirmPassword
                 "
-                class="text-red-600 dark:text-red-400 text-sm"
+                class="text-accent-red text-sm"
               >
                 Passwords do not match
               </div>
               <div
-                class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200"
+                class="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3 text-sm text-accent-amber"
               >
                 <strong>Important:</strong> Remember this password - you'll need it to access the
                 dashboard.
@@ -957,7 +957,7 @@ const stepTitles = [
         <!-- Error Message -->
         <div
           v-if="setupStore.error"
-          class="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-600 dark:text-red-200"
+          class="mb-6 bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-accent-red"
         >
           {{ setupStore.error }}
         </div>
@@ -980,7 +980,7 @@ const stepTitles = [
             class="px-8 py-3 rounded-[12px] font-semibold transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             :class="
               setupStore.canGoNext && !setupStore.isSubmitting
-                ? 'bg-primary hover:bg-primary/90 text-white border border-primary hover:border-primary/80'
+                ? 'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50'
                 : 'bg-background-mute dark:bg-stroke/5 text-content-muted dark:text-content-muted border border-stroke-subtle dark:border-stroke/10'
             "
           >
@@ -1030,10 +1030,10 @@ const stepTitles = [
         >
           <div class="flex justify-center mb-6">
             <div
-              class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center"
+              class="w-16 h-16 rounded-full bg-accent-red/15 flex items-center justify-center"
             >
               <svg
-                class="w-8 h-8 text-red-600 dark:text-red-400"
+                class="w-8 h-8 text-accent-red"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

@@ -322,17 +322,17 @@ defineExpose({ requestLeave, isEditing });
     <!-- Success Message -->
     <div
       v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/10 border border-green-300 dark:border-green-500/30 rounded-lg p-3"
+      class="bg-accent-green/10 border border-accent-green/30 rounded-lg p-3"
     >
-      <p class="text-green-700 dark:text-green-400 text-sm">{{ successMessage }}</p>
+      <p class="text-accent-green text-sm">{{ successMessage }}</p>
     </div>
 
     <!-- Error Message -->
     <div
       v-if="error"
-      class="bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/30 rounded-lg p-3"
+      class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3"
     >
-      <p class="text-red-700 dark:text-red-400 text-sm">{{ error }}</p>
+      <p class="text-accent-red text-sm">{{ error }}</p>
     </div>
 
     <!-- General Settings -->
@@ -554,7 +554,7 @@ defineExpose({ requestLeave, isEditing });
               :disabled="keygenGenerating"
               class="cfg-input py-2 placeholder-gray-400 dark:placeholder-white/40 font-mono uppercase disabled:opacity-50"
             />
-            <p v-if="keygenPrefix && !isValidPrefix" class="text-red-500 text-xs mt-1">
+            <p v-if="keygenPrefix && !isValidPrefix" class="text-accent-red text-xs mt-1">
               Enter 1-{{ maxPrefixLength }} valid hex characters (0-9, A-F)
             </p>
             <p
@@ -590,12 +590,12 @@ defineExpose({ requestLeave, isEditing });
             </button>
             <div
               v-if="keygenAdvanced"
-              class="mt-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+              class="mt-2 bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3"
             >
-              <p class="text-amber-600 dark:text-amber-400 text-xs font-medium">
+              <p class="text-accent-amber text-xs font-medium">
                 Extended prefix mode (up to 8 characters)
               </p>
-              <p class="text-amber-600 dark:text-amber-500 text-xs mt-1">
+              <p class="text-accent-amber text-xs mt-1">
                 Prefixes longer than 4 characters require exponentially more attempts and can take a
                 very long time or may not complete at all. The request may time out.
               </p>
@@ -605,10 +605,10 @@ defineExpose({ requestLeave, isEditing });
           <!-- Generating Progress -->
           <div
             v-if="keygenGenerating"
-            class="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3"
+            class="flex items-center gap-3 bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg p-3"
           >
             <svg
-              class="animate-spin h-5 w-5 text-blue-500 flex-shrink-0"
+              class="animate-spin h-5 w-5 text-accent-cyan flex-shrink-0"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
@@ -628,26 +628,26 @@ defineExpose({ requestLeave, isEditing });
               />
             </svg>
             <div>
-              <p class="text-blue-700 dark:text-blue-400 text-xs font-medium">
+              <p class="text-accent-cyan text-xs font-medium">
                 Searching for key with prefix "{{ keygenPrefix.toUpperCase() }}"...
               </p>
-              <p class="text-blue-600 dark:text-blue-500 text-xs mt-0.5">
+              <p class="text-accent-cyan text-xs mt-0.5">
                 Elapsed: {{ keygenElapsed }}s
               </p>
             </div>
           </div>
 
           <!-- Error -->
-          <div v-if="keygenError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <p class="text-red-600 dark:text-red-400 text-sm">{{ keygenError }}</p>
+          <div v-if="keygenError" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3">
+            <p class="text-accent-red text-sm">{{ keygenError }}</p>
           </div>
 
           <!-- Result -->
           <div
             v-if="keygenResult"
-            class="bg-green-500/10 border border-green-600/40 dark:border-green-500/30 rounded-lg p-3 space-y-2"
+            class="bg-accent-green/10 border border-accent-green/30 rounded-lg p-3 space-y-2"
           >
-            <p class="text-green-600 dark:text-green-400 text-sm font-medium">
+            <p class="text-accent-green text-sm font-medium">
               Key found in {{ keygenResult.attempts.toLocaleString() }} attempts
             </p>
             <div>
@@ -661,12 +661,12 @@ defineExpose({ requestLeave, isEditing });
           <!-- Apply Confirmation -->
           <div
             v-if="showApplyConfirm && keygenResult"
-            class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+            class="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-3"
           >
-            <p class="text-amber-600 dark:text-amber-400 text-sm font-medium">
+            <p class="text-accent-amber text-sm font-medium">
               Warning: This will replace your current identity key.
             </p>
-            <p class="text-amber-600 dark:text-amber-500 text-xs mt-1">
+            <p class="text-accent-amber text-xs mt-1">
               Your node address and public key will change. Other nodes will need to re-discover
               you. This cannot be undone unless you have a backup.
             </p>
@@ -674,14 +674,14 @@ defineExpose({ requestLeave, isEditing });
               <button
                 @click="applyGeneratedKey"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs transition-colors disabled:opacity-50"
+                class="btn-danger-xs"
               >
                 {{ keygenApplying ? 'Applying...' : 'Confirm Replace Key' }}
               </button>
               <button
                 @click="showApplyConfirm = false"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 text-xs transition-colors"
+                class="btn-secondary text-xs px-3 py-1.5"
               >
                 Cancel
               </button>
@@ -718,7 +718,7 @@ defineExpose({ requestLeave, isEditing });
               <button
                 v-if="!showApplyConfirm"
                 @click="showApplyConfirm = true"
-                class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-600 dark:text-red-400 rounded-lg border border-red-500/50 text-sm transition-colors"
+                class="btn-danger"
               >
                 Apply Key
               </button>

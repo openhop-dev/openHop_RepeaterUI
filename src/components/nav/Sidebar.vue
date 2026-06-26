@@ -203,7 +203,7 @@ const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
     case 'quiet':    return 'bg-primary/20 text-primary border-primary/50';
     case 'normal':   return 'bg-primary/20 text-primary border-primary/50';
-    case 'busy':     return 'bg-secondary/20 text-secondary border-secondary/50';
+    case 'busy':     return 'bg-accent-amber/20 text-accent-amber border-accent-amber/50';
     case 'congested': return 'bg-accent-red/20 text-accent-red border-accent-red/50';
     default:         return 'bg-surface-elevated text-content-muted border-stroke-subtle';
   }
@@ -318,7 +318,7 @@ const currentTime = computed(() => {
               <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted dark:text-content-muted">
                 <span class="text-primary">OK: {{ advertsAllowed }}</span>
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
-                <span v-if="activePenalties > 0" class="text-secondary">Pen: {{ activePenalties }}</span>
+                <span v-if="activePenalties > 0" class="text-accent-amber">Pen: {{ activePenalties }}</span>
               </div>
               <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
                 <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted mb-1">
@@ -349,7 +349,7 @@ const currentTime = computed(() => {
                     ? opt.id === 'forward'
                       ? 'bg-mode-segment-forward text-primary'
                       : opt.id === 'monitor'
-                        ? 'bg-secondary/20 text-secondary'
+                        ? 'bg-accent-amber/20 text-accent-amber'
                         : 'bg-mode-segment-no-tx text-accent-red'
                     : 'text-content-primary dark:text-content-primary hover:bg-white/5 dark:hover:bg-white/5',
                 ]"
@@ -438,12 +438,12 @@ const currentTime = computed(() => {
 
       <!-- Version badges -->
       <div class="mb-4">
-        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-blue-500/30 dark:border-blue-400/50 bg-blue-500/10 dark:bg-blue-400/20">
+        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-accent-cyan/30 bg-accent-cyan/10">
           <div class="flex items-center justify-center gap-2">
-            <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <svg class="w-4 h-4 text-accent-cyan flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
-            <span class="text-blue-500 dark:text-blue-400 text-xs font-semibold">Development Build</span>
+            <span class="text-accent-cyan text-xs font-semibold">Development Build</span>
           </div>
         </div>
 
@@ -520,8 +520,8 @@ const currentTime = computed(() => {
         <a href="https://github.com/pyMC-dev/pyMC_Repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
           <GitHubIcon class="w-5 h-5 text-white group-hover:text-primary transition-colors" />
         </a>
-        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-yellow-50 dark:hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
-          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-yellow-500 transition-colors" />
+        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-accent-amber/10 hover:border-accent-amber/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
+          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-accent-amber transition-colors" />
         </a>
       </div>
     </div>

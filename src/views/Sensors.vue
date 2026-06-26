@@ -136,7 +136,7 @@ useManagedPolling(
         </div>
         <span
           class="rounded-full px-3 py-1 text-xs font-semibold"
-          :class="reading.ok ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300'"
+          :class="reading.ok ? 'bg-accent-green/15 text-accent-green' : 'bg-accent-red/15 text-accent-red'"
         >
           {{ reading.ok ? 'OK' : 'Error' }}
         </span>
@@ -149,7 +149,7 @@ useManagedPolling(
         </div>
         <div v-if="reading.error" class="text-sm">
           <span class="text-content-muted">Error:</span>
-          <span class="ml-2 text-red-600 dark:text-red-300">{{ reading.error }}</span>
+          <span class="ml-2 text-accent-red">{{ reading.error }}</span>
         </div>
       </div>
 

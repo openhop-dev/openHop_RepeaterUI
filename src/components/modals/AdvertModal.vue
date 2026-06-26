@@ -254,7 +254,7 @@ const isNetworkTimeoutError = (error: string | null) => {
             <p v-else-if="isSuccess" class="text-accent-green text-lg font-medium">
               Advertisement sent successfully!
             </p>
-            <p v-else-if="error && isNetworkTimeoutError(error)" class="text-secondary text-lg">
+            <p v-else-if="error && isNetworkTimeoutError(error)" class="text-accent-amber text-lg">
               Advertisement likely sent
             </p>
             <p v-else-if="error" class="text-accent-red text-lg">Failed to send advertisement</p>
@@ -264,7 +264,7 @@ const isNetworkTimeoutError = (error: string | null) => {
 
             <!-- Error message -->
             <div v-if="error" class="mt-3">
-              <p v-if="isNetworkTimeoutError(error)" class="text-secondary text-sm">
+              <p v-if="isNetworkTimeoutError(error)" class="text-accent-amber text-sm">
                 Network timeout occurred, but the advertisement may have been successfully
                 transmitted to nearby nodes.
               </p>

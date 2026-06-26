@@ -178,7 +178,7 @@ const radioWarning = computed(() => {
 // Utility functions
 const getContactTypeColor = (contactType: string) => {
   const colors = {
-    'Chat Node': 'text-blue-600 dark:text-blue-400',
+    'Chat Node': 'text-accent-cyan',
     Repeater: 'text-accent-green',
     'Room Server': 'text-accent-purple',
   };
@@ -461,7 +461,7 @@ const toggleMobileSidebar = () => {
             <!-- Rate limit warning in dropdown -->
             <div
               v-if="updateInfo.rateLimitUntil && !updateInfo.isChecking"
-              class="flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 border-l-2 border-l-amber-500 rounded-lg p-3 text-xs text-amber-800 dark:text-amber-300"
+              class="flex items-start gap-2 bg-accent-amber/10 border border-accent-amber/30 border-l-2 border-l-accent-amber rounded-lg p-3 text-xs text-accent-amber"
             >
               <svg
                 class="w-3.5 h-3.5 shrink-0 mt-0.5"
@@ -736,12 +736,12 @@ const toggleMobileSidebar = () => {
 
     <div
       v-if="radioWarning"
-      class="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-amber-800 dark:text-amber-200"
+      class="mt-4 rounded-xl border border-accent-amber/40 bg-accent-amber/10 px-4 py-3 text-accent-amber"
       role="alert"
     >
       <div class="flex items-start gap-3">
         <svg
-          class="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-300 shrink-0"
+          class="w-5 h-5 mt-0.5 text-accent-amber shrink-0"
           viewBox="0 0 20 20"
           fill="currentColor"
           aria-hidden="true"

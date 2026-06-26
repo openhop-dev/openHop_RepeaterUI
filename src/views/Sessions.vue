@@ -107,7 +107,7 @@ function identityTypeBadgeClass(type: string | undefined): string {
     return 'bg-primary/20 text-primary';
   if (type === 'companion')
     return 'bg-accent-purple/20 text-accent-purple';
-  return 'bg-secondary/20 text-secondary';
+  return 'bg-accent-amber/20 text-accent-amber';
 }
 
 function formatOptionalAcl(value: unknown): string {
@@ -158,7 +158,7 @@ function formatOptionalAcl(value: unknown): string {
       </div>
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Guest Clients</div>
-        <div class="text-2xl font-bold text-secondary">
+        <div class="text-2xl font-bold text-accent-amber">
           {{ aclStats.guest_clients }}
         </div>
       </div>
@@ -499,7 +499,7 @@ function formatOptionalAcl(value: unknown): string {
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
                           ? 'bg-accent-green/20 text-accent-green'
-                          : 'bg-secondary/20 text-secondary',
+                          : 'bg-accent-amber/20 text-accent-amber',
                       ]"
                     >
                       {{ client.permissions }}
@@ -563,7 +563,7 @@ function formatOptionalAcl(value: unknown): string {
                         'px-2 py-1 text-xs font-medium rounded',
                         client.permissions === 'admin'
                           ? 'bg-accent-green/20 text-accent-green'
-                          : 'bg-secondary/20 text-secondary',
+                          : 'bg-accent-amber/20 text-accent-amber',
                       ]"
                     >
                       {{ client.permissions }}

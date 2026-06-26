@@ -118,7 +118,7 @@ const cssVar = (name: string, fallback: string): string => {
 const getThemeColors = () => {
   return {
     gridColor: cssVar('--color-border-subtle', 'lightgray'),
-    tickColor: cssVar('--color-text-secondary', 'gray'),
+    tickColor: cssVar('--color-text-accent-amber', 'gray'),
     legendColor: cssVar('--color-text-primary', 'white'),
     titleColor: cssVar('--color-text-primary', 'white'),
     tooltipBg: cssVar('--color-surface-elevated', 'black'),

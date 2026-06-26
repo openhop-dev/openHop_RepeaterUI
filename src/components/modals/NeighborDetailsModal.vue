@@ -67,10 +67,10 @@ const formatContactType = (contactType: string) => {
 const getContactTypeColor = (contactType: string) => {
   const colors: Record<string, string> = {
     Unknown: 'text-gray-600 dark:text-gray-400',
-    'Chat Node': 'text-blue-600 dark:text-blue-400',
-    Repeater: 'text-emerald-600 dark:text-emerald-400',
+    'Chat Node': 'text-accent-cyan',
+    Repeater: 'text-accent-green',
     'Room Server': 'text-purple-600 dark:text-purple-400',
-    'Hybrid Node': 'text-amber-600 dark:text-amber-400',
+    'Hybrid Node': 'text-accent-amber',
   };
   return colors[contactType] || 'text-gray-600 dark:text-gray-400';
 };
@@ -343,8 +343,8 @@ const signalQuality = computed(() => {
                       class="font-medium"
                       :class="
                         neighbor.zero_hop
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-gray-600 dark:text-gray-400'
+                          ? 'text-accent-green'
+                          : 'text-content-muted'
                       "
                     >
                       {{ neighbor.zero_hop ? 'Yes' : 'No' }}

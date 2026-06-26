@@ -176,7 +176,7 @@ const handleClose = () => {
               >
                 <svg
                   v-if="child.name.startsWith('#')"
-                  class="w-3 h-3 text-secondary"
+                  class="w-3 h-3 text-accent-amber"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -290,7 +290,7 @@ const handleClose = () => {
 
             <div class="flex items-center gap-2 flex-1">
               <svg
-                class="w-4 h-4 text-secondary"
+                class="w-4 h-4 text-accent-amber"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

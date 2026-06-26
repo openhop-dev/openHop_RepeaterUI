@@ -167,10 +167,10 @@ onMounted(() => {
     </div>
 
     <!-- Info Box -->
-    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 sm:p-4">
+    <div class="bg-accent-cyan/10 border border-accent-cyan/30 rounded-lg p-3 sm:p-4">
       <div class="flex gap-2 sm:gap-3">
         <svg
-          class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
+          class="w-4 h-4 sm:w-5 sm:h-5 text-accent-cyan flex-shrink-0 mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -194,8 +194,8 @@ onMounted(() => {
     </div>
 
     <!-- Error Message -->
-    <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-      <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+    <div v-if="error" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4">
+      <div class="flex items-center gap-2 text-accent-red">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -257,7 +257,7 @@ onMounted(() => {
           <button
             @click="openRevokeConfirm(token.id, token.name)"
             :disabled="isLoading"
-            class="w-full sm:w-auto px-3 py-1.5 bg-red-100 dark:bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg border border-red-500/50 transition-colors disabled:opacity-50 text-sm"
+            class="btn-danger-xs"
           >
             Revoke
           </button>
@@ -357,10 +357,10 @@ onMounted(() => {
         </h3>
 
         <div class="space-y-4">
-          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div class="bg-accent-amber/10 border border-accent-amber/30 rounded-lg p-4">
             <div class="flex gap-3">
               <svg
-                class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+                class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -372,7 +372,7 @@ onMounted(() => {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <div class="text-sm text-secondary">
+              <div class="text-sm text-accent-amber">
                 <strong>Save this token now!</strong> For security reasons, it will not be shown
                 again.
               </div>

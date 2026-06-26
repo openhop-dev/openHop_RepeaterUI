@@ -23,7 +23,7 @@ const readCssToken = (token: string, fallback: string) => {
 
 const getTerminalTheme = (): ITheme => ({
   background: readCssToken('--color-surface', 'black'),
-  foreground: readCssToken('--color-text-secondary', 'gainsboro'),
+  foreground: readCssToken('--color-text-accent-amber', 'gainsboro'),
   cursor: readCssToken('--color-accent-cyan', 'deepskyblue'),
   cursorAccent: readCssToken('--color-surface', 'black'),
   selectionBackground: readCssToken('--color-badge-cyan-bg', 'lightblue'),

@@ -577,10 +577,10 @@ function reloadPage() {
           <!-- GitHub rate limit warning -->
           <div
             v-if="props.rateLimitUntil"
-            class="flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-3"
+            class="flex items-start gap-3 bg-accent-amber/10 border border-accent-amber/30 rounded-xl p-3"
           >
             <svg
-              class="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"
+              class="w-4 h-4 shrink-0 mt-0.5 text-accent-amber"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -592,7 +592,7 @@ function reloadPage() {
                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
               />
             </svg>
-            <div class="text-xs text-amber-800 dark:text-amber-300">
+            <div class="text-xs text-accent-amber">
               <p class="font-semibold mb-0.5">GitHub API rate limit reached</p>
               <p>
                 Version checks are paused until
@@ -756,9 +756,9 @@ function reloadPage() {
               </span>
               <span
                 v-else-if="installState === 'restarting'"
-                class="flex items-center gap-1 text-xs text-yellow-500"
+                class="flex items-center gap-1 text-xs text-accent-amber"
               >
-                <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                <span class="inline-block w-2 h-2 rounded-full status-dot-amber animate-pulse"></span>
                 {{ restartPhase === 'going-down' ? 'Stopping service…' : 'Waiting for service…' }}
               </span>
               <span
@@ -806,7 +806,7 @@ function reloadPage() {
               </div>
               <div
                 v-else-if="installState === 'restarting'"
-                class="flex items-center gap-2 mt-2 text-yellow-400"
+                class="flex items-center gap-2 mt-2 text-accent-amber"
               >
                 <Spinner size="xs" class="inline-block" />
                 {{
@@ -840,7 +840,7 @@ function reloadPage() {
           </div>
           <div v-else-if="installState === 'restarting' && logLines.length === 0">
             <div
-              class="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3 text-sm text-yellow-800 dark:text-yellow-400"
+              class="flex items-center gap-3 bg-accent-amber/10 border border-accent-amber/30 rounded-xl p-3 text-sm text-accent-amber"
             >
               <Spinner size="sm" class="shrink-0" />
               <div>
@@ -968,7 +968,7 @@ function reloadPage() {
                 : installState === 'error' || installState === 'verify-failed'
                   ? 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border border-accent-red/50'
                   : installState === 'restarting'
-                    ? 'bg-yellow-500/20 text-yellow-600 cursor-default'
+                    ? 'bg-accent-amber/20 text-accent-amber cursor-default'
                     : 'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50'
             "
           >

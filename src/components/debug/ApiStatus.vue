@@ -141,7 +141,7 @@ onMounted(async () => {
                 ? 'text-accent-red'
                 : packetStore.hasPacketStats || packetStore.hasRecentPackets
                   ? 'text-accent-green'
-                  : 'text-secondary'
+                  : 'text-accent-amber'
             "
             class="text-sm"
           >
