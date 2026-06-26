@@ -592,7 +592,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
       <!-- Error State -->
       <div v-else-if="error" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div class="text-red-600 dark:text-red-400 mb-2">Failed to load room servers</div>
+          <div class="text-accent-red mb-2">Failed to load room servers</div>
           <div class="text-content-secondary dark:text-content-muted text-sm mb-4">{{ error }}</div>
           <button
             @click="fetchIdentities"
@@ -713,7 +713,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 :class="[
                   'group px-4 py-2 rounded-[10px] text-xs font-medium transition-all duration-200 flex items-center gap-2',
                   identity.registered
-                    ? 'bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/30 hover:scale-105 hover:shadow-lg hover:shadow-secondary/20'
+                    ? 'bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber border border-accent-amber/30 hover:scale-105 hover:shadow-lg hover:shadow-secondary/20'
                     : 'bg-background-mute dark:bg-white/5 text-content-muted dark:text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
                 ]"
                 :title="
@@ -850,7 +850,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
           <!-- Name -->
           <div>
-            <label class="modal-field-label">Name <span class="text-red-500">*</span></label>
+            <label class="modal-field-label">Name <span class="text-accent-red">*</span></label>
             <input
               v-model="newIdentity.name"
               type="text"
@@ -1020,7 +1020,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
           <!-- Name -->
           <div>
-            <label class="modal-field-label">Name <span class="text-red-500">*</span></label>
+            <label class="modal-field-label">Name <span class="text-accent-red">*</span></label>
             <input
               v-model="editingIdentity.name"
               type="text"
@@ -1202,10 +1202,10 @@ async function removeClient(publicKey: string, identityHash?: string) {
           <div class="flex items-center gap-4">
             <!-- Message Icon with glow -->
             <div class="relative">
-              <div class="absolute inset-0 bg-secondary/40 blur-xl rounded-full"></div>
-              <div class="relative bg-secondary/20 p-3 rounded-[12px] border border-secondary/30">
+              <div class="absolute inset-0 bg-accent-amber/40 blur-xl rounded-full"></div>
+              <div class="relative bg-accent-amber/20 p-3 rounded-[12px] border border-accent-amber/30">
                 <svg
-                  class="w-6 h-6 text-secondary"
+                  class="w-6 h-6 text-accent-amber"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1297,7 +1297,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <!-- Error State -->
         <div v-else-if="messagesError" class="flex items-center justify-center py-12">
           <div class="text-center">
-            <div class="text-red-600 dark:text-red-400 mb-2">Failed to load messages</div>
+            <div class="text-accent-red mb-2">Failed to load messages</div>
             <div class="text-content-secondary dark:text-content-muted text-sm mb-4">
               {{ messagesError }}
             </div>
@@ -1315,7 +1315,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           <div
             v-for="(message, index) in roomMessages"
             :key="message.id || index"
-            class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[12px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-secondary/30 transition-all duration-300 hover:shadow-lg hover:shadow-secondary/10"
+            class="group relative overflow-hidden glass-card backdrop-blur-xl rounded-[12px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-accent-amber/30 dark:hover:border-accent-amber/30 transition-all duration-300 hover:shadow-lg hover:shadow-secondary/10"
           >
             <!-- Subtle gradient on hover -->
             <div
@@ -1447,7 +1447,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <div v-else class="flex items-center justify-center h-full">
           <div class="text-center py-12">
             <div class="relative mb-6">
-              <div class="absolute inset-0 bg-secondary/20 blur-3xl rounded-full"></div>
+              <div class="absolute inset-0 bg-accent-amber/20 blur-3xl rounded-full"></div>
               <div
                 class="relative bg-gradient-to-br from-secondary/20 to-primary/20 p-6 rounded-[20px] inline-block border border-stroke-subtle dark:border-white/10"
               >
@@ -1602,7 +1602,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                     'px-2 py-0.5 text-xs font-medium rounded',
                     client.permissions === 'admin'
                       ? 'bg-accent-green/20 text-accent-green'
-                      : 'bg-secondary/20 text-secondary',
+                      : 'bg-accent-amber/20 text-accent-amber',
                   ]"
                 >
                   {{ client.permissions }}

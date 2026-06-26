@@ -538,7 +538,7 @@ const handleBackdropClick = (event: MouseEvent) => {
 
                       <div class="md:col-span-2 md:text-right">
                         <button
-                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
                           @click="openPacketDetails(packet)"
                         >
                           Open

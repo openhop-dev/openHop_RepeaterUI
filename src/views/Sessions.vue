@@ -265,7 +265,7 @@ function formatOptionalAcl(value: unknown): string {
             <div
               v-for="identity in identityList"
               :key="identity.hash"
-              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 transition-colors"
+              class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 transition-colors"
             >
               <div class="flex items-start justify-between">
                 <div class="flex-1 min-w-0">

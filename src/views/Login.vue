@@ -164,7 +164,7 @@
             <a
               href="https://github.com/rightup"
               target="_blank"
-              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 dark:hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
               title="GitHub"
             >
               <GitHubIcon
@@ -174,7 +174,7 @@
             <a
               href="https://buymeacoffee.com/rightup"
               target="_blank"
-              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
+              class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-secondary/10 hover:border-secondary/50 dark:hover:border-secondary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm"
               title="Buy Me a Coffee"
             >
               <CoffeeIcon

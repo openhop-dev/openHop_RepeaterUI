@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Type</label>
           <select
             v-model="selectedType"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
           >
             <option
               v-for="type in packetTypes"
@@ -493,7 +493,7 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Route</label>
           <select
             v-model="selectedRoute"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
           >
             <option
               v-for="route in routeTypes"
@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
             class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 min-w-[120px]"
             :class="{
               'border-primary bg-primary/10 text-primary': showOnlyNewPackets,
-              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/5':
+              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary dark:hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/5':
                 !showOnlyNewPackets,
             }"
           >
@@ -531,7 +531,7 @@ onBeforeUnmount(() => {
           <label class="text-transparent text-xs mb-1">.</label>
           <button
             @click="resetFilters"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
             :disabled="selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets"
             :class="{
               'opacity-50 cursor-not-allowed hover:border-stroke-subtle dark:hover:border-stroke hover:text-content-secondary dark:hover:text-content-muted':
@@ -1010,7 +1010,7 @@ onBeforeUnmount(() => {
           :class="{
             'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
               currentPage <= 1,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
               currentPage > 1,
           }"
         >
@@ -1024,7 +1024,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage > 3"
             @click="currentPage = 1"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
           >
             1
           </button>
@@ -1047,7 +1047,7 @@ onBeforeUnmount(() => {
             class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 page-number"
             :class="{
               'border-primary bg-primary/10 text-primary': currentPage === page,
-              'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+              'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
                 currentPage !== page,
             }"
           >
@@ -1065,7 +1065,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage < totalPages - 2"
             @click="currentPage = totalPages"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
           >
             {{ totalPages }}
           </button>
@@ -1079,7 +1079,7 @@ onBeforeUnmount(() => {
           :class="{
             'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
               currentPage >= totalPages,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
               currentPage < totalPages,
           }"
         >
