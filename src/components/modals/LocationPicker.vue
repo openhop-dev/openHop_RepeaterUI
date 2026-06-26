@@ -193,7 +193,7 @@ onUnmounted(() => {
       <div
         class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/10"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h3 class="text-xl font-semibold text-content-primary">
           Select Location
         </h3>
         <button
@@ -250,7 +250,7 @@ onUnmounted(() => {
         <div class="flex gap-3">
           <button
             @click="getCurrentLocation"
-            class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm flex items-center justify-center gap-2"
+            class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -270,19 +270,19 @@ onUnmounted(() => {
           </button>
           <button
             @click="handleClose"
-            class="px-6 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
+            class="px-6 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
           >
             Cancel
           </button>
           <button
             @click="handleSelect"
-            class="px-6 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
+            class="px-6 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
           >
             Select Location
           </button>
         </div>
 
-        <p class="text-content-muted dark:text-content-muted text-xs text-center">
+        <p class="text-content-muted text-xs text-center">
           Click on the map to select a location
         </p>
       </div>

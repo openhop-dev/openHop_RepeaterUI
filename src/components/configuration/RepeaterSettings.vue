@@ -289,7 +289,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure repeater identity, location, and network settings</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -337,7 +337,7 @@ defineExpose({ requestLeave, isEditing });
 
     <!-- General Settings -->
     <div class="cfg-section space-y-3">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary pb-2">General Settings</h3>
+      <h3 class="text-lg font-semibold text-content-primary pb-2">General Settings</h3>
 
       <!-- Node Name -->
       <div
@@ -348,7 +348,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm break-all"
+          class="text-content-primary font-mono text-sm break-all"
         >
           {{ nodeName }}
         </div>
@@ -369,7 +369,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Local Hash</span
         >
-        <span class="text-content-primary dark:text-content-primary font-mono text-xs break-all">{{
+        <span class="text-content-primary font-mono text-xs break-all">{{
           localHash
         }}</span>
       </div>
@@ -384,7 +384,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div class="flex items-center gap-2 min-w-0 sm:justify-end">
           <span
-            class="text-content-primary dark:text-content-primary font-mono text-xs break-all sm:text-right min-w-0"
+            class="text-content-primary font-mono text-xs break-all sm:text-right min-w-0"
             >{{ publicKey }}</span
           >
           <button
@@ -402,7 +402,7 @@ defineExpose({ requestLeave, isEditing });
         class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Mode</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+        <span class="text-content-primary font-mono text-sm">{{
           mode
         }}</span>
       </div>
@@ -416,7 +416,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ pathHashModeDisplay }}
         </div>
@@ -439,7 +439,7 @@ defineExpose({ requestLeave, isEditing });
           >
           <div
             v-if="!isEditing"
-            class="text-content-primary dark:text-content-primary font-mono text-sm sm:ml-4"
+            class="text-content-primary font-mono text-sm sm:ml-4"
           >
             {{ advertInterval }}
           </div>
@@ -451,10 +451,10 @@ defineExpose({ requestLeave, isEditing });
               max="48"
               class="cfg-input w-20"
             />
-            <span class="text-content-muted dark:text-content-muted text-sm">hours</span>
+            <span class="text-content-muted text-sm">hours</span>
           </div>
         </div>
-        <span class="text-content-muted dark:text-content-muted text-xs"
+        <span class="text-content-muted text-xs"
           >How often the repeater sends an advertisement packet (0 = disabled, 3-48 hours)</span
         >
       </div>
@@ -463,7 +463,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Location Settings -->
     <div class="cfg-section space-y-3">
       <div class="pb-2">
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-3">Location Settings</h3>
+        <h3 class="text-lg font-semibold text-content-primary mb-3">Location Settings</h3>
         <button
           v-if="isEditing"
           @click="openMapPicker"
@@ -481,7 +481,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Manual Latitude -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Latitude</span>
-        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
           {{ latitude }}
         </div>
         <input
@@ -498,7 +498,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Manual Longitude -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Longitude</span>
-        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
           {{ longitude }}
         </div>
         <input
@@ -532,10 +532,10 @@ defineExpose({ requestLeave, isEditing });
         <div
           class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] shadow-2xl w-full max-w-md p-6 space-y-4"
         >
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Generate Vanity Identity Key
           </h3>
-          <p class="text-xs text-content-muted dark:text-content-muted">
+          <p class="text-xs text-content-muted">
             Generate a new Ed25519 identity key whose public key starts with your chosen hex prefix
             (0-9, A-F). Longer prefixes take more time to find.
           </p>
@@ -559,7 +559,7 @@ defineExpose({ requestLeave, isEditing });
             </p>
             <p
               v-else-if="difficultyHint"
-              class="text-content-muted dark:text-content-muted text-xs mt-1"
+              class="text-content-muted text-xs mt-1"
             >
               {{ difficultyHint }}
             </p>
@@ -570,7 +570,7 @@ defineExpose({ requestLeave, isEditing });
             <button
               @click="keygenAdvanced = !keygenAdvanced"
               :disabled="keygenGenerating"
-              class="text-xs text-content-muted dark:text-content-muted hover:text-content-secondary dark:hover:text-content-secondary transition-colors disabled:opacity-50 flex items-center gap-1"
+              class="text-xs text-content-muted hover:text-content-secondary dark:hover:text-content-secondary transition-colors disabled:opacity-50 flex items-center gap-1"
             >
               <svg
                 class="w-3 h-3 transition-transform"
@@ -651,8 +651,8 @@ defineExpose({ requestLeave, isEditing });
               Key found in {{ keygenResult.attempts.toLocaleString() }} attempts
             </p>
             <div>
-              <span class="text-xs text-content-muted dark:text-content-muted">Public Key:</span>
-              <p class="font-mono text-xs break-all text-content-primary dark:text-content-primary">
+              <span class="text-xs text-content-muted">Public Key:</span>
+              <p class="font-mono text-xs break-all text-content-primary">
                 {{ keygenResult.public_hex }}
               </p>
             </div>
@@ -681,7 +681,7 @@ defineExpose({ requestLeave, isEditing });
               <button
                 @click="showApplyConfirm = false"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 text-xs transition-colors"
+                class="px-3 py-1.5 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 text-xs transition-colors"
               >
                 Cancel
               </button>
@@ -693,7 +693,7 @@ defineExpose({ requestLeave, isEditing });
             <button
               @click="showKeygenDialog = false"
               :disabled="keygenGenerating"
-              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors"
+              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors"
             >
               Close
             </button>

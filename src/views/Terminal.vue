@@ -814,7 +814,7 @@ const handleMobileBackspace = () => {
       <div class="flex items-center justify-between">
         <div>
           <h1
-            class="text-content-primary dark:text-content-primary text-lg md:text-xl font-semibold"
+            class="text-content-primary text-lg md:text-xl font-semibold"
           >
             Terminal
           </h1>
@@ -944,7 +944,7 @@ const handleMobileBackspace = () => {
         />
         <button
           @click="searchPrev"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary transition-colors"
           title="Previous (Shift+Enter)"
         >
           ↑
@@ -958,7 +958,7 @@ const handleMobileBackspace = () => {
         </button>
         <button
           @click="closeSearch"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary transition-colors"
         >
           ✕
         </button>

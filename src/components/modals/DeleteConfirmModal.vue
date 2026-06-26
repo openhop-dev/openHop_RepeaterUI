@@ -122,7 +122,7 @@ const handleClose = () => {
           />
         </svg>
         <div>
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Confirm Deletion
           </h3>
           <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -227,7 +227,7 @@ const handleClose = () => {
 
       <!-- Move Option (only show if there are children and available targets) -->
       <div v-if="childrenToAffect.length > 0 && moveTargets.length > 0" class="mb-6">
-        <h4 class="text-content-primary dark:text-content-primary font-medium text-sm mb-3">
+        <h4 class="text-content-primary font-medium text-sm mb-3">
           Move children to another region:
         </h4>
 
@@ -235,7 +235,7 @@ const handleClose = () => {
         <div class="mb-3">
           <div class="relative">
             <svg
-              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-content-muted dark:text-content-muted"
+              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-content-muted"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -302,7 +302,7 @@ const handleClose = () => {
                   d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
                 />
               </svg>
-              <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+              <span class="text-content-primary font-mono text-sm">{{
                 target.name
               }}</span>
 
@@ -322,7 +322,7 @@ const handleClose = () => {
       <div class="flex gap-3">
         <button
           @click="handleClose"
-          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary rounded-lg transition-colors"
         >
           Cancel
         </button>

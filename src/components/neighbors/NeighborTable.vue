@@ -265,7 +265,7 @@ const sortedAdverts = computed(() => {
           class="w-3 h-3 rounded-full border border-stroke-subtle"
           :style="{ backgroundColor: color }"
         ></div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-semibold">
+        <h3 class="text-content-primary text-lg font-semibold">
           {{ contactType }}
         </h3>
         <span
@@ -274,7 +274,7 @@ const sortedAdverts = computed(() => {
           {{ adverts.length }}
           <span
             v-if="originalCount > 0 && adverts.length < originalCount"
-            class="text-content-muted dark:text-content-muted"
+            class="text-content-muted"
           >
             / {{ originalCount }}
           </span>
@@ -587,17 +587,17 @@ const sortedAdverts = computed(() => {
               />
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               {{ advert.node_name || 'Unknown' }}
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm font-mono`"
+              :class="`${getCellPadding()} text-content-primary text-sm font-mono`"
             >
               <button
                 @click.stop="copyPubkey(advert.pubkey)"
                 :class="[
-                  'text-content-primary dark:text-content-primary hover:text-primary transition-colors cursor-pointer underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60',
+                  'text-content-primary hover:text-primary transition-colors cursor-pointer underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60',
                   copiedPubkey === advert.pubkey
                     ? 'text-primary decoration-primary/60'
                     : '',
@@ -611,7 +611,7 @@ const sortedAdverts = computed(() => {
               </button>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <div
                 v-if="advert.latitude !== null && advert.longitude !== null"
@@ -623,7 +623,7 @@ const sortedAdverts = computed(() => {
                 <div class="flex gap-1">
                   <button
                     @click.stop="copyCoordinates(advert.latitude!, advert.longitude!)"
-                    class="text-content-muted dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors cursor-pointer"
+                    class="text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors cursor-pointer"
                     title="Copy coordinates to clipboard"
                   >
                     <!-- Copy icon -->
@@ -677,12 +677,12 @@ const sortedAdverts = computed(() => {
               <span v-else class="text-content-muted">Unknown</span>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               {{ getDistanceFromBase(advert) }}
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <span
                 :class="[
@@ -696,7 +696,7 @@ const sortedAdverts = computed(() => {
               </span>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <span
                 :class="[
@@ -710,7 +710,7 @@ const sortedAdverts = computed(() => {
               </span>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <div class="flex items-center gap-2">
                 <!-- Signal strength bars -->
@@ -722,12 +722,12 @@ const sortedAdverts = computed(() => {
               </div>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               {{ formatSNR(advert.snr) }}
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <div class="flex items-center gap-2">
                 <!-- Status indicator -->
@@ -755,14 +755,14 @@ const sortedAdverts = computed(() => {
               </div>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm`"
+              :class="`${getCellPadding()} text-content-primary text-sm`"
             >
               <span :title="formatTimestamp(advert.first_seen)" class="cursor-help">
                 {{ getRelativeTime(advert.first_seen) }}
               </span>
             </td>
             <td
-              :class="`${getCellPadding()} text-content-primary dark:text-content-primary text-sm text-center`"
+              :class="`${getCellPadding()} text-content-primary text-sm text-center`"
             >
               {{ advert.advert_count }}
             </td>
@@ -782,7 +782,7 @@ const sortedAdverts = computed(() => {
         <!-- Card Header -->
         <div class="flex items-center justify-between mb-3">
           <div class="flex items-center gap-3">
-            <h4 class="text-content-primary dark:text-content-primary font-medium text-base">
+            <h4 class="text-content-primary font-medium text-base">
               {{ advert.node_name || 'Unknown Node' }}
             </h4>
             <div class="flex items-center gap-2">
@@ -826,7 +826,7 @@ const sortedAdverts = computed(() => {
               <button
                 @click="copyPubkey(advert.pubkey)"
                 :class="[
-                  'text-content-primary dark:text-content-primary hover:text-primary transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60 break-all',
+                  'text-content-primary hover:text-primary transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60 break-all',
                   copiedPubkey === advert.pubkey
                     ? 'text-primary decoration-primary/60'
                     : '',
@@ -887,7 +887,7 @@ const sortedAdverts = computed(() => {
             <div>
               <div class="text-content-muted text-xs mb-1">Distance</div>
               <span
-                class="text-content-primary dark:text-content-primary text-sm block text-right"
+                class="text-content-primary text-sm block text-right"
                 >{{ getDistanceFromBase(advert) }}</span
               >
             </div>
@@ -906,7 +906,7 @@ const sortedAdverts = computed(() => {
               <div class="flex gap-2">
                 <button
                   @click="copyCoordinates(advert.latitude!, advert.longitude!)"
-                  class="text-content-muted dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg"
+                  class="text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg"
                   title="Copy coordinates"
                 >
                   <svg
@@ -961,20 +961,20 @@ const sortedAdverts = computed(() => {
           <div class="grid grid-cols-3 gap-4 pt-3 border-t border-stroke-subtle">
             <div class="text-center">
               <div class="text-content-muted text-xs mb-1">SNR</div>
-              <span class="text-content-primary dark:text-content-primary text-sm font-medium">{{
+              <span class="text-content-primary text-sm font-medium">{{
                 formatSNR(advert.snr)
               }}</span>
             </div>
             <div class="text-center">
               <div class="text-content-muted text-xs mb-1">Adverts</div>
-              <span class="text-content-primary dark:text-content-primary text-sm font-medium">{{
+              <span class="text-content-primary text-sm font-medium">{{
                 advert.advert_count
               }}</span>
             </div>
             <div class="text-center">
               <div class="text-content-muted text-xs mb-1">First Seen</div>
               <span
-                class="text-content-primary dark:text-content-primary text-sm"
+                class="text-content-primary text-sm"
                 :title="formatTimestamp(advert.first_seen)"
               >
                 {{ getRelativeTime(advert.first_seen) }}

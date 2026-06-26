@@ -8,7 +8,7 @@
     <div
       class="modal-card max-w-md shadow-xl"
     >
-      <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-2">
+      <h3 class="text-xl font-semibold text-content-primary mb-2">
         Change Password
       </h3>
       <p class="text-content-secondary dark:text-content-muted text-sm mb-6">
@@ -82,7 +82,7 @@
             type="button"
             @click="skipChange"
             :disabled="loading"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
+            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
           >
             {{ canSkip ? 'Skip for Now' : 'Cancel' }}
           </button>

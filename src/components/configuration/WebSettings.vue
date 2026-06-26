@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Web Options</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Web Options</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure site identification, CORS policy and web frontend selection</p>
       </div>
     </div>
@@ -12,7 +12,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Site Identification
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -24,7 +24,7 @@
         <div>
           <label
             for="site-name"
-            class="block text-sm font-medium text-content-primary dark:text-content-primary mb-2"
+            class="block text-sm font-medium text-content-primary mb-2"
           >
             Site Name
           </label>
@@ -34,7 +34,7 @@
             type="text"
             maxlength="80"
             placeholder="e.g. Base Station Alpha"
-            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary dark:text-content-primary placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-colors"
+            class="w-full px-3 py-2 rounded-lg bg-background-mute dark:bg-background/40 border border-stroke-subtle dark:border-stroke/20 text-sm text-content-primary placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-colors"
             @change="saveSettings"
             :disabled="saving"
           />
@@ -49,7 +49,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             CORS Settings
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -62,7 +62,7 @@
         <!-- CORS Enabled Toggle -->
         <div class="flex items-center justify-between">
           <div>
-            <label class="text-sm font-medium text-content-primary dark:text-content-primary"
+            <label class="text-sm font-medium text-content-primary"
               >Enable CORS</label
             >
             <p class="text-xs text-content-secondary dark:text-content-muted mt-1">
@@ -95,7 +95,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Web Frontend
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -125,13 +125,13 @@
               class="mt-1 h-4 w-4 text-accent-cyan focus:ring-accent-cyan focus:ring-offset-background"
             />
             <div class="flex-1">
-              <div class="text-sm font-medium text-content-primary dark:text-content-primary">
+              <div class="text-sm font-medium text-content-primary">
                 Default Frontend
               </div>
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
                 Built-in Repeater web interface
               </div>
-              <div class="text-xs text-content-muted dark:text-content-muted/60 mt-1 font-mono">
+              <div class="text-xs text-content-muted/60 mt-1 font-mono">
                 Built-in
               </div>
             </div>
@@ -157,7 +157,7 @@
             />
             <div class="flex-1">
               <div class="flex items-center justify-between">
-                <div class="text-sm font-medium text-content-primary dark:text-content-primary">
+                <div class="text-sm font-medium text-content-primary">
                   openHop Console
                 </div>
                 <span
@@ -168,7 +168,7 @@
               <div class="text-xs text-content-secondary dark:text-content-muted mt-1">
                 Alternative web interface for Repeater
               </div>
-              <div class="text-xs text-content-muted dark:text-content-muted/60 mt-1 font-mono">
+              <div class="text-xs text-content-muted/60 mt-1 font-mono">
                 /opt/pymc_console/web/html
               </div>
             </div>
@@ -215,7 +215,7 @@
               />
             </svg>
             <div class="flex-1">
-              <h4 class="text-sm font-medium text-content-primary dark:text-content-primary">
+              <h4 class="text-sm font-medium text-content-primary">
                 {{
                   pymcConsoleExists
                     ? 'openHop Console has been detected'

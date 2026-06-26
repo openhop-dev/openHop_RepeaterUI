@@ -280,7 +280,7 @@ function onImportDone(imported: number) {
             </div>
           </div>
           <div>
-            <h1 class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <h1 class="text-3xl font-bold text-content-primary mb-1">
               Companions
             </h1>
             <p class="text-content-secondary dark:text-content-muted text-sm">
@@ -290,7 +290,7 @@ function onImportDone(imported: number) {
         </div>
         <button
           @click="openCreateModal"
-          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary dark:text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
+          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
         >
           <span class="flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,7 +316,7 @@ function onImportDone(imported: number) {
             <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Total Configured
             </div>
-            <div class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <div class="text-3xl font-bold text-content-primary mb-1">
               {{ companionConfiguredCount }}
             </div>
           </div>
@@ -419,7 +419,7 @@ function onImportDone(imported: number) {
                     ]"
                   ></div>
                 </div>
-                <h3 class="text-xl font-bold text-content-primary dark:text-content-primary">
+                <h3 class="text-xl font-bold text-content-primary">
                   {{ identity.name }}
                 </h3>
                 <span
@@ -434,39 +434,39 @@ function onImportDone(imported: number) {
                 </span>
                 <span
                   v-if="identity.hash"
-                  class="text-content-muted dark:text-content-muted text-sm"
+                  class="text-content-muted text-sm"
                   >{{ identity.hash }}</span
                 >
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Node Name:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">Node Name:</span>
+                  <span class="text-content-primary/90 ml-2">{{
                     identity.settings?.node_name || identity.name
                   }}</span>
                 </div>
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">TCP Port:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">TCP Port:</span>
+                  <span class="text-content-primary/90 ml-2">{{
                     identity.settings?.tcp_port ?? 5000
                   }}</span>
                 </div>
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Bind Address:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">Bind Address:</span>
+                  <span class="text-content-primary/90 ml-2">{{
                     identity.settings?.bind_address || '0.0.0.0'
                   }}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-content-muted dark:text-content-muted">Identity Key:</span>
+                  <span class="text-content-muted">Identity Key:</span>
                   <span
                     v-if="visibleKeys.has(identity.name)"
-                    class="text-content-primary dark:text-content-primary/90 font-mono ml-2 text-xs"
+                    class="text-content-primary/90 font-mono ml-2 text-xs"
                   >
                     {{ identity.identity_key }}
                   </span>
-                  <span v-else class="text-content-muted dark:text-content-muted ml-2 text-xs"
+                  <span v-else class="text-content-muted ml-2 text-xs"
                     >••••••••••••••••</span
                   >
                   <button
@@ -478,14 +478,14 @@ function onImportDone(imported: number) {
                 </div>
               </div>
 
-              <div class="text-xs text-content-muted dark:text-content-muted">
-                <span class="text-content-muted dark:text-content-muted">Public Key:</span>
+              <div class="text-xs text-content-muted">
+                <span class="text-content-muted">Public Key:</span>
                 <span
                   v-if="identity.public_key"
-                  class="ml-2 font-mono text-content-primary dark:text-content-primary/90 break-all"
+                  class="ml-2 font-mono text-content-primary/90 break-all"
                   >{{ identity.public_key }}</span
                 >
-                <span v-else class="ml-2 text-content-muted dark:text-content-muted">—</span>
+                <span v-else class="ml-2 text-content-muted">—</span>
               </div>
             </div>
 
@@ -516,7 +516,7 @@ function onImportDone(imported: number) {
       <!-- Empty State -->
       <div v-else class="text-center py-12 text-content-secondary dark:text-content-muted">
         <svg
-          class="w-16 h-16 mx-auto mb-4 text-content-muted dark:text-content-muted/60"
+          class="w-16 h-16 mx-auto mb-4 text-content-muted/60"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -551,7 +551,7 @@ function onImportDone(imported: number) {
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
+        <h2 class="text-xl font-bold text-content-primary mb-4">
           Add Companion
         </h2>
 
@@ -637,7 +637,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -662,7 +662,7 @@ function onImportDone(imported: number) {
       <div
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
+        <h2 class="text-xl font-bold text-content-primary mb-4">
           Edit Companion
         </h2>
 
@@ -739,7 +739,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>

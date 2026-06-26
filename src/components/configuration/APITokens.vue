@@ -143,7 +143,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h2 class="text-lg sm:text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h2 class="text-lg sm:text-xl font-semibold text-content-primary">
           API Tokens
         </h2>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm mt-1">
@@ -241,7 +241,7 @@ onMounted(() => {
               </svg>
               <div class="min-w-0 flex-1">
                 <h3
-                  class="text-content-primary dark:text-content-primary font-medium text-sm sm:text-base break-all"
+                  class="text-content-primary font-medium text-sm sm:text-base break-all"
                 >
                   {{ token.name }}
                 </h3>
@@ -268,7 +268,7 @@ onMounted(() => {
     <!-- Empty State -->
     <div v-else class="text-center py-12">
       <svg
-        class="w-16 h-16 text-content-muted dark:text-content-muted/40 mx-auto mb-4"
+        class="w-16 h-16 text-content-muted/40 mx-auto mb-4"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -280,7 +280,7 @@ onMounted(() => {
           d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
         />
       </svg>
-      <h3 class="text-content-primary dark:text-content-primary font-medium mb-2">No API Tokens</h3>
+      <h3 class="text-content-primary font-medium mb-2">No API Tokens</h3>
       <p class="text-content-secondary dark:text-content-muted text-sm mb-4">
         Create a token to enable API access
       </p>
@@ -301,7 +301,7 @@ onMounted(() => {
       <div
         class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-6 max-w-md w-full shadow-2xl"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-4">
+        <h3 class="text-xl font-semibold text-content-primary mb-4">
           Create API Token
         </h3>
 
@@ -318,7 +318,7 @@ onMounted(() => {
               class="cfg-input placeholder-gray-400 dark:placeholder-white/40"
               @keydown.enter="createToken"
             />
-            <p class="text-xs text-content-muted dark:text-content-muted mt-1">
+            <p class="text-xs text-content-muted mt-1">
               Give your token a descriptive name to identify its purpose
             </p>
           </div>
@@ -327,7 +327,7 @@ onMounted(() => {
             <button
               @click="closeCreateModal"
               :disabled="isLoading"
-              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -352,7 +352,7 @@ onMounted(() => {
       <div
         class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-6 max-w-lg w-full shadow-2xl"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-4">
+        <h3 class="text-xl font-semibold text-content-primary mb-4">
           Token Created Successfully
         </h3>
 

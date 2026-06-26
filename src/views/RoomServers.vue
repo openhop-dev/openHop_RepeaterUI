@@ -481,7 +481,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             </div>
           </div>
           <div>
-            <h1 class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <h1 class="text-3xl font-bold text-content-primary mb-1">
               Room Servers
             </h1>
             <p class="text-content-secondary dark:text-content-muted text-sm">
@@ -491,7 +491,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         </div>
         <button
           @click="openCreateModal"
-          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary dark:text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
+          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
         >
           <span class="flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -520,7 +520,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Total Configured
             </div>
-            <div class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <div class="text-3xl font-bold text-content-primary mb-1">
               {{ roomServerConfiguredCount }}
             </div>
           </div>
@@ -628,7 +628,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 </div>
 
                 <h3
-                  class="text-xl font-bold text-content-primary dark:text-content-primary"
+                  class="text-xl font-bold text-content-primary"
                 >
                   {{ identity.name }}
                 </h3>
@@ -645,27 +645,27 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 </span>
                 <span
                   v-if="identity.hash"
-                  class="text-content-muted dark:text-content-muted text-sm"
+                  class="text-content-muted text-sm"
                   >{{ identity.hash }}</span
                 >
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Node Name:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">Node Name:</span>
+                  <span class="text-content-primary/90 ml-2">{{
                     identity.settings?.node_name || 'Not set'
                   }}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-content-muted dark:text-content-muted">Identity Key:</span>
+                  <span class="text-content-muted">Identity Key:</span>
                   <span
                     v-if="visibleKeys.has(identity.name)"
-                    class="text-content-primary dark:text-content-primary/90 font-mono ml-2 text-xs"
+                    class="text-content-primary/90 font-mono ml-2 text-xs"
                   >
                     {{ identity.identity_key }}
                   </span>
-                  <span v-else class="text-content-muted dark:text-content-muted ml-2 text-xs">
+                  <span v-else class="text-content-muted ml-2 text-xs">
                     ••••••••••••••••
                   </span>
                   <button
@@ -676,20 +676,20 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   </button>
                 </div>
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Location:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">
+                  <span class="text-content-muted">Location:</span>
+                  <span class="text-content-primary/90 ml-2">
                     {{ identity.settings?.latitude || 0 }}, {{ identity.settings?.longitude || 0 }}
                   </span>
                 </div>
                 <div v-if="identity.settings?.admin_password || identity.settings?.guest_password">
-                  <span class="text-content-muted dark:text-content-muted">Passwords:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">
+                  <span class="text-content-muted">Passwords:</span>
+                  <span class="text-content-primary/90 ml-2">
                     <span v-if="identity.settings?.admin_password" class="text-accent-green"
                       >Admin</span
                     >
                     <span
                       v-if="identity.settings?.admin_password && identity.settings?.guest_password"
-                      class="text-content-muted dark:text-content-muted"
+                      class="text-content-muted"
                     >
                       /
                     </span>
@@ -700,7 +700,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
               <div
                 v-if="identity.address"
-                class="text-xs text-content-muted dark:text-content-muted font-mono"
+                class="text-xs text-content-muted font-mono"
               >
                 Address: {{ identity.address }}
               </div>
@@ -714,7 +714,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   'group px-4 py-2 rounded-[10px] text-xs font-medium transition-all duration-200 flex items-center gap-2',
                   identity.registered
                     ? 'bg-accent-amber/20 hover:bg-accent-amber/30 text-accent-amber border border-accent-amber/30 hover:scale-105 hover:shadow-lg hover:shadow-secondary/20'
-                    : 'bg-background-mute dark:bg-white/5 text-content-muted dark:text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
+                    : 'bg-background-mute dark:bg-white/5 text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
                 ]"
                 :title="
                   identity.registered
@@ -744,7 +744,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   'group px-4 py-2 rounded-[10px] text-xs font-medium transition-all duration-200 flex items-center gap-2',
                   identity.registered
                     ? 'bg-accent-green/20 hover:bg-accent-green/30 text-accent-green border border-accent-green/30 hover:scale-105 hover:shadow-lg hover:shadow-accent-green/20'
-                    : 'bg-background-mute dark:bg-white/5 text-content-muted dark:text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
+                    : 'bg-background-mute dark:bg-white/5 text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
                 ]"
                 :title="
                   identity.registered
@@ -787,7 +787,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
       <!-- Empty State -->
       <div v-else class="text-center py-12 text-content-secondary dark:text-content-muted">
         <svg
-          class="w-16 h-16 mx-auto mb-4 text-content-muted dark:text-content-muted/60"
+          class="w-16 h-16 mx-auto mb-4 text-content-muted/60"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -828,7 +828,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <!-- Header -->
         <div class="flex items-center justify-between mb-7">
           <div>
-            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-xl font-semibold text-content-primary">
               Add Room Server
             </h3>
             <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -998,7 +998,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         <!-- Header -->
         <div class="flex items-center justify-between mb-7">
           <div>
-            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-xl font-semibold text-content-primary">
               Edit Room Server
             </h3>
             <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -1220,7 +1220,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
               </div>
             </div>
             <div>
-              <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+              <h2 class="text-2xl font-bold text-content-primary mb-1">
                 Room Messages
               </h2>
               <p
@@ -1354,10 +1354,10 @@ async function removeClient(publicKey: string, identityHash?: string) {
                     >
                       {{ message.author_pubkey.substring(0, 8) }}...
                     </span>
-                    <span v-else class="text-content-muted dark:text-content-muted text-xs">
+                    <span v-else class="text-content-muted text-xs">
                       Anonymous
                     </span>
-                    <span class="text-content-muted dark:text-content-muted/60 text-xs">•</span>
+                    <span class="text-content-muted/60 text-xs">•</span>
                     <span
                       class="text-content-secondary dark:text-content-muted text-xs flex items-center gap-1"
                     >
@@ -1373,7 +1373,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                     </span>
                     <span
                       v-if="message.id"
-                      class="text-content-muted dark:text-content-muted/50 text-[10px] font-mono bg-background-mute dark:bg-white/5 px-1.5 py-0.5 rounded"
+                      class="text-content-muted/50 text-[10px] font-mono bg-background-mute dark:bg-white/5 px-1.5 py-0.5 rounded"
                     >
                       #{{ message.id }}
                     </span>
@@ -1382,7 +1382,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
 
                 <!-- Message Content -->
                 <div
-                  class="text-content-primary dark:text-content-primary/90 text-sm leading-relaxed break-words whitespace-pre-wrap bg-gray-50 dark:bg-white/5 p-3 rounded-[10px] border border-stroke-subtle dark:border-white/5"
+                  class="text-content-primary/90 text-sm leading-relaxed break-words whitespace-pre-wrap bg-gray-50 dark:bg-white/5 p-3 rounded-[10px] border border-stroke-subtle dark:border-white/5"
                 >
                   {{ message.message_text }}
                 </div>
@@ -1415,7 +1415,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
           <div v-if="hasMoreMessages && !loadingMessages" class="text-center pt-4">
             <button
               @click="loadMoreMessages"
-              class="group px-6 py-2.5 bg-gradient-to-r from-gray-100 dark:from-white/5 to-gray-200 dark:to-white/10 hover:from-gray-200 dark:hover:from-white/10 hover:to-gray-300 dark:hover:to-white/15 text-content-primary dark:text-content-primary rounded-[10px] transition-all hover:scale-105 text-sm font-medium border border-stroke-subtle dark:border-stroke/10 flex items-center gap-2 mx-auto"
+              class="group px-6 py-2.5 bg-gradient-to-r from-gray-100 dark:from-white/5 to-gray-200 dark:to-white/10 hover:from-gray-200 dark:hover:from-white/10 hover:to-gray-300 dark:hover:to-white/15 text-content-primary rounded-[10px] transition-all hover:scale-105 text-sm font-medium border border-stroke-subtle dark:border-stroke/10 flex items-center gap-2 mx-auto"
             >
               <svg
                 class="w-4 h-4 group-hover:translate-y-1 transition-transform"
@@ -1452,7 +1452,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 class="relative bg-gradient-to-br from-secondary/20 to-primary/20 p-6 rounded-[20px] inline-block border border-stroke-subtle dark:border-white/10"
               >
                 <svg
-                  class="w-16 h-16 text-content-muted dark:text-content-muted/70"
+                  class="w-16 h-16 text-content-muted/70"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1466,7 +1466,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 </svg>
               </div>
             </div>
-            <p class="text-xl font-bold text-content-primary dark:text-content-primary mb-2">
+            <p class="text-xl font-bold text-content-primary mb-2">
               No messages yet
             </p>
             <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -1504,8 +1504,8 @@ async function removeClient(publicKey: string, identityHash?: string) {
               :class="[
                 'group px-6 py-3 rounded-[12px] transition-all duration-200 flex items-center justify-center gap-2 font-medium',
                 newMessage.trim()
-                  ? 'bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary dark:text-content-primary border border-primary/50 hover:scale-105 hover:shadow-lg hover:shadow-primary/20'
-                  : 'bg-background-mute dark:bg-white/5 text-content-muted dark:text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
+                  ? 'bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary border border-primary/50 hover:scale-105 hover:shadow-lg hover:shadow-primary/20'
+                  : 'bg-background-mute dark:bg-white/5 text-content-muted/60 cursor-not-allowed border border-stroke-subtle dark:border-stroke/10',
               ]"
             >
               <svg
@@ -1557,7 +1557,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
         class="flex items-center justify-between mb-4 pb-4 border-b border-stroke-subtle dark:border-white/10"
       >
         <div>
-          <h2 class="text-xl font-bold text-content-primary dark:text-content-primary">
+          <h2 class="text-xl font-bold text-content-primary">
             Active Sessions
           </h2>
           <p class="text-content-secondary dark:text-content-primary/70 text-sm mt-1">
@@ -1594,7 +1594,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
             <!-- Identity Name & Permissions -->
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <span class="text-content-primary dark:text-content-primary font-semibold">{{
+                <span class="text-content-primary font-semibold">{{
                   client.identity_name || 'Unknown'
                 }}</span>
                 <span

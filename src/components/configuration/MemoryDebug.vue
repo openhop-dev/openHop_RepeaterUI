@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Memory</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Memory</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Diagnose memory usage and trace allocations</p>
       </div>
     </div>
@@ -11,7 +11,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Memory Diagnostics
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -60,7 +60,7 @@
       <div v-if="!tracing && rssMb !== null && !loading" class="mb-4">
         <div class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10 inline-block">
           <p class="text-xs text-content-muted mb-1">Current Memory (RSS)</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">{{ rssMb }} MB</p>
+          <p class="text-lg font-semibold text-content-primary font-mono">{{ rssMb }} MB</p>
         </div>
       </div>
 
@@ -95,21 +95,21 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
           <div v-if="data.rss_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
             <p class="text-xs text-content-muted mb-1">Total Memory Used</p>
-            <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">{{ data.rss_mb }} MB</p>
+            <p class="text-lg font-semibold text-content-primary font-mono">{{ data.rss_mb }} MB</p>
           </div>
           <div v-if="data.traced_current_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
             <p class="text-xs text-content-muted mb-1">Tracked Now</p>
-            <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">{{ data.traced_current_mb }} MB</p>
+            <p class="text-lg font-semibold text-content-primary font-mono">{{ data.traced_current_mb }} MB</p>
           </div>
           <div v-if="data.traced_peak_mb !== undefined" class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10">
             <p class="text-xs text-content-muted mb-1">Peak Tracked</p>
-            <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">{{ data.traced_peak_mb }} MB</p>
+            <p class="text-lg font-semibold text-content-primary font-mono">{{ data.traced_peak_mb }} MB</p>
           </div>
         </div>
 
         <!-- Growth breakdown -->
         <div v-if="data.growth_since_baseline && data.growth_since_baseline.length > 0" class="mb-6">
-          <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary mb-1">Memory Growth Breakdown</h4>
+          <h4 class="text-sm font-semibold text-content-primary mb-1">Memory Growth Breakdown</h4>
           <p class="text-xs text-content-muted mb-3">
             Items at the top with red/orange tags are the most likely cause of memory issues.
             Green items are normal and can be ignored.
@@ -183,7 +183,7 @@
                     class="border-t border-stroke-subtle/50 dark:border-stroke/5 hover:bg-background-mute/50 dark:hover:bg-background/20 transition-colors"
                   >
                     <td class="px-3 py-2 text-content-muted font-mono text-xs">{{ i + 1 }}</td>
-                    <td class="px-3 py-2 text-content-primary dark:text-content-primary font-mono text-xs break-all">{{ simplifyPath(row.file) }}</td>
+                    <td class="px-3 py-2 text-content-primary font-mono text-xs break-all">{{ simplifyPath(row.file) }}</td>
                     <td class="px-3 py-2 text-right font-mono text-xs text-content-secondary dark:text-content-muted whitespace-nowrap">{{ formatSize(row.size_kb) }}</td>
                     <td class="px-3 py-2 text-right font-mono text-xs text-content-secondary dark:text-content-muted">{{ row.count }}</td>
                   </tr>

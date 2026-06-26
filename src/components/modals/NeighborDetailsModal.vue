@@ -274,7 +274,7 @@ const signalQuality = computed(() => {
             <!-- Header -->
             <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
               <div class="flex-1 min-w-0">
-                <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+                <h2 class="text-2xl font-bold text-content-primary mb-1">
                   {{ neighbor.node_name || 'Unknown Node' }}
                 </h2>
                 <p
@@ -306,14 +306,14 @@ const signalQuality = computed(() => {
               <!-- Basic Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Basic Information
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Contact Type
                     </div>
@@ -324,18 +324,18 @@ const signalQuality = computed(() => {
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Route Type
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatRouteType(neighbor.route_type) }}
                     </div>
                   </div>
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Zero Hop
                     </div>
@@ -353,11 +353,11 @@ const signalQuality = computed(() => {
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Advert Count
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ neighbor.advert_count.toLocaleString() }}
                     </div>
                   </div>
@@ -367,29 +367,29 @@ const signalQuality = computed(() => {
               <!-- Signal Quality -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Signal Quality
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       RSSI
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatRSSI(neighbor.rssi) }}
                     </div>
                   </div>
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       SNR
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatSNR(neighbor.snr) }}
                     </div>
                   </div>
@@ -399,7 +399,7 @@ const signalQuality = computed(() => {
                     class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]"
                   >
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Signal Strength
                     </div>
@@ -416,29 +416,29 @@ const signalQuality = computed(() => {
               <!-- Timestamps -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Timeline
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       First Seen
                     </div>
-                    <div class="text-content-primary dark:text-content-primary text-sm">
+                    <div class="text-content-primary text-sm">
                       {{ formatTimestamp(neighbor.first_seen) }}
                     </div>
                   </div>
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Last Seen
                     </div>
-                    <div class="text-content-primary dark:text-content-primary text-sm">
+                    <div class="text-content-primary text-sm">
                       {{ formatTimestamp(neighbor.last_seen) }}
                     </div>
                   </div>
@@ -448,7 +448,7 @@ const signalQuality = computed(() => {
               <!-- Location Information - only show if coordinates exist -->
               <div v-if="hasCoordinates" class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Location
                 </h3>
@@ -456,35 +456,35 @@ const signalQuality = computed(() => {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Latitude
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-mono text-sm">
+                    <div class="text-content-primary font-mono text-sm">
                       {{ neighbor.latitude?.toFixed(6) }}
                     </div>
                   </div>
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Longitude
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-mono text-sm">
+                    <div class="text-content-primary font-mono text-sm">
                       {{ neighbor.longitude?.toFixed(6) }}
                     </div>
                   </div>
 
                   <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       {{ distance !== null ? 'Distance' : 'Coordinates' }}
                     </div>
                     <div
                       v-if="distance !== null"
-                      class="text-content-primary dark:text-content-primary font-medium"
+                      class="text-content-primary font-medium"
                     >
                       {{ `${distance.toFixed(2)} km` }}
                     </div>

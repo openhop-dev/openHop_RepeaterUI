@@ -540,7 +540,7 @@ onUnmounted(() => {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h1 class="text-2xl font-bold text-content-primary">
         CAD Calibration Tool
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-2">
@@ -586,7 +586,7 @@ onUnmounted(() => {
     <!-- Status and Progress -->
     <div class="glass-card rounded-[15px] p-6 space-y-4">
       <!-- Status message -->
-      <div class="text-content-primary dark:text-content-primary">{{ statusMessage }}</div>
+      <div class="text-content-primary">{{ statusMessage }}</div>
 
       <!-- Info row: fixed height, swaps between config and results -->
       <div class="flex items-center justify-between gap-4 px-4 bg-primary/10 border border-primary/30 rounded-lg h-[52px] overflow-hidden">
@@ -597,11 +597,11 @@ onUnmounted(() => {
           {{ (rangeInfo.peak_max - rangeInfo.peak_min + 1) * (rangeInfo.min_max - rangeInfo.min_min + 1) }} tests
         </div>
         <!-- Placeholder before calibration starts -->
-        <div v-else-if="!showResults" class="text-content-muted dark:text-content-muted text-sm italic">
+        <div v-else-if="!showResults" class="text-content-muted text-sm italic">
           Awaiting calibration…
         </div>
         <!-- Results (when complete) -->
-        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary dark:text-content-primary text-sm">
+        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary text-sm">
           <span class="text-accent-green font-medium">Optimal settings found — </span>
           Peak: <strong>{{ bestCalibrationResult.det_peak }}</strong>,
           Min: <strong>{{ bestCalibrationResult.det_min }}</strong>,

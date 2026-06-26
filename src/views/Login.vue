@@ -39,10 +39,10 @@
               class="logo-image h-[178px] sm:h-[210px] relative z-10"
             />
           </div>
-          <h1 class="text-content-primary dark:text-content-primary text-xl sm:text-2xl font-heading font-bold mt-1 mb-1">
+          <h1 class="text-content-primary text-xl sm:text-2xl font-heading font-bold mt-1 mb-1">
             Repeater
           </h1>
-          <p v-if="siteName" class="text-content-primary dark:text-content-primary text-sm sm:text-base font-semibold mb-1">
+          <p v-if="siteName" class="text-content-primary text-sm sm:text-base font-semibold mb-1">
             {{ siteName }}
           </p>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm pt-2">
@@ -71,7 +71,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter username"
                 :disabled="loading || isRateLimited"
               />
@@ -98,7 +98,7 @@
                 autocorrect="off"
                 spellcheck="false"
                 required
-                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary dark:text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
+                class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-gray-400 dark:placeholder-white/30 focus:outline-none focus:border-primary/50 transition-all duration-300"
                 placeholder="Enter password"
                 :disabled="loading || isRateLimited"
               />
@@ -153,7 +153,7 @@
         <div class="mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/10">
           <!-- Powered by MeshCore -->
           <div class="flex flex-col items-center justify-center mb-4">
-            <p class="text-content-muted dark:text-content-muted text-[10px] sm:text-xs mb-1.5 tracking-wide uppercase opacity-60">Powered by</p>
+            <p class="text-content-muted text-[10px] sm:text-xs mb-1.5 tracking-wide uppercase opacity-60">Powered by</p>
             <img
               src="@/assets/meshcore.svg"
               alt="MeshCore"

@@ -318,7 +318,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Header -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Region Configuration
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -360,7 +360,7 @@ defineExpose({ requestLeave, isEditing });
     <div class="cfg-section">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h4 class="text-xs sm:text-sm font-medium text-content-primary dark:text-content-primary mb-1">
+          <h4 class="text-xs sm:text-sm font-medium text-content-primary mb-1">
             Unscoped Flood Policy (*)
           </h4>
           <p class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
@@ -401,8 +401,8 @@ defineExpose({ requestLeave, isEditing });
 
     <!-- Tree Viewer -->
     <div class="cfg-section space-y-4" @click="isEditing && treeStore.setSelectedNode(null)">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">Regions</h3>
-      <p v-if="isEditing" class="text-xs text-content-muted dark:text-content-muted pb-1">
+      <h3 class="text-lg font-semibold text-content-primary">Regions</h3>
+      <p v-if="isEditing" class="text-xs text-content-muted pb-1">
         To add a child region, click on a region to select it, then click "Add Region".
       </p>
 
@@ -423,8 +423,8 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Empty State -->
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
-        <div class="text-content-muted dark:text-content-muted mb-2">No regions found</div>
-        <div class="text-content-muted dark:text-content-muted/60 text-sm">
+        <div class="text-content-muted mb-2">No regions found</div>
+        <div class="text-content-muted/60 text-sm">
           Click "Edit Settings" then "Add Region" to get started
         </div>
       </div>

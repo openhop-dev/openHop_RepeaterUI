@@ -102,7 +102,7 @@ function handleCancel() {
           <!-- Header -->
           <div class="flex items-center justify-between mb-7">
             <div>
-              <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-xl font-semibold text-content-primary">
                 {{ isNew ? 'Add Broker' : 'Edit Broker' }}
               </h3>
               <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -160,7 +160,7 @@ function handleCancel() {
                 >
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.enabled ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
-                <span class="text-sm font-medium text-content-primary dark:text-content-primary">Enabled</span>
+                <span class="text-sm font-medium text-content-primary">Enabled</span>
               </div>
             </div>
 
@@ -169,7 +169,7 @@ function handleCancel() {
               <div>
                 <label class="modal-field-label">
                   MQTT Base Topic
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(e.g. meshcore/repeater)</span>
+                  <span class="font-normal text-content-muted/60 ml-1">(e.g. meshcore/repeater)</span>
                 </label>
                 <input
                   v-model="draft.base_topic"
@@ -200,7 +200,7 @@ function handleCancel() {
                 >
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.use_jwt_auth ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
-                <span class="text-sm font-medium text-content-primary dark:text-content-primary">Use JWT Auth</span>
+                <span class="text-sm font-medium text-content-primary">Use JWT Auth</span>
               </div>
             </div>
 
@@ -225,7 +225,7 @@ function handleCancel() {
                 <template v-if="draft.use_jwt_auth">
                   <label class="modal-field-label">
                     Audience <span class="text-accent-red">*</span>
-                    <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(usually same as host)</span>
+                    <span class="font-normal text-content-muted/60 ml-1">(usually same as host)</span>
                   </label>
                   <input
                     v-model="draft.audience"
@@ -237,9 +237,9 @@ function handleCancel() {
                 <template v-else>
                   <label class="modal-field-label">
                     Username
-                    <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(blank = anonymous)</span>
+                    <span class="font-normal text-content-muted/60 ml-1">(blank = anonymous)</span>
                   </label>
-                  <input type="text" autocomplete="username" style="display:none" />
+                  <input type="text" autocomplete="username" class="hidden" />
                   <input
                     autocomplete="username"
                     v-model="draft.username"
@@ -254,7 +254,7 @@ function handleCancel() {
               <div>
                 <label class="modal-field-label">
                   Port <span class="text-accent-red">*</span>
-                  <span class="font-normal text-content-muted dark:text-content-muted/60 ml-1">(443 WS, 1883 TCP)</span>
+                  <span class="font-normal text-content-muted/60 ml-1">(443 WS, 1883 TCP)</span>
                 </label>
                 <input
                   v-model.number="draft.port"
@@ -268,7 +268,7 @@ function handleCancel() {
               <!-- Password: always in DOM so grid row height never changes; invisible when JWT auth is on -->
               <div :class="draft.use_jwt_auth ? 'invisible pointer-events-none' : ''" :aria-hidden="draft.use_jwt_auth ? 'true' : undefined">
                 <label class="modal-field-label">Password</label>
-                <input type="password" autocomplete="current-password" style="display:none" />
+                <input type="password" autocomplete="current-password" class="hidden" />
                 <input
                   autocomplete="new-password"
                   v-model="draft.password"
@@ -293,8 +293,8 @@ function handleCancel() {
                   <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.retain_status ? 'translate-x-4' : 'translate-x-0']" />
                 </button>
                 <div>
-                  <span class="text-sm font-medium text-content-primary dark:text-content-primary">Retain Status</span>
-                  <span class="text-xs text-content-muted dark:text-content-muted/60 ml-1">(MQTT retained)</span>
+                  <span class="text-sm font-medium text-content-primary">Retain Status</span>
+                  <span class="text-xs text-content-muted/60 ml-1">(MQTT retained)</span>
                 </div>
               </div>
               <div class="flex items-center gap-6">
@@ -306,7 +306,7 @@ function handleCancel() {
                   >
                     <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.tls.enabled ? 'translate-x-4' : 'translate-x-0']" />
                   </button>
-                  <span class="text-sm font-medium text-content-primary dark:text-content-primary">TLS</span>
+                  <span class="text-sm font-medium text-content-primary">TLS</span>
                 </div>
                 <div class="flex items-center gap-3">
                   <button
@@ -316,7 +316,7 @@ function handleCancel() {
                   >
                     <span :class="['pointer-events-none absolute top-0.5 left-0.5 inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out', draft.tls.insecure ? 'translate-x-4' : 'translate-x-0']" />
                   </button>
-                  <span class="text-sm font-medium text-content-primary dark:text-content-primary">Insecure</span>
+                  <span class="text-sm font-medium text-content-primary">Insecure</span>
                 </div>
               </div>
             </div>
@@ -365,7 +365,7 @@ function handleCancel() {
                   'flex-1 px-4 py-3 rounded-lg transition-colors font-medium',
                   draftIsValid
                     ? 'bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green'
-                    : 'bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 text-content-muted dark:text-content-muted/70 cursor-not-allowed',
+                    : 'bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/20 text-content-muted/70 cursor-not-allowed',
                 ]"
               >
                 Done

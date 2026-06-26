@@ -121,13 +121,13 @@ function formatOptionalAcl(value: unknown): string {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h1 class="text-2xl font-bold text-content-primary">
         Sessions & Access Control
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-2">
         Manage authenticated clients and access control lists
       </p>
-      <p class="text-content-muted dark:text-content-muted text-sm mt-1">
+      <p class="text-content-muted text-sm mt-1">
         Repeater, room servers, and companion identities; companions do not accept client logins.
       </p>
     </div>
@@ -138,7 +138,7 @@ function formatOptionalAcl(value: unknown): string {
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">
           Total Identities
         </div>
-        <div class="text-2xl font-bold text-content-primary dark:text-content-primary">
+        <div class="text-2xl font-bold text-content-primary">
           {{ aclStats.total_identities }}
         </div>
       </div>
@@ -272,7 +272,7 @@ function formatOptionalAcl(value: unknown): string {
                   <!-- Title row: name + type badge -->
                   <div class="flex items-center gap-2 flex-wrap mb-3">
                     <h3
-                      class="text-lg font-semibold text-content-primary dark:text-content-primary truncate"
+                      class="text-lg font-semibold text-content-primary truncate"
                     >
                       {{ identity.name }}
                     </h3>
@@ -324,14 +324,14 @@ function formatOptionalAcl(value: unknown): string {
                       </span>
                       <span
                         v-if="identity.hash"
-                        class="text-content-muted dark:text-content-muted font-mono text-xs"
+                        class="text-content-muted font-mono text-xs"
                       >
                         Hash: {{ identity.hash }}
                       </span>
                     </div>
                     <p
                       v-if="identity.last_seen != null"
-                      class="text-content-muted dark:text-content-muted text-xs mt-2 mb-0"
+                      class="text-content-muted text-xs mt-2 mb-0"
                     >
                       Last seen: {{ formatTimestamp(identity.last_seen) }}
                     </p>
@@ -344,7 +344,7 @@ function formatOptionalAcl(value: unknown): string {
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Max Clients
                         </div>
-                        <div class="text-content-primary dark:text-content-primary font-medium">
+                        <div class="text-content-primary font-medium">
                           {{ formatOptionalAcl(identity.max_clients) }}
                         </div>
                       </div>
@@ -476,7 +476,7 @@ function formatOptionalAcl(value: unknown): string {
                   class="border-b border-stroke-subtle dark:border-white/5 hover:bg-gray-100/50 dark:hover:bg-white/5 transition-colors"
                 >
                   <td class="py-3">
-                    <div class="font-mono text-sm text-content-primary dark:text-content-primary">
+                    <div class="font-mono text-sm text-content-primary">
                       {{ client.public_key }}
                     </div>
                   </td>
@@ -486,10 +486,10 @@ function formatOptionalAcl(value: unknown): string {
                     </div>
                   </td>
                   <td class="py-3">
-                    <div class="text-sm text-content-primary dark:text-content-primary">
+                    <div class="text-sm text-content-primary">
                       {{ client.identity_name }}
                     </div>
-                    <div class="text-xs text-content-muted dark:text-content-muted">
+                    <div class="text-xs text-content-muted">
                       {{ client.identity_hash }}
                     </div>
                   </td>
@@ -533,7 +533,7 @@ function formatOptionalAcl(value: unknown): string {
             >
             <select
               v-model="selectedIdentity"
-              class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary dark:text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
+              class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/50 transition-colors"
             >
               <option :value="null">All Identities</option>
               <option v-for="identity in identityList" :key="identity.name" :value="identity.name">
@@ -569,7 +569,7 @@ function formatOptionalAcl(value: unknown): string {
                       {{ client.permissions }}
                     </span>
                     <span
-                      class="text-content-primary dark:text-content-primary font-mono text-sm"
+                      class="text-content-primary font-mono text-sm"
                       >{{ client.public_key }}</span
                     >
                   </div>
@@ -578,13 +578,13 @@ function formatOptionalAcl(value: unknown): string {
                     <div>
                       <span class="text-content-secondary dark:text-content-muted">Address:</span>
                       <span
-                        class="text-content-primary dark:text-content-primary/90 font-mono ml-2"
+                        class="text-content-primary/90 font-mono ml-2"
                         >{{ client.address }}</span
                       >
                     </div>
                     <div>
                       <span class="text-content-secondary dark:text-content-muted">Identity:</span>
-                      <span class="text-content-primary dark:text-content-primary/90 ml-2"
+                      <span class="text-content-primary/90 ml-2"
                         >{{ client.identity_name }} ({{ client.identity_hash }})</span
                       >
                     </div>
@@ -592,7 +592,7 @@ function formatOptionalAcl(value: unknown): string {
                       <span class="text-content-secondary dark:text-content-muted"
                         >Last Activity:</span
                       >
-                      <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                      <span class="text-content-primary/90 ml-2">{{
                         formatTimestamp(client.last_activity)
                       }}</span>
                     </div>
@@ -600,7 +600,7 @@ function formatOptionalAcl(value: unknown): string {
                       <span class="text-content-secondary dark:text-content-muted"
                         >Last Login:</span
                       >
-                      <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                      <span class="text-content-primary/90 ml-2">{{
                         formatTimestamp(client.last_login_success)
                       }}</span>
                     </div>

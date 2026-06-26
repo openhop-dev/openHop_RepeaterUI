@@ -109,7 +109,7 @@ const buttonClass = computed(() => {
   if (isActive.value) {
     return `${base} ${indent} text-primary font-semibold border border-transparent`
   }
-  return `${base} ${indent} text-content-primary dark:text-content-primary hover:text-primary border border-transparent`
+  return `${base} ${indent} text-content-primary hover:text-primary border border-transparent`
 })
 
 const iconClass = computed(() =>

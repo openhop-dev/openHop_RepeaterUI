@@ -44,7 +44,7 @@ defineEmits<{
               </svg>
             </div>
             <div>
-              <h3 class="text-base font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-base font-semibold text-content-primary">
                 Unsaved Changes
               </h3>
               <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">

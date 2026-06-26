@@ -114,7 +114,7 @@ const saveChanges = async () => {
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Duty Cycle</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Duty Cycle</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure duty cycle limits for channel activity</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -168,7 +168,7 @@ const saveChanges = async () => {
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ maxAirtimePercent }}
         </div>
@@ -189,7 +189,7 @@ const saveChanges = async () => {
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ enforcement }}
         </div>

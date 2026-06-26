@@ -7,7 +7,7 @@ defineOptions({ name: 'HelpView' });
     <div
       class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/10 rounded-[15px] p-8"
     >
-      <h1 class="text-content-primary dark:text-content-primary text-2xl font-semibold mb-6">
+      <h1 class="text-content-primary text-2xl font-semibold mb-6">
         Help & Documentation
       </h1>
 
@@ -23,7 +23,7 @@ defineOptions({ name: 'HelpView' });
           </svg>
         </div>
 
-        <h2 class="text-content-primary dark:text-content-primary text-xl font-medium mb-3">
+        <h2 class="text-content-primary text-xl font-medium mb-3">
           Repeater Wiki
         </h2>
         <p class="text-content-secondary dark:text-content-muted mb-8 max-w-md mx-auto">
@@ -48,7 +48,7 @@ defineOptions({ name: 'HelpView' });
           Visit Wiki Documentation
         </a>
 
-        <div class="mt-8 text-xs text-content-muted dark:text-content-muted">
+        <div class="mt-8 text-xs text-content-muted">
           Opens in a new tab
         </div>
       </div>

@@ -50,7 +50,7 @@ const buttonColors = {
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h3 class="text-xl font-semibold text-content-primary">
           {{ props.title }}
         </h3>
         <button
@@ -120,7 +120,7 @@ const buttonColors = {
       <div class="flex gap-3">
         <button
           @click="emit('close')"
-          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/10"
+          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/10"
         >
           {{ props.cancelText }}
         </button>

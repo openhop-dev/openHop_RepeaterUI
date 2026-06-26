@@ -46,7 +46,7 @@ function onConfirm() {
               <AlertTriangle class="w-5 h-5" />
             </div>
             <div>
-              <h4 class="text-content-primary dark:text-content-primary text-base font-semibold">
+              <h4 class="text-content-primary text-base font-semibold">
                 TX Power &amp; PA Configuration Notice
               </h4>
               <p v-if="selectedTxPower !== null" class="text-xs text-content-secondary dark:text-content-muted mt-1">
@@ -70,7 +70,7 @@ function onConfirm() {
             Do not assume all boards support the same maximum power levels or PA configuration methods.
           </p>
           <div class="rounded-xl border border-stroke-subtle dark:border-white/10 bg-background-mute/60 dark:bg-white/5 p-3">
-            <p class="text-content-primary dark:text-content-primary font-medium mb-2">Recommended checks before applying changes:</p>
+            <p class="text-content-primary font-medium mb-2">Recommended checks before applying changes:</p>
             <ul class="list-disc pl-5 space-y-1">
               <li>Verify whether your board includes an external PA/LNA stage</li>
               <li>Confirm the manufacturer&rsquo;s recommended TX power limits</li>
@@ -91,7 +91,7 @@ function onConfirm() {
               class="mt-0.5"
               @change="emit('update:confirmed', ($event.target as HTMLInputElement).checked)"
             />
-            <span class="text-content-primary dark:text-content-primary">I have read and understood this warning.</span>
+            <span class="text-content-primary">I have read and understood this warning.</span>
           </label>
         </div>
 

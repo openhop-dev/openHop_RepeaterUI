@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Backup &amp; Restore</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Backup &amp; Restore</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Export, import, and restore your repeater configuration</p>
       </div>
     </div>
@@ -44,7 +44,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Export Settings
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -87,7 +87,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Full Backup
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -186,7 +186,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Import Configuration
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -232,7 +232,7 @@
           v-if="importPreview"
           class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10"
         >
-          <h4 class="text-sm font-medium text-content-primary dark:text-content-primary mb-2">
+          <h4 class="text-sm font-medium text-content-primary mb-2">
             Import Preview
           </h4>
           <div
@@ -341,7 +341,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Export Identity Key
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -433,7 +433,7 @@
         class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10 space-y-2"
       >
         <div class="flex items-center justify-between">
-          <h4 class="text-sm font-medium text-content-primary dark:text-content-primary">
+          <h4 class="text-sm font-medium text-content-primary">
             Key Exported
           </h4>
           <button

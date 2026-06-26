@@ -425,7 +425,7 @@ onUnmounted(() => {
     <!-- Page heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Observer Configuration
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -445,7 +445,7 @@ onUnmounted(() => {
           <button
             @click="cancelGlobalEditing"
             :disabled="isSaving"
-            class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            class="px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
@@ -471,7 +471,7 @@ onUnmounted(() => {
     <!-- ── Observer Status ────────────────────────────────────────────── -->
     <div class="cfg-section">
       <div class="mb-4">
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Observer Status</h3>
+        <h3 class="text-lg font-semibold text-content-primary mb-1">Observer Status</h3>
         <p class="text-sm text-content-secondary dark:text-content-muted">Live LetsMesh broker connection state</p>
       </div>
 
@@ -495,14 +495,14 @@ onUnmounted(() => {
             </span>
           </div>
         </div>
-        <div v-else class="text-sm text-content-muted dark:text-content-muted/60 italic">No broker connections configured.</div>
+        <div v-else class="text-sm text-content-muted/60 italic">No broker connections configured.</div>
       </div>
     </div>
 
     <!-- ── Observer Setup ────────────────────────────────────────────── -->
     <div class="cfg-card p-6">
       <div class="mb-4">
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Observer Setup</h3>
+        <h3 class="text-lg font-semibold text-content-primary mb-1">Observer Setup</h3>
         <p class="text-sm text-content-secondary dark:text-content-muted">IATA code, status interval, and owner details</p>
       </div>
 
@@ -511,19 +511,19 @@ onUnmounted(() => {
         <div v-if="!isGlobalEditing" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/10">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IATA Code</span>
-            <span class="text-content-primary dark:text-content-primary font-mono text-sm mt-0.5">{{ mqttConfig.iata_code || '—' }}</span>
+            <span class="text-content-primary font-mono text-sm mt-0.5">{{ mqttConfig.iata_code || '—' }}</span>
           </div>
           <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/10">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Status Interval</span>
-            <span class="text-content-primary dark:text-content-primary text-sm mt-0.5">{{ mqttConfig.status_interval ?? 300 }}s</span>
+            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.status_interval ?? 300 }}s</span>
           </div>
           <div class="flex flex-col py-1">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Owner</span>
-            <span class="text-content-primary dark:text-content-primary text-sm mt-0.5">{{ mqttConfig.owner || '—' }}</span>
+            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.owner || '—' }}</span>
           </div>
           <div class="flex flex-col py-1">
             <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Email</span>
-            <span class="text-content-primary dark:text-content-primary text-sm mt-0.5">{{ mqttConfig.email || '—' }}</span>
+            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.email || '—' }}</span>
           </div>
         </div>
 
@@ -532,14 +532,14 @@ onUnmounted(() => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
-                IATA Code <span class="text-content-muted dark:text-content-muted/60 text-xs">(e.g. SFO, LHR)</span>
+                IATA Code <span class="text-content-muted/60 text-xs">(e.g. SFO, LHR)</span>
               </label>
               <input v-model="iataCodeInput" type="text" maxlength="10" placeholder="TEST"
                 class="cfg-input font-mono" />
             </div>
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
-                Status Interval <span class="text-content-muted dark:text-content-muted/60 text-xs">(seconds, min 60)</span>
+                Status Interval <span class="text-content-muted/60 text-xs">(seconds, min 60)</span>
               </label>
               <input v-model.number="statusIntervalInput" type="number" min="60" max="3600"
                 class="cfg-input font-mono" />
@@ -563,7 +563,7 @@ onUnmounted(() => {
     <div class="cfg-card p-6">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">Broker Settings</h3>
+          <h3 class="text-lg font-semibold text-content-primary mb-1">Broker Settings</h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">MQTT brokers for observer publishing</p>
         </div>
         <div v-if="isGlobalEditing" class="flex items-center gap-2 flex-shrink-0 ml-4">
@@ -571,7 +571,7 @@ onUnmounted(() => {
           <div class="relative">
             <button
               @click="showTemplateMenu = !showTemplateMenu"
-              class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
+              class="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
             >
               From Template
               <svg class="w-3 h-3 transition-transform" :class="showTemplateMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -608,7 +608,7 @@ onUnmounted(() => {
                       @click="addFromTemplate(tpl)"
                     >
                       <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium text-content-primary dark:text-content-primary group-hover:text-primary transition-colors">{{ tpl.name }}</p>
+                        <p class="text-sm font-medium text-content-primary group-hover:text-primary transition-colors">{{ tpl.name }}</p>
                         <p class="text-xs text-content-secondary dark:text-content-muted">{{ tpl.brokers.length }} broker{{ tpl.brokers.length !== 1 ? 's' : '' }}</p>
                       </div>
                       <!-- Chevron expands the per-broker chooser. Only
@@ -647,7 +647,7 @@ onUnmounted(() => {
                         @click="addOneFromTemplate(broker)"
                       >
                         <div class="min-w-0 flex-1">
-                          <p class="text-xs font-medium text-content-primary dark:text-content-primary truncate">{{ broker.name }}</p>
+                          <p class="text-xs font-medium text-content-primary truncate">{{ broker.name }}</p>
                           <p class="text-[11px] font-mono text-content-secondary dark:text-content-muted truncate">{{ broker.host }}:{{ broker.port }}</p>
                         </div>
                         <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-primary text-xs font-bold" title="Add only this broker">+</span>
@@ -697,13 +697,13 @@ onUnmounted(() => {
                 <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-green-500' : 'bg-red-500'"></span>
                 {{ broker.enabled ? 'Enabled' : 'Disabled' }}
               </span>
-              <span class="text-sm font-medium text-content-primary dark:text-content-primary">{{ broker.name || '(unnamed)' }}</span>
+              <span class="text-sm font-medium text-content-primary">{{ broker.name || '(unnamed)' }}</span>
               <span class="text-xs font-mono text-content-secondary dark:text-content-muted">{{ broker.host || '—' }}:{{ broker.port }}</span>
             </div>
             <div v-if="isGlobalEditing" class="flex items-center gap-1.5 flex-shrink-0">
               <button
                 @click="openBrokerEdit(broker)"
-                class="px-2.5 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded border border-primary/50 transition-colors"
+                class="px-2.5 py-1 text-xs bg-primary/20 hover:bg-primary/30 text-content-primary rounded border border-primary/50 transition-colors"
               >
                 Edit
               </button>

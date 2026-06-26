@@ -513,10 +513,10 @@ function reloadPage() {
               </svg>
             </div>
             <div>
-              <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-lg font-semibold text-content-primary">
                 OTA Update
               </h3>
-              <p class="text-xs text-content-muted dark:text-content-muted">
+              <p class="text-xs text-content-muted">
                 Update over the air from GitHub
               </p>
             </div>
@@ -546,7 +546,7 @@ function reloadPage() {
             >
               <p class="text-xs text-content-muted mb-1">Installed</p>
               <p
-                class="text-sm font-mono font-medium text-content-primary dark:text-content-primary"
+                class="text-sm font-mono font-medium text-content-primary"
               >
                 {{ localCurrentVersion || '—' }}
               </p>
@@ -628,7 +628,7 @@ function reloadPage() {
           <div v-if="changelog.length > 0 || changelogLoading" class="space-y-1">
             <button
               @click="changelogOpen = !changelogOpen"
-              class="flex items-center justify-between w-full text-xs font-medium text-content-secondary dark:text-content-secondary uppercase tracking-wide py-1 hover:text-content-primary transition-colors"
+              class="flex items-center justify-between w-full text-xs font-medium text-content-secondary uppercase tracking-wide py-1 hover:text-content-primary transition-colors"
             >
               <span>What's New</span>
               <span class="flex items-center gap-1">
@@ -699,7 +699,7 @@ function reloadPage() {
           <!-- Channel selector -->
           <div class="space-y-2">
             <label
-              class="text-xs font-medium text-content-secondary dark:text-content-secondary uppercase tracking-wide"
+              class="text-xs font-medium text-content-secondary uppercase tracking-wide"
             >
               Release Channel
             </label>
@@ -707,7 +707,7 @@ function reloadPage() {
               <select
                 v-model="selectedChannel"
                 :disabled="loadingChannels || installState === 'installing' || installState === 'verified' || checkingVersion"
-                class="flex-1 bg-background-mute dark:bg-surface border border-stroke-subtle dark:border-stroke/20 rounded-xl px-3 py-2 text-sm text-content-primary dark:text-content-primary disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary"
+                class="flex-1 bg-background-mute dark:bg-surface border border-stroke-subtle dark:border-stroke/20 rounded-xl px-3 py-2 text-sm text-content-primary disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option v-for="ch in channels" :key="ch" :value="ch">{{ ch }}</option>
               </select>

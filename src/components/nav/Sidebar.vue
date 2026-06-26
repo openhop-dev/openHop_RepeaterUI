@@ -285,7 +285,7 @@ const currentTime = computed(() => {
           <div :class="['flex', isMobile ? 'mb-0' : 'mb-0 justify-center']">
             <img :src="logoSrc" alt="openHop" class="logo-image" :class="isMobile ? 'h-[130px]' : 'h-[154px]'" />
           </div>
-          <h2 class="text-content-primary dark:text-content-primary text-center text-lg sm:text-xl font-heading font-bold mb-3">
+          <h2 class="text-content-primary text-center text-lg sm:text-xl font-heading font-bold mb-3">
             Repeater
           </h2>
           <p class="text-content-secondary dark:text-content-muted text-sm">
@@ -310,20 +310,20 @@ const currentTime = computed(() => {
           <div class="mt-3 rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
             <div class="p-2">
               <div class="flex items-center justify-between">
-                <span class="text-content-muted dark:text-content-muted text-[10px] uppercase tracking-wide">Adaptive</span>
+                <span class="text-content-muted text-[10px] uppercase tracking-wide">Adaptive</span>
                 <div :class="['inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-semibold', adaptiveTierClass]">
                   {{ currentTier.toUpperCase() }}
                 </div>
               </div>
-              <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted dark:text-content-muted">
+              <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted">
                 <span class="text-primary">OK: {{ advertsAllowed }}</span>
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
                 <span v-if="activePenalties > 0" class="text-accent-amber">Pen: {{ activePenalties }}</span>
               </div>
               <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
-                <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted mb-1">
+                <div class="flex items-center justify-between text-[10px] text-content-muted mb-1">
                   <span>Duty Cycle</span>
-                  <span class="text-content-primary dark:text-content-primary">
+                  <span class="text-content-primary">
                     {{ systemStore.dutyCycleUtilization.toFixed(1) }}% / {{ systemStore.dutyCycleMax.toFixed(1) }}%
                   </span>
                 </div>
@@ -351,7 +351,7 @@ const currentTime = computed(() => {
                       : opt.id === 'monitor'
                         ? 'bg-accent-amber/20 text-accent-amber'
                         : 'bg-mode-segment-no-tx text-accent-red'
-                    : 'text-content-primary dark:text-content-primary hover:bg-white/5 dark:hover:bg-white/5',
+                    : 'text-content-primary hover:bg-white/5 dark:hover:bg-white/5',
                 ]"
               >
                 {{ changingMode && systemStore.currentMode !== opt.id ? '…' : opt.label }}
@@ -394,7 +394,7 @@ const currentTime = computed(() => {
               v-model="navSearch"
               type="text"
               placeholder="Search menu..."
-              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/30 bg-white/70 dark:bg-white/5 px-3 pr-8 text-xs text-content-primary dark:text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
+              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/30 bg-white/70 dark:bg-white/5 px-3 pr-8 text-xs text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
             <button
               v-if="navSearch"
@@ -502,7 +502,7 @@ const currentTime = computed(() => {
       </div>
 
       <div class="flex flex-col items-center justify-center mb-4">
-        <p class="text-content-muted dark:text-content-muted text-[10px] mb-1 tracking-wide uppercase opacity-70">Powered by</p>
+        <p class="text-content-muted text-[10px] mb-1 tracking-wide uppercase opacity-70">Powered by</p>
         <a href="https://meshcore.io" target="_blank" rel="noopener noreferrer" title="MeshCore">
           <img src="@/assets/meshcore.svg" alt="MeshCore" class="h-4 opacity-70 dark:invert-0 invert" />
         </a>

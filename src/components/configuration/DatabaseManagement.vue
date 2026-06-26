@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Database</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Database</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">View database statistics and perform maintenance</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -17,7 +17,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Database Overview
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -43,7 +43,7 @@
           class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
         >
           <p class="text-xs text-content-muted mb-1">Database Size</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.database_size_bytes) }}
           </p>
         </div>
@@ -51,7 +51,7 @@
           class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
         >
           <p class="text-xs text-content-muted mb-1">RRD Metrics</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.rrd_size_bytes) }}
           </p>
         </div>
@@ -59,7 +59,7 @@
           class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
         >
           <p class="text-xs text-content-muted mb-1">Total Size</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.database_size_bytes + stats.rrd_size_bytes) }}
           </p>
         </div>
@@ -67,7 +67,7 @@
           class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
         >
           <p class="text-xs text-content-muted mb-1">Total Rows</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ totalRows.toLocaleString() }}
           </p>
         </div>
@@ -124,7 +124,7 @@
                 class="border-b border-stroke-subtle/50 dark:border-stroke/5"
               >
                 <td class="py-2.5 pr-4">
-                  <span class="font-mono text-content-primary dark:text-content-primary">{{
+                  <span class="font-mono text-content-primary">{{
                     table.name
                   }}</span>
                 </td>
@@ -191,15 +191,15 @@
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-lg font-semibold text-content-primary">
                 {{ purgeConfirm.table === 'all' ? 'Purge All Tables' : `Purge "${purgeConfirm.table}"` }}
               </h3>
               <p class="text-sm text-content-secondary dark:text-content-muted mt-1">
                 <template v-if="purgeConfirm.table === 'all'">
-                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">all data</strong> from every data table ({{ totalRows.toLocaleString() }} rows total). This cannot be undone.
+                  This will permanently delete <strong class="text-content-primary">all data</strong> from every data table ({{ totalRows.toLocaleString() }} rows total). This cannot be undone.
                 </template>
                 <template v-else>
-                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from <strong class="text-content-primary dark:text-content-primary font-mono">{{ purgeConfirm.table }}</strong>. This cannot be undone.
+                  This will permanently delete <strong class="text-content-primary">{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from <strong class="text-content-primary font-mono">{{ purgeConfirm.table }}</strong>. This cannot be undone.
                 </template>
               </p>
             </div>
@@ -208,7 +208,7 @@
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary rounded-lg transition-colors"
             >
               Cancel
             </button>
@@ -226,7 +226,7 @@
 
     <!-- Bulk Actions -->
     <div class="cfg-section">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4">
+      <h3 class="text-lg font-semibold text-content-primary mb-4">
         Maintenance
       </h3>
       <div class="flex flex-wrap gap-3">

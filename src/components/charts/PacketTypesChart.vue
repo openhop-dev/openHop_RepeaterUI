@@ -247,7 +247,7 @@ useManagedPolling(fetchChartData, {
 <template>
   <div class="glass-card rounded-[10px] p-4 lg:p-6">
     <div class="flex items-baseline justify-between mb-3 lg:mb-4">
-      <h3 class="text-content-primary dark:text-content-primary text-lg lg:text-xl font-semibold">
+      <h3 class="text-content-primary text-lg lg:text-xl font-semibold">
         Packet Types
       </h3>
       <p class="text-content-secondary dark:text-content-muted text-xs lg:text-sm uppercase">
@@ -279,7 +279,7 @@ useManagedPolling(fetchChartData, {
           v-if="hoveredBucket"
           class="absolute top-2 left-1/2 -translate-x-1/2 bg-white/95 dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke rounded-lg px-3 py-2 z-10 pointer-events-none min-w-48"
         >
-          <div class="text-content-primary dark:text-content-primary text-sm font-medium mb-1">
+          <div class="text-content-primary text-sm font-medium mb-1">
             {{ hoveredBucket.name }} · {{ hoveredBucket.total.toLocaleString() }}
           </div>
           <div
@@ -288,7 +288,7 @@ useManagedPolling(fetchChartData, {
             class="flex justify-between gap-4 text-xs text-content-secondary dark:text-content-muted"
           >
             <span>{{ item.name }}</span>
-            <span class="text-content-primary dark:text-content-primary">{{
+            <span class="text-content-primary">{{
               item.count.toLocaleString()
             }}</span>
           </div>
@@ -305,8 +305,7 @@ useManagedPolling(fetchChartData, {
           >
             <!-- Count label above bar -->
             <span
-              class="text-content-primary dark:text-content-primary text-xs sm:text-sm font-semibold text-center w-full"
-              style="padding-bottom: 5px"
+              class="text-content-primary text-xs sm:text-sm font-semibold text-center w-full pb-1"
               >{{ bucket.total.toLocaleString() }}</span
             >
 

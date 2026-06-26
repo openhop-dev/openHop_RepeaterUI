@@ -445,7 +445,7 @@ onBeforeUnmount(() => {
       class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 filter-container"
     >
       <div class="flex items-center gap-2 header-info relative">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold">
+        <h3 class="text-content-primary text-xl font-semibold">
           Recent Packets
         </h3>
         <span class="text-content-secondary dark:text-content-muted text-sm packet-count">
@@ -476,13 +476,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Type</label>
           <select
             v-model="selectedType"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
           >
             <option
               v-for="type in packetTypes"
               :key="type"
               :value="type"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 type === 'all' ? 'All Types' : `Type ${type} (${getPacketTypeName(parseInt(type))})`
@@ -496,13 +496,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Route</label>
           <select
             v-model="selectedRoute"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50 dark:hover:border-primary/50"
           >
             <option
               v-for="route in routeTypes"
               :key="route"
               :value="route"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 route === 'all'
@@ -582,7 +582,7 @@ onBeforeUnmount(() => {
           <!-- Desktop Table View -->
           <div class="hidden lg:block space-y-2">
             <div class="grid grid-cols-12 gap-2 items-center">
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-sm">
+              <div class="col-span-1 text-content-primary text-sm">
                 {{ formatTime(packet.timestamp) }}
               </div>
               <div class="col-span-1 flex items-center gap-2">
@@ -591,7 +591,7 @@ onBeforeUnmount(() => {
                   :class="getPacketTypeIndicatorColor(packet.type)"
                 ></div>
                 <div class="flex flex-col">
-                  <span class="text-content-primary dark:text-content-primary text-xs">{{
+                  <span class="text-content-primary text-xs">{{
                     getPacketTypeName(packet.type)
                   }}</span>
                   <span
@@ -611,20 +611,20 @@ onBeforeUnmount(() => {
                   {{ getRouteTypeName(packet.route) }}
                 </span>
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.length }}B
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs flex items-center gap-1">
+              <div class="col-span-1 text-content-primary text-xs flex items-center gap-1">
                 <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
                 {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
                   <div
                     v-if="packet.transmitted"
@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
                           :class="
                             idx === 0
                               ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                              : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
+                              : 'bg-gray-500/20 text-content-muted'
                           "
                           :title="node"
                         >
@@ -698,7 +698,7 @@ onBeforeUnmount(() => {
                       </template>
                       <span
                         v-if="getPathInfo(packet)!.hops > 0"
-                        class="text-[9px] text-content-muted dark:text-content-muted ml-1"
+                        class="text-[9px] text-content-muted ml-1"
                       >
                         {{ getPathInfo(packet)!.hops }} hop{{
                           getPathInfo(packet)!.hops > 1 ? 's' : ''
@@ -714,7 +714,7 @@ onBeforeUnmount(() => {
                         {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
                       </span>
                       <svg
-                        class="w-3 h-3 text-content-muted dark:text-content-muted/60"
+                        class="w-3 h-3 text-content-muted/60"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -754,7 +754,7 @@ onBeforeUnmount(() => {
                 ></div>
                 <div class="flex flex-col">
                   <span
-                    class="text-content-primary dark:text-content-primary text-sm font-medium"
+                    class="text-content-primary text-sm font-medium"
                     >{{ getPacketTypeName(packet.type) }}</span
                   >
                   <!-- Node name for ADVERT packets -->
@@ -818,7 +818,7 @@ onBeforeUnmount(() => {
                 <template v-if="getPathInfo(packet)">
                   <!-- Show actual path with intermediate hops -->
                   <div class="flex flex-wrap items-center gap-0.5">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >PATH</span
                     >
                     <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
@@ -827,7 +827,7 @@ onBeforeUnmount(() => {
                         :class="
                           idx === 0
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
+                            : 'bg-gray-500/20 text-content-muted'
                         "
                         :title="node"
                       >
@@ -840,7 +840,7 @@ onBeforeUnmount(() => {
                     </template>
                     <span
                       v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted dark:text-content-muted ml-1"
+                      class="text-[9px] text-content-muted ml-1"
                     >
                       {{ getPathInfo(packet)!.hops }} hop{{
                         getPathInfo(packet)!.hops > 1 ? 's' : ''
@@ -852,7 +852,7 @@ onBeforeUnmount(() => {
                   <!-- Fallback to src/dst display when no path info -->
                   <!-- Source Node -->
                   <div class="flex items-center gap-1">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >SRC</span
                     >
                     <span
@@ -864,7 +864,7 @@ onBeforeUnmount(() => {
 
                   <!-- Path Arrow/Indicator -->
                   <div
-                    class="flex items-center gap-0.5 text-content-muted dark:text-content-muted/60"
+                    class="flex items-center gap-0.5 text-content-muted/60"
                   >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -907,7 +907,7 @@ onBeforeUnmount(() => {
                     >
                       {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
                     </span>
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >DST</span
                     >
                   </div>
@@ -928,7 +928,7 @@ onBeforeUnmount(() => {
                 <!-- Signal bars on mobile, hidden on desktop -->
                 <div class="md:hidden flex items-center gap-1">
                   <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
-                  <span class="text-content-primary dark:text-content-primary text-xs">{{
+                  <span class="text-content-primary text-xs">{{
                     packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
                   }}</span>
                 </div>
@@ -995,9 +995,9 @@ onBeforeUnmount(() => {
           :disabled="currentPage <= 1"
           class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage <= 1,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
               currentPage > 1,
           }"
         >
@@ -1011,7 +1011,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage > 3"
             @click="currentPage = 1"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
           >
             1
           </button>
@@ -1034,7 +1034,7 @@ onBeforeUnmount(() => {
             class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 page-number"
             :class="{
               'border-primary bg-primary/10 text-primary': currentPage === page,
-              'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+              'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
                 currentPage !== page,
             }"
           >
@@ -1052,7 +1052,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage < totalPages - 2"
             @click="currentPage = totalPages"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
           >
             {{ totalPages }}
           </button>
@@ -1064,9 +1064,9 @@ onBeforeUnmount(() => {
           :disabled="currentPage >= totalPages"
           class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage >= totalPages,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/5':
               currentPage < totalPages,
           }"
         >

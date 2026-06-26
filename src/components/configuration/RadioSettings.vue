@@ -263,7 +263,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Radio Settings</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Radio Settings</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure LoRa radio parameters and frequency presets</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -316,10 +316,10 @@ defineExpose({ requestLeave, isEditing });
           <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/10 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
             <div class="flex items-start justify-between gap-3 p-5 border-b border-stroke-subtle dark:border-white/10">
               <div>
-                <div class="text-content-primary dark:text-content-primary font-semibold text-base">
+                <div class="text-content-primary font-semibold text-base">
                   Prefill from preset
                 </div>
-                <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                <div class="text-content-muted text-xs mt-1">
                   Pick a preset to load its radio values into the form.
                 </div>
               </div>
@@ -348,7 +348,7 @@ defineExpose({ requestLeave, isEditing });
                 >
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                      <div class="text-content-primary dark:text-content-primary font-semibold text-sm truncate">
+                      <div class="text-content-primary font-semibold text-sm truncate">
                         {{ preset.title }}
                       </div>
                       <span
@@ -393,7 +393,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedFrequency }}
         </div>
@@ -406,7 +406,7 @@ defineExpose({ requestLeave, isEditing });
             max="1000"
             class="cfg-input w-32"
           />
-          <span class="text-content-muted dark:text-content-muted text-sm">MHz</span>
+          <span class="text-content-muted text-sm">MHz</span>
         </div>
       </div>
 
@@ -419,7 +419,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedSpreadingFactor }}
         </div>
@@ -444,7 +444,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedBandwidth }}
         </div>
@@ -469,7 +469,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedTxPower }}
         </div>
@@ -481,7 +481,7 @@ defineExpose({ requestLeave, isEditing });
             max="22"
             class="cfg-input w-20"
           />
-          <span class="text-content-muted dark:text-content-muted text-sm">dBm</span>
+          <span class="text-content-muted text-sm">dBm</span>
         </div>
       </div>
 
@@ -494,7 +494,7 @@ defineExpose({ requestLeave, isEditing });
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedCodingRate }}
         </div>
@@ -516,7 +516,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Preamble Length</span
         >
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+        <span class="text-content-primary font-mono text-sm">{{
           formattedPreambleLength
         }}</span>
       </div>
@@ -527,7 +527,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Section header -->
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">CAD Calibration</h3>
+          <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">CAD Calibration</h3>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Channel Activity Detection: Run Calibration to update</p>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm mt-1">These settings tune the receivers ability to detect channel status prior to transmission</p>
         </div>
@@ -541,7 +541,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Peak Threshold -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Peak Threshold</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <span class="text-content-primary font-mono text-sm">
           {{ cadConfig.peak_threshold ?? 'Not calibrated' }}
         </span>
       </div>
@@ -549,7 +549,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Min Threshold -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Min Threshold</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <span class="text-content-primary font-mono text-sm">
           {{ cadConfig.min_threshold ?? 'Not calibrated' }}
         </span>
       </div>

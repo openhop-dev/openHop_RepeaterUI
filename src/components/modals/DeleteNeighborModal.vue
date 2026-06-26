@@ -72,7 +72,7 @@ const handleClose = () => {
           />
         </svg>
         <div>
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Delete Neighbor
           </h3>
           <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -100,7 +100,7 @@ const handleClose = () => {
       >
         <div class="flex items-center gap-3">
           <div class="flex-1 min-w-0">
-            <div class="text-content-primary dark:text-content-primary font-medium truncate">
+            <div class="text-content-primary font-medium truncate">
               {{ neighbor?.node_name || neighbor?.long_name || neighbor?.short_name || 'Unknown' }}
             </div>
             <div class="text-content-secondary dark:text-content-muted text-sm font-mono">
@@ -134,7 +134,7 @@ const handleClose = () => {
       <div class="flex gap-3">
         <button
           @click="handleClose"
-          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary rounded-lg transition-colors"
         >
           Cancel
         </button>

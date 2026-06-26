@@ -237,7 +237,7 @@ const toggleMobileSidebar = () => {
         </button>
         <div class="hidden sm:block">
           <h1
-            class="text-content-primary dark:text-content-primary text-2xl lg:text-[35px] font-bold mb-1 sm:mb-2"
+            class="text-content-primary text-2xl lg:text-[35px] font-bold mb-1 sm:mb-2"
           >
             Hi {{ username }}👋
           </h1>
@@ -261,7 +261,7 @@ const toggleMobileSidebar = () => {
             </p>
             <div
               v-if="trackedBreakdown.length > 0"
-              class="text-xs text-content-muted dark:text-content-muted/80"
+              class="text-xs text-content-muted/80"
               style="min-height: 16px"
             >
               <span v-for="(item, index) in trackedBreakdown" :key="item.type" class="inline">
@@ -269,7 +269,7 @@ const toggleMobileSidebar = () => {
                 }}<span v-if="index < trackedBreakdown.length - 1">, </span>
               </span>
             </div>
-            <!-- <div v-if="lastUpdateTime" class="text-xs text-content-muted dark:text-content-muted/60 hidden sm:block" style="min-height: 16px;">
+            <!-- <div v-if="lastUpdateTime" class="text-xs text-content-muted/60 hidden sm:block" style="min-height: 16px;">
               Updated {{ lastUpdateTime.toLocaleTimeString() }}
             </div> -->
           </div>
@@ -279,7 +279,7 @@ const toggleMobileSidebar = () => {
             </p>
             <div
               v-if="lastUpdateTime"
-              class="text-xs text-content-muted dark:text-content-muted/60 hidden sm:block"
+              class="text-xs text-content-muted/60 hidden sm:block"
               style="min-height: 16px"
             >
               Last checked {{ lastUpdateTime.toLocaleTimeString() }}
@@ -393,7 +393,7 @@ const toggleMobileSidebar = () => {
           class="fixed z-[250] w-80 bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-4 shadow-2xl backdrop-blur-sm overflow-y-auto max-h-[calc(100vh-4rem)]"
         >
           <div class="flex items-center justify-between mb-3">
-            <p class="text-content-primary dark:text-content-primary font-semibold">
+            <p class="text-content-primary font-semibold">
               System Status
             </p>
             <div class="flex items-center gap-2">
@@ -423,12 +423,12 @@ const toggleMobileSidebar = () => {
               class="bg-red-50 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
             >
               <div class="flex items-center justify-between">
-                <span class="text-content-primary dark:text-content-primary font-medium"
+                <span class="text-content-primary font-medium"
                   >Update Available</span
                 >
                 <span class="text-accent-red font-bold">{{ updateInfo.latestVersion }}</span>
               </div>
-              <div class="text-xs text-content-muted dark:text-content-muted mt-1">
+              <div class="text-xs text-content-muted mt-1">
                 Current: {{ updateInfo.currentVersion }}
               </div>
               <div class="mt-2 flex items-center gap-2">
@@ -493,14 +493,14 @@ const toggleMobileSidebar = () => {
               class="bg-green-50 dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-accent-green"
             >
               <div class="flex items-center justify-between">
-                <span class="text-content-primary dark:text-content-primary font-medium"
+                <span class="text-content-primary font-medium"
                   >Up to Date</span
                 >
                 <span class="text-accent-green font-bold">{{ updateInfo.currentVersion }}</span>
               </div>
               <div
                 v-if="updateInfo.lastChecked"
-                class="text-xs text-content-muted dark:text-content-muted mt-1"
+                class="text-xs text-content-muted mt-1"
               >
                 Last checked: {{ updateInfo.lastChecked.toLocaleTimeString() }}
               </div>
@@ -531,7 +531,7 @@ const toggleMobileSidebar = () => {
             >
               <div class="flex items-center justify-center gap-2">
                 <Spinner size="sm" />
-                <span class="text-content-secondary dark:text-content-secondary"
+                <span class="text-content-secondary"
                   >Checking for updates...</span
                 >
               </div>
@@ -542,7 +542,7 @@ const toggleMobileSidebar = () => {
               v-else-if="updateInfo.error"
               class="bg-red-50 dark:bg-background-mute p-3 rounded-lg border border-accent-red/30 border-l-2 border-l-accent-red"
             >
-              <div class="text-content-primary dark:text-content-primary font-medium mb-1">
+              <div class="text-content-primary font-medium mb-1">
                 Update Check Failed
               </div>
               <div class="text-xs text-content-secondary dark:text-content-muted">
@@ -554,7 +554,7 @@ const toggleMobileSidebar = () => {
             <div class="border-t border-stroke-subtle dark:border-stroke/10"></div>
 
             <!-- Mesh Network Status Header -->
-            <div class="text-content-primary dark:text-content-primary font-medium text-sm mb-2">
+            <div class="text-content-primary font-medium text-sm mb-2">
               Mesh Network Status
             </div>
 
@@ -563,14 +563,14 @@ const toggleMobileSidebar = () => {
               class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10 border-l-2 border-l-primary"
             >
               <div class="flex items-center justify-between">
-                <span class="text-content-primary dark:text-content-primary font-medium"
+                <span class="text-content-primary font-medium"
                   >Total Tracked Nodes</span
                 >
                 <span class="text-primary font-bold">{{ totalTrackedNodes }}</span>
               </div>
               <div
                 v-if="lastUpdateTime"
-                class="text-xs text-content-muted dark:text-content-muted mt-1"
+                class="text-xs text-content-muted mt-1"
               >
                 Last updated: {{ lastUpdateTime.toLocaleString() }}
               </div>
@@ -583,7 +583,7 @@ const toggleMobileSidebar = () => {
               class="bg-background-mute dark:bg-background-mute p-3 rounded-lg border border-stroke-subtle dark:border-stroke/10"
             >
               <div class="flex items-center justify-between">
-                <span class="text-content-primary dark:text-content-primary font-medium"
+                <span class="text-content-primary font-medium"
                   >{{ item.type }}{{ item.count === 1 ? '' : 's' }}</span
                 >
                 <span :class="getContactTypeColor(item.type)" class="font-bold">{{
@@ -591,9 +591,9 @@ const toggleMobileSidebar = () => {
                 }}</span>
               </div>
               <div v-if="trackedNodes[item.type]?.length > 0" class="mt-2">
-                <div class="text-xs text-content-muted dark:text-content-muted">
+                <div class="text-xs text-content-muted">
                   Latest:
-                  <span class="text-content-secondary dark:text-content-secondary">{{
+                  <span class="text-content-secondary">{{
                     getLatestNodeName(item.type)
                   }}</span>
                 </div>
@@ -630,7 +630,7 @@ const toggleMobileSidebar = () => {
             >
               <div class="flex items-center justify-center gap-2">
                 <Spinner size="sm" />
-                <span class="text-content-secondary dark:text-content-secondary"
+                <span class="text-content-secondary"
                   >Scanning mesh network...</span
                 >
               </div>
@@ -674,7 +674,7 @@ const toggleMobileSidebar = () => {
           >
             <button
               @click="showChangePasswordModal = true; userMenu.close()"
-              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary dark:text-content-primary rounded-lg transition-colors"
+              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary rounded-lg transition-colors"
             >
               <svg
                 class="w-4 h-4 text-content-secondary"
@@ -689,7 +689,7 @@ const toggleMobileSidebar = () => {
             <div class="border-t border-stroke-subtle dark:border-stroke/40 my-1 mx-2"></div>
             <button
               @click="showRestartModal = true; userMenu.close()"
-              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary dark:text-content-primary rounded-lg transition-colors"
+              class="user-menu-item w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-content-primary rounded-lg transition-colors"
             >
               <svg
                 class="w-4 h-4 text-content-secondary"

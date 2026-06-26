@@ -113,7 +113,7 @@ const isNetworkTimeoutError = (error: string | null) => {
         <!-- Content -->
         <div class="text-center">
           <!-- Title -->
-          <h2 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-6">
+          <h2 class="text-content-primary text-xl font-semibold mb-6">
             Send Advertisement
           </h2>
 
@@ -248,7 +248,7 @@ const isNetworkTimeoutError = (error: string | null) => {
 
           <!-- Status Text -->
           <div class="mb-6">
-            <p v-if="isLoading" class="text-content-primary dark:text-content-primary text-lg">
+            <p v-if="isLoading" class="text-content-primary text-lg">
               Broadcasting advertisement...
             </p>
             <p v-else-if="isSuccess" class="text-accent-green text-lg font-medium">
@@ -278,7 +278,7 @@ const isNetworkTimeoutError = (error: string | null) => {
           <div v-if="!isLoading && !isSuccess" class="flex gap-3">
             <button
               @click="handleClose"
-              class="flex-1 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 hover:border-primary dark:hover:border-primary rounded-[10px] px-6 py-3 text-content-primary dark:text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 transition-all duration-200"
+              class="flex-1 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 hover:border-primary dark:hover:border-primary rounded-[10px] px-6 py-3 text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 transition-all duration-200"
             >
               Cancel
             </button>

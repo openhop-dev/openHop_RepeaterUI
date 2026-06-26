@@ -286,7 +286,7 @@ const stepTitles = [
                   ? 'bg-primary text-white'
                   : step < setupStore.currentStep
                     ? 'bg-primary/30 text-content-secondary dark:text-content-primary/70'
-                    : 'bg-background-mute dark:bg-stroke/10 text-content-muted dark:text-content-muted',
+                    : 'bg-background-mute dark:bg-stroke/10 text-content-muted',
               ]"
             >
               {{ step }}
@@ -297,7 +297,7 @@ const stepTitles = [
         <!-- Step Content -->
         <div class="mb-8">
           <h2
-            class="text-2xl sm:text-3xl font-bold text-content-primary dark:text-content-primary mb-2 text-center"
+            class="text-2xl sm:text-3xl font-bold text-content-primary mb-2 text-center"
           >
             {{ stepTitles[setupStore.currentStep - 1] }}
           </h2>
@@ -405,7 +405,7 @@ const stepTitles = [
             </p>
             <div class="max-w-md mx-auto">
               <label
-                class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                class="block text-content-primary/90 text-sm font-medium mb-2"
                 >Repeater Name</label
               >
               <input
@@ -450,7 +450,7 @@ const stepTitles = [
                   <Usb v-else-if="connection.key === 'usb'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
                   <Wifi v-else class="w-9 h-9 text-primary" :stroke-width="1.8" />
                 </div>
-                <div class="font-semibold text-lg text-content-primary dark:text-content-primary mb-2">
+                <div class="font-semibold text-lg text-content-primary mb-2">
                   {{ connection.title }}
                 </div>
                 <div class="text-sm text-content-secondary dark:text-content-muted">
@@ -498,7 +498,7 @@ const stepTitles = [
                     </svg>
                     <span v-else>1</span>
                   </div>
-                  <h3 class="font-semibold text-content-primary dark:text-content-primary">Select your hardware board</h3>
+                  <h3 class="font-semibold text-content-primary">Select your hardware board</h3>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">
                   <button
@@ -517,7 +517,7 @@ const stepTitles = [
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div>
-                        <div class="font-medium text-content-primary dark:text-content-primary mb-1">
+                        <div class="font-medium text-content-primary mb-1">
                           {{ hardware.name }}
                         </div>
                         <div class="text-sm text-content-secondary dark:text-content-muted">
@@ -549,7 +549,7 @@ const stepTitles = [
                     <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
                       2
                     </div>
-                    <h3 class="font-semibold text-content-primary dark:text-content-primary">
+                    <h3 class="font-semibold text-content-primary">
                       Configure the connection to your modem
                     </h3>
                   </div>
@@ -564,7 +564,7 @@ const stepTitles = [
                   >
                     <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
                       <div>
-                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                        <label class="block text-content-primary/90 text-sm font-medium mb-1.5">
                           Serial Port
                         </label>
                         <div class="space-y-2">
@@ -590,7 +590,7 @@ const stepTitles = [
                             </select>
                             <button
                               type="button"
-                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-sm text-content-primary dark:text-content-primary bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 disabled:opacity-50"
+                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-sm text-content-primary bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 disabled:opacity-50"
                               :disabled="serialDevicesLoading"
                               @click="loadSerialDevices"
                             >
@@ -618,7 +618,7 @@ const stepTitles = [
                             {{ serialDevicesError }}
                           </p>
                         </div>
-                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
+                        <p class="text-content-muted text-xs mt-2">
                           The USB-CDC device path for your modem. If you have the openHop udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
                         </p>
                       </div>
@@ -632,7 +632,7 @@ const stepTitles = [
                   >
                     <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
                       <div>
-                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                        <label class="block text-content-primary/90 text-sm font-medium mb-1.5">
                           Modem Hostname or IP Address <span class="text-red-500">*</span>
                         </label>
                         <input
@@ -641,13 +641,13 @@ const stepTitles = [
                           class="modal-input px-4 py-3 font-mono"
                           placeholder="pymc-3e2834.local"
                         />
-                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
+                        <p class="text-content-muted text-xs mt-2">
                           mDNS hostname, LAN IP, or domain name of the openHop Wi-Fi modem.
                         </p>
                       </div>
                       <div class="grid grid-cols-2 gap-4">
                         <div>
-                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          <label class="block text-content-primary/90 text-sm font-medium mb-1.5">
                             Port
                           </label>
                           <input
@@ -658,10 +658,10 @@ const stepTitles = [
                             class="modal-input px-4 py-3"
                             placeholder="5055"
                           />
-                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Default is 5055.</p>
+                          <p class="text-content-muted text-xs mt-2">Default is 5055.</p>
                         </div>
                         <div>
-                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          <label class="block text-content-primary/90 text-sm font-medium mb-1.5">
                             Auth Token
                             <span class="font-normal text-content-muted ml-1">(optional)</span>
                           </label>
@@ -671,7 +671,7 @@ const stepTitles = [
                             class="modal-input px-4 py-3"
                             placeholder="Leave blank if none"
                           />
-                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
+                          <p class="text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
                         </div>
                       </div>
                     </div>
@@ -718,7 +718,7 @@ const stepTitles = [
                 >
                   <div class="relative z-10">
                     <div
-                      class="font-medium text-content-primary dark:text-content-primary mb-1 flex items-start justify-between gap-2"
+                      class="font-medium text-content-primary mb-1 flex items-start justify-between gap-2"
                     >
                       <span class="flex items-center gap-2">
                         <span class="text-2xl">{{ getFlagEmoji(preset.title) }}</span>
@@ -745,32 +745,32 @@ const stepTitles = [
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">Freq</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                        <div class="text-content-muted">Freq</div>
+                        <div class="text-content-primary/80 font-medium">
                           {{ preset.frequency }}
                         </div>
                       </div>
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">BW</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                        <div class="text-content-muted">BW</div>
+                        <div class="text-content-primary/80 font-medium">
                           {{ preset.bandwidth }}
                         </div>
                       </div>
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">SF</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                        <div class="text-content-muted">SF</div>
+                        <div class="text-content-primary/80 font-medium">
                           {{ preset.spreading_factor }}
                         </div>
                       </div>
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">CR</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                        <div class="text-content-muted">CR</div>
+                        <div class="text-content-primary/80 font-medium">
                           {{ preset.coding_rate }}
                         </div>
                       </div>
                       <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1 col-span-2">
-                        <div class="text-content-muted dark:text-content-muted">TX Power</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                        <div class="text-content-muted">TX Power</div>
+                        <div class="text-content-primary/80 font-medium">
                           {{ setupStore.selectedHardware?.config?.tx_power ?? (preset.tx_power || '14') }} dBm
                         </div>
                       </div>
@@ -795,7 +795,7 @@ const stepTitles = [
                 >
                   <div class="flex items-center justify-between mb-2">
                     <div
-                      class="font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
+                      class="font-medium text-content-primary flex items-center gap-2"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -827,7 +827,7 @@ const stepTitles = [
                   <div v-if="setupStore.useCustomRadio" class="mt-4 grid grid-cols-2 gap-4">
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/90 text-sm font-medium mb-2"
                         >Frequency (MHz)</label
                       >
                       <input
@@ -840,7 +840,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/90 text-sm font-medium mb-2"
                         >Bandwidth (kHz)</label
                       >
                       <input
@@ -852,7 +852,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/90 text-sm font-medium mb-2"
                         >Spreading Factor</label
                       >
                       <select
@@ -869,7 +869,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/90 text-sm font-medium mb-2"
                         >Coding Rate</label
                       >
                       <select
@@ -884,7 +884,7 @@ const stepTitles = [
                     </div>
                     <div class="col-span-2 sm:col-span-1">
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/90 text-sm font-medium mb-2"
                         >TX Power (dBm)</label
                       >
                       <input
@@ -895,7 +895,7 @@ const stepTitles = [
                         class="modal-input px-4 py-2.5"
                         placeholder="14"
                       />
-                      <p class="text-content-muted dark:text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
+                      <p class="text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
                     </div>
                   </div>
                 </Transition>
@@ -911,7 +911,7 @@ const stepTitles = [
             <div class="max-w-md mx-auto space-y-4">
               <div>
                 <label
-                  class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                  class="block text-content-primary/90 text-sm font-medium mb-2"
                   >Admin Password</label
                 >
                 <input
@@ -924,7 +924,7 @@ const stepTitles = [
               </div>
               <div>
                 <label
-                  class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                  class="block text-content-primary/90 text-sm font-medium mb-2"
                   >Confirm Password</label
                 >
                 <input
@@ -967,7 +967,7 @@ const stepTitles = [
           <button
             v-if="setupStore.canGoBack"
             @click="handleBack"
-            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20 transition-all duration-300 font-medium"
+            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20 transition-all duration-300 font-medium"
           >
             Back
           </button>
@@ -981,7 +981,7 @@ const stepTitles = [
             :class="
               setupStore.canGoNext && !setupStore.isSubmitting
                 ? 'bg-primary hover:bg-primary/90 text-white border border-primary hover:border-primary/80'
-                : 'bg-background-mute dark:bg-stroke/5 text-content-muted dark:text-content-muted border border-stroke-subtle dark:border-stroke/10'
+                : 'bg-background-mute dark:bg-stroke/5 text-content-muted border border-stroke-subtle dark:border-stroke/10'
             "
           >
             <Spinner v-if="setupStore.isSubmitting" size="sm" color="white" />
@@ -1048,7 +1048,7 @@ const stepTitles = [
             </div>
           </div>
           <h3
-            class="text-2xl font-bold text-content-primary dark:text-content-primary text-center mb-4"
+            class="text-2xl font-bold text-content-primary text-center mb-4"
           >
             {{ dialogTitle }}
           </h3>

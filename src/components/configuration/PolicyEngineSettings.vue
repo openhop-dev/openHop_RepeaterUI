@@ -1288,7 +1288,7 @@ onMounted(loadPolicy);
   <div class="space-y-6">
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Policy Engine
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -1369,9 +1369,9 @@ onMounted(loadPolicy);
             <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/50 dark:bg-white/5 px-4 py-4 flex items-center justify-between gap-4">
               <div>
                 <label class="cfg-label">Policy Engine Enabled</label>
-                <p class="mt-1 text-xs text-content-muted dark:text-content-muted">Enable policy enforcement for incoming packets.</p>
+                <p class="mt-1 text-xs text-content-muted">Enable policy enforcement for incoming packets.</p>
               </div>
-              <label class="inline-flex items-center gap-3 rounded-full border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 px-3 py-2 text-sm font-medium text-content-primary dark:text-content-primary shadow-sm">
+              <label class="inline-flex items-center gap-3 rounded-full border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 px-3 py-2 text-sm font-medium text-content-primary shadow-sm">
                 <input
                   v-model="policyEngine.enabled"
                   type="checkbox"
@@ -1384,7 +1384,7 @@ onMounted(loadPolicy);
             <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/50 dark:bg-white/5 px-4 py-4 flex flex-col justify-between gap-3">
               <div>
                 <label class="cfg-label">Default Action</label>
-                <p class="mt-1 text-xs text-content-muted dark:text-content-muted">Applied when no policy rule matches.</p>
+                <p class="mt-1 text-xs text-content-muted">Applied when no policy rule matches.</p>
               </div>
               <select v-model="policyEngine.default_action" class="cfg-select w-full md:max-w-sm" :disabled="!isEditing || saving">
                 <option v-for="opt in actionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -1411,12 +1411,12 @@ onMounted(loadPolicy);
               <table class="w-full min-w-[980px] table-fixed text-sm">
                 <thead class="bg-background-mute/80 dark:bg-white/5 backdrop-blur">
                   <tr>
-                    <th class="w-16 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Order</th>
-                    <th class="w-14 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">On</th>
-                    <th class="w-44 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Name</th>
-                    <th class="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Logic</th>
-                    <th class="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Action</th>
-                    <th class="w-48 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Controls</th>
+                    <th class="w-16 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Order</th>
+                    <th class="w-14 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">On</th>
+                    <th class="w-44 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Name</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Logic</th>
+                    <th class="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Action</th>
+                    <th class="w-48 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Controls</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1425,7 +1425,7 @@ onMounted(loadPolicy);
                     :key="`${rule.id}-${idx}`"
                     class="border-t border-stroke-subtle/70 dark:border-stroke/15 odd:bg-background-mute/20 dark:odd:bg-white/[0.02] hover:bg-primary/5 dark:hover:bg-white/[0.04] transition-colors"
                   >
-                    <td class="px-3 py-3 text-xs font-medium text-content-secondary dark:text-content-secondary">{{ idx + 1 }}</td>
+                    <td class="px-3 py-3 text-xs font-medium text-content-secondary">{{ idx + 1 }}</td>
                     <td class="px-3 py-3">
                       <span
                         class="inline-flex h-5 w-5 items-center justify-center rounded-md border text-[10px] font-semibold"
@@ -1437,10 +1437,10 @@ onMounted(loadPolicy);
                         {{ rule.enabled ? '✓' : '—' }}
                       </span>
                     </td>
-                    <td class="px-3 py-3 text-content-primary dark:text-content-primary">
+                    <td class="px-3 py-3 text-content-primary">
                       <span class="block truncate font-medium" :title="rule.name">{{ rule.name }}</span>
                     </td>
-                    <td class="px-3 py-3 text-xs text-content-secondary dark:text-content-secondary">
+                    <td class="px-3 py-3 text-xs text-content-secondary">
                       <span class="block truncate font-mono leading-5" :title="summarizeRule(rule)">{{ summarizeRule(rule) }}</span>
                     </td>
                     <td class="px-3 py-3">
@@ -1462,13 +1462,13 @@ onMounted(loadPolicy);
                     </td>
                   </tr>
                   <tr v-if="!uiRules.length">
-                    <td colspan="6" class="px-3 py-8 text-center text-xs text-content-muted dark:text-content-muted">No rules yet. Add your first rule.</td>
+                    <td colspan="6" class="px-3 py-8 text-center text-xs text-content-muted">No rules yet. Add your first rule.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <p class="text-xs text-content-muted dark:text-content-muted">
+            <p class="text-xs text-content-muted">
               Rules are evaluated top to bottom. First matching rule wins.
             </p>
 
@@ -1521,8 +1521,8 @@ onMounted(loadPolicy);
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div class="cfg-section lg:col-span-4 space-y-4">
             <div class="flex items-center justify-between">
-              <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Groups</h4>
-              <span class="text-xs text-content-muted dark:text-content-muted">{{ currentGroups.length }} total</span>
+              <h4 class="text-sm font-semibold text-content-primary">Groups</h4>
+              <span class="text-xs text-content-muted">{{ currentGroups.length }} total</span>
             </div>
 
             <div class="space-y-2 max-h-[360px] overflow-auto pr-1">
@@ -1537,22 +1537,22 @@ onMounted(loadPolicy);
               >
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <p class="text-sm font-medium text-content-primary dark:text-content-primary">
+                    <p class="text-sm font-medium text-content-primary">
                       {{ group.friendly_name }}
                     </p>
-                    <p class="text-xs text-content-muted dark:text-content-muted mt-1">{{ group.id }}</p>
+                    <p class="text-xs text-content-muted mt-1">{{ group.id }}</p>
                   </div>
-                  <span class="text-[11px] text-content-muted dark:text-content-muted">{{ group.entries.length }}</span>
+                  <span class="text-[11px] text-content-muted">{{ group.entries.length }}</span>
                 </div>
               </button>
 
-              <div v-if="!currentGroups.length" class="text-xs text-content-muted dark:text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
+              <div v-if="!currentGroups.length" class="text-xs text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
                 No groups yet
               </div>
             </div>
 
             <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/20 space-y-2">
-              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Create Group</h5>
+              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Create Group</h5>
               <input v-model="newGroup.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
               <input v-model="newGroup.description" class="cfg-input" :disabled="!isEditing || saving" placeholder="Description (optional)" />
               <button class="cfg-btn-primary w-full" :disabled="!isEditing || saving" @click="createGroup">Add Group</button>
@@ -1561,7 +1561,7 @@ onMounted(loadPolicy);
 
           <div class="cfg-section lg:col-span-8 space-y-4">
             <div class="flex items-center justify-between">
-              <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">
+              <h4 class="text-sm font-semibold text-content-primary">
                 {{ selectedGroup ? selectedGroup.friendly_name : 'Entries' }}
               </h4>
               <button
@@ -1578,15 +1578,15 @@ onMounted(loadPolicy);
               <table class="w-full text-sm">
                 <thead class="bg-background-mute dark:bg-white/5">
                   <tr>
-                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Name</th>
-                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value</th>
-                    <th class="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Actions</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Name</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Value</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="entry in selectedGroup.entries" :key="entry.id" class="border-t border-stroke-subtle dark:border-stroke/15">
-                    <td class="px-3 py-2 text-content-primary dark:text-content-primary">{{ entry.friendly_name }}</td>
-                    <td class="px-3 py-2 font-mono text-xs text-content-secondary dark:text-content-secondary">{{ entry.value }}</td>
+                    <td class="px-3 py-2 text-content-primary">{{ entry.friendly_name }}</td>
+                    <td class="px-3 py-2 font-mono text-xs text-content-secondary">{{ entry.value }}</td>
                     <td class="px-3 py-2 text-right">
                       <button
                         class="text-xs px-2.5 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10"
@@ -1598,18 +1598,18 @@ onMounted(loadPolicy);
                     </td>
                   </tr>
                   <tr v-if="!selectedGroup.entries.length">
-                    <td colspan="3" class="px-3 py-8 text-center text-xs text-content-muted dark:text-content-muted">No entries in this group</td>
+                    <td colspan="3" class="px-3 py-8 text-center text-xs text-content-muted">No entries in this group</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div v-else class="text-xs text-content-muted dark:text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
+            <div v-else class="text-xs text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
               Select a group to manage entries
             </div>
 
             <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/20 space-y-2" v-if="selectedGroup">
-              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Add Entry</h5>
+              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Add Entry</h5>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <input v-model="newEntry.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
                 <input
@@ -1634,10 +1634,10 @@ onMounted(loadPolicy);
       <div class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-lg font-semibold text-content-primary">
               {{ editingRuleIndex === null ? 'Add Policy Rule' : 'Edit Policy Rule' }}
             </h3>
-            <p class="text-xs text-content-muted dark:text-content-muted mt-1">
+            <p class="text-xs text-content-muted mt-1">
               Choose match logic, then add one or more conditions. {{ ruleDraft.matchMode === 'all' ? 'ALL' : 'ANY' }} conditions must match.
             </p>
           </div>
@@ -1659,17 +1659,17 @@ onMounted(loadPolicy);
           class="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2"
         >
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Match Field Logic Matrix</h4>
+            <h4 class="text-sm font-semibold text-content-primary">Match Field Logic Matrix</h4>
             <button class="cfg-btn-secondary text-xs" @click="showLogicMatrix = false">Hide</button>
           </div>
           <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/20">
             <table class="w-full min-w-[840px] text-xs">
               <thead class="bg-background-mute dark:bg-white/5">
                 <tr>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Field</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value Types</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Operators</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Group Sources</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Field</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Value Types</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Operators</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Group Sources</th>
                 </tr>
               </thead>
               <tbody>
@@ -1708,14 +1708,14 @@ onMounted(loadPolicy);
           </div>
         </div>
 
-        <label class="inline-flex items-center gap-2 text-sm text-content-primary dark:text-content-primary">
+        <label class="inline-flex items-center gap-2 text-sm text-content-primary">
           <input v-model="ruleDraft.enabled" type="checkbox" />
           Rule enabled
         </label>
 
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Conditions</h4>
+            <h4 class="text-sm font-semibold text-content-primary">Conditions</h4>
             <button class="cfg-btn-secondary text-xs" @click="addDraftCondition">Add Condition</button>
           </div>
 
@@ -1730,13 +1730,13 @@ onMounted(loadPolicy);
             <table class="w-full min-w-[980px] text-sm">
               <thead class="bg-background-mute dark:bg-white/5">
                 <tr>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Drag</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Field</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Operator</th>
-                  <th v-if="hasAnyGroupSource" class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Source</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Type</th>
-                  <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Action</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Drag</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Field</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Operator</th>
+                  <th v-if="hasAnyGroupSource" class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Source</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Value</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Type</th>
+                  <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-content-muted">Action</th>
                 </tr>
               </thead>
               <tbody>

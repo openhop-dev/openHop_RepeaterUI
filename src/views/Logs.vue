@@ -103,7 +103,7 @@ const getLevelClass = (level: string): string => {
 
 const getLevelFilterClass = (level: string, enabled: boolean): string => {
   if (!enabled) {
-    return 'border-stroke-subtle dark:border-stroke/20 text-content-muted dark:text-content-muted bg-background-mute/70 dark:bg-white/5 hover:bg-background-mute dark:hover:bg-white/10';
+    return 'border-stroke-subtle dark:border-stroke/20 text-content-muted bg-background-mute/70 dark:bg-white/5 hover:bg-background-mute dark:hover:bg-white/10';
   }
 
   const enabledMap: Record<string, string> = {
@@ -518,7 +518,7 @@ onBeforeUnmount(() => {
     <div class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 space-y-5">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 class="text-content-primary dark:text-content-primary text-2xl font-semibold mb-2">
+          <h1 class="text-content-primary text-2xl font-semibold mb-2">
             System Logs
           </h1>
           <p class="text-content-secondary dark:text-content-muted max-w-2xl">
@@ -550,23 +550,23 @@ onBeforeUnmount(() => {
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Visible</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ filteredLogCount }}</div>
+          <div class="text-xs uppercase tracking-wide text-content-muted">Visible</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ filteredLogCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ totalLogCount }} retained lines</div>
         </div>
         <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Logger Filters</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ visibleLoggerCount }}</div>
+          <div class="text-xs uppercase tracking-wide text-content-muted">Logger Filters</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLoggerCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLoggers.size }} selected</div>
         </div>
         <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Level Filters</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ visibleLevelCount }}</div>
+          <div class="text-xs uppercase tracking-wide text-content-muted">Level Filters</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLevelCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLevels.size }} selected</div>
         </div>
         <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Last Activity</div>
-          <div class="mt-1 text-sm font-semibold text-content-primary dark:text-content-primary">
+          <div class="text-xs uppercase tracking-wide text-content-muted">Last Activity</div>
+          <div class="mt-1 text-sm font-semibold text-content-primary">
             {{ lastEventAt ? formatDateTime(lastEventAt) : 'Waiting for stream' }}
           </div>
           <div class="text-xs text-content-secondary dark:text-content-muted">
@@ -578,7 +578,7 @@ onBeforeUnmount(() => {
       <div class="rounded-2xl border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 p-4 space-y-4">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
           <div class="xl:col-span-8">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted mb-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
               Search Logs
             </label>
             <input
@@ -589,7 +589,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="xl:col-span-4">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted mb-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
               Actions
             </label>
             <div class="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -608,7 +608,7 @@ onBeforeUnmount(() => {
           <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/40 dark:bg-white/[0.03] p-4">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div>
-                <div class="text-sm font-semibold text-content-primary dark:text-content-primary">Level Filters</div>
+                <div class="text-sm font-semibold text-content-primary">Level Filters</div>
                 <div class="text-xs text-content-secondary dark:text-content-muted">{{ visibleLevelCount }} of {{ allLevels.size }} selected</div>
               </div>
               <div class="flex items-center gap-2">
@@ -637,7 +637,7 @@ onBeforeUnmount(() => {
               class="w-full flex items-center justify-between px-4 py-3 text-left"
             >
               <div>
-                <div class="text-sm font-semibold text-content-primary dark:text-content-primary">Logger Filters</div>
+                <div class="text-sm font-semibold text-content-primary">Logger Filters</div>
                 <div class="text-xs text-content-secondary dark:text-content-muted">{{ visibleLoggerCount }} of {{ allLoggers.size }} selected</div>
               </div>
               <svg class="w-4 h-4 text-content-muted transition-transform" :class="{ 'rotate-180': showLoggerFilters }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -697,7 +697,7 @@ onBeforeUnmount(() => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">Error Loading Logs</h3>
+        <h3 class="text-content-primary text-lg font-medium mb-2">Error Loading Logs</h3>
         <p class="text-content-secondary dark:text-content-muted mb-4">{{ error }}</p>
         <button @click="loadLogs('refresh')" class="btn-primary">Try Again</button>
       </div>

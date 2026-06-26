@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
           <div v-if="isRestarting" class="flex flex-col items-center gap-5 py-2">
             <Spinner size="lg" />
             <div class="text-center">
-              <h3 class="text-base font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-base font-semibold text-content-primary">
                 Restarting&hellip;
               </h3>
               <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
@@ -283,7 +283,7 @@ onBeforeUnmount(() => {
           <div v-else-if="isValidating" class="flex flex-col items-center gap-5 py-2">
             <Spinner size="lg" />
             <div class="text-center">
-              <h3 class="text-base font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-base font-semibold text-content-primary">
                 Validating Configuration&hellip;
               </h3>
               <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-content-primary dark:text-content-primary">
+                <h3 class="text-base font-semibold text-content-primary">
                   Service Did Not Restart
                 </h3>
                 <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
@@ -325,7 +325,7 @@ onBeforeUnmount(() => {
                 </svg>
               </div>
               <div>
-                <h3 class="text-base font-semibold text-content-primary dark:text-content-primary">
+                <h3 class="text-base font-semibold text-content-primary">
                   {{ title }}
                 </h3>
                 <p class="mt-1 text-sm text-content-secondary dark:text-content-muted">
@@ -373,7 +373,7 @@ onBeforeUnmount(() => {
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
                 <div class="min-w-0">
-                  <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">
+                  <h4 class="text-sm font-semibold text-content-primary">
                     {{
                       validationPassed
                         ? (validationWarnings.length ? 'Preflight Warning' : 'Preflight Passed')

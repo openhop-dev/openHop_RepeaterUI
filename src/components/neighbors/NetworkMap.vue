@@ -835,9 +835,9 @@ onUnmounted(() => {
       </div>
 
       <!-- Stats returned but no valid coordinates configured -->
-      <div v-else class="text-center text-content-primary dark:text-content-primary">
+      <div v-else class="text-center text-content-primary">
         <svg
-          class="w-8 h-8 mx-auto mb-2 text-content-muted dark:text-content-muted"
+          class="w-8 h-8 mx-auto mb-2 text-content-muted"
           fill="currentColor"
           viewBox="0 0 20 20"
         >
@@ -845,7 +845,7 @@ onUnmounted(() => {
             d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
           />
         </svg>
-        <p class="text-sm text-content-primary dark:text-content-primary">
+        <p class="text-sm text-content-primary">
           No valid coordinates available
         </p>
         <p class="text-xs text-content-secondary dark:text-content-muted">

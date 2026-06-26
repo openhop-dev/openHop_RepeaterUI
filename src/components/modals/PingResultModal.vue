@@ -211,7 +211,7 @@ const close = () => {
                   </svg>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-content-primary dark:text-content-primary">
+                  <h2 class="text-xl font-bold text-content-primary">
                     Ping Result
                   </h2>
                   <p v-if="nodeName" class="text-sm text-content-secondary dark:text-content-muted">
@@ -241,7 +241,7 @@ const close = () => {
             <div v-if="loading" class="text-center py-8">
               <Spinner size="lg" class="mx-auto mb-4" />
               <p class="text-content-secondary dark:text-content-muted">Sending ping...</p>
-              <p class="text-content-muted dark:text-content-muted text-sm mt-1">
+              <p class="text-content-muted text-sm mt-1">
                 Waiting for response...
               </p>
             </div>
@@ -288,7 +288,7 @@ const close = () => {
                   </span>
                 </div>
                 <div class="flex items-baseline gap-2">
-                  <span class="text-3xl font-bold text-content-primary dark:text-content-primary">{{
+                  <span class="text-3xl font-bold text-content-primary">{{
                     result.rtt_ms.toFixed(2)
                   }}</span>
                   <span class="text-content-secondary dark:text-content-muted">ms</span>
@@ -303,7 +303,7 @@ const close = () => {
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
-                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.rssi }}</span>
+                    <span class="text-xl font-bold text-content-primary">{{ result.rssi }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dBm</span>
                   </div>
                 </div>
@@ -314,7 +314,7 @@ const close = () => {
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
-                    <span class="text-xl font-bold text-content-primary dark:text-content-primary">{{ result.snr_db }}</span>
+                    <span class="text-xl font-bold text-content-primary">{{ result.snr_db }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dB</span>
                   </div>
                 </div>
@@ -428,7 +428,7 @@ const close = () => {
                   </div>
                 </div>
                 <div
-                  class="text-content-muted dark:text-content-muted text-xs mt-2 flex items-center justify-between"
+                  class="text-content-muted text-xs mt-2 flex items-center justify-between"
                 >
                   <span>{{ result.path.length }} hop{{ result.path.length !== 1 ? 's' : '' }}</span>
                   <span v-if="isAnimating" class="text-cyan-500 dark:text-primary animate-pulse"
@@ -439,7 +439,7 @@ const close = () => {
 
               <!-- Metadata -->
               <div
-                class="flex items-center justify-between text-xs text-content-muted dark:text-content-muted pt-2"
+                class="flex items-center justify-between text-xs text-content-muted pt-2"
               >
                 <span>Target: {{ result.target_id }}</span>
                 <span>Tag: #{{ result.tag }}</span>

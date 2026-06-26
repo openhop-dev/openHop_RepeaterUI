@@ -888,7 +888,7 @@ const parsePacketStructure = (
 
 // Get signal quality class for SNR values (using RSSI-based utility)
 const getSnrClass = (snr: number | null, rssi: number | null) => {
-  if (snr == null || rssi == null) return 'text-content-muted dark:text-content-muted';
+  if (snr == null || rssi == null) return 'text-content-muted';
 
   const quality = getSignalQuality(rssi);
   return quality.color;
@@ -993,7 +993,7 @@ watch(
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between p-4 sm:p-6 lg:p-8 pb-3 sm:pb-4 shrink-0 gap-3 sm:gap-4">
               <div class="min-w-0 flex-1">
-                <h2 class="text-lg sm:text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+                <h2 class="text-lg sm:text-2xl font-bold text-content-primary mb-1">
                   Packet Details
                 </h2>
                 <div class="flex flex-wrap gap-2 mt-2">
@@ -1052,7 +1052,7 @@ watch(
               <!-- Section 1: Basic Information -->
               <div class="mb-6">
                 <h3
-                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-cyan-400 mr-3"></div>
                   Basic Information
@@ -1067,7 +1067,7 @@ watch(
                           >Timestamp</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-sm"
+                          class="text-content-primary font-mono text-sm"
                           >{{ formatFullTime(packet.timestamp) }}</span
                         >
                       </div>
@@ -1078,7 +1078,7 @@ watch(
                           >Packet Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs break-all"
+                          class="text-content-primary font-mono text-xs break-all"
                           >{{ packet.packet_hash }}</span
                         >
                       </div>
@@ -1090,7 +1090,7 @@ watch(
                           >Header</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           >{{ packet.header }}</span
                         >
                       </div>
@@ -1102,7 +1102,7 @@ watch(
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Type</span
                         >
-                        <span class="text-content-primary dark:text-content-primary font-semibold"
+                        <span class="text-content-primary font-semibold"
                           >{{ packet.type }} ({{ getPacketTypeName(packet.type) }})</span
                         >
                       </div>
@@ -1112,7 +1112,7 @@ watch(
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Route</span
                         >
-                        <span class="text-content-primary dark:text-content-primary font-semibold"
+                        <span class="text-content-primary font-semibold"
                           >{{ packet.route }} ({{ getRouteName(packet.route) }})</span
                         >
                       </div>
@@ -1134,7 +1134,7 @@ watch(
               <!-- Section 2: Payload Data -->
               <div class="mb-6">
                 <h3
-                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-orange-400 mr-3"></div>
                   Payload Data
@@ -1149,7 +1149,7 @@ watch(
                       <span class="text-content-secondary dark:text-content-muted text-sm"
                         >Payload Length</span
                       >
-                      <span class="text-content-primary dark:text-content-primary"
+                      <span class="text-content-primary"
                         >{{ packet.payload_length || packet.length }} bytes</span
                       >
                     </div>
@@ -1169,7 +1169,7 @@ watch(
                         </div>
                         <div class="w-full overflow-x-auto">
                           <pre
-                            class="text-content-primary dark:text-content-primary/90 text-xs font-mono whitespace-pre leading-relaxed min-w-full"
+                            class="text-content-primary/90 text-xs font-mono whitespace-pre leading-relaxed min-w-full"
                             >{{ formatPayload(packet.payload) }}</pre
                           >
                         </div>
@@ -1194,7 +1194,7 @@ watch(
                           >
                             {{ section.name }}
                           </h4>
-                          <span class="text-content-muted dark:text-content-muted text-xs"
+                          <span class="text-content-muted text-xs"
                             >Bytes {{ section.byteRange }}</span
                           >
                         </div>
@@ -1202,7 +1202,7 @@ watch(
                         <!-- Hex Input Display -->
                         <div class="bg-background-mute dark:bg-white/10 rounded-[8px] p-3 mb-3">
                           <div
-                            class="font-mono text-xs text-content-primary dark:text-content-primary break-all whitespace-pre-wrap leading-relaxed"
+                            class="font-mono text-xs text-content-primary break-all whitespace-pre-wrap leading-relaxed"
                           >
                             {{ section.hexData }}
                           </div>
@@ -1232,12 +1232,12 @@ watch(
                               {{ field.bits }}
                             </div>
                             <div
-                              class="text-content-primary dark:text-content-primary text-sm break-words min-w-0"
+                              class="text-content-primary text-sm break-words min-w-0"
                             >
                               {{ field.name }}
                             </div>
                             <div
-                              class="text-content-primary dark:text-content-primary text-sm font-semibold break-all min-w-0 overflow-hidden"
+                              class="text-content-primary text-sm font-semibold break-all min-w-0 overflow-hidden"
                             >
                               <span class="block" :title="field.value">{{ field.value }}</span>
                             </div>
@@ -1271,7 +1271,7 @@ watch(
                                   >Field:</span
                                 >
                                 <div
-                                  class="text-content-primary dark:text-content-primary text-sm break-words"
+                                  class="text-content-primary text-sm break-words"
                                 >
                                   {{ field.name }}
                                 </div>
@@ -1283,7 +1283,7 @@ watch(
                                 >Value:</span
                               >
                               <div
-                                class="text-content-primary dark:text-content-primary text-sm font-semibold break-all"
+                                class="text-content-primary text-sm font-semibold break-all"
                                 :title="field.value"
                               >
                                 {{ field.value }}
@@ -1307,7 +1307,7 @@ watch(
                         <!-- Additional Info -->
                         <div
                           v-if="section.description"
-                          class="text-content-muted dark:text-content-muted text-xs italic mt-2 px-1"
+                          class="text-content-muted text-xs italic mt-2 px-1"
                         >
                           {{ section.description }}
                         </div>
@@ -1317,7 +1317,7 @@ watch(
                       <span class="text-content-secondary dark:text-content-muted text-sm"
                         >Payload:</span
                       >
-                      <span class="text-content-muted dark:text-content-muted ml-2">None</span>
+                      <span class="text-content-muted ml-2">None</span>
                     </div>
                   </div>
                 </div>
@@ -1326,7 +1326,7 @@ watch(
               <!-- Section 3: Path Information -->
               <div class="mb-6">
                 <h3
-                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-purple-400 mr-3"></div>
                   Path Information
@@ -1344,7 +1344,7 @@ watch(
                           >Source Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.src_hash === props.localHash
                               ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
@@ -1361,7 +1361,7 @@ watch(
                           >Destination Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.dst_hash === props.localHash
                               ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
@@ -1409,7 +1409,7 @@ watch(
                           :key="`desktop-${row.hop}`"
                           class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 border-t border-stroke-subtle dark:border-stroke/10 items-center"
                         >
-                          <div class="font-mono text-xs text-content-muted dark:text-content-muted">
+                          <div class="font-mono text-xs text-content-muted">
                             #{{ row.hop }}
                           </div>
 
@@ -1420,8 +1420,8 @@ watch(
                                 row.original
                                   ? row.localOriginal
                                     ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
-                                    : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary dark:text-content-primary'
-                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                    : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary'
+                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                               "
                               :title="row.original || 'No hop'"
                             >
@@ -1436,8 +1436,8 @@ watch(
                                 row.forwarded
                                   ? row.localForwarded
                                     ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
-                                    : 'bg-orange-500/10 border-orange-400/25 text-content-primary dark:text-content-primary'
-                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                    : 'bg-orange-500/10 border-orange-400/25 text-content-primary'
+                                  : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                               "
                               :title="row.forwarded || 'No hop'"
                             >
@@ -1478,7 +1478,7 @@ watch(
                             class="p-3 space-y-2"
                           >
                             <div class="flex items-center justify-between">
-                              <span class="font-mono text-xs text-content-muted dark:text-content-muted">
+                              <span class="font-mono text-xs text-content-muted">
                                 Hop #{{ row.hop }}
                               </span>
                               <span
@@ -1507,7 +1507,7 @@ watch(
 
                             <div class="grid grid-cols-2 gap-2">
                               <div class="space-y-1 min-w-0">
-                                <div class="text-[11px] uppercase tracking-wide text-content-muted dark:text-content-muted">
+                                <div class="text-[11px] uppercase tracking-wide text-content-muted">
                                   Original
                                 </div>
                                 <div
@@ -1516,8 +1516,8 @@ watch(
                                     row.original
                                       ? row.localOriginal
                                         ? 'bg-cyan-400/20 border-cyan-400/40 text-cyan-700 dark:text-cyan-300'
-                                        : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary dark:text-content-primary'
-                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                        : 'bg-cyan-500/10 border-cyan-400/25 text-content-primary'
+                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                                   "
                                   :title="row.original || 'No hop'"
                                 >
@@ -1526,7 +1526,7 @@ watch(
                               </div>
 
                               <div class="space-y-1 min-w-0">
-                                <div class="text-[11px] uppercase tracking-wide text-content-muted dark:text-content-muted">
+                                <div class="text-[11px] uppercase tracking-wide text-content-muted">
                                   Forwarded
                                 </div>
                                 <div
@@ -1535,8 +1535,8 @@ watch(
                                     row.forwarded
                                       ? row.localForwarded
                                         ? 'bg-yellow-500/20 border-yellow-400/40 text-yellow-700 dark:text-yellow-300'
-                                        : 'bg-orange-500/10 border-orange-400/25 text-content-primary dark:text-content-primary'
-                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted dark:text-content-muted'
+                                        : 'bg-orange-500/10 border-orange-400/25 text-content-primary'
+                                      : 'bg-background-mute/60 border-stroke-subtle text-content-muted'
                                   "
                                   :title="row.forwarded || 'No hop'"
                                 >
@@ -1555,7 +1555,7 @@ watch(
               <!-- Section 4: Signal & Processing -->
               <div class="mb-6">
                 <h3
-                  class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
                   <div class="w-2 h-2 rounded-full bg-green-400 mr-3"></div>
                   Signal & Processing
@@ -1569,10 +1569,10 @@ watch(
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         RSSI
                       </div>
-                      <div class="text-lg font-bold text-content-primary dark:text-content-primary">
+                      <div class="text-lg font-bold text-content-primary">
                         {{ typeof packet.rssi === 'number' ? packet.rssi : 'N/A' }}
                       </div>
-                      <div class="text-content-muted dark:text-content-muted text-xs">dBm</div>
+                      <div class="text-content-muted text-xs">dBm</div>
                     </div>
                     <div
                       class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px]"
@@ -1583,7 +1583,7 @@ watch(
                       <div class="text-lg font-bold" :class="getSnrClass(packet.snr, packet.rssi)">
                         {{ typeof packet.snr === 'number' ? packet.snr.toFixed(1) : 'N/A' }}
                       </div>
-                      <div class="text-content-muted dark:text-content-muted text-xs">dB</div>
+                      <div class="text-content-muted text-xs">dB</div>
                     </div>
                     <div
                       class="text-center p-3 glass-card bg-background-mute dark:bg-white/5 rounded-[10px] col-span-2 md:col-span-1"
@@ -1591,7 +1591,7 @@ watch(
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         Score
                       </div>
-                      <div class="text-lg font-bold text-content-primary dark:text-content-primary">
+                      <div class="text-lg font-bold text-content-primary">
                         {{ typeof packet.score === 'number' ? packet.score.toFixed(3) : 'N/A' }}
                       </div>
                     </div>
@@ -1613,7 +1613,7 @@ watch(
                     <div class="text-content-secondary dark:text-content-muted text-sm mb-2">
                       Signal Quality
                     </div>
-                    <div class="text-content-muted dark:text-content-muted text-sm italic">
+                    <div class="text-content-muted text-sm italic">
                       N/A (TX Packet)
                     </div>
                   </div>
@@ -1637,11 +1637,11 @@ watch(
                         class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-white/5 rounded-[8px]"
                       >
                         <div class="flex items-center gap-3">
-                          <span class="text-content-muted dark:text-content-muted text-sm"
+                          <span class="text-content-muted text-sm"
                             >{{ index + 1 }}.</span
                           >
                           <span
-                            class="font-mono text-xs text-content-primary dark:text-content-primary"
+                            class="font-mono text-xs text-content-primary"
                             :class="
                               props.localHash && pathSnr.hash === props.localHash
                                 ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
@@ -1692,7 +1692,7 @@ watch(
                           CAD Attempts
                         </div>
                         <div
-                          class="text-2xl font-bold text-content-primary dark:text-content-primary"
+                          class="text-2xl font-bold text-content-primary"
                         >
                           {{ packet.lbt_attempts }}
                         </div>
@@ -1706,7 +1706,7 @@ watch(
                           Total LBT Delay
                         </div>
                         <div
-                          class="text-2xl font-bold text-content-primary dark:text-content-primary"
+                          class="text-2xl font-bold text-content-primary"
                         >
                           {{
                             formatDelayTime(
@@ -1717,7 +1717,7 @@ watch(
                             )
                           }}
                         </div>
-                        <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                        <div class="text-content-muted text-xs mt-1">
                           {{ parseLbtDelays(packet.lbt_backoff_delays_ms).length }} backoffs
                         </div>
                       </div>
@@ -1739,7 +1739,7 @@ watch(
                         >
                           {{ packet.lbt_channel_busy ? 'BUSY' : 'CLEAR' }}
                         </div>
-                        <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                        <div class="text-content-muted text-xs mt-1">
                           {{ packet.lbt_channel_busy ? 'Waited for clear' : 'Immediate TX' }}
                         </div>
                       </div>
@@ -1793,7 +1793,7 @@ watch(
                                 <!-- Delay text overlay -->
                                 <div class="absolute inset-0 flex items-center px-3">
                                   <span
-                                    class="text-content-primary dark:text-content-primary text-xs font-mono font-semibold"
+                                    class="text-content-primary text-xs font-mono font-semibold"
                                     >{{ formatDelayTime(delay) }}</span
                                   >
                                 </div>
@@ -1803,7 +1803,7 @@ watch(
 
                           <!-- Percentage of total -->
                           <div class="flex-shrink-0 w-12 text-left">
-                            <span class="text-content-muted dark:text-content-muted text-xs">
+                            <span class="text-content-muted text-xs">
                               {{
                                 Math.round(
                                   (delay /
@@ -1830,7 +1830,7 @@ watch(
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >TX Delay</span
                         >
-                        <span class="text-content-primary dark:text-content-primary">
+                        <span class="text-content-primary">
                           {{
                             Number(packet.tx_delay_ms) > 0
                               ? Number(packet.tx_delay_ms).toFixed(1) + 'ms'
@@ -1866,7 +1866,7 @@ watch(
                           :class="
                             packet.is_duplicate
                               ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-content-muted dark:text-content-muted'
+                              : 'text-content-muted'
                           "
                         >
                           {{ packet.is_duplicate ? 'Yes' : 'No' }}
@@ -1897,7 +1897,7 @@ watch(
                 type="button"
                 @click="emit('close')"
                 aria-label="Close packet details"
-                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary dark:text-content-primary transition-all duration-200 backdrop-blur-sm"
+                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary transition-all duration-200 backdrop-blur-sm"
               >
                 Close
               </button>

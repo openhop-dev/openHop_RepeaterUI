@@ -169,7 +169,7 @@ const handleCancel = () => {
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-xl font-semibold text-content-primary">
               {{ isAddMode ? 'Add New Entry' : 'Edit Entry' }}
             </h3>
             <p v-if="!isAddMode" class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -187,7 +187,7 @@ const handleCancel = () => {
         <div v-if="parentPath.length > 0" class="mb-4 text-sm text-content-secondary dark:text-content-muted">
           <span>{{ isAddMode ? 'Adding under:' : 'Parent:' }}</span>
           <span v-for="(ancestor, i) in parentPath" :key="ancestor.id">
-            <span class="text-content-muted dark:text-content-muted"> / </span>
+            <span class="text-content-muted"> / </span>
             <span :class="i === parentPath.length - 1 ? 'text-primary font-mono' : 'font-mono'">{{ ancestor.name }}</span>
           </span>
         </div>
@@ -275,13 +275,13 @@ const handleCancel = () => {
                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span class="text-sm font-medium text-content-primary dark:text-content-primary">Last Used</span>
+                <span class="text-sm font-medium text-content-primary">Last Used</span>
               </div>
               <div class="text-right">
                 <div class="text-sm text-content-secondary dark:text-content-muted">
                   {{ node.last_used.toLocaleDateString() }} at {{ node.last_used.toLocaleTimeString() }}
                 </div>
-                <div class="text-xs text-content-muted dark:text-content-muted">{{ formatTimeAgo(node.last_used) }}</div>
+                <div class="text-xs text-content-muted">{{ formatTimeAgo(node.last_used) }}</div>
               </div>
             </div>
           </div>

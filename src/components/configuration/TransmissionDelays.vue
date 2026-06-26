@@ -126,7 +126,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">TX Delays</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">TX Delays</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure transmission delay factors for flood and direct packets</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -175,11 +175,11 @@ defineExpose({ requestLeave, isEditing });
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-3">
         <div class="flex flex-col gap-1">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Flood TX Delay Factor</span>
-          <span class="text-content-muted dark:text-content-muted text-xs">Scales the airtime-based random transmit window for flood packets. Higher values increase delay spread for collision avoidance.</span>
+          <span class="text-content-muted text-xs">Scales the airtime-based random transmit window for flood packets. Higher values increase delay spread for collision avoidance.</span>
         </div>
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm flex-shrink-0"
+          class="text-content-primary font-mono text-sm flex-shrink-0"
         >
           {{ floodTxDelayFactor }}
         </div>
@@ -197,11 +197,11 @@ defineExpose({ requestLeave, isEditing });
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 gap-3">
         <div class="flex flex-col gap-1">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Direct TX Delay Factor</span>
-          <span class="text-content-muted dark:text-content-muted text-xs">Fixed delay in seconds before transmitting direct-routed packets. Applied as-is with no randomisation.</span>
+          <span class="text-content-muted text-xs">Fixed delay in seconds before transmitting direct-routed packets. Applied as-is with no randomisation.</span>
         </div>
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm flex-shrink-0"
+          class="text-content-primary font-mono text-sm flex-shrink-0"
         >
           {{ directTxDelayFactor }}
         </div>

@@ -360,7 +360,7 @@ onMounted(() => {
       <!-- Global Filter Controls (only show if we have data) -->
       <div v-if="Object.keys(advertsByType).length > 0" class="">
         <div class="flex items-center justify-between">
-          <span class="text-content-primary dark:text-content-primary text-lg font-semibold"></span>
+          <span class="text-content-primary text-lg font-semibold"></span>
           <div class="flex items-center gap-3">
             <!-- View Toggle Buttons -->
             <div
@@ -538,7 +538,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.zeroHop"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none"
               >
                 <option value="all">All Nodes</option>
                 <option value="true">Zero Hop Only</option>
@@ -554,7 +554,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.routeType"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none"
               >
                 <option value="all">All Types</option>
                 <option value="direct">Direct</option>
@@ -574,7 +574,7 @@ onMounted(() => {
                 v-model="filters.searchText"
                 type="text"
                 placeholder="Node name or pubkey..."
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-gray-400 dark:placeholder-white/40"
+                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-gray-400 dark:placeholder-white/40"
               />
             </div>
           </div>
@@ -626,7 +626,7 @@ onMounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">
+        <h3 class="text-content-primary text-lg font-medium mb-2">
           No Neighbors Found
         </h3>
         <p class="text-content-secondary dark:text-content-muted">
@@ -660,7 +660,7 @@ onMounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">
+        <h3 class="text-content-primary text-lg font-medium mb-2">
           No neighbors match your filters
         </h3>
         <p class="text-content-secondary dark:text-content-muted mb-4">
