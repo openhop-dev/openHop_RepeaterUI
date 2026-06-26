@@ -22,7 +22,7 @@ defineEmits<{
     >
       <div
         v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/opacity-heavy backdrop-blur-sm"
+        class="modal-backdrop"
       >
         <div class="modal-card max-w-md">
           <div class="flex items-start gap-3 mb-4">

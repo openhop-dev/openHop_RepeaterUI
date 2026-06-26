@@ -1180,7 +1180,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
   <Teleport to="body">
   <div
     v-if="showMessagesDialog"
-    class="fixed inset-0 bg-black/opacity-heavy backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+    class="modal-backdrop"
     @click.self="showMessagesDialog = false"
   >
     <div
@@ -1547,7 +1547,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
   <Teleport to="body">
   <div
     v-if="showSessionsDialog"
-    class="fixed inset-0 bg-black/opacity-heavy backdrop-blur-md flex items-center justify-center z-[350] p-4"
+    class="modal-backdrop z-[350]!"
   >
     <div
       class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6 max-w-3xl w-full max-h-[80vh] flex flex-col"

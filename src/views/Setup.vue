@@ -1021,7 +1021,7 @@ const stepTitles = [
     <Transition name="modal">
       <div
         v-if="showDialog"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/opacity-heavy backdrop-blur-sm"
+        class="modal-backdrop"
         @click="closeDialog"
       >
         <div

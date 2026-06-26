@@ -545,7 +545,7 @@ function onImportDone(imported: number) {
     <Teleport to="body">
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/opacity-heavy backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      class="modal-backdrop"
       @click.self="showCreateModal = false"
     >
       <div
@@ -656,7 +656,7 @@ function onImportDone(imported: number) {
     <Teleport to="body">
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/opacity-heavy backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      class="modal-backdrop"
       @click.self="closeModals"
     >
       <div
