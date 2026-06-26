@@ -359,7 +359,7 @@ defineExpose({ requestLeave, isEditing });
 function formatPolicyApiError(err: unknown, fallback: string): string {
   const raw = err instanceof Error ? err.message : fallback;
   if (raw.includes('404')) {
-    return 'Policy API not available on the connected backend. Update/restart pyMC_Repeater so /api/policy, /api/policy_groups, and /api/policy_group_entries are exposed.';
+    return 'Policy API not available on the connected backend. Update/restart openHop Repeater so /api/policy, /api/policy_groups, and /api/policy_group_entries are exposed.';
   }
   return raw || fallback;
 }

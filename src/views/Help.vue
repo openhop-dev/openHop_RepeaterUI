@@ -32,7 +32,7 @@ defineOptions({ name: 'HelpView' });
         </p>
 
         <a
-          href="https://github.com/rightup/pyMC_Repeater/wiki"
+          href="https://github.com/openhop-dev/openhope-repeater/wiki"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 font-medium py-3 px-6 rounded-xl transition-colors bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"

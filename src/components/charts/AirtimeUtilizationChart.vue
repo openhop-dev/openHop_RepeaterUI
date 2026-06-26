@@ -17,7 +17,7 @@ const AIRTIME_CACHE_TTL_MS = 120_000; // 2 minutes — matches 60-second bucket 
  * Uses proper LoRa airtime calculation (Semtech formula) for accurate
  * channel utilization metrics.
  *
- * Ported from pymc_console recharts implementation.
+ * Ported from openHop console recharts implementation.
  *
  * @see https://www.semtech.com/design-support/lora-calculator
  */

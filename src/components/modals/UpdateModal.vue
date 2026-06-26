@@ -297,7 +297,7 @@ async function startInstall() {
                 if (installState.value === 'installing' || installState.value === 'complete') {
                   stopEventSource();
                   installState.value = 'restarting';
-                  appendLine('[pyMC updater] Service is restarting — waiting for it to come back…');
+                  appendLine('[openHop updater] Service is restarting — waiting for it to come back…');
                   waitForRestart();
                 }
               }, 8000);
@@ -345,7 +345,7 @@ async function startInstall() {
     // Transition to the restart-wait flow instead of showing an error.
     if (pipDone.value && installState.value !== 'error') {
       installState.value = 'restarting';
-      appendLine('[pyMC updater] Connection lost — waiting for service restart…');
+      appendLine('[openHop updater] Connection lost — waiting for service restart…');
       waitForRestart();
       return;
     }
@@ -379,7 +379,7 @@ async function waitForRestart() {
   }
 
   if (!wentDown) {
-    appendLine('[pyMC updater] Service did not appear to stop — assuming fast restart');
+    appendLine('[openHop updater] Service did not appear to stop — assuming fast restart');
   }
 
   // --- Phase 2: wait for the service to come back UP (max 60 s) ---

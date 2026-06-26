@@ -149,7 +149,7 @@ function handleCancel() {
                   <option value="meshcoretomqtt">Meshcoretomqtt</option>
                   <option value="letsmesh">Letsmesh</option>
                   <option value="waev">Waev</option>
-                  <option value="mqtt">pyMC</option>
+                  <option value="mqtt">openHop</option>
                 </select>
               </div>
               <div class="flex items-center gap-3 pb-1.5">

@@ -500,7 +500,7 @@ export class HttpClient<SecurityDataType = unknown> {
  * @title Repeater API
  * @version 1.0.0
  * @baseUrl /api
- * @contact Repeater (https://github.com/rightup/pyMC_Repeater)
+ * @contact Repeater (https://github.com/openhop-dev/openhope-repeater)
  *
  * REST API for Repeater - LoRa mesh network repeater with room server functionality.
  *
