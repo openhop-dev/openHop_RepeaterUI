@@ -54,6 +54,9 @@
 
   --color-accent-cyan: #38bdf8;
   --color-accent-green: #22c55e;
+  --color-accent-green-light: #86efac;
+  --color-accent-orange: #c2410c;
+  --color-accent-amber: #f59e0b;
   --color-accent-purple: var(--openhop-purple);
   --color-accent-red: #ef4444;
 
@@ -161,6 +164,9 @@
 
   --color-accent-cyan: #38bdf8;
   --color-accent-green: #4ade80;
+  --color-accent-green-light: #bbf7d0;
+  --color-accent-orange: #ea580c;
+  --color-accent-amber: #fbbf24;
   --color-accent-purple: #c084fc;
   --color-accent-red: #f87171;
 
