@@ -80,7 +80,7 @@ const isNetworkTimeoutError = (error: string | null) => {
   <Teleport to="body">
     <div
       v-if="showModal"
-      class="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      class="modal-backdrop"
       @click.self="handleClose"
     >
       <!-- Backdrop -->

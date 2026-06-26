@@ -81,7 +81,7 @@ onUnmounted(() => {
     >
       <div
         v-if="show"
-        class="fixed inset-0 z-[500] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+        class="modal-backdrop z-[500]!"
       >
         <div class="modal-card max-w-sm w-full">
           <!-- Header -->

@@ -302,7 +302,7 @@ const handleBackdropClick = (event: MouseEvent) => {
     <Transition name="fade">
       <div
         v-if="incident"
-        class="modal-backdrop z-40!"
+        class="modal-backdrop"
         @click="handleBackdropClick"
       >
         <div
