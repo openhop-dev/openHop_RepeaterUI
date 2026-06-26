@@ -306,7 +306,7 @@ const handleBackdropClick = (event: MouseEvent) => {
         @click="handleBackdropClick"
       >
         <div
-          class="modal-card max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl"
+          class="bg-white dark:bg-surface-elevated rounded-[20px] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl border border-stroke-subtle dark:border-white/10"
           @click.stop
         >
           <!-- Header -->
