@@ -92,9 +92,9 @@ const formatDateTime = (timestamp: string): string => {
 
 const getLevelClass = (level: string): string => {
   const levelMap: Record<string, string> = {
-    ERROR: 'text-red-600 dark:text-red-300 bg-red-500/10 border-red-500/20',
-    WARNING: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
-    WARN: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
+    ERROR: 'text-accent-red bg-accent-red/10 border-accent-red/20',
+    WARNING: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
+    WARN: 'text-accent-amber bg-accent-amber/10 border-accent-amber/20',
     INFO: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/20',
     DEBUG: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20',
   };
@@ -107,9 +107,9 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
   }
 
   const enabledMap: Record<string, string> = {
-    ERROR: 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
-    WARNING: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    WARN: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+    ERROR: 'border-accent-red/40 bg-accent-red/10 text-accent-red',
+    WARNING: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
+    WARN: 'border-accent-amber/40 bg-accent-amber/10 text-accent-amber',
     INFO: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300',
     DEBUG: 'border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   };
@@ -118,11 +118,11 @@ const getLevelFilterClass = (level: string, enabled: boolean): string => {
 
 const streamStatusClass = computed(() => {
   const classMap: Record<StreamState, string> = {
-    connecting: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    live: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    paused: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-    reconnecting: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-    offline: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300',
+    connecting: 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber',
+    live: 'border-accent-green/30 bg-accent-green/10 text-accent-green',
+    paused: 'border-stroke/30 bg-background-mute text-content-muted',
+    reconnecting: 'border-accent-amber/30 bg-accent-amber/10 text-accent-amber',
+    offline: 'border-accent-red/30 bg-accent-red/10 text-accent-red',
   };
   return classMap[streamState.value];
 });
@@ -692,7 +692,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else-if="error && allLogs.length === 0" class="p-8 text-center">
-        <div class="text-red-600 dark:text-red-400 mb-4">
+        <div class="text-accent-red mb-4">
           <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -705,26 +705,26 @@ onBeforeUnmount(() => {
       <div v-else class="relative">
         <div
           ref="logContainer"
-          class="max-h-[70vh] overflow-y-auto bg-slate-950/95 text-slate-100"
+          class="max-h-[70vh] overflow-y-auto bg-background-mute dark:bg-slate-950/95 text-content-primary"
           @scroll="handleLogScroll"
         >
-          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-slate-300">
-            <h3 class="text-lg font-medium text-white mb-2">No Logs to Display</h3>
-            <p class="text-sm text-slate-400">The current search and filter settings removed every retained line.</p>
+          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-content-secondary">
+            <h3 class="text-lg font-medium text-content-primary mb-2">No Logs to Display</h3>
+            <p class="text-sm text-content-muted">The current search and filter settings removed every retained line.</p>
           </div>
 
-          <div v-else class="divide-y divide-white/5">
+          <div v-else class="divide-y divide-stroke-subtle dark:divide-white/5">
             <div
               v-for="(log, index) in filteredLogs"
               :key="log.id ?? `${log.timestamp}-${index}`"
               class="px-3 py-1 transition-colors cursor-pointer"
-              :class="selectedLogId === log.id ? 'bg-white/10' : 'hover:bg-white/5'"
+              :class="selectedLogId === log.id ? 'bg-stroke-subtle dark:bg-white/10' : 'hover:bg-stroke-subtle/50 dark:hover:bg-white/5'"
               @click="selectLog(log)"
             >
               <div class="flex flex-col gap-0.5 xl:flex-row xl:items-start">
                 <div class="flex flex-wrap items-center gap-1.5 xl:min-w-[260px] xl:max-w-[260px] xl:flex-none">
-                  <span class="text-[11px] text-slate-400">{{ formatTime(log.timestamp) }}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-white/10 bg-white/5 text-slate-200">
+                  <span class="text-[11px] text-content-muted">{{ formatTime(log.timestamp) }}</span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/10 bg-stroke-subtle/50 dark:bg-white/5 text-content-secondary dark:text-slate-200">
                     {{ extractLoggerName(log) }}
                   </span>
                   <span :class="['px-1.5 py-0.5 text-[10px] font-semibold rounded-full border', getLevelClass(log.level)]">
@@ -732,38 +732,38 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-xs leading-4 break-words text-slate-100">
+                  <div class="text-xs leading-4 break-words text-content-primary">
                     {{ cleanLogMessage(log) }}
                   </div>
 
-                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 space-y-3 text-xs text-slate-300">
+                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-stroke-subtle dark:border-white/10 bg-background-mute dark:bg-black/20 p-3 space-y-3 text-xs text-content-secondary">
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Timestamp</div>
-                        <div class="mt-1 text-slate-200">{{ formatDateTime(log.timestamp) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Timestamp</div>
+                        <div class="mt-1 text-content-primary">{{ formatDateTime(log.timestamp) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Logger</div>
-                        <div class="mt-1 text-slate-200">{{ extractLoggerName(log) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Logger</div>
+                        <div class="mt-1 text-content-primary">{{ extractLoggerName(log) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Module</div>
-                        <div class="mt-1 text-slate-200">{{ log.module || '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Module</div>
+                        <div class="mt-1 text-content-primary">{{ log.module || '—' }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Line</div>
-                        <div class="mt-1 text-slate-200">{{ log.line ?? '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Line</div>
+                        <div class="mt-1 text-content-primary">{{ log.line ?? '—' }}</div>
                       </div>
                     </div>
 
                     <div>
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Full Message</div>
-                      <pre class="whitespace-pre-wrap break-words text-slate-100">{{ log.message }}</pre>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Full Message</div>
+                      <pre class="whitespace-pre-wrap break-words text-content-primary">{{ log.message }}</pre>
                     </div>
 
                     <div v-if="log.exception">
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Exception</div>
-                      <pre class="whitespace-pre-wrap break-words text-red-200">{{ log.exception }}</pre>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Exception</div>
+                      <pre class="whitespace-pre-wrap break-words text-accent-red/80">{{ log.exception }}</pre>
                     </div>
                   </div>
                 </div>
@@ -773,7 +773,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="!followTail && pendingNewLogs" class="absolute bottom-4 right-4">
-          <button @click="jumpToLatest" class="rounded-full border border-primary/40 bg-primary text-white px-4 py-2 shadow-lg">
+          <button @click="jumpToLatest" class="rounded-full border border-primary/50 bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 shadow-lg">
             {{ pendingNewLogs }} new line{{ pendingNewLogs === 1 ? '' : 's' }}
           </button>
         </div>
