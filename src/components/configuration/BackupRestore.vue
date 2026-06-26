@@ -200,7 +200,7 @@
       <!-- File picker -->
       <div class="space-y-3">
         <label
-          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/50 hover:border-primary/50 transition-colors"
+          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/50 hover:border-primary/50 dark:hover:border-primary/50 transition-colors"
         >
           <svg
             class="w-5 h-5 text-content-secondary dark:text-content-muted"
