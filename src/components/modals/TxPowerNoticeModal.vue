@@ -35,7 +35,7 @@ function onConfirm() {
   <Transition name="fade">
     <div
       v-if="show"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      class="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       @click.self="closeModal"
     >
       <div class="w-full max-w-2xl rounded-3xl border border-amber-300/70 dark:border-amber-400/30 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
