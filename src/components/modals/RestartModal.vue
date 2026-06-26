@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        class="modal-backdrop"
         @click.self="close"
       >
         <div class="modal-card max-w-md shadow-xl">

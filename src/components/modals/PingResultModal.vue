@@ -182,7 +182,7 @@ const close = () => {
     <Transition name="modal">
       <div
         v-if="show"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[300] p-4"
+        class="modal-backdrop"
         @click.self="close"
       >
         <div

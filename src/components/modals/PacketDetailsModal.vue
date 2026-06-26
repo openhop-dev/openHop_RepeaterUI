@@ -976,7 +976,7 @@ watch(
     <Transition name="modal" appear>
       <div
         v-if="isOpen && packet"
-        class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-hidden"
+        class="modal-backdrop overflow-hidden !p-2 sm:!p-4"
         @click="handleBackdropClick"
         @keydown="handleKeyDown"
         tabindex="0"

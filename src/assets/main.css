@@ -152,12 +152,12 @@
 
   /* Standard modal backdrop (confirmations, edit dialogs) — z-[300] per layering scale */
   .modal-backdrop {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4;
   }
 
   /* Heavy backdrop for irreversible / destructive operations */
   .modal-backdrop-heavy {
-    @apply fixed inset-0 bg-black/80 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4;
   }
 
   /* Inner card — combine with max-w-md / max-w-lg / max-w-2xl in the template */
@@ -273,4 +273,5 @@
   .status-dot-red    { background-color: var(--color-accent-red); }
   .status-dot-cyan   { background-color: var(--color-accent-cyan); }
   .status-dot-muted  { background-color: var(--color-border); }
+
 }
