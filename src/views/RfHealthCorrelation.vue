@@ -111,7 +111,7 @@ const CHART_COLORS = {
   crc: 'var(--color-accent-red)',
   packetCount: 'var(--color-accent-green)',
   grid: 'var(--color-border-subtle)',
-  ticks: 'var(--color-text-accent-amber)',
+  ticks: 'var(--color-text-secondary)',
   tooltipBg: 'var(--color-surface-elevated)',
   tooltipText: 'var(--color-text-primary)',
   tooltipBorder: 'var(--color-border-subtle)',
