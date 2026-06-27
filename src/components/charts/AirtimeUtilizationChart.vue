@@ -17,7 +17,7 @@ const AIRTIME_CACHE_TTL_MS = 120_000; // 2 minutes — matches 60-second bucket 
  * Uses proper LoRa airtime calculation (Semtech formula) for accurate
  * channel utilization metrics.
  *
- * Ported from pymc_console recharts implementation.
+ * Ported from openHop console recharts implementation.
  *
  * @see https://www.semtech.com/design-support/lora-calculator
  */
@@ -591,7 +591,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="glass-card rounded-[10px] p-4 lg:p-6">
     <h3
-      class="text-content-primary dark:text-content-primary text-lg lg:text-xl font-semibold mb-3 lg:mb-4"
+      class="text-content-primary text-lg lg:text-xl font-semibold mb-3 lg:mb-4"
     >
       Airtime Utilization
     </h3>
@@ -628,7 +628,7 @@ onBeforeUnmount(() => {
     <!-- Performance Stats -->
     <div class="mt-3 lg:mt-4 grid grid-cols-2 gap-3 lg:gap-4">
       <div class="text-center">
-        <div class="text-lg lg:text-2xl font-bold text-content-primary dark:text-content-primary">
+        <div class="text-lg lg:text-2xl font-bold text-content-primary">
           {{ packetStore.packetStats?.total_packets || localStats.totalReceived }}
         </div>
         <div class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide">
@@ -636,7 +636,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <div class="text-center">
-        <div class="text-lg lg:text-2xl font-bold text-content-primary dark:text-content-primary">
+        <div class="text-lg lg:text-2xl font-bold text-content-primary">
           {{ packetStore.packetStats?.transmitted_packets || localStats.totalTransmitted }}
         </div>
         <div class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide">

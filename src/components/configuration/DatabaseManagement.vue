@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Database</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Database</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">View database statistics and perform maintenance</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -17,7 +17,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Database Overview
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -40,34 +40,34 @@
       <!-- Size summary -->
       <div v-if="stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Database Size</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.database_size_bytes) }}
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">RRD Metrics</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.rrd_size_bytes) }}
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Total Size</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ formatBytes(stats.database_size_bytes + stats.rrd_size_bytes) }}
           </p>
         </div>
         <div
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           <p class="text-xs text-content-muted mb-1">Total Rows</p>
-          <p class="text-lg font-semibold text-content-primary dark:text-content-primary font-mono">
+          <p class="text-lg font-semibold text-content-primary font-mono">
             {{ totalRows.toLocaleString() }}
           </p>
         </div>
@@ -84,9 +84,9 @@
       <!-- Error state -->
       <div
         v-if="error"
-        class="rounded-lg border border-red-500/30 dark:border-red-400/30 bg-red-50 dark:bg-red-500/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium dark:border-accent-red/opacity-medium bg-accent-red/opacity-light dark:bg-accent-red/opacity-light p-3 mb-4"
       >
-        <p class="text-xs text-red-700 dark:text-red-400">{{ error }}</p>
+        <p class="text-xs text-accent-red">{{ error }}</p>
       </div>
 
       <!-- Table list -->
@@ -94,7 +94,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-stroke-subtle dark:border-stroke/10">
+              <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
                 <th
                   class="text-left py-2 pr-4 text-xs font-medium text-content-muted uppercase tracking-wider"
                 >
@@ -121,10 +121,10 @@
               <tr
                 v-for="table in stats.tables"
                 :key="table.name"
-                class="border-b border-stroke-subtle/50 dark:border-stroke/5"
+                class="border-b border-stroke-subtle/50 dark:border-stroke/opacity-light"
               >
                 <td class="py-2.5 pr-4">
-                  <span class="font-mono text-content-primary dark:text-content-primary">{{
+                  <span class="font-mono text-content-primary">{{
                     table.name
                   }}</span>
                 </td>
@@ -140,21 +140,21 @@
                   >
                     {{ formatDateShort(table.oldest_timestamp) }} —
                     {{ formatDateShort(table.newest_timestamp) }}
-                    <span class="text-content-muted/60 ml-1"
+                    <span class="text-content-muted/opacity-heavy ml-1"
                       >({{ dateDays(table.oldest_timestamp, table.newest_timestamp) }}d)</span
                     >
                   </span>
-                  <span v-else-if="table.row_count === 0" class="text-xs text-content-muted/50"
+                  <span v-else-if="table.row_count === 0" class="text-xs text-content-muted/opacity-heavy"
                     >—</span
                   >
-                  <span v-else class="text-xs text-content-muted/50">n/a</span>
+                  <span v-else class="text-xs text-content-muted/opacity-heavy">n/a</span>
                 </td>
                 <td class="py-2.5 text-right">
                   <button
                     v-if="isUnlocked && isPurgeable(table.name) && table.row_count > 0"
                     @click="confirmPurge(table.name, table.row_count)"
                     :disabled="purging[table.name]"
-                    class="px-2.5 py-1 bg-red-500/10 dark:bg-red-400/10 hover:bg-red-500/20 dark:hover:bg-red-400/20 text-red-700 dark:text-red-400 rounded border border-red-500/30 dark:border-red-400/20 transition-colors text-xs disabled:opacity-50"
+                    class="px-2.5 py-1 bg-accent-red/opacity-light dark:bg-accent-red/opacity-light hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded border border-accent-red/opacity-medium dark:border-accent-red/opacity-medium transition-colors text-xs disabled:opacity-50"
                   >
                     <span v-if="purging[table.name]" class="flex items-center gap-1">
                       <Spinner size="xs" color="current" class="inline-block" />
@@ -162,7 +162,7 @@
                     </span>
                     <span v-else>Empty</span>
                   </button>
-                  <span v-else-if="!isPurgeable(table.name)" class="text-xs text-content-muted/50"
+                  <span v-else-if="!isPurgeable(table.name)" class="text-xs text-content-muted/opacity-heavy"
                     >—</span
                   >
                 </td>
@@ -185,21 +185,21 @@
           @click.stop
         >
           <div class="flex items-start gap-3 mb-5">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center">
-              <svg class="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-accent-red/opacity-light flex items-center justify-center">
+              <svg class="w-5 h-5 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
             </div>
             <div class="flex-1 min-w-0">
-              <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-lg font-semibold text-content-primary">
                 {{ purgeConfirm.table === 'all' ? 'Purge All Tables' : `Purge "${purgeConfirm.table}"` }}
               </h3>
               <p class="text-sm text-content-secondary dark:text-content-muted mt-1">
                 <template v-if="purgeConfirm.table === 'all'">
-                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">all data</strong> from every data table ({{ totalRows.toLocaleString() }} rows total). This cannot be undone.
+                  This will permanently delete <strong class="text-content-primary">all data</strong> from every data table ({{ totalRows.toLocaleString() }} rows total). This cannot be undone.
                 </template>
                 <template v-else>
-                  This will permanently delete <strong class="text-content-primary dark:text-content-primary">{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from <strong class="text-content-primary dark:text-content-primary font-mono">{{ purgeConfirm.table }}</strong>. This cannot be undone.
+                  This will permanently delete <strong class="text-content-primary">{{ purgeConfirm.rowCount.toLocaleString() }} rows</strong> from <strong class="text-content-primary font-mono">{{ purgeConfirm.table }}</strong>. This cannot be undone.
                 </template>
               </p>
             </div>
@@ -208,14 +208,14 @@
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
             >
               Cancel
             </button>
             <button
               @click="executePurge"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-600 dark:text-red-400 rounded-lg transition-colors font-medium disabled:opacity-50"
+              class="flex-1 px-4 py-3 bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red rounded-lg transition-colors font-medium disabled:opacity-50"
             >
               {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
             </button>
@@ -226,7 +226,7 @@
 
     <!-- Bulk Actions -->
     <div class="cfg-section">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4">
+      <h3 class="text-lg font-semibold text-content-primary mb-4">
         Maintenance
       </h3>
       <div class="flex flex-wrap gap-3">
@@ -234,7 +234,7 @@
         <button
           @click="confirmPurge('all', totalRows)"
           :disabled="!stats || totalRows === 0 || !isUnlocked"
-          class="px-4 py-2 bg-red-500/20 dark:bg-red-400/20 hover:bg-red-500/30 dark:hover:bg-red-400/30 text-red-900 dark:text-red-200 rounded-lg border border-red-500/50 dark:border-red-400/40 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-4 py-2 bg-accent-red/opacity-medium dark:bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded-lg border border-accent-red/opacity-heavy dark:border-accent-red/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,10 +269,10 @@
         </button>
       </div>
 
-      <p v-if="vacuumResult" class="text-xs text-green-600 dark:text-green-400 mt-3">
+      <p v-if="vacuumResult" class="text-xs text-accent-green mt-3">
         {{ vacuumResult }}
       </p>
-      <p v-if="purgeSuccess" class="text-xs text-green-600 dark:text-green-400 mt-3">
+      <p v-if="purgeSuccess" class="text-xs text-accent-green mt-3">
         {{ purgeSuccess }}
       </p>
     </div>

@@ -175,9 +175,9 @@ onUnmounted(() => {
     <button
       ref="buttonRef"
       @click="toggleMenu"
-      class="p-1 rounded hover:bg-stroke-subtle dark:hover:bg-white/10 transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary/80"
+      class="p-1 rounded hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary/opacity-heavy"
       :class="{
-        'bg-background-mute dark:bg-stroke/10 text-content-primary dark:text-content-primary/80':
+        'bg-background-mute dark:bg-stroke/opacity-subtle text-content-primary/opacity-heavy':
           showMenu,
       }"
       data-menu-container
@@ -197,14 +197,14 @@ onUnmounted(() => {
       <div
         v-if="showMenu"
         ref="menuRef"
-        class="fixed w-36 bg-white dark:bg-surface-elevated backdrop-blur-lg border border-stroke-subtle dark:border-white/20 rounded-[15px] shadow-2xl z-[450]"
+        class="fixed w-36 bg-white dark:bg-surface-elevated backdrop-blur-lg border border-stroke-subtle dark:border-white/opacity-medium rounded-[15px] shadow-2xl z-[450]"
         :style="{ top: menuPosition.top + 'px', left: menuPosition.left + 'px' }"
         data-menu-container
       >
         <div class="py-2">
           <button
             @click="handleShowDetails"
-            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-content-primary dark:text-content-primary hover:bg-primary/10 transition-colors border-b border-stroke-subtle dark:border-white/10"
+            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-content-primary hover:bg-primary/opacity-light transition-colors border-b border-stroke-subtle dark:border-white/opacity-light"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -219,7 +219,7 @@ onUnmounted(() => {
 
           <button
             @click="handlePing"
-            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-content-primary dark:text-content-primary hover:bg-primary/10 transition-colors border-b border-stroke-subtle dark:border-white/10"
+            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-content-primary hover:bg-primary/opacity-light transition-colors border-b border-stroke-subtle dark:border-white/opacity-light"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -234,7 +234,7 @@ onUnmounted(() => {
 
           <button
             @click="handleDelete"
-            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-accent-red hover:bg-accent-red/10 transition-colors"
+            class="flex items-center gap-3 w-full px-4 py-3 text-sm text-accent-red hover:bg-accent-red/opacity-light transition-colors"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

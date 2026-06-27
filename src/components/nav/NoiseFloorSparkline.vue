@@ -26,10 +26,10 @@ const sparklineData = computed(() => {
 </script>
 
 <template>
-  <div v-if="currentValue !== null" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
-    <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted uppercase tracking-wide mb-1">
+  <div v-if="currentValue !== null" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/opacity-light">
+    <div class="flex items-center justify-between text-[10px] text-content-muted uppercase tracking-wide mb-1">
       <span>Noise Floor</span>
-      <span class="text-content-primary dark:text-content-primary normal-case tracking-normal font-medium">
+      <span class="text-content-primary normal-case tracking-normal font-medium">
         {{ currentValue }} dBm
       </span>
     </div>

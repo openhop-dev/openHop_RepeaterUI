@@ -250,7 +250,7 @@ function onImportDone(imported: number) {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div
-      class="relative overflow-hidden rounded-[20px] p-6 mb-6 glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10"
+      class="relative overflow-hidden rounded-[20px] p-6 mb-6 glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light"
     >
       <div
         class="absolute inset-0 bg-gradient-to-br from-primary/20 via-secondary/10 to-accent-purple/20 opacity-50"
@@ -262,8 +262,8 @@ function onImportDone(imported: number) {
       <div class="relative flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div class="relative">
-            <div class="absolute inset-0 bg-primary/30 blur-xl rounded-full"></div>
-            <div class="relative bg-primary/20 p-4 rounded-[15px] border border-primary/30">
+            <div class="absolute inset-0 bg-primary/opacity-medium blur-xl rounded-full"></div>
+            <div class="relative bg-primary/opacity-medium p-4 rounded-[15px] border border-primary/opacity-medium">
               <svg
                 class="w-8 h-8 text-primary"
                 fill="none"
@@ -280,7 +280,7 @@ function onImportDone(imported: number) {
             </div>
           </div>
           <div>
-            <h1 class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <h1 class="text-3xl font-bold text-content-primary mb-1">
               Companions
             </h1>
             <p class="text-content-secondary dark:text-content-muted text-sm">
@@ -290,7 +290,7 @@ function onImportDone(imported: number) {
         </div>
         <button
           @click="openCreateModal"
-          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary dark:text-content-primary rounded-[12px] border border-primary/50 transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
+          class="group relative px-6 py-3 bg-gradient-to-r from-primary/30 to-secondary/30 hover:from-primary/40 hover:to-secondary/40 text-content-primary rounded-[12px] border border-primary/opacity-heavy transition-all hover:scale-105 hover:shadow-lg hover:shadow-primary/opacity-medium"
         >
           <span class="flex items-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,18 +310,18 @@ function onImportDone(imported: number) {
     <!-- Stats -->
     <div v-if="identities && companionConfiguredCount > 0" class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Total Configured -->
-      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-5">
         <div class="flex items-center justify-between">
           <div>
             <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
               Total Configured
             </div>
-            <div class="text-3xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <div class="text-3xl font-bold text-content-primary mb-1">
               {{ companionConfiguredCount }}
             </div>
           </div>
-          <div class="bg-background-mute dark:bg-white/10 p-3 rounded-[12px]">
-            <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="bg-background-mute dark:bg-white/opacity-subtle p-3 rounded-[12px]">
+            <svg class="w-6 h-6 text-content-secondary dark:text-content-primary/opacity-heavy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
@@ -330,7 +330,7 @@ function onImportDone(imported: number) {
       </div>
 
       <!-- Currently Registered -->
-      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-5">
         <div class="flex items-center justify-between">
           <div>
             <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
@@ -340,7 +340,7 @@ function onImportDone(imported: number) {
               {{ companionRegisteredCount }}
             </div>
           </div>
-          <div class="bg-primary/20 p-3 rounded-[12px]">
+          <div class="bg-primary/opacity-medium p-3 rounded-[12px]">
             <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
             </svg>
@@ -349,7 +349,7 @@ function onImportDone(imported: number) {
       </div>
 
       <!-- Status -->
-      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-5">
+      <div class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-5">
         <div class="flex items-center justify-between">
           <div>
             <div class="text-content-secondary dark:text-content-muted text-xs font-medium mb-2 uppercase tracking-wide">
@@ -359,7 +359,7 @@ function onImportDone(imported: number) {
               {{ companionsSynced ? 'Synced' : 'Out of Sync' }}
             </div>
           </div>
-          <div :class="['p-3 rounded-[12px]', companionsSynced ? 'bg-accent-green/20' : 'bg-accent-yellow/20']">
+          <div :class="['p-3 rounded-[12px]', companionsSynced ? 'bg-accent-green/opacity-medium' : 'bg-accent-yellow/20']">
             <svg v-if="companionsSynced" class="w-6 h-6 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -373,12 +373,12 @@ function onImportDone(imported: number) {
 
     <!-- Main Content -->
     <div
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6"
+      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6"
     >
       <div v-if="loading" class="flex items-center justify-center py-12">
         <div class="text-center">
           <Spinner class="mx-auto mb-4" />
-          <div class="text-content-secondary dark:text-content-primary/70">
+          <div class="text-content-secondary dark:text-content-primary/opacity-heavy">
             Loading companions...
           </div>
         </div>
@@ -386,7 +386,7 @@ function onImportDone(imported: number) {
 
       <div v-else-if="error" class="flex items-center justify-center py-12">
         <div class="text-center">
-          <div class="text-red-600 dark:text-red-400 mb-2">Failed to load companions</div>
+          <div class="text-accent-red mb-2">Failed to load companions</div>
           <div class="text-content-secondary dark:text-content-muted text-sm mb-4">{{ error }}</div>
           <button
             @click="fetchIdentities"
@@ -402,7 +402,7 @@ function onImportDone(imported: number) {
         <div
           v-for="identity in configuredCompanions()"
           :key="identity.name"
-          class="glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/10"
+          class="glass-card backdrop-blur-xl rounded-[15px] p-5 border border-stroke-subtle dark:border-white/opacity-light"
         >
           <div class="flex items-start justify-between">
             <div class="flex-1">
@@ -410,7 +410,7 @@ function onImportDone(imported: number) {
                 <div class="relative">
                   <div
                     v-if="identity.registered"
-                    class="absolute inset-0 bg-accent-green/50 rounded-full animate-ping"
+                    class="absolute inset-0 bg-accent-green/opacity-heavy rounded-full animate-ping"
                   ></div>
                   <div
                     :class="[
@@ -419,73 +419,73 @@ function onImportDone(imported: number) {
                     ]"
                   ></div>
                 </div>
-                <h3 class="text-xl font-bold text-content-primary dark:text-content-primary">
+                <h3 class="text-xl font-bold text-content-primary">
                   {{ identity.name }}
                 </h3>
                 <span
                   :class="[
                     'px-3 py-1 text-xs font-semibold rounded-full',
                     identity.registered
-                      ? 'bg-accent-green/20 text-accent-green border border-accent-green/30'
-                      : 'bg-accent-red/20 text-accent-red border border-accent-red/30',
+                      ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-medium'
+                      : 'bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-medium',
                   ]"
                 >
                   {{ identity.registered ? '● Active' : '○ Inactive' }}
                 </span>
                 <span
                   v-if="identity.hash"
-                  class="text-content-muted dark:text-content-muted text-sm"
+                  class="text-content-muted text-sm"
                   >{{ identity.hash }}</span
                 >
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Node Name:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">Node Name:</span>
+                  <span class="text-content-primary/opacity-heavy ml-2">{{
                     identity.settings?.node_name || identity.name
                   }}</span>
                 </div>
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">TCP Port:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">TCP Port:</span>
+                  <span class="text-content-primary/opacity-heavy ml-2">{{
                     identity.settings?.tcp_port ?? 5000
                   }}</span>
                 </div>
                 <div>
-                  <span class="text-content-muted dark:text-content-muted">Bind Address:</span>
-                  <span class="text-content-primary dark:text-content-primary/90 ml-2">{{
+                  <span class="text-content-muted">Bind Address:</span>
+                  <span class="text-content-primary/opacity-heavy ml-2">{{
                     identity.settings?.bind_address || '0.0.0.0'
                   }}</span>
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="text-content-muted dark:text-content-muted">Identity Key:</span>
+                  <span class="text-content-muted">Identity Key:</span>
                   <span
                     v-if="visibleKeys.has(identity.name)"
-                    class="text-content-primary dark:text-content-primary/90 font-mono ml-2 text-xs"
+                    class="text-content-primary/opacity-heavy font-mono ml-2 text-xs"
                   >
                     {{ identity.identity_key }}
                   </span>
-                  <span v-else class="text-content-muted dark:text-content-muted ml-2 text-xs"
+                  <span v-else class="text-content-muted ml-2 text-xs"
                     >••••••••••••••••</span
                   >
                   <button
                     @click="toggleKeyVisibility(identity.name)"
-                    class="text-primary/70 hover:text-primary text-xs underline"
+                    class="text-primary/opacity-heavy hover:text-primary text-xs underline"
                   >
                     {{ visibleKeys.has(identity.name) ? 'Hide' : 'Show' }}
                   </button>
                 </div>
               </div>
 
-              <div class="text-xs text-content-muted dark:text-content-muted">
-                <span class="text-content-muted dark:text-content-muted">Public Key:</span>
+              <div class="text-xs text-content-muted">
+                <span class="text-content-muted">Public Key:</span>
                 <span
                   v-if="identity.public_key"
-                  class="ml-2 font-mono text-content-primary dark:text-content-primary/90 break-all"
+                  class="ml-2 font-mono text-content-primary/opacity-heavy break-all"
                   >{{ identity.public_key }}</span
                 >
-                <span v-else class="ml-2 text-content-muted dark:text-content-muted">—</span>
+                <span v-else class="ml-2 text-content-muted">—</span>
               </div>
             </div>
 
@@ -516,7 +516,7 @@ function onImportDone(imported: number) {
       <!-- Empty State -->
       <div v-else class="text-center py-12 text-content-secondary dark:text-content-muted">
         <svg
-          class="w-16 h-16 mx-auto mb-4 text-content-muted dark:text-content-muted/60"
+          class="w-16 h-16 mx-auto mb-4 text-content-muted/opacity-heavy"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -545,19 +545,19 @@ function onImportDone(imported: number) {
     <Teleport to="body">
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      class="modal-backdrop"
       @click.self="showCreateModal = false"
     >
       <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
+        <h2 class="text-xl font-bold text-content-primary mb-4">
           Add Companion
         </h2>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
               >Name *</label
             >
             <input
@@ -569,12 +569,12 @@ function onImportDone(imported: number) {
           </div>
 
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2">
               Identity Key (Optional)
               <button
                 @click="showKeyInCreate = !showKeyInCreate"
                 type="button"
-                class="ml-2 text-primary/70 hover:text-primary text-xs underline"
+                class="ml-2 text-primary/opacity-heavy hover:text-primary text-xs underline"
               >
                 {{ showKeyInCreate ? 'Hide' : 'Show/Edit' }}
               </button>
@@ -596,7 +596,7 @@ function onImportDone(imported: number) {
           </div>
 
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
               >Node Name</label
             >
             <input
@@ -609,7 +609,7 @@ function onImportDone(imported: number) {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+              <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
                 >TCP Port</label
               >
               <input
@@ -621,7 +621,7 @@ function onImportDone(imported: number) {
               />
             </div>
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+              <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
                 >Bind Address</label
               >
               <input
@@ -637,7 +637,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -656,19 +656,19 @@ function onImportDone(imported: number) {
     <Teleport to="body">
     <div
       v-if="showEditModal && editingIdentity"
-      class="fixed inset-0 bg-black/50 backdrop-blur-lg flex items-center justify-center z-[300] p-4"
+      class="modal-backdrop"
       @click.self="closeModals"
     >
       <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
-        <h2 class="text-xl font-bold text-content-primary dark:text-content-primary mb-4">
+        <h2 class="text-xl font-bold text-content-primary mb-4">
           Edit Companion
         </h2>
 
         <div class="space-y-4">
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
               >Name *</label
             >
             <input
@@ -679,12 +679,12 @@ function onImportDone(imported: number) {
           </div>
 
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2">
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2">
               Identity Key (Optional)
               <button
                 @click="showKeyInEdit = !showKeyInEdit"
                 type="button"
-                class="ml-2 text-primary/70 hover:text-primary text-xs underline"
+                class="ml-2 text-primary/opacity-heavy hover:text-primary text-xs underline"
               >
                 {{ showKeyInEdit ? 'Hide' : 'Show/Edit' }}
               </button>
@@ -700,7 +700,7 @@ function onImportDone(imported: number) {
           </div>
 
           <div>
-            <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+            <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
               >Node Name</label
             >
             <input
@@ -712,7 +712,7 @@ function onImportDone(imported: number) {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+              <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
                 >TCP Port</label
               >
               <input
@@ -724,7 +724,7 @@ function onImportDone(imported: number) {
               />
             </div>
             <div>
-              <label class="block text-content-secondary dark:text-content-primary/70 text-sm mb-2"
+              <label class="block text-content-secondary dark:text-content-primary/opacity-heavy text-sm mb-2"
                 >Bind Address</label
               >
               <input
@@ -739,7 +739,7 @@ function onImportDone(imported: number) {
         <div class="flex justify-end gap-3 mt-6">
           <button
             @click="closeModals"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg transition-colors"
           >
             Cancel
           </button>

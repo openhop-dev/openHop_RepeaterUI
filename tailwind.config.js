@@ -35,6 +35,9 @@ export default {
         secondary: 'var(--color-secondary)',
         accent: {
           green: 'var(--color-accent-green)',
+          'green-light': 'var(--color-accent-green-light)',
+          orange: 'var(--color-accent-orange)',
+          amber: 'var(--color-accent-amber)',
           purple: 'var(--color-accent-purple)',
           red: 'var(--color-accent-red)',
           cyan: 'var(--color-accent-cyan)',
@@ -76,6 +79,12 @@ export default {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'Roboto', 'Helvetica', 'sans-serif'],
         heading: ['Michroma', 'sans-serif'],
+      },
+      opacity: {
+        'opacity-subtle': '0.05',
+        'opacity-light':  '0.10',
+        'opacity-medium': '0.25',
+        'opacity-heavy':  '0.50',
       },
       backdropBlur: {
         '50': '50px',

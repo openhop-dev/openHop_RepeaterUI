@@ -6,11 +6,14 @@ import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import HopConnector from '@/components/ui/HopConnector.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
+import { useSignalQuality } from '@/composables/useSignalQuality';
 import { getPreference, setPreference } from '@/utils/preferences';
 
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
+const { getSignalQualityFromSNR } = useSignalQuality();
 const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -216,21 +219,21 @@ const getPacketTypeIndicatorColor = (type: number) => {
     8: 'bg-accent-green', // PATH - Green (reuse)
     9: 'bg-secondary', // TRACE - Yellow (reuse)
   };
-  return colors[type] || 'bg-gray-500';
+  return colors[type] || 'bg-background-mute';
 };
 
 const getPacketTypeColor = (type: number) => {
   const colors: Record<number, string> = {
     0: 'border-l-primary', // REQ - Primary cyan
     1: 'border-l-accent-green', // RESPONSE - Green
-    2: 'border-l-secondary', // TXT_MSG - Yellow
+    2: 'border-l-accent-amber', // TXT_MSG - Yellow
     3: 'border-l-accent-purple', // ACK - Purple
     4: 'border-l-accent-red', // ADVERT - Red
     5: 'border-l-accent-cyan', // GRP_TXT - Cyan
     6: 'border-l-primary', // GRP_DATA - Primary (reuse)
     7: 'border-l-accent-purple', // ANON_REQ - Purple (reuse)
     8: 'border-l-accent-green', // PATH - Green (reuse)
-    9: 'border-l-secondary', // TRACE - Yellow (reuse)
+    9: 'border-l-accent-amber', // TRACE - Yellow (reuse)
   };
   return colors[type] || 'border-l-gray-500';
 };
@@ -238,15 +241,15 @@ const getPacketTypeColor = (type: number) => {
 // Get LBT indicator color based on attempts
 const getLbtIndicatorColor = (packet: RecentPacket) => {
   if (!packet.transmitted || !packet.lbt_attempts || packet.lbt_attempts === 0) {
-    return 'bg-green-400'; // Clear channel or no LBT needed
+    return 'status-dot-green'; // Clear channel or no LBT needed
   }
   if (packet.lbt_attempts === 1) {
-    return 'bg-cyan-400'; // Light congestion
+    return 'status-dot-muted'; // Light congestion
   }
   if (packet.lbt_attempts === 2) {
-    return 'bg-yellow-400'; // Moderate congestion
+    return 'status-dot-amber'; // Moderate congestion
   }
-  return 'bg-orange-400'; // Heavy congestion (3+)
+  return 'status-dot-red'; // Heavy congestion (3+)
 };
 
 // Format delay value - convert to seconds if >= 1000ms
@@ -442,7 +445,7 @@ onBeforeUnmount(() => {
       class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 filter-container"
     >
       <div class="flex items-center gap-2 header-info relative">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold">
+        <h3 class="text-content-primary text-xl font-semibold">
           Recent Packets
         </h3>
         <span class="text-content-secondary dark:text-content-muted text-sm packet-count">
@@ -450,7 +453,7 @@ onBeforeUnmount(() => {
         </span>
         <span
           v-if="showOnlyNewPackets"
-          class="text-primary text-xs sm:text-sm bg-primary/10 px-2 py-1 rounded-md border border-primary/20 live-mode-badge whitespace-nowrap"
+          class="text-primary text-xs sm:text-sm bg-primary/opacity-light px-2 py-1 rounded-md border border-primary/opacity-medium live-mode-badge whitespace-nowrap"
           :title="`Filter activated at ${formatFilterTime}`"
         >
           <span class="hidden sm:inline">Live Mode (since {{ formatFilterTime }})</span>
@@ -473,13 +476,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Type</label>
           <select
             v-model="selectedType"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="type in packetTypes"
               :key="type"
               :value="type"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 type === 'all' ? 'All Types' : `Type ${type} (${getPacketTypeName(parseInt(type))})`
@@ -493,13 +496,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Route</label>
           <select
             v-model="selectedRoute"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="route in routeTypes"
               :key="route"
               :value="route"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 route === 'all'
@@ -515,10 +518,10 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Filter</label>
           <button
             @click="toggleNewPacketsFilter"
-            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 min-w-[120px]"
+            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium min-w-[120px]"
             :class="{
-              'border-primary bg-primary/10 text-primary': showOnlyNewPackets,
-              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': showOnlyNewPackets,
+              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary dark:hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/opacity-light':
                 !showOnlyNewPackets,
             }"
           >
@@ -531,12 +534,12 @@ onBeforeUnmount(() => {
           <label class="text-transparent text-xs mb-1">.</label>
           <button
             @click="resetFilters"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium"
             :disabled="selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets"
             :class="{
               'opacity-50 cursor-not-allowed hover:border-stroke-subtle dark:hover:border-stroke hover:text-content-secondary dark:hover:text-content-muted':
                 selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets,
-              'hover:bg-primary/10':
+              'hover:bg-primary/opacity-light':
                 selectedType !== 'all' || selectedRoute !== 'all' || showOnlyNewPackets,
             }"
           >
@@ -561,7 +564,7 @@ onBeforeUnmount(() => {
         <div class="col-span-1">TX Delay</div>
         <div class="col-span-3">Status</div>
       </div>
-      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/50">
+      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
         <div class="col-span-12">Path/Hashes</div>
       </div>
     </div>
@@ -572,14 +575,14 @@ onBeforeUnmount(() => {
         <div
           v-for="(packet, index) in paginatedPackets"
           :key="`${packet.packet_hash}_${packet.timestamp}_${index}`"
-          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
+          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
           :class="[getPacketTypeColor(packet.type), getPacketRowClass(packet)]"
           @click="openPacketDetails(packet)"
         >
           <!-- Desktop Table View -->
           <div class="hidden lg:block space-y-2">
             <div class="grid grid-cols-12 gap-2 items-center">
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-sm">
+              <div class="col-span-1 text-content-primary text-sm">
                 {{ formatTime(packet.timestamp) }}
               </div>
               <div class="col-span-1 flex items-center gap-2">
@@ -588,12 +591,12 @@ onBeforeUnmount(() => {
                   :class="getPacketTypeIndicatorColor(packet.type)"
                 ></div>
                 <div class="flex flex-col">
-                  <span class="text-content-primary dark:text-content-primary text-xs">{{
+                  <span class="text-content-primary text-xs">{{
                     getPacketTypeName(packet.type)
                   }}</span>
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                    class="text-accent-red/70 text-[10px] font-medium max-w-[80px] truncate"
+                    class="text-accent-red/opacity-heavy text-[10px] font-medium max-w-[80px] truncate"
                     :title="getAdvertNodeName(packet) || undefined"
                   >
                     {{ getAdvertNodeName(packet) }}
@@ -608,19 +611,20 @@ onBeforeUnmount(() => {
                   {{ getRouteTypeName(packet.route) }}
                 </span>
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.length }}B
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs flex items-center gap-1">
+                <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
                 {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
               </div>
-              <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
+              <div class="col-span-1 text-content-primary text-xs">
                 <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
                   <div
                     v-if="packet.transmitted"
@@ -638,7 +642,7 @@ onBeforeUnmount(() => {
                     }}</span>
                     <span
                       v-if="isPolicyBlockedPacket(packet)"
-                      class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                      class="inline-flex items-center text-[10px] font-medium text-accent-amber"
                       title="Policy blocked"
                     >
                       <svg
@@ -681,7 +685,7 @@ onBeforeUnmount(() => {
                           :class="
                             idx === 0
                               ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                              : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
+                              : 'bg-background-mute/opacity-medium text-content-muted'
                           "
                           :title="node"
                         >
@@ -694,7 +698,7 @@ onBeforeUnmount(() => {
                       </template>
                       <span
                         v-if="getPathInfo(packet)!.hops > 0"
-                        class="text-[9px] text-content-muted dark:text-content-muted ml-1"
+                        class="text-[9px] text-content-muted ml-1"
                       >
                         {{ getPathInfo(packet)!.hops }} hop{{
                           getPathInfo(packet)!.hops > 1 ? 's' : ''
@@ -710,7 +714,7 @@ onBeforeUnmount(() => {
                         {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
                       </span>
                       <svg
-                        class="w-3 h-3 text-content-muted dark:text-content-muted/60"
+                        class="w-3 h-3 text-content-muted/opacity-heavy"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -727,7 +731,7 @@ onBeforeUnmount(() => {
                         :class="
                           packet.dst_hash
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                            : 'bg-accent-amber/opacity-medium text-accent-amber'
                         "
                       >
                         {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
@@ -750,13 +754,13 @@ onBeforeUnmount(() => {
                 ></div>
                 <div class="flex flex-col">
                   <span
-                    class="text-content-primary dark:text-content-primary text-sm font-medium"
+                    class="text-content-primary text-sm font-medium"
                     >{{ getPacketTypeName(packet.type) }}</span
                   >
                   <!-- Node name for ADVERT packets -->
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                    class="text-accent-red/70 text-[10px] font-medium leading-tight"
+                    class="text-accent-red/opacity-heavy text-[10px] font-medium leading-tight"
                     :title="getAdvertNodeName(packet) || undefined"
                   >
                     {{ getAdvertNodeName(packet) }}
@@ -779,7 +783,7 @@ onBeforeUnmount(() => {
                   }}</span>
                   <span
                     v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
+                    class="inline-flex items-center text-[10px] font-medium text-accent-amber"
                     title="Policy blocked"
                   >
                     <svg
@@ -814,7 +818,7 @@ onBeforeUnmount(() => {
                 <template v-if="getPathInfo(packet)">
                   <!-- Show actual path with intermediate hops -->
                   <div class="flex flex-wrap items-center gap-0.5">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >PATH</span
                     >
                     <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
@@ -823,7 +827,7 @@ onBeforeUnmount(() => {
                         :class="
                           idx === 0
                             ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
+                            : 'bg-background-mute/opacity-medium text-content-muted'
                         "
                         :title="node"
                       >
@@ -836,7 +840,7 @@ onBeforeUnmount(() => {
                     </template>
                     <span
                       v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted dark:text-content-muted ml-1"
+                      class="text-[9px] text-content-muted ml-1"
                     >
                       {{ getPathInfo(packet)!.hops }} hop{{
                         getPathInfo(packet)!.hops > 1 ? 's' : ''
@@ -848,7 +852,7 @@ onBeforeUnmount(() => {
                   <!-- Fallback to src/dst display when no path info -->
                   <!-- Source Node -->
                   <div class="flex items-center gap-1">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >SRC</span
                     >
                     <span
@@ -860,7 +864,7 @@ onBeforeUnmount(() => {
 
                   <!-- Path Arrow/Indicator -->
                   <div
-                    class="flex items-center gap-0.5 text-content-muted dark:text-content-muted/60"
+                    class="flex items-center gap-0.5 text-content-muted/opacity-heavy"
                   >
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
@@ -898,12 +902,12 @@ onBeforeUnmount(() => {
                       :class="
                         packet.dst_hash
                           ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
+                          : 'bg-accent-amber/opacity-medium text-accent-amber'
                       "
                     >
                       {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
                     </span>
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
+                    <span class="text-content-muted text-[10px] font-medium"
                       >DST</span
                     >
                   </div>
@@ -923,25 +927,8 @@ onBeforeUnmount(() => {
               <div class="flex items-center gap-3">
                 <!-- Signal bars on mobile, hidden on desktop -->
                 <div class="md:hidden flex items-center gap-1">
-                  <div v-if="packet.snr != null" class="flex gap-0.5">
-                    <div
-                      class="w-1 h-3 rounded-sm"
-                      :class="packet.snr >= -10 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-4 rounded-sm"
-                      :class="packet.snr >= -5 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-5 rounded-sm"
-                      :class="packet.snr >= 0 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-6 rounded-sm"
-                      :class="packet.snr >= 10 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                  </div>
-                  <span class="text-content-primary dark:text-content-primary text-xs">{{
+                  <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
+                  <span class="text-content-primary text-xs">{{
                     packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
                   }}</span>
                 </div>
@@ -984,7 +971,7 @@ onBeforeUnmount(() => {
           <button
             @click="loadMoreRecords"
             :disabled="isLoadingMore"
-            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 hover:bg-primary/5"
+            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium hover:bg-primary/opacity-light"
             :class="{
               'text-primary border-primary cursor-pointer': !isLoadingMore,
               'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke cursor-not-allowed opacity-50':
@@ -1006,11 +993,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage - 1"
           :disabled="currentPage <= 1"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage <= 1,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage > 1,
           }"
         >
@@ -1024,7 +1011,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage > 3"
             @click="currentPage = 1"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             1
           </button>
@@ -1044,10 +1031,10 @@ onBeforeUnmount(() => {
             }).filter((p) => p <= totalPages)"
             :key="page"
             @click="currentPage = page"
-            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 page-number"
+            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium page-number"
             :class="{
-              'border-primary bg-primary/10 text-primary': currentPage === page,
-              'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': currentPage === page,
+              'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
                 currentPage !== page,
             }"
           >
@@ -1065,7 +1052,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage < totalPages - 2"
             @click="currentPage = totalPages"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             {{ totalPages }}
           </button>
@@ -1075,11 +1062,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage + 1"
           :disabled="currentPage >= totalPages"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage >= totalPages,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage < totalPages,
           }"
         >
@@ -1101,7 +1088,7 @@ onBeforeUnmount(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs">•</span>
         <button
           @click="loadMoreRecords"
-          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
         >
           Load {{ Math.min(200, maxLimit - currentLimit) }} more records
         </button>

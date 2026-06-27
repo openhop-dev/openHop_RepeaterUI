@@ -2,13 +2,13 @@
   <Teleport to="body">
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    class="modal-backdrop"
     @click.self="closeModal"
   >
     <div
       class="modal-card max-w-md shadow-xl"
     >
-      <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-2">
+      <h3 class="text-xl font-semibold text-content-primary mb-2">
         Change Password
       </h3>
       <p class="text-content-secondary dark:text-content-muted text-sm mb-6">
@@ -19,7 +19,7 @@
         <!-- Current Password -->
         <div>
           <label
-            class="block text-sm font-medium text-content-secondary dark:text-content-primary/70 mb-2"
+            class="block text-sm font-medium text-content-secondary dark:text-content-primary/opacity-heavy mb-2"
             >Current Password</label
           >
           <input
@@ -34,7 +34,7 @@
         <!-- New Password -->
         <div>
           <label
-            class="block text-sm font-medium text-content-secondary dark:text-content-primary/70 mb-2"
+            class="block text-sm font-medium text-content-secondary dark:text-content-primary/opacity-heavy mb-2"
             >New Password</label
           >
           <input
@@ -50,7 +50,7 @@
         <!-- Confirm Password -->
         <div>
           <label
-            class="block text-sm font-medium text-content-secondary dark:text-content-primary/70 mb-2"
+            class="block text-sm font-medium text-content-secondary dark:text-content-primary/opacity-heavy mb-2"
             >Confirm New Password</label
           >
           <input
@@ -64,14 +64,14 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="error" class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-3">
+        <div v-if="error" class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-3">
           <p class="text-accent-red text-sm">{{ error }}</p>
         </div>
 
         <!-- Success Message -->
         <div
           v-if="success"
-          class="bg-accent-green/10 border border-accent-green/30 rounded-lg p-3"
+          class="bg-accent-green/opacity-light border border-accent-green/opacity-medium rounded-lg p-3"
         >
           <p class="text-accent-green text-sm">{{ success }}</p>
         </div>
@@ -82,7 +82,7 @@
             type="button"
             @click="skipChange"
             :disabled="loading"
-            class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
+            class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors disabled:opacity-50"
           >
             {{ canSkip ? 'Skip for Now' : 'Cancel' }}
           </button>

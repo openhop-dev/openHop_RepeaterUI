@@ -318,7 +318,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Header -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Region Configuration
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -352,15 +352,15 @@ defineExpose({ requestLeave, isEditing });
     </div>
 
     <!-- Save Error -->
-    <div v-if="saveError" class="bg-red-100 dark:bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-      <p class="text-red-600 dark:text-red-400 text-sm">{{ saveError }}</p>
+    <div v-if="saveError" class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy rounded-lg p-3">
+      <p class="text-accent-red text-sm">{{ saveError }}</p>
     </div>
 
     <!-- Unscoped Flood Control -->
     <div class="cfg-section">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h4 class="text-xs sm:text-sm font-medium text-content-primary dark:text-content-primary mb-1">
+          <h4 class="text-xs sm:text-sm font-medium text-content-primary mb-1">
             Unscoped Flood Policy (*)
           </h4>
           <p class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
@@ -369,7 +369,7 @@ defineExpose({ requestLeave, isEditing });
         </div>
         <div
           :class="[
-            'flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5 sm:p-1',
+            'flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5 sm:p-1',
             !isEditing ? 'opacity-50 pointer-events-none' : '',
           ]"
         >
@@ -378,7 +378,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'deny'
-                ? 'bg-accent-red/20 text-accent-red border border-accent-red/50'
+                ? 'bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -389,7 +389,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'allow'
-                ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -401,8 +401,8 @@ defineExpose({ requestLeave, isEditing });
 
     <!-- Tree Viewer -->
     <div class="cfg-section space-y-4" @click="isEditing && treeStore.setSelectedNode(null)">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">Regions</h3>
-      <p v-if="isEditing" class="text-xs text-content-muted dark:text-content-muted pb-1">
+      <h3 class="text-lg font-semibold text-content-primary">Regions</h3>
+      <p v-if="isEditing" class="text-xs text-content-muted pb-1">
         To add a child region, click on a region to select it, then click "Add Region".
       </p>
 
@@ -423,8 +423,8 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Empty State -->
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
-        <div class="text-content-muted dark:text-content-muted mb-2">No regions found</div>
-        <div class="text-content-muted dark:text-content-muted/60 text-sm">
+        <div class="text-content-muted mb-2">No regions found</div>
+        <div class="text-content-muted/opacity-heavy text-sm">
           Click "Edit Settings" then "Add Region" to get started
         </div>
       </div>

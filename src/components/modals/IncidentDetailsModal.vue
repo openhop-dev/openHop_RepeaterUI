@@ -67,10 +67,10 @@ const incidentDetails = computed(() => {
     totalCrc: inc.totalCrc.toLocaleString(),
     severityColor:
       inc.severity === 'high'
-        ? 'bg-danger/10 text-danger'
+        ? 'bg-accent-red/opacity-light text-accent-red'
         : inc.severity === 'medium'
-          ? 'bg-warning/10 text-warning'
-          : 'bg-success/10 text-success',
+          ? 'bg-accent-amber/opacity-light text-accent-amber'
+          : 'bg-accent-green/opacity-light text-accent-green',
   };
 });
 
@@ -302,26 +302,38 @@ const handleBackdropClick = (event: MouseEvent) => {
     <Transition name="fade">
       <div
         v-if="incident"
-        class="modal-backdrop z-40!"
+        class="modal-backdrop"
         @click="handleBackdropClick"
       >
         <div
-          class="modal-card max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl"
+          class="modal-card-glass max-w-2xl overflow-hidden"
           @click.stop
         >
           <!-- Header -->
-          <div class="sticky top-0 z-20 border-b border-stroke px-6 py-4 flex items-center justify-between shadow-sm backdrop-blur-md bg-surface-primary/95 dark:bg-surface-elevated/92 supports-backdrop-filter:bg-surface-primary/80 supports-backdrop-filter:dark:bg-surface-elevated/78">
-            <div>
-              <h3 class="text-lg font-semibold text-content-primary">RF Degradation Event</h3>
-              <p class="text-sm text-content-secondary mt-1">{{ incidentDetails?.startTime }}</p>
+          <div class="bg-gradient-to-r from-accent-amber/20 to-accent-red/20 border-b border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-accent-amber/opacity-medium rounded-lg">
+                  <svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-content-primary">RF Degradation Event</h2>
+                  <p class="text-sm text-content-secondary dark:text-content-muted">{{ incidentDetails?.startTime }}</p>
+                </div>
+              </div>
+              <button
+                @click="emit('close')"
+                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <button
-              @click="emit('close')"
-              class="text-content-tertiary hover:text-content-secondary transition-colors text-2xl leading-none"
-            >
-              ×
-            </button>
           </div>
+          <div class="max-h-[75vh] overflow-y-auto">
 
           <!-- Content -->
           <div class="px-6 py-4 space-y-6">
@@ -357,14 +369,14 @@ const handleBackdropClick = (event: MouseEvent) => {
 
             <!-- Metrics Grid -->
             <div class="grid grid-cols-2 gap-4">
-              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-sky-500">
+              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-accent-red">
                 <div class="text-xs text-content-tertiary uppercase tracking-wide mb-1">Peak Noise Delta</div>
-                <div class="text-3xl text-content-primary font-bold">+{{ incidentDetails?.peakNoise }}</div>
+                <div class="text-3xl text-accent-red font-bold">+{{ incidentDetails?.peakNoise }}</div>
                 <div class="text-xs text-content-secondary mt-1">dB above baseline</div>
               </div>
-              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-amber-500">
+              <div class="bg-surface-primary rounded-lg p-4 border-l-4 border-accent-amber">
                 <div class="text-xs text-content-tertiary uppercase tracking-wide mb-1">Total CRC Errors</div>
-                <div class="text-3xl text-content-primary font-bold">{{ incidentDetails?.totalCrc }}</div>
+                <div class="text-3xl text-accent-amber font-bold">{{ incidentDetails?.totalCrc }}</div>
                 <div class="text-xs text-content-secondary mt-1">detected during event</div>
               </div>
             </div>
@@ -374,11 +386,11 @@ const handleBackdropClick = (event: MouseEvent) => {
               <div class="text-sm font-medium text-content-primary mb-3">What This Means</div>
               <ul class="space-y-2 text-sm text-content-secondary">
                 <li class="flex gap-2">
-                  <span class="text-sky-500 font-bold">•</span>
+                  <span class="text-accent-red font-bold">•</span>
                   <span>Noise floor increased {{ incidentDetails?.peakNoise }} dB above baseline, indicating RF interference or environmental factors.</span>
                 </li>
                 <li class="flex gap-2">
-                  <span class="text-amber-500 font-bold">•</span>
+                  <span class="text-accent-amber font-bold">•</span>
                   <span>{{ incidentDetails?.totalCrc }} CRC errors occurred during this period, suggesting packet corruption.</span>
                 </li>
                 <li class="flex gap-2">
@@ -420,7 +432,7 @@ const handleBackdropClick = (event: MouseEvent) => {
               </div>
 
               <div v-if="nearbyLoading" class="text-sm text-content-secondary mt-3">Loading nearby packets...</div>
-              <div v-else-if="nearbyError" class="text-sm text-danger mt-3">{{ nearbyError }}</div>
+              <div v-else-if="nearbyError" class="text-sm text-accent-red mt-3">{{ nearbyError }}</div>
               <div v-else class="mt-3 space-y-3">
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <div class="rounded-md border border-stroke-subtle px-2 py-2">
@@ -504,7 +516,7 @@ const handleBackdropClick = (event: MouseEvent) => {
                     <div
                       v-for="packet in nearbyPacketsPreview"
                       :key="`${packet.packet_hash}-${packet.timestamp}`"
-                      class="packet-context-row grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-2 border-b border-stroke-subtle dark:border-dark-border/50 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150"
+                      class="packet-context-row grid grid-cols-1 md:grid-cols-12 gap-2 px-3 py-2 border-b border-stroke-subtle dark:border-dark-border/50 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150"
                     >
                       <div class="md:col-span-2 text-content-secondary text-xs">
                         <span class="md:hidden text-content-tertiary font-semibold uppercase tracking-wide mr-1">Time:</span>
@@ -519,9 +531,9 @@ const handleBackdropClick = (event: MouseEvent) => {
                       <div
                         class="md:col-span-2 text-xs font-medium"
                         :class="{
-                          'text-warning': packetStatus(packet) === 'Duplicate',
-                          'text-danger': packetStatus(packet) === 'Dropped',
-                          'text-success': packetStatus(packet) === 'Forwarded',
+                          'text-accent-amber': packetStatus(packet) === 'Duplicate',
+                          'text-accent-red': packetStatus(packet) === 'Dropped',
+                          'text-accent-green': packetStatus(packet) === 'Forwarded',
                         }"
                       >
                         <span class="md:hidden text-content-tertiary font-semibold uppercase tracking-wide mr-1">Status:</span>
@@ -538,7 +550,7 @@ const handleBackdropClick = (event: MouseEvent) => {
 
                       <div class="md:col-span-2 md:text-right">
                         <button
-                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+                          class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-lg px-2 py-1 text-[11px] text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
                           @click="openPacketDetails(packet)"
                         >
                           Open
@@ -551,14 +563,12 @@ const handleBackdropClick = (event: MouseEvent) => {
             </div>
           </div>
 
+          </div>
           <!-- Footer -->
-          <div class="sticky bottom-0 z-10 bg-white dark:bg-surface-elevated border-t border-stroke-subtle px-6 py-4 flex justify-end gap-3">
-            <button
-              @click="emit('close')"
-              class="px-4 py-2 rounded-lg bg-surface-primary text-content-primary hover:bg-surface-hover transition-colors font-medium"
-            >
-              Close
-            </button>
+          <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
+            <div class="modal-actions">
+              <button type="button" class="modal-btn-primary" @click="emit('close')">Close</button>
+            </div>
           </div>
         </div>
       </div>

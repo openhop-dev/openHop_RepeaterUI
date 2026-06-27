@@ -239,13 +239,13 @@ const summaryCards = computed(() => [
     label: 'Coordinates',
     value: formatCoordinate(position.value.latitude, position.value.longitude),
     note: `${formatValue(positionMeta.value.source_label)} | altitude: ${formatValue(position.value.altitude_m, 'm')}`,
-    valueClass: 'text-content-heading dark:text-white',
+    valueClass: 'text-content-heading',
   },
   {
     label: 'Satellites',
     value: `${formatValue(satellites.value.used_count)} / ${formatValue(satellites.value.in_view_count)}`,
     note: `SNR avg: ${formatValue(satellites.value.snr?.avg, 'dB')}`,
-    valueClass: 'text-content-heading dark:text-white',
+    valueClass: 'text-content-heading',
   },
   {
     label: 'Freshness',
@@ -254,13 +254,13 @@ const summaryCards = computed(() => [
         ? 'n/a'
         : `${formatValue(status.value.age_seconds)}s`,
     note: status.value.last_update || 'last update unknown',
-    valueClass: status.value.stale ? 'text-secondary' : 'text-content-heading dark:text-white',
+    valueClass: status.value.stale ? 'text-secondary' : 'text-content-heading',
   },
   {
     label: 'GPS Time',
     value: gpsTime.value.utc_time ?? 'n/a',
     note: gpsTime.value.date ?? 'no date',
-    valueClass: gpsTime.value.utc_time ? 'text-content-heading dark:text-white' : 'text-content-muted',
+    valueClass: gpsTime.value.utc_time ? 'text-content-heading' : 'text-content-muted',
   },
 ]);
 
@@ -1073,14 +1073,14 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
     <!-- ── Header ─────────────────────────────────────────────────────────── -->
     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-content-heading dark:text-white">GPS Diagnostics</h1>
+        <h1 class="text-2xl font-semibold text-content-heading">GPS Diagnostics</h1>
         <p class="text-sm text-content-muted">
           Live NMEA receiver state, parsed fix data, and satellite visibility.
         </p>
       </div>
       <button
         type="button"
-        class="rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white/80 dark:bg-white/10 px-4 py-2 text-sm font-semibold text-content-primary dark:text-white transition-colors hover:bg-white dark:hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+        class="rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-surface dark:bg-white/opacity-light px-4 py-2 text-sm font-semibold text-content-primary transition-colors hover:bg-white dark:hover:bg-white/opacity-medium disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="isLoading"
         @click="fetchGps"
       >
@@ -1090,7 +1090,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 
     <div
       v-if="error"
-      class="rounded-[10px] border border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm text-accent-red"
+      class="rounded-[10px] border border-accent-red/opacity-medium bg-accent-red/opacity-light px-4 py-3 text-sm text-accent-red"
     >
       {{ error }}
     </div>
@@ -1128,7 +1128,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
         <section class="glass-card p-5">
           <div class="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h2 class="text-lg font-semibold text-content-heading dark:text-white">
+              <h2 class="text-lg font-semibold text-content-heading">
                 Satellites
               </h2>
               <p class="text-xs text-content-muted">
@@ -1137,7 +1137,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <span class="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <span class="rounded-full border border-primary/opacity-medium bg-primary/opacity-light px-3 py-1 text-xs font-semibold text-primary">
                 {{ globeCountLabel }}
               </span>
               <!-- Globe / Table inner toggle -->
@@ -1232,7 +1232,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
                     class="sat-row"
                     :class="{ 'sat-row-stale': row.stale }"
                   >
-                    <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary dark:text-white'">
+                    <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary'">
                       {{ row.prn }}
                     </td>
                     <td class="py-2 pr-4">
@@ -1256,29 +1256,29 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 
         <!-- Position card -->
         <section class="glass-card p-5">
-          <h2 class="mb-4 text-lg font-semibold text-content-heading dark:text-white">Position</h2>
+          <h2 class="mb-4 text-lg font-semibold text-content-heading">Position</h2>
           <div class="space-y-3 text-sm">
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Display source</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatValue(positionMeta.source_label || positionMeta.source) }}</span>
+              <span class="break-words text-content-primary">{{ formatValue(positionMeta.source_label || positionMeta.source) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Display location</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatCoordinate(position.latitude, position.longitude) }}</span>
+              <span class="break-words text-content-primary">{{ formatCoordinate(position.latitude, position.longitude) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">GPS location</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatCoordinate(gpsPosition.latitude, gpsPosition.longitude) }}</span>
+              <span class="break-words text-content-primary">{{ formatCoordinate(gpsPosition.latitude, gpsPosition.longitude) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Manual location</span>
-              <span class="break-words text-content-primary dark:text-white">
+              <span class="break-words text-content-primary">
                 {{ manualPosition ? formatCoordinate(manualPosition.latitude, manualPosition.longitude) : 'n/a' }}
               </span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Policy</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatValue(positionMeta.policy) }}</span>
+              <span class="break-words text-content-primary">{{ formatValue(positionMeta.policy) }}</span>
             </div>
           </div>
         </section>
@@ -1288,7 +1288,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
     <!-- ══════════════════════ SATELLITES TAB ════════════════════════════════ -->
     <div v-show="activeTab === 'satellites'">
       <section class="glass-card p-5">
-        <h2 class="mb-4 text-lg font-semibold text-content-heading dark:text-white">Satellites In View</h2>
+        <h2 class="mb-4 text-lg font-semibold text-content-heading">Satellites In View</h2>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[540px] text-left text-sm">
             <thead class="border-b border-stroke-subtle text-xs uppercase text-content-muted">
@@ -1307,7 +1307,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
                 class="sat-row"
                 :class="{ 'sat-row-stale': row.stale }"
               >
-                <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary dark:text-white'">
+                <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary'">
                   {{ row.prn }}
                 </td>
                 <td class="py-2 pr-4">
@@ -1344,7 +1344,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
             class="accordion-header"
             @click="toggleGroup(group.title)"
           >
-            <span class="font-semibold text-content-heading dark:text-white">{{ group.title }}</span>
+            <span class="font-semibold text-content-heading">{{ group.title }}</span>
             <svg
               class="accordion-chevron"
               :class="{ 'accordion-chevron-open': openGroups.has(group.title) }"
@@ -1365,7 +1365,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
             <div class="grid grid-cols-[minmax(110px,0.75fr)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
               <template v-for="row in group.rows" :key="`${group.title}-${row[0]}`">
                 <div class="text-content-muted">{{ row[0] }}</div>
-                <div class="break-words font-medium text-content-primary dark:text-white">{{ formatValue(row[1], row[2]) }}</div>
+                <div class="break-words font-medium text-content-primary">{{ formatValue(row[1], row[2]) }}</div>
               </template>
             </div>
           </div>
@@ -1379,7 +1379,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
           class="accordion-header"
           @click="toggleGroup('__nmea__')"
         >
-          <span class="font-semibold text-content-heading dark:text-white">Recent NMEA Sentences</span>
+          <span class="font-semibold text-content-heading">Recent NMEA Sentences</span>
           <svg
             class="accordion-chevron"
             :class="{ 'accordion-chevron-open': openGroups.has('__nmea__') }"
@@ -1424,10 +1424,10 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
       <!-- Raw snapshot (collapsed by default) -->
       <section class="glass-card p-5">
         <div class="flex items-center justify-between gap-3">
-          <h2 class="text-lg font-semibold text-content-heading dark:text-white">Raw Snapshot</h2>
+          <h2 class="text-lg font-semibold text-content-heading">Raw Snapshot</h2>
           <button
             type="button"
-            class="rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white/70 dark:bg-white/10 px-3 py-1.5 text-xs font-semibold text-content-primary dark:text-white hover:bg-white dark:hover:bg-white/20"
+            class="rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-surface dark:bg-white/opacity-light px-3 py-1.5 text-xs font-semibold text-content-primary hover:bg-white dark:hover:bg-white/opacity-medium"
             @click="showRawSnapshot = !showRawSnapshot"
           >
             {{ showRawSnapshot ? 'Hide' : 'Show' }}
@@ -1435,7 +1435,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
         </div>
         <pre
           v-if="showRawSnapshot"
-          class="mt-4 max-h-[440px] overflow-auto rounded-[10px] border border-stroke-subtle bg-background-soft p-4 text-xs text-content-primary dark:border-white/10 dark:bg-black/20 dark:text-white"
+          class="mt-4 max-h-[440px] overflow-auto rounded-[10px] border border-stroke-subtle bg-background-soft p-4 text-xs text-content-primary dark:border-white/opacity-light dark:bg-black/opacity-medium dark:text-on-dark"
           >{{ rawSnapshot }}</pre
         >
       </section>

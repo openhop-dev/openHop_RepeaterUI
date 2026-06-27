@@ -647,7 +647,7 @@ onBeforeUnmount(() => {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div class="flex justify-between items-center">
-      <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h2 class="text-2xl font-bold text-content-primary">
         System Statistics
       </h2>
       <div class="text-content-secondary dark:text-content-muted text-sm">
@@ -704,7 +704,7 @@ onBeforeUnmount(() => {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- CPU Details -->
       <div class="glass-card rounded-[15px] p-6">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-4">
+        <h3 class="text-content-primary text-xl font-semibold mb-4">
           CPU Performance
         </h3>
 
@@ -723,25 +723,25 @@ onBeforeUnmount(() => {
         <div v-if="hardwareStats" class="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div class="text-content-secondary dark:text-content-muted">CPU Count</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ hardwareStats.cpu.count }} cores
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Frequency</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ hardwareStats.cpu.frequency.toFixed(0) }} MHz
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Load (1m)</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ hardwareStats.cpu.load_avg['1min'].toFixed(2) }}
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Load (5m)</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ hardwareStats.cpu.load_avg['5min'].toFixed(2) }}
             </div>
           </div>
@@ -750,7 +750,7 @@ onBeforeUnmount(() => {
 
       <!-- Memory Details -->
       <div class="glass-card rounded-[15px] p-6">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-4">
+        <h3 class="text-content-primary text-xl font-semibold mb-4">
           Memory Usage
         </h3>
 
@@ -769,25 +769,25 @@ onBeforeUnmount(() => {
         <div v-if="hardwareStats" class="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div class="text-content-secondary dark:text-content-muted">Total</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ formatBytes(hardwareStats.memory.total) }}
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Used</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ formatBytes(hardwareStats.memory.used) }}
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Available</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ formatBytes(hardwareStats.memory.available) }}
             </div>
           </div>
           <div>
             <div class="text-content-secondary dark:text-content-muted">Usage</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ hardwareStats.memory.usage_percent.toFixed(1) }}%
             </div>
           </div>
@@ -799,7 +799,7 @@ onBeforeUnmount(() => {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Disk Usage -->
       <div class="glass-card rounded-[15px] p-6">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-4">
+        <h3 class="text-content-primary text-xl font-semibold mb-4">
           Storage Usage
         </h3>
 
@@ -812,7 +812,7 @@ onBeforeUnmount(() => {
         <div v-if="hardwareStats" class="grid grid-cols-3 gap-4 text-sm mt-4">
           <div class="text-center">
             <div class="text-content-secondary dark:text-content-muted">Total</div>
-            <div class="text-content-primary dark:text-content-primary font-semibold">
+            <div class="text-content-primary font-semibold">
               {{ formatBytes(hardwareStats.disk.total) }}
             </div>
           </div>
@@ -833,7 +833,7 @@ onBeforeUnmount(() => {
 
       <!-- Network Stats -->
       <div class="glass-card rounded-[15px] p-6">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-4">
+        <h3 class="text-content-primary text-xl font-semibold mb-4">
           Network Statistics
         </h3>
 
@@ -841,25 +841,25 @@ onBeforeUnmount(() => {
           <div class="grid grid-cols-2 gap-4 text-sm">
             <div>
               <div class="text-content-secondary dark:text-content-muted">Bytes Sent</div>
-              <div class="text-content-primary dark:text-content-primary font-semibold">
+              <div class="text-content-primary font-semibold">
                 {{ formatBytes(hardwareStats.network.bytes_sent) }}
               </div>
             </div>
             <div>
               <div class="text-content-secondary dark:text-content-muted">Bytes Received</div>
-              <div class="text-content-primary dark:text-content-primary font-semibold">
+              <div class="text-content-primary font-semibold">
                 {{ formatBytes(hardwareStats.network.bytes_recv) }}
               </div>
             </div>
             <div>
               <div class="text-content-secondary dark:text-content-muted">Packets Sent</div>
-              <div class="text-content-primary dark:text-content-primary font-semibold">
+              <div class="text-content-primary font-semibold">
                 {{ hardwareStats.network.packets_sent.toLocaleString() }}
               </div>
             </div>
             <div>
               <div class="text-content-secondary dark:text-content-muted">Packets Received</div>
-              <div class="text-content-primary dark:text-content-primary font-semibold">
+              <div class="text-content-primary font-semibold">
                 {{ hardwareStats.network.packets_recv.toLocaleString() }}
               </div>
             </div>
@@ -868,7 +868,7 @@ onBeforeUnmount(() => {
           <!-- Temperature if available -->
           <div
             v-if="hardwareStats.temperatures && Object.keys(hardwareStats.temperatures).length > 0"
-            class="pt-4 border-t border-stroke-subtle dark:border-stroke/10"
+            class="pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light"
           >
             <div class="text-content-secondary dark:text-content-muted mb-2">
               System Temperatures
@@ -876,7 +876,7 @@ onBeforeUnmount(() => {
             <div class="grid grid-cols-2 gap-2 text-sm">
               <div v-for="(temp, sensor) in hardwareStats.temperatures" :key="sensor">
                 <span class="text-content-secondary dark:text-content-muted">{{ sensor }}:</span>
-                <span class="text-content-primary dark:text-content-primary font-semibold ml-1"
+                <span class="text-content-primary font-semibold ml-1"
                   >{{ temp.toFixed(1) }}°C</span
                 >
               </div>
@@ -888,7 +888,7 @@ onBeforeUnmount(() => {
 
     <!-- Top Processes Section -->
     <div class="glass-card rounded-[15px] p-6">
-      <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold mb-4">
+      <h3 class="text-content-primary text-xl font-semibold mb-4">
         Top Processes
       </h3>
 
@@ -898,7 +898,7 @@ onBeforeUnmount(() => {
       >
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-stroke-subtle dark:border-stroke/10">
+            <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
               <th class="text-left text-content-secondary dark:text-content-muted py-2">PID</th>
               <th class="text-left text-content-secondary dark:text-content-muted py-2">Name</th>
               <th class="text-center text-content-secondary dark:text-content-muted py-2">CPU %</th>
@@ -912,15 +912,15 @@ onBeforeUnmount(() => {
             <tr
               v-for="process in processesData.processes.slice(0, 10)"
               :key="process.pid"
-              class="border-b border-stroke-subtle dark:border-white/5 process-row"
+              class="border-b border-stroke-subtle dark:border-white/opacity-light process-row"
             >
               <td
-                class="text-content-secondary dark:text-content-primary/80 py-2 transition-all duration-300"
+                class="text-content-secondary dark:text-content-primary/opacity-heavy py-2 transition-all duration-300"
               >
                 {{ process.pid }}
               </td>
               <td
-                class="text-content-primary dark:text-content-primary font-semibold py-2 transition-all duration-300"
+                class="text-content-primary font-semibold py-2 transition-all duration-300"
               >
                 {{ process.name }}
               </td>
@@ -945,7 +945,7 @@ onBeforeUnmount(() => {
                 </span>
               </td>
               <td
-                class="text-right text-content-secondary dark:text-content-primary/80 py-2 transition-all duration-300"
+                class="text-right text-content-secondary dark:text-content-primary/opacity-heavy py-2 transition-all duration-300"
               >
                 <span :class="{ 'value-updated': hasProcessValueChanged(process, 'memory_mb') }">
                   {{ process.memory_mb.toFixed(1) }} MB

@@ -7,7 +7,7 @@ const { theme, toggleTheme } = useTheme();
 <template>
   <button
     @click="toggleTheme"
-    class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/30 transition-colors"
+    class="w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/opacity-medium transition-colors"
     :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
     :title="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
   >
@@ -15,7 +15,7 @@ const { theme, toggleTheme } = useTheme();
     <svg
       v-if="theme === 'dark'"
       xmlns="http://www.w3.org/2000/svg"
-      class="w-5 h-5 text-yellow-600 dark:text-yellow-400"
+      class="w-5 h-5 text-accent-amber"
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"

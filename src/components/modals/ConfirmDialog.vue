@@ -23,16 +23,16 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<Emits>();
 
 const variantColors = {
-  danger: 'bg-red-100 dark:bg-red-500/20 border-red-500/30 text-red-600 dark:text-red-400',
+  danger: 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border-accent-red/opacity-medium text-accent-red',
   warning:
-    'bg-yellow-100 dark:bg-yellow-500/20 border-yellow-500/30 text-yellow-600 dark:text-yellow-400',
-  info: 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400',
+    'bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-medium border-accent-amber/opacity-medium text-accent-amber',
+  info: 'bg-primary/opacity-medium border-primary/opacity-medium text-primary',
 };
 
 const buttonColors = {
-  danger: 'bg-red-500 hover:bg-red-600',
-  warning: 'bg-yellow-500 hover:bg-yellow-600',
-  info: 'bg-blue-500 hover:bg-blue-600',
+  danger: 'bg-accent-red/opacity-light hover:bg-accent-red/opacity-light',
+  warning: 'bg-accent-amber/opacity-light hover:bg-accent-amber/opacity-light',
+  info: 'bg-primary/opacity-light hover:bg-primary/opacity-light',
 };
 </script>
 
@@ -50,7 +50,7 @@ const buttonColors = {
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h3 class="text-xl font-semibold text-content-primary">
           {{ props.title }}
         </h3>
         <button
@@ -111,7 +111,7 @@ const buttonColors = {
             />
           </svg>
         </div>
-        <p class="text-content-secondary dark:text-content-primary/80 text-base leading-relaxed">
+        <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-base leading-relaxed">
           {{ props.message }}
         </p>
       </div>
@@ -120,7 +120,7 @@ const buttonColors = {
       <div class="flex gap-3">
         <button
           @click="emit('close')"
-          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/10"
+          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
           {{ props.cancelText }}
         </button>

@@ -529,7 +529,7 @@ const incidentDetails = computed(() => {
     duration: formatDuration(inc.startMs, inc.endMs),
     peakNoise: inc.peakNoiseDelta.toFixed(2),
     totalCrc: inc.totalCrc.toLocaleString(),
-    severityColor: inc.severity === 'high' ? 'bg-danger/10 text-danger' : inc.severity === 'medium' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success',
+    severityColor: inc.severity === 'high' ? 'bg-accent-red/opacity-light text-accent-red' : inc.severity === 'medium' ? 'bg-accent-amber/opacity-light text-accent-amber' : 'bg-accent-green/opacity-light text-accent-green',
   };
 });
 
@@ -962,7 +962,7 @@ onBeforeUnmount(() => {
           <div
             v-for="incident in incidents"
             :key="incident.id"
-             class="border border-stroke-subtle rounded-lg p-3 hover:bg-surface-hover/5 cursor-pointer transition-colors group"
+             class="border border-stroke-subtle rounded-lg p-3 hover:bg-surface-hover/opacity-subtle cursor-pointer transition-colors group"
              @click="selectedIncident = incident"
           >
             <div class="flex items-center justify-between gap-2">
@@ -973,7 +973,7 @@ onBeforeUnmount(() => {
                 class="text-xs font-semibold px-2 py-1 rounded-full"
                 :class="{
                   'bg-accent-red-bg text-accent-red': incident.severity === 'high',
-                  'bg-warning-bg text-warning': incident.severity === 'medium',
+                  'bg-accent-amber/opacity-light text-accent-amber': incident.severity === 'medium',
                   'bg-accent-green-bg text-accent-green': incident.severity === 'low',
                 }"
               >

@@ -72,7 +72,7 @@ const handleClose = () => {
           />
         </svg>
         <div>
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Delete Neighbor
           </h3>
           <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -96,11 +96,11 @@ const handleClose = () => {
 
       <!-- Neighbor Info -->
       <div
-        class="bg-gray-50 dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4 mb-6"
+        class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-4 mb-6"
       >
         <div class="flex items-center gap-3">
           <div class="flex-1 min-w-0">
-            <div class="text-content-primary dark:text-content-primary font-medium truncate">
+            <div class="text-content-primary font-medium truncate">
               {{ neighbor?.node_name || neighbor?.long_name || neighbor?.short_name || 'Unknown' }}
             </div>
             <div class="text-content-secondary dark:text-content-muted text-sm font-mono">
@@ -116,7 +116,7 @@ const handleClose = () => {
         </div>
       </div>
 
-      <div class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 mb-6">
+      <div class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-4 mb-6">
         <div class="flex items-center gap-2 text-accent-red text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -134,7 +134,7 @@ const handleClose = () => {
       <div class="flex gap-3">
         <button
           @click="handleClose"
-          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
         >
           Cancel
         </button>

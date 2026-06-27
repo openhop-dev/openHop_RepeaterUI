@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 docs
 .DS_Store
+.claude
+.vexp
 dist
 dist-ssr
 coverage

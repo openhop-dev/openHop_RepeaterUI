@@ -953,7 +953,7 @@ onBeforeUnmount(() => {
   <div class="p-3 sm:p-6 space-y-4 sm:space-y-6">
     <!-- Header with Time Range Dropdown -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-      <h2 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h2 class="text-xl sm:text-2xl font-bold text-content-primary">
         Statistics
       </h2>
 
@@ -1022,7 +1022,7 @@ onBeforeUnmount(() => {
     <!-- Performance Metrics Section -->
     <div class="glass-card rounded-[15px] p-3 sm:p-6">
       <h3
-        class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+        class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
       >
         Performance Metrics
       </h3>
@@ -1061,7 +1061,7 @@ onBeforeUnmount(() => {
       <!-- Noise Floor Over Time -->
       <div class="glass-card rounded-[15px] p-3 sm:p-6 flex flex-col">
         <h3
-          class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+          class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
         >
           Noise Floor Over Time
         </h3>
@@ -1079,7 +1079,7 @@ onBeforeUnmount(() => {
       <!-- Route Distribution -->
       <div class="glass-card rounded-[15px] p-3 sm:p-6 flex flex-col">
         <h3
-          class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+          class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
         >
           Route Distribution
         </h3>
@@ -1097,11 +1097,11 @@ onBeforeUnmount(() => {
               class="flex items-center gap-3"
             >
               <div
-                class="w-28 sm:w-32 text-sm text-content-primary dark:text-content-primary truncate"
+                class="w-28 sm:w-32 text-sm text-content-primary truncate"
               >
                 {{ route }}
               </div>
-              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/10 rounded overflow-hidden">
+              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/opacity-subtle rounded overflow-hidden">
                 <div
                   class="h-full rounded transition-all duration-300"
                   :style="{

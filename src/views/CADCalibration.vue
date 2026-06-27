@@ -540,7 +540,7 @@ onUnmounted(() => {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h1 class="text-2xl font-bold text-content-primary">
         CAD Calibration Tool
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-2">
@@ -555,7 +555,7 @@ onUnmounted(() => {
           <button
             @click="startCalibration"
             :disabled="isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-green/10 hover:bg-accent-green/20 disabled:bg-gray-500/10 text-accent-green disabled:text-gray-400 rounded-lg border border-accent-green/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-green/opacity-light hover:bg-accent-green/opacity-medium disabled:bg-background-mute/opacity-light text-accent-green disabled:text-content-muted rounded-lg border border-accent-green/opacity-medium disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -569,7 +569,7 @@ onUnmounted(() => {
           <button
             @click="stopCalibration"
             :disabled="!isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-red/10 hover:bg-accent-red/20 disabled:bg-gray-500/10 text-accent-red disabled:text-gray-400 rounded-lg border border-accent-red/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-red/opacity-light hover:bg-accent-red/opacity-medium disabled:bg-background-mute/opacity-light text-accent-red disabled:text-content-muted rounded-lg border border-accent-red/opacity-medium disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="6" y="6" width="12" height="12"></rect>
@@ -586,10 +586,10 @@ onUnmounted(() => {
     <!-- Status and Progress -->
     <div class="glass-card rounded-[15px] p-6 space-y-4">
       <!-- Status message -->
-      <div class="text-content-primary dark:text-content-primary">{{ statusMessage }}</div>
+      <div class="text-content-primary">{{ statusMessage }}</div>
 
       <!-- Info row: fixed height, swaps between config and results -->
-      <div class="flex items-center justify-between gap-4 px-4 bg-primary/10 border border-primary/30 rounded-lg h-[52px] overflow-hidden">
+      <div class="flex items-center justify-between gap-4 px-4 bg-primary/opacity-light border border-primary/opacity-medium rounded-lg h-[52px] overflow-hidden">
         <!-- Config (before complete) -->
         <div v-if="!showResults && showRangeInfo && rangeInfo" class="text-content-primary dark:text-primary text-sm">
           <strong>Configuration:</strong>
@@ -597,11 +597,11 @@ onUnmounted(() => {
           {{ (rangeInfo.peak_max - rangeInfo.peak_min + 1) * (rangeInfo.min_max - rangeInfo.min_min + 1) }} tests
         </div>
         <!-- Placeholder before calibration starts -->
-        <div v-else-if="!showResults" class="text-content-muted dark:text-content-muted text-sm italic">
+        <div v-else-if="!showResults" class="text-content-muted text-sm italic">
           Awaiting calibration…
         </div>
         <!-- Results (when complete) -->
-        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary dark:text-content-primary text-sm">
+        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary text-sm">
           <span class="text-accent-green font-medium">Optimal settings found — </span>
           Peak: <strong>{{ bestCalibrationResult.det_peak }}</strong>,
           Min: <strong>{{ bestCalibrationResult.det_min }}</strong>,
@@ -626,7 +626,7 @@ onUnmounted(() => {
 
       <!-- Progress bar (always present, height never changes) -->
       <div class="space-y-2">
-        <div class="w-full bg-white/10 rounded-full h-2">
+        <div class="w-full bg-white/opacity-light rounded-full h-2">
           <div
             class="bg-gradient-to-r from-primary to-accent-green h-2 rounded-full transition-all duration-300"
             :style="{

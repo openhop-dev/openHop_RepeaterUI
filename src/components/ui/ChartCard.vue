@@ -55,7 +55,7 @@ onBeforeUnmount(clearTimers);
     <!-- First-load overlay: no data yet, full-area spinner -->
     <div
       v-if="isLoading"
-      class="absolute inset-0 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-sm z-10"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-surface/opacity-heavy backdrop-blur-sm z-10"
     >
       <Spinner />
       <p v-if="status" class="mt-2 text-sm text-content-secondary">{{ status }}</p>
@@ -73,7 +73,7 @@ onBeforeUnmount(clearTimers);
     <!-- Error overlay: shown over chart or blank area -->
     <div
       v-if="error && !isLoading"
-      class="absolute inset-0 flex flex-col items-center justify-center bg-surface/80 backdrop-blur-sm z-10"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-surface/opacity-heavy backdrop-blur-sm z-10"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

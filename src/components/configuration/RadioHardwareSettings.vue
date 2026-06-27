@@ -440,7 +440,7 @@ watch(
   <div class="space-y-12">
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Radio Hardware
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -476,17 +476,17 @@ watch(
 
     <div
       v-if="errorMessage"
-      class="bg-red-100 dark:bg-red-500/20 border border-red-500 dark:border-red-500/50 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
 
     <div class="cfg-section space-y-3">
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Radio Type</span>
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ currentRadioTypeLabel }}
         </div>
@@ -504,11 +504,11 @@ watch(
       </div>
 
       <template v-if="showSerialFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
             Serial Port
           </span>
-          <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm break-all">
+          <div v-if="!isEditing" class="text-content-primary font-mono text-sm break-all">
             {{ selectedRadioType === 'kiss' ? kissPort : pymcUsbPort }}
           </div>
           <template v-else>
@@ -586,7 +586,7 @@ watch(
 
               <p
                 v-if="serialDevicesError"
-                class="text-xs text-red-600 dark:text-red-400"
+                class="text-xs text-accent-red"
               >
                 {{ serialDevicesError }}
               </p>
@@ -594,11 +594,11 @@ watch(
           </template>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
             Baud Rate
           </span>
-          <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
             {{ selectedRadioType === 'kiss' ? kissBaudRate : pymcUsbBaudRate }}
           </div>
           <template v-else>
@@ -621,9 +621,9 @@ watch(
       </template>
 
       <template v-if="showTcpFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Host</span>
-          <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm break-all">
+          <div v-if="!isEditing" class="text-content-primary font-mono text-sm break-all">
             {{ pymcTcpHost || 'Not set' }}
           </div>
           <input
@@ -635,9 +635,9 @@ watch(
           />
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Port</span>
-          <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
             {{ pymcTcpPort }}
           </div>
           <input
@@ -650,9 +650,9 @@ watch(
           />
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Token</span>
-          <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
             {{ pymcTcpToken ? 'Configured' : 'Not set' }}
           </div>
           <input
@@ -666,7 +666,7 @@ watch(
       </template>
 
       <template v-if="showSx1262Fields && isEditing">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-2">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Board Preset (Quick Apply)</span>
           <div class="w-full sm:w-96 space-y-2">
             <div class="flex gap-2">
@@ -689,53 +689,53 @@ watch(
                 {{ hardwareOptionsLoading ? '...' : 'Refresh' }}
               </button>
             </div>
-            <p v-if="hardwareOptionsError" class="text-xs text-red-600 dark:text-red-400">
+            <p v-if="hardwareOptionsError" class="text-xs text-accent-red">
               {{ hardwareOptionsError }}
             </p>
-            <p class="text-xs text-content-muted dark:text-content-muted">
+            <p class="text-xs text-content-muted">
               Optional: selecting a preset fills the pin fields below for quick setup changes.
             </p>
           </div>
         </div>
 
-        <div class="pt-2 text-xs text-content-muted dark:text-content-muted">SX1262 Board Pin Configuration</div>
+        <div class="pt-2 text-xs text-content-muted">SX1262 Board Pin Configuration</div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/10">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI Bus ID
             <input v-if="isEditing" v-model.number="sxBusId" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxBusId }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxBusId }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI CS ID
             <input v-if="isEditing" v-model.number="sxCsId" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxCsId }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxCsId }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CS Pin
             <input v-if="isEditing" v-model.number="sxCsPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxCsPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxCsPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Reset Pin
             <input v-if="isEditing" v-model.number="sxResetPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxResetPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxResetPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Busy Pin
             <input v-if="isEditing" v-model.number="sxBusyPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxBusyPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxBusyPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IRQ Pin
             <input v-if="isEditing" v-model.number="sxIrqPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxIrqPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxIrqPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX Enable Pin
             <input v-if="isEditing" v-model.number="sxTxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxTxEnPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxTxEnPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX Enable Pin
             <input v-if="isEditing" v-model.number="sxRxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxRxEnPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxRxEnPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pin
             <input v-if="isEditing" v-model.number="sxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxEnPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxEnPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pins (array)
             <input
@@ -745,73 +745,73 @@ watch(
               class="cfg-input mt-1"
               placeholder="26, 23"
             />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">
               {{ sxEnPinsInput || 'Not set' }}
             </span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX LED Pin
             <input v-if="isEditing" v-model.number="sxTxLedPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxTxLedPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxTxLedPin }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX LED Pin
             <input v-if="isEditing" v-model.number="sxRxLedPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ sxRxLedPin }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxRxLedPin }}</span>
           </label>
         </div>
       </template>
 
       <div v-else-if="showSx1262Fields" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current SPI bus</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxBusId }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current SPI bus</div>
+          <div class="text-content-primary font-mono">{{ sxBusId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current SPI CS</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxCsId }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current SPI CS</div>
+          <div class="text-content-primary font-mono">{{ sxCsId }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current CS pin</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxCsPin }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current CS pin</div>
+          <div class="text-content-primary font-mono">{{ sxCsPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current reset pin</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxResetPin }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current reset pin</div>
+          <div class="text-content-primary font-mono">{{ sxResetPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current busy pin</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxBusyPin }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current busy pin</div>
+          <div class="text-content-primary font-mono">{{ sxBusyPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current IRQ pin</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxIrqPin }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current IRQ pin</div>
+          <div class="text-content-primary font-mono">{{ sxIrqPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current power enable pin</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">{{ sxEnPin }}</div>
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current power enable pin</div>
+          <div class="text-content-primary font-mono">{{ sxEnPin }}</div>
         </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/10 bg-background-mute dark:bg-white/5 p-3">
-          <div class="text-content-muted dark:text-content-muted text-xs mb-1">Current power enable pins</div>
-          <div class="text-content-primary dark:text-content-primary font-mono">
+        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
+          <div class="text-content-muted text-xs mb-1">Current power enable pins</div>
+          <div class="text-content-primary font-mono">
             {{ sxEnPinsInput || 'Not set' }}
           </div>
         </div>
       </div>
 
       <template v-if="showCh341Fields">
-        <div class="pt-2 text-xs text-content-muted dark:text-content-muted">CH341 Adapter Configuration</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/10">
+        <div class="pt-2 text-xs text-content-muted">CH341 Adapter Configuration</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 VID
             <input v-if="isEditing" v-model.number="ch341Vid" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ ch341Vid }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ ch341Vid }}</span>
           </label>
           <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 PID
             <input v-if="isEditing" v-model.number="ch341Pid" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary dark:text-content-primary font-mono text-sm mt-1">{{ ch341Pid }}</span>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ ch341Pid }}</span>
           </label>
         </div>
       </template>
 
-      <div class="py-2 text-xs text-content-muted dark:text-content-muted">
+      <div class="py-2 text-xs text-content-muted">
         Switching hardware saves immediately and requires a service restart to apply.
       </div>
     </div>

@@ -169,7 +169,7 @@ const handleCancel = () => {
         <!-- Header -->
         <div class="flex items-center justify-between mb-6">
           <div>
-            <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-xl font-semibold text-content-primary">
               {{ isAddMode ? 'Add New Entry' : 'Edit Entry' }}
             </h3>
             <p v-if="!isAddMode" class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -187,7 +187,7 @@ const handleCancel = () => {
         <div v-if="parentPath.length > 0" class="mb-4 text-sm text-content-secondary dark:text-content-muted">
           <span>{{ isAddMode ? 'Adding under:' : 'Parent:' }}</span>
           <span v-for="(ancestor, i) in parentPath" :key="ancestor.id">
-            <span class="text-content-muted dark:text-content-muted"> / </span>
+            <span class="text-content-muted"> / </span>
             <span :class="i === parentPath.length - 1 ? 'text-primary font-mono' : 'font-mono'">{{ ancestor.name }}</span>
           </span>
         </div>
@@ -200,14 +200,14 @@ const handleCancel = () => {
           <!-- Entry Type Toggle -->
           <div class="pb-2">
             <label class="modal-field-label">Entry Type</label>
-            <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <div class="flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5">
               <button
                 type="button"
                 @click="entryType = 'region'"
                 :class="[
                   'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
                   entryType === 'region'
-                    ? 'bg-secondary/20 text-secondary border border-secondary/50'
+                    ? 'bg-secondary/opacity-medium text-secondary border border-secondary/opacity-heavy'
                     : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
                 ]"
               >REGION</button>
@@ -217,7 +217,7 @@ const handleCancel = () => {
                 :class="[
                   'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
                   entryType === 'privateKey'
-                    ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                    ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-heavy'
                     : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
                 ]"
               >PRIVATE KEY</button>
@@ -228,7 +228,7 @@ const handleCancel = () => {
           <div>
             <label class="modal-field-label">{{ keyType.type }} Name</label>
             <div class="flex items-center">
-              <span v-if="isRegion" class="px-3 py-2 bg-secondary/10 border border-r-0 border-secondary/30 rounded-l-md text-secondary text-sm font-mono">#</span>
+              <span v-if="isRegion" class="px-3 py-2 bg-secondary/opacity-light border border-r-0 border-secondary/opacity-medium rounded-l-md text-secondary text-sm font-mono">#</span>
               <input
                 v-model="keyName"
                 type="text"
@@ -262,41 +262,41 @@ const handleCancel = () => {
                 readonly
                 class="modal-input-readonly w-full text-xs"
               />
-              <p v-if="nameChanged" class="text-xs text-amber-500 dark:text-amber-400 mt-1">
+              <p v-if="nameChanged" class="text-xs text-accent-amber mt-1">
                 Updated for "{{ liveDisplayName }}"
               </p>
             </div>
           </div>
 
           <!-- Last Used (edit mode) -->
-          <div v-if="!isAddMode && node?.last_used" class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-3">
+          <div v-if="!isAddMode && node?.last_used" class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span class="text-sm font-medium text-content-primary dark:text-content-primary">Last Used</span>
+                <span class="text-sm font-medium text-content-primary">Last Used</span>
               </div>
               <div class="text-right">
                 <div class="text-sm text-content-secondary dark:text-content-muted">
                   {{ node.last_used.toLocaleDateString() }} at {{ node.last_used.toLocaleTimeString() }}
                 </div>
-                <div class="text-xs text-content-muted dark:text-content-muted">{{ formatTimeAgo(node.last_used) }}</div>
+                <div class="text-xs text-content-muted">{{ formatTimeAgo(node.last_used) }}</div>
               </div>
             </div>
           </div>
 
           <!-- Flood Policy -->
-          <div class="pt-1 border-t border-stroke-subtle dark:border-stroke/10">
+          <div class="pt-1 border-t border-stroke-subtle dark:border-stroke/opacity-light">
             <label class="modal-field-label pt-4">Flood Policy</label>
-            <div class="flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5">
+            <div class="flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5">
               <button
                 type="button"
                 @click="floodPolicy = 'allow'"
                 :class="[
                   'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
                   floodPolicy === 'allow'
-                    ? 'bg-accent-green/10 text-accent-green border border-accent-green/20'
+                    ? 'bg-accent-green/opacity-light text-accent-green border border-accent-green/opacity-medium'
                     : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
                 ]"
               >ALLOW</button>
@@ -306,7 +306,7 @@ const handleCancel = () => {
                 :class="[
                   'flex-1 px-3 py-1.5 text-xs font-medium rounded transition-colors',
                   floodPolicy === 'deny'
-                    ? 'bg-accent-red/10 text-accent-red border border-accent-red/20'
+                    ? 'bg-accent-red/opacity-light text-accent-red border border-accent-red/opacity-medium'
                     : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
                 ]"
               >DENY</button>
@@ -322,8 +322,8 @@ const handleCancel = () => {
               :class="[
                 'flex-1 px-4 py-3 rounded-lg transition-colors font-medium',
                 isValid
-                  ? 'bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green'
-                  : 'bg-background-mute dark:bg-stroke/5 border border-stroke-subtle dark:border-stroke/20 text-content-muted cursor-not-allowed',
+                  ? 'bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green'
+                  : 'bg-background-mute dark:bg-stroke/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted cursor-not-allowed',
               ]"
             >
               {{ isAddMode ? `Add ${keyType.type}` : 'Done' }}

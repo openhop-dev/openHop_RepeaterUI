@@ -809,12 +809,12 @@ const handleMobileBackspace = () => {
   <div class="space-y-4 md:space-y-6">
     <!-- Header -->
     <div
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-3 md:p-4"
+      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-3 md:p-4"
     >
       <div class="flex items-center justify-between">
         <div>
           <h1
-            class="text-content-primary dark:text-content-primary text-lg md:text-xl font-semibold"
+            class="text-content-primary text-lg md:text-xl font-semibold"
           >
             Terminal
           </h1>
@@ -827,7 +827,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="isMobileDevice"
             @click="toggleFullWindow"
-            class="flex items-center gap-2 px-3 py-2 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullWindow ? 'Exit fullscreen' : 'Enter fullscreen'"
           >
             <svg
@@ -859,7 +859,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="!isMobileDevice"
             @click="toggleFullWindow"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullWindow ? 'Exit full window' : 'Full window'"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -877,7 +877,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="!isMobileDevice"
             @click="toggleFullScreen"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullScreen ? 'Exit fullscreen' : 'Fullscreen'"
           >
             <svg
@@ -906,7 +906,7 @@ const handleMobileBackspace = () => {
           </button>
           <button
             @click="showSearch = !showSearch"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-primary border border-primary/opacity-heavy rounded-lg transition-colors"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -931,7 +931,7 @@ const handleMobileBackspace = () => {
     <!-- Search Bar -->
     <div
       v-if="showSearch"
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-4"
+      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-4"
     >
       <div class="flex items-center gap-3">
         <input
@@ -944,21 +944,21 @@ const handleMobileBackspace = () => {
         />
         <button
           @click="searchPrev"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
           title="Previous (Shift+Enter)"
         >
           ↑
         </button>
         <button
           @click="performSearch"
-          class="px-3 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg text-primary transition-colors"
+          class="px-3 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy rounded-lg text-primary transition-colors"
           title="Next (Enter)"
         >
           ↓
         </button>
         <button
           @click="closeSearch"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
         >
           ✕
         </button>
@@ -968,14 +968,14 @@ const handleMobileBackspace = () => {
     <!-- Terminal Window -->
     <div
       ref="terminalContainerRef"
-      class="bg-surface dark:bg-surface-elevated/80 backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] overflow-hidden relative"
+      class="bg-surface dark:bg-surface-elevated/80 backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] overflow-hidden relative"
       :class="{ 'fullscreen-terminal': isFullScreen, 'full-window-terminal': isFullWindow }"
     >
       <!-- Exit full window button -->
       <button
         v-if="isFullWindow && !isFullScreen"
         @click="exitFullWindow"
-        class="absolute top-4 right-4 z-50 p-2 bg-black/80 backdrop-blur-sm hover:bg-black/90 text-white border border-white/20 rounded-lg transition-colors"
+        class="absolute top-4 right-4 z-50 p-2 bg-black/80 backdrop-blur-sm hover:bg-black/80 text-white border border-white/opacity-medium rounded-lg transition-colors"
         title="Exit full window (ESC)"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1014,7 +1014,7 @@ const handleMobileBackspace = () => {
       <!-- Loading indicator -->
       <div
         v-if="isLoading"
-        class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/30 flex items-center gap-2"
+        class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/opacity-medium flex items-center gap-2"
       >
         <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
         <span class="text-primary text-sm font-medium">Processing...</span>

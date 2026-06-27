@@ -359,7 +359,7 @@ defineExpose({ requestLeave, isEditing });
 function formatPolicyApiError(err: unknown, fallback: string): string {
   const raw = err instanceof Error ? err.message : fallback;
   if (raw.includes('404')) {
-    return 'Policy API not available on the connected backend. Update/restart pyMC_Repeater so /api/policy, /api/policy_groups, and /api/policy_group_entries are exposed.';
+    return 'Policy API not available on the connected backend. Update/restart openHop Repeater so /api/policy, /api/policy_groups, and /api/policy_group_entries are exposed.';
   }
   return raw || fallback;
 }
@@ -857,12 +857,12 @@ function actionLabel(action: PolicyAction): string {
 
 function actionBadgeClasses(action: PolicyAction): string {
   if (action === 'drop') {
-    return 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-300';
+    return 'border-accent-red/opacity-medium bg-accent-red/opacity-light text-accent-red';
   }
   if (action === 'log_only') {
-    return 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300';
+    return 'border-accent-amber/opacity-medium bg-accent-amber/opacity-light text-accent-amber';
   }
-  return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300';
+  return 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green';
 }
 
 function openAddRuleModal() {
@@ -1288,7 +1288,7 @@ onMounted(loadPolicy);
   <div class="space-y-6">
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Policy Engine
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -1322,15 +1322,15 @@ onMounted(loadPolicy);
         </template>
       </div>
     </div>
-    <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3 text-red-600 dark:text-red-400 text-sm">
+    <div v-if="error" class="alert-error">
       {{ error }}
     </div>
 
-    <div v-if="message" class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-emerald-700 dark:text-emerald-400 text-sm">
+    <div v-if="message" class="alert-success">
       {{ message }}
     </div>
 
-    <div v-if="validationInfo" class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-blue-700 dark:text-blue-300 text-sm">
+    <div v-if="validationInfo" class="bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-3 text-primary text-sm">
       {{ validationInfo }}
     </div>
 
@@ -1345,8 +1345,8 @@ onMounted(loadPolicy);
           <button
             class="px-3 py-1.5 text-xs sm:text-sm rounded-md border transition-colors"
             :class="activeView === 'policy'
-              ? 'border-primary/60 text-primary bg-primary/10'
-              : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary'"
+              ? 'border-primary/opacity-heavy text-primary bg-primary/opacity-light'
+              : 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary'"
             @click="activeView = 'policy'"
           >
             Policy
@@ -1354,8 +1354,8 @@ onMounted(loadPolicy);
           <button
             class="px-3 py-1.5 text-xs sm:text-sm rounded-md border transition-colors"
             :class="activeView === 'objects'
-              ? 'border-primary/60 text-primary bg-primary/10'
-              : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary'"
+              ? 'border-primary/opacity-heavy text-primary bg-primary/opacity-light'
+              : 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary'"
             @click="activeView = 'objects'"
           >
             Objects
@@ -1366,25 +1366,25 @@ onMounted(loadPolicy);
       <div v-if="activeView === 'policy'" class="space-y-4">
         <div class="cfg-section space-y-4">
           <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
-            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/50 dark:bg-white/5 px-4 py-4 flex items-center justify-between gap-4">
+            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-4 flex items-center justify-between gap-4">
               <div>
                 <label class="cfg-label">Policy Engine Enabled</label>
-                <p class="mt-1 text-xs text-content-muted dark:text-content-muted">Enable policy enforcement for incoming packets.</p>
+                <p class="mt-1 text-xs text-content-muted">Enable policy enforcement for incoming packets.</p>
               </div>
-              <label class="inline-flex items-center gap-3 rounded-full border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 px-3 py-2 text-sm font-medium text-content-primary dark:text-content-primary shadow-sm">
+              <label class="inline-flex items-center gap-3 rounded-full border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-main dark:bg-surface-900 px-3 py-2 text-sm font-medium text-content-primary shadow-sm">
                 <input
                   v-model="policyEngine.enabled"
                   type="checkbox"
                   :disabled="!isEditing || saving"
-                  class="h-4 w-4 rounded border-stroke-subtle dark:border-stroke/30 accent-primary"
+                  class="h-4 w-4 rounded border-stroke-subtle dark:border-stroke/opacity-medium accent-primary"
                 />
                 <span>Enable policy enforcement</span>
               </label>
             </div>
-            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/50 dark:bg-white/5 px-4 py-4 flex flex-col justify-between gap-3">
+            <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-4 flex flex-col justify-between gap-3">
               <div>
                 <label class="cfg-label">Default Action</label>
-                <p class="mt-1 text-xs text-content-muted dark:text-content-muted">Applied when no policy rule matches.</p>
+                <p class="mt-1 text-xs text-content-muted">Applied when no policy rule matches.</p>
               </div>
               <select v-model="policyEngine.default_action" class="cfg-select w-full md:max-w-sm" :disabled="!isEditing || saving">
                 <option v-for="opt in actionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
@@ -1407,40 +1407,40 @@ onMounted(loadPolicy);
               </div>
             </div>
 
-            <div class="overflow-x-auto rounded-2xl border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 shadow-sm">
+            <div class="overflow-x-auto rounded-2xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-main dark:bg-surface-900 shadow-sm">
               <table class="w-full min-w-[980px] table-fixed text-sm">
-                <thead class="bg-background-mute/80 dark:bg-white/5 backdrop-blur">
+                <thead class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle backdrop-blur">
                   <tr>
-                    <th class="w-16 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Order</th>
-                    <th class="w-14 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">On</th>
-                    <th class="w-44 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Name</th>
-                    <th class="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Logic</th>
-                    <th class="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Action</th>
-                    <th class="w-48 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted dark:text-content-muted">Controls</th>
+                    <th class="w-16 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Order</th>
+                    <th class="w-14 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">On</th>
+                    <th class="w-44 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Name</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Logic</th>
+                    <th class="w-28 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Action</th>
+                    <th class="w-48 px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-content-muted">Controls</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
                     v-for="(rule, idx) in uiRules"
                     :key="`${rule.id}-${idx}`"
-                    class="border-t border-stroke-subtle/70 dark:border-stroke/15 odd:bg-background-mute/20 dark:odd:bg-white/[0.02] hover:bg-primary/5 dark:hover:bg-white/[0.04] transition-colors"
+                    class="border-t border-stroke-subtle/70 dark:border-stroke/opacity-light odd:bg-background-mute/opacity-medium dark:odd:bg-white/[0.02] hover:bg-primary/opacity-light dark:hover:bg-white/[0.04] transition-colors"
                   >
-                    <td class="px-3 py-3 text-xs font-medium text-content-secondary dark:text-content-secondary">{{ idx + 1 }}</td>
+                    <td class="px-3 py-3 text-xs font-medium text-content-secondary">{{ idx + 1 }}</td>
                     <td class="px-3 py-3">
                       <span
                         class="inline-flex h-5 w-5 items-center justify-center rounded-md border text-[10px] font-semibold"
                         :class="rule.enabled
-                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
-                          : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/20 dark:bg-white/5 dark:text-content-muted'"
+                          ? 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green'
+                          : 'border-stroke-subtle/70 bg-background-mute text-content-muted dark:border-stroke/opacity-medium dark:bg-white/opacity-subtle dark:text-content-muted'"
                         :title="rule.enabled ? 'Enabled' : 'Disabled'"
                       >
                         {{ rule.enabled ? '✓' : '—' }}
                       </span>
                     </td>
-                    <td class="px-3 py-3 text-content-primary dark:text-content-primary">
+                    <td class="px-3 py-3 text-content-primary">
                       <span class="block truncate font-medium" :title="rule.name">{{ rule.name }}</span>
                     </td>
-                    <td class="px-3 py-3 text-xs text-content-secondary dark:text-content-secondary">
+                    <td class="px-3 py-3 text-xs text-content-secondary">
                       <span class="block truncate font-mono leading-5" :title="summarizeRule(rule)">{{ summarizeRule(rule) }}</span>
                     </td>
                     <td class="px-3 py-3">
@@ -1457,18 +1457,18 @@ onMounted(loadPolicy);
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, -1)">▲</button>
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, 1)">▼</button>
                         <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="openEditRuleModal(idx)">Edit</button>
-                        <button class="text-xs px-2 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10 disabled:opacity-40" :disabled="!isEditing || saving" @click="removeRule(idx)">Del</button>
+                        <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light disabled:opacity-40" :disabled="!isEditing || saving" @click="removeRule(idx)">Del</button>
                       </div>
                     </td>
                   </tr>
                   <tr v-if="!uiRules.length">
-                    <td colspan="6" class="px-3 py-8 text-center text-xs text-content-muted dark:text-content-muted">No rules yet. Add your first rule.</td>
+                    <td colspan="6" class="px-3 py-8 text-center text-xs text-content-muted">No rules yet. Add your first rule.</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <p class="text-xs text-content-muted dark:text-content-muted">
+            <p class="text-xs text-content-muted">
               Rules are evaluated top to bottom. First matching rule wins.
             </p>
 
@@ -1500,8 +1500,8 @@ onMounted(loadPolicy);
             <button
               class="px-3 py-1.5 text-xs sm:text-sm rounded-md border transition-colors"
               :class="objectKind === 'channel_hashes'
-                ? 'border-primary/60 text-primary bg-primary/10'
-                : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted'"
+                ? 'border-primary/opacity-heavy text-primary bg-primary/opacity-light'
+                : 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted'"
               @click="objectKind = 'channel_hashes'"
             >
               Channel Hash Groups
@@ -1509,8 +1509,8 @@ onMounted(loadPolicy);
             <button
               class="px-3 py-1.5 text-xs sm:text-sm rounded-md border transition-colors"
               :class="objectKind === 'pubkeys'
-                ? 'border-primary/60 text-primary bg-primary/10'
-                : 'border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted'"
+                ? 'border-primary/opacity-heavy text-primary bg-primary/opacity-light'
+                : 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted'"
               @click="objectKind = 'pubkeys'"
             >
               Pubkey Groups
@@ -1521,8 +1521,8 @@ onMounted(loadPolicy);
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div class="cfg-section lg:col-span-4 space-y-4">
             <div class="flex items-center justify-between">
-              <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Groups</h4>
-              <span class="text-xs text-content-muted dark:text-content-muted">{{ currentGroups.length }} total</span>
+              <h4 class="text-sm font-semibold text-content-primary">Groups</h4>
+              <span class="text-xs text-content-muted">{{ currentGroups.length }} total</span>
             </div>
 
             <div class="space-y-2 max-h-[360px] overflow-auto pr-1">
@@ -1531,28 +1531,28 @@ onMounted(loadPolicy);
                 :key="group.id"
                 class="w-full text-left rounded-lg border p-3 transition-colors"
                 :class="selectedGroupId === group.id
-                  ? 'border-primary/60 bg-primary/10'
-                  : 'border-stroke-subtle dark:border-stroke/20 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10'"
+                  ? 'border-primary/opacity-heavy bg-primary/opacity-light'
+                  : 'border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light'"
                 @click="selectedGroupId = group.id"
               >
                 <div class="flex items-start justify-between gap-2">
                   <div>
-                    <p class="text-sm font-medium text-content-primary dark:text-content-primary">
+                    <p class="text-sm font-medium text-content-primary">
                       {{ group.friendly_name }}
                     </p>
-                    <p class="text-xs text-content-muted dark:text-content-muted mt-1">{{ group.id }}</p>
+                    <p class="text-xs text-content-muted mt-1">{{ group.id }}</p>
                   </div>
-                  <span class="text-[11px] text-content-muted dark:text-content-muted">{{ group.entries.length }}</span>
+                  <span class="text-[11px] text-content-muted">{{ group.entries.length }}</span>
                 </div>
               </button>
 
-              <div v-if="!currentGroups.length" class="text-xs text-content-muted dark:text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
+              <div v-if="!currentGroups.length" class="text-xs text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg">
                 No groups yet
               </div>
             </div>
 
-            <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/20 space-y-2">
-              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Create Group</h5>
+            <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/opacity-medium space-y-2">
+              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Create Group</h5>
               <input v-model="newGroup.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
               <input v-model="newGroup.description" class="cfg-input" :disabled="!isEditing || saving" placeholder="Description (optional)" />
               <button class="cfg-btn-primary w-full" :disabled="!isEditing || saving" @click="createGroup">Add Group</button>
@@ -1561,12 +1561,12 @@ onMounted(loadPolicy);
 
           <div class="cfg-section lg:col-span-8 space-y-4">
             <div class="flex items-center justify-between">
-              <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">
+              <h4 class="text-sm font-semibold text-content-primary">
                 {{ selectedGroup ? selectedGroup.friendly_name : 'Entries' }}
               </h4>
               <button
                 v-if="selectedGroup"
-                class="text-xs px-2.5 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
                 :disabled="!isEditing || saving"
                 @click="deleteGroup(selectedGroup.id)"
               >
@@ -1574,22 +1574,22 @@ onMounted(loadPolicy);
               </button>
             </div>
 
-            <div v-if="selectedGroup" class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/20">
+            <div v-if="selectedGroup" class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
               <table class="w-full text-sm">
-                <thead class="bg-background-mute dark:bg-white/5">
+                <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                   <tr>
-                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Name</th>
-                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value</th>
-                    <th class="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Actions</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Name</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Value</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-muted">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="entry in selectedGroup.entries" :key="entry.id" class="border-t border-stroke-subtle dark:border-stroke/15">
-                    <td class="px-3 py-2 text-content-primary dark:text-content-primary">{{ entry.friendly_name }}</td>
-                    <td class="px-3 py-2 font-mono text-xs text-content-secondary dark:text-content-secondary">{{ entry.value }}</td>
+                  <tr v-for="entry in selectedGroup.entries" :key="entry.id" class="border-t border-stroke-subtle dark:border-stroke/opacity-light">
+                    <td class="px-3 py-2 text-content-primary">{{ entry.friendly_name }}</td>
+                    <td class="px-3 py-2 font-mono text-xs text-content-secondary">{{ entry.value }}</td>
                     <td class="px-3 py-2 text-right">
                       <button
-                        class="text-xs px-2.5 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                        class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
                         :disabled="!isEditing || saving"
                         @click="removeEntry(entry.id)"
                       >
@@ -1598,18 +1598,18 @@ onMounted(loadPolicy);
                     </td>
                   </tr>
                   <tr v-if="!selectedGroup.entries.length">
-                    <td colspan="3" class="px-3 py-8 text-center text-xs text-content-muted dark:text-content-muted">No entries in this group</td>
+                    <td colspan="3" class="px-3 py-8 text-center text-xs text-content-muted">No entries in this group</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <div v-else class="text-xs text-content-muted dark:text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/30 rounded-lg">
+            <div v-else class="text-xs text-content-muted py-8 text-center border border-dashed border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg">
               Select a group to manage entries
             </div>
 
-            <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/20 space-y-2" v-if="selectedGroup">
-              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Add Entry</h5>
+            <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/opacity-medium space-y-2" v-if="selectedGroup">
+              <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Add Entry</h5>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                 <input v-model="newEntry.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
                 <input
@@ -1628,23 +1628,23 @@ onMounted(loadPolicy);
 
     <div
       v-if="showRuleModal && ruleDraft"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeRuleModal"
     >
-      <div class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
+      <div class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] p-5 max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl space-y-4">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+            <h3 class="text-lg font-semibold text-content-primary">
               {{ editingRuleIndex === null ? 'Add Policy Rule' : 'Edit Policy Rule' }}
             </h3>
-            <p class="text-xs text-content-muted dark:text-content-muted mt-1">
+            <p class="text-xs text-content-muted mt-1">
               Choose match logic, then add one or more conditions. {{ ruleDraft.matchMode === 'all' ? 'ALL' : 'ANY' }} conditions must match.
             </p>
           </div>
           <div class="flex items-center gap-2">
             <button
-              class="w-7 h-7 rounded-full border border-stroke-subtle dark:border-stroke/30 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary hover:bg-background-mute dark:hover:bg-white/10 text-sm font-semibold"
-              :class="showLogicMatrix ? 'bg-primary/10 text-primary border-primary/50' : ''"
+              class="w-7 h-7 rounded-full border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary hover:bg-background-mute dark:hover:bg-white/opacity-light text-sm font-semibold"
+              :class="showLogicMatrix ? 'bg-primary/opacity-light text-primary border-primary/opacity-heavy' : ''"
               title="Match Field Logic Matrix"
               @click="showLogicMatrix = !showLogicMatrix"
             >
@@ -1656,24 +1656,24 @@ onMounted(loadPolicy);
 
         <div
           v-if="showLogicMatrix"
-          class="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2"
+          class="rounded-lg border border-primary/opacity-medium bg-primary/opacity-light p-3 space-y-2"
         >
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Match Field Logic Matrix</h4>
+            <h4 class="text-sm font-semibold text-content-primary">Match Field Logic Matrix</h4>
             <button class="cfg-btn-secondary text-xs" @click="showLogicMatrix = false">Hide</button>
           </div>
-          <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/20">
+          <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[840px] text-xs">
-              <thead class="bg-background-mute dark:bg-white/5">
+              <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                 <tr>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Field</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value Types</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Operators</th>
-                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Group Sources</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Field</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Value Types</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Operators</th>
+                  <th class="px-2 py-2 text-left font-semibold uppercase tracking-wide text-content-muted">Group Sources</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="f in fieldDefinitions" :key="f.value" class="border-t border-stroke-subtle dark:border-stroke/15">
+                <tr v-for="f in fieldDefinitions" :key="f.value" class="border-t border-stroke-subtle dark:border-stroke/opacity-light">
                   <td class="px-2 py-1.5">{{ f.label }}</td>
                   <td class="px-2 py-1.5">{{ f.valueTypes.join(', ') }}</td>
                   <td class="px-2 py-1.5">{{ f.operators.map(operatorLabel).join(', ') }}</td>
@@ -1684,7 +1684,7 @@ onMounted(loadPolicy);
           </div>
         </div>
 
-        <div v-if="ruleModalError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-600 dark:text-red-400 text-xs">
+        <div v-if="ruleModalError" class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-2 text-accent-red text-xs">
           {{ ruleModalError }}
         </div>
 
@@ -1708,42 +1708,42 @@ onMounted(loadPolicy);
           </div>
         </div>
 
-        <label class="inline-flex items-center gap-2 text-sm text-content-primary dark:text-content-primary">
+        <label class="inline-flex items-center gap-2 text-sm text-content-primary">
           <input v-model="ruleDraft.enabled" type="checkbox" />
           Rule enabled
         </label>
 
         <div class="space-y-2">
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-semibold text-content-primary dark:text-content-primary">Conditions</h4>
+            <h4 class="text-sm font-semibold text-content-primary">Conditions</h4>
             <button class="cfg-btn-secondary text-xs" @click="addDraftCondition">Add Condition</button>
           </div>
 
           <div
             v-if="getChannelBodyGuardWarning(ruleDraft)"
-            class="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+            class="rounded-lg border border-accent-amber/opacity-medium bg-accent-amber/opacity-light px-3 py-2 text-xs text-accent-amber"
           >
             {{ getChannelBodyGuardWarning(ruleDraft) }}
           </div>
 
-          <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/20">
+          <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[980px] text-sm">
-              <thead class="bg-background-mute dark:bg-white/5">
+              <thead class="bg-background-mute dark:bg-white/opacity-subtle">
                 <tr>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Drag</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Field</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Operator</th>
-                  <th v-if="hasAnyGroupSource" class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Source</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Value</th>
-                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Type</th>
-                  <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted">Action</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Drag</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Field</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Operator</th>
+                  <th v-if="hasAnyGroupSource" class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Source</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Value</th>
+                  <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-content-muted">Type</th>
+                  <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-content-muted">Action</th>
                 </tr>
               </thead>
               <tbody>
                 <tr
                   v-for="(cond, cIdx) in ruleDraft.conditions"
                   :key="cond.id"
-                  class="border-t border-stroke-subtle dark:border-stroke/15 transition-colors"
+                  class="border-t border-stroke-subtle dark:border-stroke/opacity-light transition-colors"
                   :class="{
                     'opacity-60': draggingConditionIndex === cIdx,
                     '!border-t-2 !border-primary': dropInsertIndex === cIdx && draggingConditionIndex !== null,
@@ -1755,7 +1755,7 @@ onMounted(loadPolicy);
                     <button
                       type="button"
                       draggable="true"
-                      class="h-8 w-8 inline-flex items-center justify-center rounded border border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/10 cursor-grab active:cursor-grabbing"
+                      class="h-8 w-8 inline-flex items-center justify-center rounded border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light cursor-grab active:cursor-grabbing"
                       title="Drag to reorder"
                       @dragstart="onConditionDragStart(cIdx, $event)"
                       @dragend="onConditionDragEnd"
@@ -1817,7 +1817,7 @@ onMounted(loadPolicy);
                         class="cfg-input h-8 text-xs font-mono"
                         :placeholder="getLiteralPlaceholder(cond)"
                       />
-                      <p v-if="isPathHashesField(cond.field)" class="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p v-if="isPathHashesField(cond.field)" class="text-[11px] text-content-muted">
                         Use hex only. All hashes in one condition must be the same width: 1 byte (`0x42`), 2 bytes (`0x0042`), or 3 bytes (`0x000042`).
                       </p>
                     </div>
@@ -1830,7 +1830,7 @@ onMounted(loadPolicy);
                   <td class="px-2 py-2 text-right">
                     <div class="inline-flex items-center gap-1">
                       <button
-                        class="text-xs px-2 py-1 rounded border border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/10 disabled:opacity-40"
+                        class="text-xs px-2 py-1 rounded border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light disabled:opacity-40"
                         :disabled="cIdx === 0"
                         title="Move condition up"
                         aria-label="Move condition up"
@@ -1839,7 +1839,7 @@ onMounted(loadPolicy);
                         ▲
                       </button>
                       <button
-                        class="text-xs px-2 py-1 rounded border border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/10 disabled:opacity-40"
+                        class="text-xs px-2 py-1 rounded border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light disabled:opacity-40"
                         :disabled="cIdx === ruleDraft.conditions.length - 1"
                         title="Move condition down"
                         aria-label="Move condition down"
@@ -1847,7 +1847,7 @@ onMounted(loadPolicy);
                       >
                         ▼
                       </button>
-                      <button class="text-xs px-2 py-1 rounded border border-red-500/50 text-red-600 dark:text-red-400 hover:bg-red-500/10" @click="removeDraftCondition(cIdx)">Del</button>
+                      <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light" @click="removeDraftCondition(cIdx)">Del</button>
                     </div>
                   </td>
                 </tr>
