@@ -70,6 +70,8 @@
                 autocapitalize="none"
                 autocorrect="off"
                 spellcheck="false"
+                @focus="handleInputFocus"
+                @blur="handleInputBlur"
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy transition-all duration-300"
                 placeholder="Enter username"
@@ -97,6 +99,8 @@
                 autocapitalize="none"
                 autocorrect="off"
                 spellcheck="false"
+                @focus="handleInputFocus"
+                @blur="handleInputBlur"
                 required
                 class="input-glass w-full px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-[12px] text-content-primary text-sm placeholder-content-muted dark:placeholder-content-muted focus:outline-none focus:border-primary/opacity-heavy transition-all duration-300"
                 placeholder="Enter password"
@@ -238,6 +242,83 @@ const usedDefaultCredentials = ref(false);
 const siteName = ref('');
 const isRateLimited = computed(() => rateLimitSeconds.value > 0);
 let rateLimitTimer: ReturnType<typeof setInterval> | null = null;
+let originalViewportMetaContent: string | null = null;
+
+const setViewportScaleLock = (locked: boolean) => {
+  const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!viewportMeta) {
+    return;
+  }
+
+  if (locked) {
+    if (originalViewportMetaContent === null) {
+      originalViewportMetaContent = viewportMeta.getAttribute('content');
+    }
+    viewportMeta.setAttribute(
+      'content',
+      'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
+    );
+    return;
+  }
+
+  if (originalViewportMetaContent !== null) {
+    viewportMeta.setAttribute('content', originalViewportMetaContent);
+    originalViewportMetaContent = null;
+  } else {
+    viewportMeta.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover');
+  }
+};
+
+const blurActiveElement = () => {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement) {
+    active.blur();
+  }
+};
+
+const waitForLayoutTick = () =>
+  new Promise<void>((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        resolve();
+      });
+    });
+  });
+
+const normalizeViewportScale = async () => {
+  const viewport = window.visualViewport;
+  if (!viewport || viewport.scale <= 1.01) {
+    return;
+  }
+
+  const viewportMeta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+  if (!viewportMeta) {
+    return;
+  }
+
+  const originalContent =
+    viewportMeta.getAttribute('content') || 'width=device-width, initial-scale=1, viewport-fit=cover';
+
+  viewportMeta.setAttribute(
+    'content',
+    'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover',
+  );
+  await waitForLayoutTick();
+  viewportMeta.setAttribute('content', originalContent);
+  await waitForLayoutTick();
+};
+
+const navigateToDashboard = async () => {
+  // On mobile Safari, focused inputs may leave the visual viewport zoomed.
+  // Reset zoom before route transition so the dashboard mounts at normal scale.
+  blurActiveElement();
+  await waitForLayoutTick();
+  await normalizeViewportScale();
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  await router.replace('/');
+  await waitForLayoutTick();
+  window.dispatchEvent(new Event('resize'));
+};
 
 const stopRateLimitTimer = () => {
   if (rateLimitTimer) {
@@ -263,6 +344,7 @@ const startRateLimitCooldown = (seconds: number) => {
 
 onBeforeUnmount(() => {
   stopRateLimitTimer();
+  setViewportScaleLock(false);
 });
 
 onMounted(async () => {
@@ -311,7 +393,7 @@ const handleLogin = async () => {
         // Store token and redirect to dashboard
         setToken(loginData.token);
         appRuntime.markAuthenticated();
-        router.push('/');
+        await navigateToDashboard();
       }
     } else {
       errorMessage.value = loginData.error || 'Login failed';
@@ -346,7 +428,7 @@ const handleLogin = async () => {
 const handlePasswordChangeSuccess = () => {
   // Password changed successfully, redirect to dashboard
   showPasswordChangeModal.value = false;
-  router.push('/');
+  void navigateToDashboard();
 };
 
 const handlePasswordChangeClose = () => {
@@ -354,8 +436,16 @@ const handlePasswordChangeClose = () => {
   showPasswordChangeModal.value = false;
   if (usedDefaultCredentials.value) {
     // Still redirect to dashboard but they skipped password change
-    router.push('/');
+    void navigateToDashboard();
   }
+};
+
+const handleInputFocus = () => {
+  setViewportScaleLock(true);
+};
+
+const handleInputBlur = () => {
+  setViewportScaleLock(false);
 };
 </script>
 
