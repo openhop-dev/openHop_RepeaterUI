@@ -27,7 +27,7 @@ const closeMobileSidebar = () => {
 </script>
 
 <template>
-  <div class="h-screen bg-background dark:bg-background overflow-hidden relative font-sans">
+  <div class="h-screen h-[100dvh] bg-background dark:bg-background overflow-hidden relative font-sans">
     <!-- Light mode background gradient ellipses with OpenHop blue/purple brand colors -->
     <div
       class="hidden lg:block dark:hidden absolute rounded-full -rotate-[24.22deg] w-[705px] h-[512px] bg-gradient-to-b from-blue-200/30 to-blue-100/20 blur-[120px] opacity-70 -top-[79px] left-[575px] mix-blend-normal pointer-events-none"
@@ -58,7 +58,7 @@ const closeMobileSidebar = () => {
       <Sidebar :mobile-open="showMobileSidebar" @close="closeMobileSidebar" />
 
       <!-- Main Content -->
-      <main class="flex-1 p-4 lg:p-[15px] overflow-y-auto overscroll-contain h-full">
+      <main class="flex-1 p-4 pb-[calc(var(--app-safe-area-bottom)+1rem)] lg:p-[15px] lg:pb-[15px] overflow-y-auto overscroll-contain h-full [webkit-overflow-scrolling:touch]">
         <!-- Top Bar -->
         <TopBar @toggle-mobile-sidebar="toggleMobileSidebar" />
 

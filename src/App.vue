@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { useTheme } from '@/composables/useTheme';
@@ -24,6 +24,29 @@ watch(
 );
 
 const showLayout = computed(() => appRuntime.isAuthenticated && route.path !== '/login' && route.path !== '/setup');
+
+let mobileQuery: MediaQueryList | null = null;
+
+const setMobileShellClass = (isMobile: boolean) => {
+  document.documentElement.classList.toggle('is-mobile-app', isMobile);
+  document.body.classList.toggle('is-mobile-app', isMobile);
+};
+
+const handleMobileQueryChange = (event: MediaQueryListEvent) => {
+  setMobileShellClass(event.matches);
+};
+
+onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 1023px)');
+  setMobileShellClass(mobileQuery.matches);
+  mobileQuery.addEventListener('change', handleMobileQueryChange);
+});
+
+onUnmounted(() => {
+  mobileQuery?.removeEventListener('change', handleMobileQueryChange);
+  mobileQuery = null;
+  setMobileShellClass(false);
+});
 </script>
 
 <template>
