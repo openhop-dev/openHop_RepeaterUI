@@ -10,7 +10,11 @@ vi.mock('@/utils/api', () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
-    getIdentities: vi.fn().mockResolvedValue({ success: true, data: { configured: [], total_configured: 0, total_registered: 0 } }),
+    createIdentity: vi.fn().mockResolvedValue({ success: true }),
+    updateIdentity: vi.fn().mockResolvedValue({ success: true }),
+    getIdentities: vi
+      .fn()
+      .mockResolvedValue({ success: true, data: { configured: [], total_configured: 0, total_registered: 0 } }),
   },
   API_SERVER_URL: '',
 }));
@@ -41,6 +45,7 @@ vi.mock('@/utils/constants', () => ({
   RESTART_STABLE_REQUIRED: 2,
 }));
 
+import ApiService from '@/utils/api';
 import RoomServers from '@/views/RoomServers.vue';
 
 function mountView() {
@@ -73,5 +78,59 @@ describe('RoomServers Add form coordinate rounding', () => {
 
     expect(vm.newIdentity.settings.latitude).toBe(-27.123457);
     expect(vm.newIdentity.settings.longitude).toBe(153.987654);
+    expect(vm.newIdentity.settings.allow_read_only).toBe(true);
+  });
+
+  it('defaults missing allow_read_only to true when editing and preserves explicit false', async () => {
+    const wrapper = mountView();
+    await flushPromises();
+
+    const vm = wrapper.vm as any;
+    vm.openEditModal({
+      name: 'Room One',
+      settings: {
+        node_name: 'Room One',
+        latitude: 1,
+        longitude: 2,
+        admin_password: 'admin',
+        guest_password: '',
+      },
+    });
+
+    expect(vm.editingIdentity.settings.allow_read_only).toBe(true);
+
+    vm.openEditModal({
+      name: 'Room Two',
+      settings: {
+        node_name: 'Room Two',
+        latitude: 1,
+        longitude: 2,
+        admin_password: 'admin',
+        guest_password: '',
+        allow_read_only: false,
+      },
+    });
+
+    expect(vm.editingIdentity.settings.allow_read_only).toBe(false);
+  });
+
+  it('sends allow_read_only in create payload', async () => {
+    const wrapper = mountView();
+    await flushPromises();
+
+    const vm = wrapper.vm as any;
+    vm.openCreateModal();
+    vm.newIdentity.name = 'Room Payload Test';
+    vm.newIdentity.settings.allow_read_only = false;
+    await vm.createIdentity();
+
+    expect(ApiService.createIdentity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Room Payload Test',
+        settings: expect.objectContaining({
+          allow_read_only: false,
+        }),
+      }),
+    );
   });
 });

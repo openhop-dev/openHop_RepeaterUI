@@ -51,16 +51,41 @@ watch(
 // Modal state
 const selectedPacket = ref<RecentPacket | null>(null);
 const isModalOpen = ref(false);
+const selectedModalIndex = ref<number | null>(null);
+const modalDetailsRequestToken = ref(0);
+
+const isSamePacket = (
+  left: RecentPacket | null | undefined,
+  right: RecentPacket | null | undefined,
+): boolean => {
+  if (!left || !right) return false;
+  return (
+    left.packet_hash === right.packet_hash &&
+    left.timestamp === right.timestamp &&
+    left.type === right.type &&
+    left.route === right.route &&
+    left.src_hash === right.src_hash &&
+    left.dst_hash === right.dst_hash &&
+    left.length === right.length
+  );
+};
 
 // Open packet details modal, then enrich with full detail fields (header, raw_packet)
 // lazily so the list queries stay lean.
-const openPacketDetails = async (packet: RecentPacket) => {
-  selectedPacket.value = packet;
-  isModalOpen.value = true;
-  if (packet.packet_hash && (!packet.header || !packet.raw_packet)) {
+const hydrateSelectedPacket = async (packet: RecentPacket, expectedIndex: number | null) => {
+  if ((packet.id || packet.packet_hash) && (!packet.header || !packet.raw_packet)) {
+    const requestToken = ++modalDetailsRequestToken.value;
     try {
-      const full = await packetStore.getPacketByHash(packet.packet_hash);
-      if (full && selectedPacket.value?.packet_hash === packet.packet_hash) {
+      const full = packet.id != null
+        ? await packetStore.getPacketById(packet.id)
+        : await packetStore.getPacketByHash(packet.packet_hash);
+      if (
+        full &&
+        modalDetailsRequestToken.value === requestToken &&
+        selectedPacket.value &&
+        isSamePacket(selectedPacket.value, packet) &&
+        selectedModalIndex.value === expectedIndex
+      ) {
         selectedPacket.value = { ...selectedPacket.value, ...full };
       }
     } catch {
@@ -69,10 +94,46 @@ const openPacketDetails = async (packet: RecentPacket) => {
   }
 };
 
+const openPacketDetails = async (packet: RecentPacket) => {
+  const currentIndex = modalPacketOrder.value.findIndex((candidate) =>
+    isSamePacket(candidate, packet),
+  );
+  selectedModalIndex.value = currentIndex >= 0 ? currentIndex : null;
+  selectedPacket.value = packet;
+  isModalOpen.value = true;
+  await hydrateSelectedPacket(packet, selectedModalIndex.value);
+};
+
+const openPacketDetailsByIndex = async (index: number) => {
+  const targetPacket = modalPacketOrder.value[index];
+  if (!targetPacket) return;
+  selectedModalIndex.value = index;
+  selectedPacket.value = targetPacket;
+  isModalOpen.value = true;
+  await hydrateSelectedPacket(targetPacket, index);
+};
+
+const showPreviousPacket = async () => {
+  if (selectedModalIndex.value == null || selectedModalIndex.value <= 0) return;
+  await openPacketDetailsByIndex(selectedModalIndex.value - 1);
+};
+
+const showNextPacket = async () => {
+  if (
+    selectedModalIndex.value == null ||
+    selectedModalIndex.value >= modalPacketOrder.value.length - 1
+  ) {
+    return;
+  }
+  await openPacketDetailsByIndex(selectedModalIndex.value + 1);
+};
+
 // Close modal
 const closeModal = () => {
   isModalOpen.value = false;
   selectedPacket.value = null;
+  selectedModalIndex.value = null;
+  modalDetailsRequestToken.value += 1;
 };
 
 // Filter states
@@ -84,12 +145,30 @@ const newPacketsTimestamp = ref<number | null>(null);
 // Available filter options
 const packetTypes = ['all', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 const routeTypes = ['all', '1', '2'];
+const expandedDuplicateGroups = ref<Set<string>>(new Set());
+
+interface PacketGroup {
+  key: string;
+  packetHash: string;
+  packets: RecentPacket[];
+  primary: RecentPacket;
+  duplicates: RecentPacket[];
+  duplicateCount: number;
+  hasDuplicates: boolean;
+}
+
+interface PacketRowMeta {
+  group: PacketGroup;
+  isPrimary: boolean;
+  duplicateIndex: number;
+}
 
 // Watch for changes and persist to localStorage
 watch(selectedType, (value) => {
   setPreference('packetTable_selectedType', value);
   currentPage.value = 1; // Reset to page 1 when filter changes
 });
+
 watch(selectedRoute, (value) => {
   setPreference('packetTable_selectedRoute', value);
   currentPage.value = 1; // Reset to page 1 when filter changes
@@ -118,16 +197,131 @@ const filteredPackets = computed(() => {
 
   return filtered;
 });
+const filteredPacketGroups = computed<PacketGroup[]>(() => {
+  const grouped = new Map<string, PacketGroup>();
+  const orderedGroups: PacketGroup[] = [];
 
-const paginatedPackets = computed(() => {
+  filteredPackets.value.forEach((packet, index) => {
+    const packetHash = packet.packet_hash?.trim();
+    const key = packetHash ? `hash:${packetHash}` : `nohash:${packet.timestamp}:${index}`;
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.packets.push(packet);
+      return;
+    }
+
+    const group: PacketGroup = {
+      key,
+      packetHash: packetHash ?? '',
+      packets: [packet],
+      primary: packet,
+      duplicates: [],
+      duplicateCount: 0,
+      hasDuplicates: false,
+    };
+    grouped.set(key, group);
+    orderedGroups.push(group);
+  });
+
+  return orderedGroups.map((group) => {
+    const preferredPrimaryIndex = group.packets.findIndex(
+      (packet) => packet.transmitted && !packet.drop_reason,
+    );
+    const fallbackPrimaryIndex =
+      preferredPrimaryIndex >= 0
+        ? preferredPrimaryIndex
+        : group.packets.findIndex((packet) => packet.transmitted);
+    const primaryIndex = fallbackPrimaryIndex >= 0 ? fallbackPrimaryIndex : 0;
+    const primary = group.packets[primaryIndex];
+    const duplicates = group.packets.filter((_, index) => index !== primaryIndex);
+    return {
+      ...group,
+      primary,
+      duplicates,
+      duplicateCount: duplicates.length,
+      hasDuplicates: duplicates.length > 0,
+    };
+  });
+});
+
+const paginatedPacketGroups = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   const end = start + itemsPerPage;
-  return filteredPackets.value.slice(start, end);
+  return filteredPacketGroups.value.slice(start, end);
+});
+
+const modalPacketOrder = computed(() => {
+  return filteredPacketGroups.value.flatMap((group) => [group.primary, ...group.duplicates]);
+});
+
+const selectedPacketLinkedDuplicates = computed(() => {
+  const activePacket = selectedPacket.value;
+  if (!activePacket) return [];
+
+  const group = filteredPacketGroups.value.find((candidateGroup) =>
+    candidateGroup.packets.some((packet) => isSamePacket(packet, activePacket)),
+  );
+
+  return group?.packets ?? [];
+});
+
+const canNavigatePrevious = computed(() => {
+  return selectedModalIndex.value != null && selectedModalIndex.value > 0;
+});
+
+const canNavigateNext = computed(() => {
+  return (
+    selectedModalIndex.value != null &&
+    selectedModalIndex.value < modalPacketOrder.value.length - 1
+  );
+});
+
+const paginatedPacketMeta = computed(() => {
+  const meta = new Map<RecentPacket, PacketRowMeta>();
+  for (const group of paginatedPacketGroups.value) {
+    meta.set(group.primary, { group, isPrimary: true, duplicateIndex: 0 });
+    group.duplicates.forEach((packet, index) => {
+      meta.set(packet, { group, isPrimary: false, duplicateIndex: index + 1 });
+    });
+  }
+  return meta;
 });
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredPackets.value.length / itemsPerPage);
+  return Math.ceil(filteredPacketGroups.value.length / itemsPerPage);
 });
+
+watch(
+  filteredPacketGroups,
+  (groups) => {
+    const validGroupKeys = new Set(
+      groups.filter((group) => group.hasDuplicates).map((group) => group.key),
+    );
+    const cleanedExpanded = new Set(
+      [...expandedDuplicateGroups.value].filter((key) => validGroupKeys.has(key)),
+    );
+
+    if (cleanedExpanded.size !== expandedDuplicateGroups.value.size) {
+      expandedDuplicateGroups.value = cleanedExpanded;
+    }
+
+    if (totalPages.value > 0 && currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  [modalPacketOrder, selectedPacket, isModalOpen],
+  ([orderedPackets, activePacket, modalOpen]) => {
+    if (!modalOpen || !activePacket) return;
+    const nextIndex = orderedPackets.findIndex((packet) => isSamePacket(packet, activePacket));
+    selectedModalIndex.value = nextIndex >= 0 ? nextIndex : null;
+  },
+  { immediate: true },
+);
 
 // Check if we're on the last page and might need more data
 const isOnLastPage = computed(() => {
@@ -143,6 +337,73 @@ const mightHaveMoreData = computed(() => {
 const shouldShowLoadMore = computed(() => {
   return isOnLastPage.value && mightHaveMoreData.value && !isLoadingMore.value;
 });
+
+const getPacketMeta = (packet: RecentPacket): PacketRowMeta | undefined => {
+  return paginatedPacketMeta.value.get(packet);
+};
+
+const isPrimaryGroupRow = (packet: RecentPacket): boolean => {
+  return getPacketMeta(packet)?.isPrimary ?? true;
+};
+
+const isDuplicateGroupRow = (packet: RecentPacket): boolean => {
+  return !isPrimaryGroupRow(packet);
+};
+const isExpandedPrimaryGroupRow = (packet: RecentPacket): boolean => {
+  return hasDuplicateGroup(packet) && duplicateGroupExpanded(packet);
+};
+
+const hasDuplicateGroup = (packet: RecentPacket): boolean => {
+  const meta = getPacketMeta(packet);
+  return Boolean(meta?.isPrimary && meta.group.hasDuplicates);
+};
+
+const duplicateCount = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary) return 0;
+  return meta.group.duplicateCount;
+};
+
+const duplicateGroupExpanded = (packet: RecentPacket): boolean => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary) return false;
+  return expandedDuplicateGroups.value.has(meta.group.key);
+};
+
+const duplicateRowIndex = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  if (!meta || meta.isPrimary) return 0;
+  return meta.duplicateIndex;
+};
+
+const duplicateGroupSize = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  return meta?.group.packets.length ?? 1;
+};
+
+const isFirstDuplicateRow = (packet: RecentPacket): boolean => {
+  return duplicateRowIndex(packet) === 1;
+};
+
+const visiblePacketsForGroup = (group: PacketGroup): RecentPacket[] => {
+  if (group.hasDuplicates && expandedDuplicateGroups.value.has(group.key)) {
+    return [group.primary, ...group.duplicates];
+  }
+  return [group.primary];
+};
+
+const toggleDuplicateGroup = (packet: RecentPacket): void => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary || !meta.group.hasDuplicates) return;
+
+  const next = new Set(expandedDuplicateGroups.value);
+  if (next.has(meta.group.key)) {
+    next.delete(meta.group.key);
+  } else {
+    next.add(meta.group.key);
+  }
+  expandedDuplicateGroups.value = next;
+};
 
 const formatTime = (timestamp: number) => {
   return new Date(timestamp * 1000).toLocaleTimeString(undefined, { hour12: true });
@@ -284,7 +545,7 @@ const parsePathString = (pathString?: string[] | string | null): string[] => {
 const getPathInfo = (packet: RecentPacket) => {
   const originalPath = parsePathString(packet.original_path);
   const forwardedPath = parsePathString(packet.forwarded_path);
-  const path = originalPath.length > 0 ? originalPath : forwardedPath;
+  const path = packet.transmitted && forwardedPath.length > 0 ? forwardedPath : originalPath.length > 0 ? originalPath : forwardedPath;
 
   if (path.length === 0) {
     return null;
@@ -439,7 +700,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="glass-card rounded-[20px] p-6">
+  <div class="glass-card w-full max-w-none rounded-[20px] p-6">
     <!-- Header with title and filters -->
     <div
       class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 filter-container"
@@ -551,9 +812,9 @@ onBeforeUnmount(() => {
 
     <!-- Table Header - Desktop only -->
     <div
-      class="hidden lg:block pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
+      class="hidden lg:block w-full pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
     >
-      <div class="grid grid-cols-12 gap-2">
+      <div class="grid w-full grid-cols-11 gap-2">
         <div class="col-span-1">Time</div>
         <div class="col-span-1">Type</div>
         <div class="col-span-2">Route</div>
@@ -562,26 +823,49 @@ onBeforeUnmount(() => {
         <div class="col-span-1">SNR</div>
         <div class="col-span-1">Score</div>
         <div class="col-span-1">TX Delay</div>
-        <div class="col-span-3">Status</div>
+        <div class="col-span-2">Status</div>
       </div>
-      <div class="grid grid-cols-12 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
-        <div class="col-span-12">Path/Hashes</div>
+      <div class="grid w-full grid-cols-11 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
+        <div class="col-span-11">Path/Hashes</div>
       </div>
     </div>
 
     <!-- Table Rows -->
-    <div class="space-y-4 overflow-hidden">
-      <div class="space-y-4">
+    <div class="space-y-4 w-full">
+      <div
+        v-for="group in paginatedPacketGroups"
+        :key="group.key"
+        class="space-y-2 w-full"
+        :class="group.hasDuplicates ? 'duplicate-group-container rounded-[12px] overflow-hidden' : ''"
+      >
         <div
-          v-for="(packet, index) in paginatedPackets"
-          :key="`${packet.packet_hash}_${packet.timestamp}_${index}`"
-          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
-          :class="[getPacketTypeColor(packet.type), getPacketRowClass(packet)]"
+          v-for="(packet, index) in visiblePacketsForGroup(group)"
+          :key="`${group.key}_${packet.packet_hash}_${packet.timestamp}_${index}`"
+          class="packet-row w-full border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
+          :class="[
+            getPacketTypeColor(packet.type),
+            getPacketRowClass(packet),
+            isDuplicateGroupRow(packet) ? 'duplicate-packet-row' : '',
+            isExpandedPrimaryGroupRow(packet) ? 'duplicate-group-expanded-row' : '',
+          ]"
           @click="openPacketDetails(packet)"
         >
+          <div
+            v-if="isFirstDuplicateRow(packet)"
+            class="duplicate-group-banner mb-2 flex items-center justify-between gap-2 rounded-[8px] px-2 py-1"
+          >
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-primary"
+              >Duplicate Group</span
+            >
+            <span class="text-[10px] text-content-secondary dark:text-content-muted">
+              {{ duplicateGroupSize(packet) - 1 }} duplicate{{
+                duplicateGroupSize(packet) - 1 === 1 ? '' : 's'
+              }}
+            </span>
+          </div>
           <!-- Desktop Table View -->
-          <div class="hidden lg:block space-y-2">
-            <div class="grid grid-cols-12 gap-2 items-center">
+          <div class="hidden lg:block w-full space-y-2">
+            <div class="grid w-full grid-cols-11 gap-2 items-center">
               <div class="col-span-1 text-content-primary text-sm">
                 {{ formatTime(packet.timestamp) }}
               </div>
@@ -634,7 +918,7 @@ onBeforeUnmount(() => {
                   <span>{{ formatDelay(Number(packet.tx_delay_ms)) }}</span>
                 </div>
               </div>
-              <div class="col-span-3">
+              <div class="col-span-2">
                 <div>
                   <div class="flex items-center gap-1">
                     <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
@@ -667,6 +951,37 @@ onBeforeUnmount(() => {
                       </svg>
                     </span>
                   </div>
+                  <div v-if="hasDuplicateGroup(packet)" class="mt-1 flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition-all duration-200 border bg-primary/opacity-medium hover:bg-primary/opacity-medium border-primary/opacity-heavy text-primary"
+                      @click.stop="toggleDuplicateGroup(packet)"
+                    >
+                      <svg
+                        class="w-2.5 h-2.5 transition-transform duration-200"
+                        :class="{ 'rotate-180': duplicateGroupExpanded(packet) }"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                      {{ duplicateGroupExpanded(packet) ? 'Hide' : 'Show' }}
+                      {{ duplicateCount(packet) }}
+                      duplicate{{ duplicateCount(packet) === 1 ? '' : 's' }}
+                    </button>
+                  </div>
+                  <div
+                    v-else-if="isDuplicateGroupRow(packet)"
+                    class="mt-1 text-[10px] text-content-secondary dark:text-content-muted"
+                  >
+                    Duplicate #{{ getPacketMeta(packet)?.duplicateIndex }}
+                  </div>
                   <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
                     {{ packet.drop_reason }}
                   </p>
@@ -674,8 +989,8 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="grid grid-cols-12 gap-2 items-start">
-              <div class="col-span-12">
+            <div class="grid w-full grid-cols-11 gap-2 items-start">
+              <div class="col-span-11">
                 <div class="space-y-1">
                   <template v-if="getPathInfo(packet)">
                     <div class="flex items-center gap-0.5 flex-wrap">
@@ -757,6 +1072,12 @@ onBeforeUnmount(() => {
                     class="text-content-primary text-sm font-medium"
                     >{{ getPacketTypeName(packet.type) }}</span
                   >
+                  <span
+                    v-if="isDuplicateGroupRow(packet)"
+                    class="text-content-secondary dark:text-content-muted text-[10px] font-medium leading-tight"
+                  >
+                    Duplicate #{{ getPacketMeta(packet)?.duplicateIndex }}
+                  </span>
                   <!-- Node name for ADVERT packets -->
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
@@ -808,6 +1129,30 @@ onBeforeUnmount(() => {
                     </svg>
                   </span>
                 </div>
+                <button
+                  v-if="hasDuplicateGroup(packet)"
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition-all duration-200 border bg-primary/opacity-medium hover:bg-primary/opacity-medium border-primary/opacity-heavy text-primary"
+                  @click.stop="toggleDuplicateGroup(packet)"
+                >
+                  <svg
+                    class="w-2.5 h-2.5 transition-transform duration-200"
+                    :class="{ 'rotate-180': duplicateGroupExpanded(packet) }"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                  {{ duplicateGroupExpanded(packet) ? 'Hide' : 'Show' }}
+                  {{ duplicateCount(packet) }}
+                  duplicate{{ duplicateCount(packet) === 1 ? '' : 's' }}
+                </button>
               </div>
             </div>
 
@@ -961,8 +1306,9 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-4 pagination-info">
         <span class="text-content-secondary dark:text-content-muted text-sm">
           Showing {{ (currentPage - 1) * itemsPerPage + 1 }} -
-          {{ Math.min(currentPage * itemsPerPage, filteredPackets.length) }}
-          of {{ filteredPackets.length }} packets
+          {{ Math.min(currentPage * itemsPerPage, filteredPacketGroups.length) }}
+          of {{ filteredPacketGroups.length }} hash groups
+          <span class="text-xs">({{ filteredPackets.length }} packets)</span>
         </span>
 
         <!-- Load More Records Button -->
@@ -1111,7 +1457,18 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Packet Details Modal -->
-  <PacketDetailsModal :packet="selectedPacket" :isOpen="isModalOpen" @close="closeModal" />
+  <PacketDetailsModal
+    :packet="selectedPacket"
+    :packets="modalPacketOrder"
+    :linkedDuplicatePackets="selectedPacketLinkedDuplicates"
+    :currentIndex="selectedModalIndex"
+    :canGoPrevious="canNavigatePrevious"
+    :canGoNext="canNavigateNext"
+    :isOpen="isModalOpen"
+    @previous="showPreviousPacket"
+    @next="showNextPacket"
+    @close="closeModal"
+  />
 </template>
 
 <style scoped>
@@ -1187,6 +1544,42 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--color-surface) 20%, transparent);
   border-radius: 8px;
   transition: background 0.2s ease;
+}
+.duplicate-packet-row {
+  border-left-width: 3px;
+  background: linear-gradient(
+    96deg,
+    color-mix(in srgb, var(--color-primary) 11%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 26%,
+    color-mix(in srgb, var(--color-primary) 5%, transparent) 52%,
+    color-mix(in srgb, var(--color-primary) 3%, transparent) 74%,
+    transparent 90%
+  );
+}
+
+.duplicate-group-container {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border-subtle));
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)) 0%,
+    color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)) 38%,
+    color-mix(in srgb, var(--color-primary) 3%, var(--color-surface)) 72%,
+    color-mix(in srgb, var(--color-primary) 2%, var(--color-surface)) 100%
+  );
+}
+
+.duplicate-group-expanded-row {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.duplicate-group-banner {
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: linear-gradient(
+    92deg,
+    color-mix(in srgb, var(--color-primary) 14%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 11%, transparent) 46%,
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 100%
+  );
 }
 
 

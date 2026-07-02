@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import SignalBars from '@/components/ui/SignalBars.vue';
 defineOptions({ name: 'PacketDetailsModal' });
@@ -7,6 +7,7 @@ defineOptions({ name: 'PacketDetailsModal' });
 const { getSignalQuality } = useSignalQuality();
 
 interface Packet {
+  id?: number;
   packet_hash: string;
   timestamp: number;
   type: number;
@@ -38,6 +39,11 @@ interface Packet {
 
 interface Props {
   packet: Packet | null;
+  packets?: Packet[];
+  linkedDuplicatePackets?: Packet[];
+  currentIndex?: number | null;
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
   isOpen: boolean;
   localHash?: string;
 }
@@ -45,6 +51,8 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{
   close: [];
+  previous: [];
+  next: [];
 }>();
 
 // Toggle for showing binary values
@@ -68,6 +76,163 @@ const getStatusText = (packet: Packet) => {
   if (packet.is_duplicate) return 'Duplicate';
   if (packet.drop_reason) return 'Dropped';
   return 'Forwarded';
+};
+
+interface PacketDifference {
+  label: string;
+  currentValue: string;
+  duplicateValue: string;
+}
+
+interface LinkedDuplicateSummary {
+  packet: Packet;
+  effectivePath: string;
+  differences: PacketDifference[];
+}
+
+const showPacketNavigation = computed(() => {
+  return (props.packets?.length ?? 0) > 1;
+});
+const canGoPrevious = computed(() => Boolean(props.canGoPrevious));
+const canGoNext = computed(() => Boolean(props.canGoNext));
+
+const packetPositionLabel = computed(() => {
+  const totalPackets = props.packets?.length ?? 0;
+  if (totalPackets === 0) return '';
+  if (props.currentIndex == null || props.currentIndex < 0) {
+    return `- / ${totalPackets}`;
+  }
+  return `${props.currentIndex + 1} / ${totalPackets}`;
+});
+
+const isSamePacket = (left: Packet, right: Packet): boolean => {
+  if (left.id != null && right.id != null) {
+    return left.id === right.id;
+  }
+  return (
+    left.packet_hash === right.packet_hash &&
+    left.timestamp === right.timestamp &&
+    left.type === right.type &&
+    left.route === right.route &&
+    left.src_hash === right.src_hash &&
+    left.dst_hash === right.dst_hash &&
+    left.length === right.length
+  );
+};
+
+const formatComparableValue = (
+  value: string | number | boolean | null | undefined,
+  suffix = '',
+  decimals: number | null = null,
+): string => {
+  if (value == null) return 'N/A';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return 'N/A';
+    const normalized = decimals == null ? value.toString() : value.toFixed(decimals);
+    return `${normalized}${suffix}`;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+  return value || 'N/A';
+};
+
+const formatPathForCompare = (path?: string[] | string | null): string => {
+  const parsed = parsePathString(path);
+  if (parsed.length === 0) return 'None';
+  return parsed.join(' → ').toUpperCase();
+};
+
+const getEffectivePath = (packet: Packet): string[] => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+
+  if (packet.transmitted && forwarded.length > 0) {
+    return forwarded;
+  }
+
+  if (original.length > 0) {
+    return original;
+  }
+
+  return forwarded;
+};
+
+const formatEffectivePathForCompare = (packet: Packet): string => {
+  return formatPathForCompare(getEffectivePath(packet));
+};
+
+const collectPacketDifferences = (base: Packet, duplicate: Packet): PacketDifference[] => {
+  const differences: PacketDifference[] = [];
+  const addDifference = (label: string, currentValue: string, duplicateValue: string) => {
+    if (currentValue !== duplicateValue) {
+      differences.push({ label, currentValue, duplicateValue });
+    }
+  };
+
+  addDifference('Type', getPacketTypeName(base.type), getPacketTypeName(duplicate.type));
+  addDifference('Route', getRouteName(base.route), getRouteName(duplicate.route));
+  addDifference('Status', getStatusText(base), getStatusText(duplicate));
+  addDifference('Length', `${base.length}B`, `${duplicate.length}B`);
+  addDifference(
+    'RSSI',
+    formatComparableValue(base.rssi, ' dBm', 0),
+    formatComparableValue(duplicate.rssi, ' dBm', 0),
+  );
+  addDifference(
+    'SNR',
+    formatComparableValue(base.snr, ' dB', 1),
+    formatComparableValue(duplicate.snr, ' dB', 1),
+  );
+  addDifference(
+    'Score',
+    formatComparableValue(base.score, '', 2),
+    formatComparableValue(duplicate.score, '', 2),
+  );
+  addDifference(
+    'TX Delay',
+    formatComparableValue(base.tx_delay_ms, ' ms', 1),
+    formatComparableValue(duplicate.tx_delay_ms, ' ms', 1),
+  );
+  addDifference('Source', formatComparableValue(base.src_hash), formatComparableValue(duplicate.src_hash));
+  addDifference(
+    'Destination',
+    formatComparableValue(base.dst_hash || 'Broadcast'),
+    formatComparableValue(duplicate.dst_hash || 'Broadcast'),
+  );
+  addDifference(
+    'Drop Reason',
+    formatComparableValue(base.drop_reason || 'None'),
+    formatComparableValue(duplicate.drop_reason || 'None'),
+  );
+  return differences;
+};
+
+const linkedDuplicateSummaries = computed<LinkedDuplicateSummary[]>(() => {
+  const basePacket = props.packet;
+  const candidatePackets = props.linkedDuplicatePackets ?? [];
+  if (!basePacket || candidatePackets.length === 0) {
+    return [];
+  }
+
+  return candidatePackets
+    .filter((candidate) => !isSamePacket(candidate, basePacket))
+    .map((duplicate) => ({
+      packet: duplicate,
+      effectivePath: formatEffectivePathForCompare(duplicate),
+      differences: collectPacketDifferences(basePacket, duplicate),
+    }))
+    .sort((left, right) => right.packet.timestamp - left.packet.timestamp);
+});
+
+const showPreviousPacket = () => {
+  if (!canGoPrevious.value) return;
+  emit('previous');
+};
+
+const showNextPacket = () => {
+  if (!canGoNext.value) return;
+  emit('next');
 };
 
 // Enhanced packet type mapping (MeshCore official specification)
@@ -947,6 +1112,22 @@ const formatDelayTime = (ms: number) => {
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     emit('close');
+    return;
+  }
+
+  if (event.key === 'ArrowUp') {
+    if (canGoPrevious.value) {
+      event.preventDefault();
+      emit('previous');
+    }
+    return;
+  }
+
+  if (event.key === 'ArrowDown') {
+    if (canGoNext.value) {
+      event.preventDefault();
+      emit('next');
+    }
   }
 };
 
@@ -1002,7 +1183,48 @@ watch(
                   </span>
                 </div>
               </div>
-              <div class="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0">
+              <div class="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0">
+                <div v-if="showPacketNavigation" class="flex items-center gap-2">
+                  <div
+                    class="flex items-center rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium overflow-hidden bg-background-mute dark:bg-white/opacity-subtle"
+                  >
+                    <button
+                      type="button"
+                      class="w-8 h-8 flex items-center justify-center text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      :disabled="!canGoPrevious"
+                      title="Previous packet (↑)"
+                      @click="showPreviousPacket"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 15l7-7 7 7"
+                        ></path>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="w-8 h-8 flex items-center justify-center text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light transition-colors border-l border-stroke-subtle dark:border-stroke/opacity-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                      :disabled="!canGoNext"
+                      title="Next packet (↓)"
+                      @click="showNextPacket"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <span class="text-xs text-content-secondary dark:text-content-muted font-medium">
+                    {{ packetPositionLabel }}
+                  </span>
+                </div>
                 <!-- Binary Toggle Button -->
                 <button
                   @click="showBinaryValues = !showBinaryValues"
@@ -1124,6 +1346,61 @@ watch(
                         }}</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section: Linked Duplicates -->
+              <div v-if="linkedDuplicateSummaries.length > 0" class="mb-6">
+                <h3
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
+                >
+                  <div class="w-2 h-2 rounded-full bg-accent-amber/opacity-heavy mr-3"></div>
+                  Linked Duplicates ({{ linkedDuplicateSummaries.length }})
+                </h3>
+                <div
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light space-y-3"
+                >
+                  <div
+                    v-for="(duplicateSummary, duplicateIndex) in linkedDuplicateSummaries"
+                    :key="`${duplicateSummary.packet.packet_hash}_${duplicateSummary.packet.timestamp}_${duplicateIndex}`"
+                    class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
+                  >
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <span class="text-content-primary text-sm font-semibold">
+                        Duplicate #{{ duplicateIndex + 1 }}
+                      </span>
+                      <span class="text-content-secondary dark:text-content-muted text-xs font-mono">
+                        {{ formatFullTime(duplicateSummary.packet.timestamp) }}
+                      </span>
+                    </div>
+
+                    <div class="mb-2 flex flex-wrap items-start justify-between gap-2 py-1 border-b border-stroke-subtle/60 dark:border-stroke/opacity-light">
+                      <span class="text-content-secondary dark:text-content-muted text-xs">
+                        Path
+                      </span>
+                      <span class="text-content-primary text-xs font-mono break-all text-right">
+                        {{ duplicateSummary.effectivePath }}
+                      </span>
+                    </div>
+
+                    <div v-if="duplicateSummary.differences.length > 0" class="space-y-1">
+                      <div
+                        v-for="difference in duplicateSummary.differences"
+                        :key="`${duplicateSummary.packet.timestamp}_${difference.label}`"
+                        class="flex flex-wrap items-start justify-between gap-2 py-1 border-b border-stroke-subtle/60 dark:border-stroke/opacity-light last:border-b-0"
+                      >
+                        <span class="text-content-secondary dark:text-content-muted text-xs">
+                          {{ difference.label }}
+                        </span>
+                        <span class="text-content-primary text-xs font-mono break-all text-right">
+                          {{ difference.currentValue }} → {{ difference.duplicateValue }}
+                        </span>
+                      </div>
+                    </div>
+                    <p v-else class="text-content-secondary dark:text-content-muted text-xs italic">
+                      No additional field differences beyond timestamp.
+                    </p>
                   </div>
                 </div>
               </div>

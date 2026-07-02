@@ -13,6 +13,7 @@ export interface PacketStats {
 }
 
 export interface RecentPacket {
+  id?: number;
   timestamp: number;
   packet_hash: string;
   type: number;

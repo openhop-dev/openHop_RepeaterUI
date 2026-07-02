@@ -80,6 +80,7 @@ const newIdentity = ref({
     longitude: 0,
     admin_password: '',
     guest_password: '',
+    allow_read_only: true,
   },
 });
 
@@ -206,6 +207,8 @@ function openEditModal(identity: unknown) {
   }
   if (!editingIdentity.value.settings.admin_password) editingIdentity.value.settings.admin_password = '';
   if (!editingIdentity.value.settings.guest_password) editingIdentity.value.settings.guest_password = '';
+  if (editingIdentity.value.settings.allow_read_only == null)
+    editingIdentity.value.settings.allow_read_only = true;
   if (editingIdentity.value.settings.latitude == null) editingIdentity.value.settings.latitude = 0;
   if (editingIdentity.value.settings.longitude == null) editingIdentity.value.settings.longitude = 0;
   showKeyInEdit.value = false;
@@ -223,6 +226,7 @@ function resetForm() {
       longitude: repeaterLng.value,
       admin_password: '',
       guest_password: '',
+      allow_read_only: true,
     },
   };
   roundCoords(newIdentity.value.settings);
@@ -260,6 +264,10 @@ function toggleKeyVisibility(identityName: string) {
   } else {
     visibleKeys.value.add(identityName);
   }
+}
+
+function isReadOnlyAllowed(settings: Record<string, unknown> | undefined): boolean {
+  return settings?.allow_read_only !== false;
 }
 
 // Room Messages functions
@@ -480,6 +488,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
               </svg>
             </div>
           </div>
+
           <div>
             <h1 class="text-3xl font-bold text-content-primary mb-1">
               Room Servers
@@ -682,7 +691,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
                   </span>
                 </div>
                 <div v-if="identity.settings?.admin_password || identity.settings?.guest_password">
-                  <span class="text-content-muted">Passwords:</span>
+                  <span class="text-content-muted">Password Roles:</span>
                   <span class="text-content-primary/opacity-heavy ml-2">
                     <span v-if="identity.settings?.admin_password" class="text-accent-green"
                       >Admin</span
@@ -693,7 +702,21 @@ async function removeClient(publicKey: string, identityHash?: string) {
                     >
                       /
                     </span>
-                    <span v-if="identity.settings?.guest_password" class="text-primary">Guest</span>
+                    <span v-if="identity.settings?.guest_password" class="text-primary">Guest (read/write)</span>
+                  </span>
+                </div>
+                <div>
+                  <span class="text-content-muted">Blank Password Login:</span>
+                  <span class="text-content-primary/opacity-heavy ml-2">
+                    <span
+                      :class="isReadOnlyAllowed(identity.settings) ? 'text-accent-amber' : 'text-content-muted'"
+                    >
+                      {{
+                        isReadOnlyAllowed(identity.settings)
+                          ? 'Allowed as read-only guest'
+                          : 'Disabled'
+                      }}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -955,8 +978,28 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 placeholder="Leave empty for no password"
                 class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Read-only access</p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Guest role with read/write posting (non-admin)</p>
             </div>
+          </div>
+
+          <div class="rounded-[12px] border border-stroke-subtle dark:border-white/opacity-light bg-background-card dark:bg-white/opacity-subtle p-4">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                v-model="newIdentity.settings.allow_read_only"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 rounded border-stroke-subtle text-primary focus:ring-primary/opacity-heavy"
+              />
+              <div>
+                <p class="text-sm font-medium text-content-primary">Allow blank-password read-only login</p>
+                <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
+                  {{
+                    newIdentity.settings.allow_read_only
+                      ? 'Clients without a password can login as read-only guests.'
+                      : 'Clients must provide admin or guest password to login.'
+                  }}
+                </p>
+              </div>
+            </label>
           </div>
 
           <!-- Actions -->
@@ -1123,8 +1166,28 @@ async function removeClient(publicKey: string, identityHash?: string) {
                 placeholder="Leave empty for no password"
                 class="modal-input"
               />
-              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Read-only access</p>
+              <p class="text-content-secondary dark:text-content-muted text-xs mt-1">Guest role with read/write posting (non-admin)</p>
             </div>
+          </div>
+
+          <div class="rounded-[12px] border border-stroke-subtle dark:border-white/opacity-light bg-background-card dark:bg-white/opacity-subtle p-4">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                v-model="editingIdentity.settings.allow_read_only"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 rounded border-stroke-subtle text-primary focus:ring-primary/opacity-heavy"
+              />
+              <div>
+                <p class="text-sm font-medium text-content-primary">Allow blank-password read-only login</p>
+                <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
+                  {{
+                    editingIdentity.settings.allow_read_only
+                      ? 'Clients without a password can login as read-only guests.'
+                      : 'Clients must provide admin or guest password to login.'
+                  }}
+                </p>
+              </div>
+            </label>
           </div>
 
           <!-- Actions -->

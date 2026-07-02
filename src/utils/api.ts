@@ -800,7 +800,12 @@ export class ApiService {
             | {
                 admin_password?: string;
                 guest_password?: string;
+                allow_read_only?: boolean;
                 max_posts?: number;
+                max_clients?: number;
+                node_name?: string;
+                latitude?: number;
+                longitude?: number;
               }
             | undefined,
         },

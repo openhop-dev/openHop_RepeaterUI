@@ -302,6 +302,29 @@ export const usePacketStore = defineStore('packets', () => {
     }
   }
 
+  async function getPacketById(packetId: number) {
+    try {
+      isLoading.value = true;
+      error.value = null;
+
+      const response = await ApiService.get<RecentPacket>('/packet_by_id', {
+        packet_id: packetId,
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Packet not found');
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Error fetching packet by id:', err);
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // Sparkline data computed from API metrics
   const sparklineData = computed(() => {
     if (!metricsGraphData.value?.series) {
@@ -469,15 +492,19 @@ export const usePacketStore = defineStore('packets', () => {
   }
 
   function addRealtimePacket(packet: RecentPacket) {
-    recentPackets.value.unshift(packet);
+    const packetIdentity = packet.id ?? packet.packet_hash;
+    recentPackets.value = [
+      packet,
+      ...recentPackets.value.filter((existing) => (existing.id ?? existing.packet_hash) !== packetIdentity),
+    ];
     if (recentPackets.value.length > 1000) {
       recentPackets.value = recentPackets.value.slice(0, 1000);
     }
   }
 
   function mergeRecentPackets(incoming: RecentPacket[]): void {
-    const existing = new Set(recentPackets.value.map((p) => p.packet_hash));
-    const novel = incoming.filter((p) => !existing.has(p.packet_hash));
+    const existing = new Set(recentPackets.value.map((p) => p.id ?? p.packet_hash));
+    const novel = incoming.filter((p) => !existing.has(p.id ?? p.packet_hash));
     if (novel.length === 0) return;
     const merged = [...novel, ...recentPackets.value];
     merged.sort((a, b) => b.timestamp - a.timestamp);
@@ -561,6 +588,7 @@ export const usePacketStore = defineStore('packets', () => {
     fetchRecentPackets,
     fetchFilteredPackets,
     getPacketByHash,
+    getPacketById,
     fetchNoiseFloorHistory,
     fetchNoiseFloorStats,
     appendNoiseFloorReading,
