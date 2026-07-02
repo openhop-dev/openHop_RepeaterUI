@@ -364,6 +364,12 @@ const duplicateCount = (packet: RecentPacket): number => {
   return meta.group.duplicateCount;
 };
 
+const duplicateToggleLabel = (packet: RecentPacket): string => {
+  const count = duplicateCount(packet);
+  const action = duplicateGroupExpanded(packet) ? 'Hide' : 'Show';
+  return `${action} ${count} duplicate${count === 1 ? '' : 's'}`;
+};
+
 const duplicateGroupExpanded = (packet: RecentPacket): boolean => {
   const meta = getPacketMeta(packet);
   if (!meta?.isPrimary) return false;
@@ -555,6 +561,11 @@ const getPathInfo = (packet: RecentPacket) => {
     // Each entry is a full hop chunk (2/4/8 hex chars for 1/2/4-byte path modes); normalize case for display.
     nodes: path.map((hash) => hash.toUpperCase()),
   };
+};
+
+const formatHopLabel = (hops: number): string => {
+  if (hops <= 0) return 'Direct';
+  return `${hops} hop${hops > 1 ? 's' : ''}`;
 };
 
 // Extract node name from ADVERT packet payload
@@ -993,6 +1004,14 @@ onBeforeUnmount(() => {
               <div class="col-span-11">
                 <div class="space-y-1">
                   <template v-if="getPathInfo(packet)">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[9px] uppercase tracking-wide text-content-muted font-semibold">
+                        Path
+                      </span>
+                      <span class="text-[9px] text-content-muted">
+                        {{ formatHopLabel(getPathInfo(packet)!.hops) }}
+                      </span>
+                    </div>
                     <div class="flex items-center gap-0.5 flex-wrap">
                       <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
                         <span
@@ -1011,14 +1030,6 @@ onBeforeUnmount(() => {
                           :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
                         />
                       </template>
-                      <span
-                        v-if="getPathInfo(packet)!.hops > 0"
-                        class="text-[9px] text-content-muted ml-1"
-                      >
-                        {{ getPathInfo(packet)!.hops }} hop{{
-                          getPathInfo(packet)!.hops > 1 ? 's' : ''
-                        }}
-                      </span>
                     </div>
                   </template>
                   <template v-else>
@@ -1060,14 +1071,14 @@ onBeforeUnmount(() => {
 
           <!-- Mobile Condensed List View -->
           <div class="lg:hidden space-y-2">
-            <!-- Line 1: Type badge + Timestamp + Status -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
+            <!-- Line 1: Type badge + Timestamp + Status + duplicate action -->
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex items-start gap-2 min-w-0">
                 <div
                   class="w-2 h-2 rounded-full flex-shrink-0"
                   :class="getPacketTypeIndicatorColor(packet.type)"
                 ></div>
-                <div class="flex flex-col">
+                <div class="flex flex-col min-w-0">
                   <span
                     class="text-content-primary text-sm font-medium"
                     >{{ getPacketTypeName(packet.type) }}</span
@@ -1088,70 +1099,88 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <span
-                  class="inline-block px-2 py-1 rounded text-xs font-medium ml-2"
+                  class="inline-block px-2 py-1 rounded text-xs font-medium ml-1 flex-shrink-0"
                   :class="getRouteClass(packet.route)"
                 >
                   {{ getRouteTypeName(packet.route) }}
                 </span>
               </div>
-              <div class="flex items-center gap-2 text-right">
-                <span class="text-content-secondary dark:text-content-muted text-xs">{{
-                  formatTime(packet.timestamp)
-                }}</span>
-                <div class="flex items-center gap-1">
-                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                    getStatusText(packet)
+              <div class="flex items-start gap-2 text-right flex-shrink-0">
+                <div class="flex flex-col items-end gap-0.5">
+                  <span class="text-content-secondary dark:text-content-muted text-xs">{{
+                    formatTime(packet.timestamp)
                   }}</span>
-                  <span
-                    v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-accent-amber"
-                    title="Policy blocked"
-                  >
-                    <svg
-                      class="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
+                  <div class="flex items-center gap-1 justify-end">
+                    <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
+                      getStatusText(packet)
+                    }}</span>
+                    <span
+                      v-if="isPolicyBlockedPacket(packet)"
+                      class="inline-flex items-center text-[10px] font-medium text-accent-amber"
+                      title="Policy blocked"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
-                      ></path>
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 8l8 8"
-                      ></path>
-                    </svg>
-                  </span>
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 8l8 8"
+                        ></path>
+                      </svg>
+                    </span>
+                  </div>
                 </div>
                 <button
                   v-if="hasDuplicateGroup(packet)"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition-all duration-200 border bg-primary/opacity-medium hover:bg-primary/opacity-medium border-primary/opacity-heavy text-primary"
+                  class="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-primary/opacity-heavy bg-primary/opacity-medium text-primary transition-colors duration-200 hover:bg-primary/opacity-medium focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
+                  :class="{
+                    'border-primary text-primary': duplicateGroupExpanded(packet),
+                  }"
+                  :title="duplicateToggleLabel(packet)"
+                  :aria-label="duplicateToggleLabel(packet)"
                   @click.stop="toggleDuplicateGroup(packet)"
                 >
                   <svg
-                    class="w-2.5 h-2.5 transition-transform duration-200"
-                    :class="{ 'rotate-180': duplicateGroupExpanded(packet) }"
+                    class="w-4 h-4"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
+                    aria-hidden="true"
                   >
+                    <rect
+                      x="9"
+                      y="9"
+                      width="11"
+                      height="11"
+                      rx="2"
+                      ry="2"
+                      stroke-width="2"
+                    />
                     <path
+                      d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"
+                      stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      stroke-width="2.5"
-                      d="M19 9l-7 7-7-7"
-                    ></path>
+                    />
                   </svg>
-                  {{ duplicateGroupExpanded(packet) ? 'Hide' : 'Show' }}
-                  {{ duplicateCount(packet) }}
-                  duplicate{{ duplicateCount(packet) === 1 ? '' : 's' }}
+                  <span
+                    class="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-surface dark:bg-surface-elevated border border-primary/opacity-heavy text-[9px] leading-none font-semibold text-primary flex items-center justify-center"
+                  >
+                    {{ duplicateCount(packet) }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -1162,35 +1191,34 @@ onBeforeUnmount(() => {
                 <!-- Check if we have path information -->
                 <template v-if="getPathInfo(packet)">
                   <!-- Show actual path with intermediate hops -->
-                  <div class="flex flex-wrap items-center gap-0.5">
-                    <span class="text-content-muted text-[10px] font-medium"
-                      >PATH</span
-                    >
-                    <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
-                      <span
-                        class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
-                        :class="
-                          idx === 0
-                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-background-mute/opacity-medium text-content-muted'
-                        "
-                        :title="node"
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-content-muted text-[10px] font-medium uppercase tracking-wide"
+                        >Path</span
                       >
-                        {{ node }}
+                      <span class="text-content-muted text-[9px]">
+                        {{ formatHopLabel(getPathInfo(packet)!.hops) }}
                       </span>
-                      <HopConnector
-                        v-if="idx < getPathInfo(packet)!.nodes.length - 1"
-                        :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
-                      />
-                    </template>
-                    <span
-                      v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted ml-1"
-                    >
-                      {{ getPathInfo(packet)!.hops }} hop{{
-                        getPathInfo(packet)!.hops > 1 ? 's' : ''
-                      }}
-                    </span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-0.5">
+                      <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
+                        <span
+                          class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
+                          :class="
+                            idx === 0
+                              ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                              : 'bg-background-mute/opacity-medium text-content-muted'
+                          "
+                          :title="node"
+                        >
+                          {{ node }}
+                        </span>
+                        <HopConnector
+                          v-if="idx < getPathInfo(packet)!.nodes.length - 1"
+                          :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
+                        />
+                      </template>
+                    </div>
                   </div>
                 </template>
                 <template v-else>
