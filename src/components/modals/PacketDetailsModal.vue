@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import SignalBars from '@/components/ui/SignalBars.vue';
+import ApiService from '@/utils/api';
 defineOptions({ name: 'PacketDetailsModal' });
 
 const { getSignalQuality } = useSignalQuality();
@@ -57,6 +58,176 @@ const emit = defineEmits<{
 
 // Toggle for showing binary values
 const showBinaryValues = ref(false);
+
+type ContactLookupSource = 'contact' | 'advert';
+
+interface ContactLookupEntry {
+  pubkey: string;
+  name: string;
+  source: ContactLookupSource;
+}
+
+type UnknownRecord = Record<string, unknown>;
+
+const contactLookupEntries = ref<ContactLookupEntry[]>([]);
+const contactLookupLoading = ref(false);
+const contactLookupFetchedAt = ref<number | null>(null);
+
+const CONTACT_LOOKUP_TTL_MS = 5 * 60 * 1000;
+const ADVERT_CONTACT_TYPES = ['Unknown', 'Chat Node', 'Repeater', 'Room Server', 'Hybrid Node'];
+
+const isRecord = (value: unknown): value is UnknownRecord => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const normalizeHex = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.replace(/^0x/i, '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+};
+
+const extractNameValue = (item: UnknownRecord, keys: string[]): string => {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const extractArrayPayload = (response: unknown): UnknownRecord[] => {
+  if (Array.isArray(response)) {
+    return response.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  if (!isRecord(response)) {
+    return [];
+  }
+
+  const data = response.data;
+  if (Array.isArray(data)) {
+    return data.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  if (isRecord(data) && Array.isArray(data.data)) {
+    return data.data.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  return [];
+};
+
+const toLookupEntries = (
+  items: UnknownRecord[],
+  source: ContactLookupSource,
+): ContactLookupEntry[] => {
+  return items
+    .map((item) => {
+      const pubkey = normalizeHex(item.pub_key ?? item.pubkey ?? item.public_key);
+      const name = extractNameValue(item, ['name', 'node_name', 'display_name', 'alias']);
+      if (!pubkey || !name) {
+        return null;
+      }
+      return { pubkey, name, source };
+    })
+    .filter((entry): entry is ContactLookupEntry => entry !== null);
+};
+
+const shouldRefreshContactLookup = (): boolean => {
+  if (contactLookupFetchedAt.value == null) return true;
+  return Date.now() - contactLookupFetchedAt.value > CONTACT_LOOKUP_TTL_MS;
+};
+
+const refreshContactLookup = async () => {
+  if (contactLookupLoading.value) return;
+
+  contactLookupLoading.value = true;
+  try {
+    const [contactsResponse, advertResponses] = await Promise.all([
+      ApiService.get('/companion/contacts'),
+      Promise.all(
+        ADVERT_CONTACT_TYPES.map((contactType) =>
+          ApiService.get('/adverts_by_contact_type', {
+            contact_type: contactType,
+            hours: 168,
+            limit: 500,
+          }).catch(() => null),
+        ),
+      ),
+    ]);
+
+    const contactEntries = toLookupEntries(extractArrayPayload(contactsResponse), 'contact');
+    const advertEntries = advertResponses.flatMap((response) => {
+      if (!response) return [];
+      return toLookupEntries(extractArrayPayload(response), 'advert');
+    });
+
+    // Prefer companion contact names; use advert names as fallback.
+    const dedupedByPubkey = new Map<string, ContactLookupEntry>();
+    [...contactEntries, ...advertEntries].forEach((entry) => {
+      if (!dedupedByPubkey.has(entry.pubkey)) {
+        dedupedByPubkey.set(entry.pubkey, entry);
+      }
+    });
+
+    contactLookupEntries.value = Array.from(dedupedByPubkey.values());
+    contactLookupFetchedAt.value = Date.now();
+  } catch {
+    // Best-effort enrichment only. Keep existing UI data when lookups fail.
+  } finally {
+    contactLookupLoading.value = false;
+  }
+};
+
+interface NameLookupMatch {
+  name: string;
+  confidencePercent: number;
+  candidates: Array<{
+    name: string;
+    pubkey: string;
+    source: ContactLookupSource;
+  }>;
+}
+
+const expandedPathMatchHops = ref<number[]>([]);
+
+const isPathMatchExpanded = (hop: number): boolean => {
+  return expandedPathMatchHops.value.includes(hop);
+};
+
+const togglePathMatchExpanded = (hop: number) => {
+  if (isPathMatchExpanded(hop)) {
+    expandedPathMatchHops.value = expandedPathMatchHops.value.filter((value) => value !== hop);
+    return;
+  }
+  expandedPathMatchHops.value = [...expandedPathMatchHops.value, hop];
+};
+
+const formatShortPubkey = (pubkey: string): string => {
+  if (pubkey.length <= 10) return pubkey;
+  return `${pubkey.slice(0, 6)}...${pubkey.slice(-4)}`;
+};
+
+const lookupNameByHashStart = (hashStart: string): NameLookupMatch | null => {
+  const normalizedHashStart = normalizeHex(hashStart);
+  if (!normalizedHashStart) return null;
+
+  const matches = contactLookupEntries.value.filter((entry) =>
+    entry.pubkey.startsWith(normalizedHashStart),
+  );
+
+  if (matches.length === 0) return null;
+
+  const bestMatch = matches[0];
+  const uniquePubkeys = new Set(matches.map((entry) => entry.pubkey));
+  // Confidence is based on uniqueness in the known DB for this prefix.
+  const confidencePercent = Math.max(1, Math.round(100 / uniquePubkeys.size));
+
+  return {
+    name: bestMatch.name,
+    confidencePercent,
+    candidates: matches.slice(0, 8),
+  };
+};
 
 // Format timestamp
 const formatFullTime = (timestamp: number) => {
@@ -639,6 +810,56 @@ const parsePathString = (pathString?: string[] | string | null): string[] => {
   return [];
 };
 
+const isLocalHashMatch = (hashValue: string): boolean => {
+  const normalizedHashValue = normalizeHex(hashValue);
+  const normalizedLocalHash = normalizeHex(props.localHash);
+
+  if (!normalizedHashValue || !normalizedLocalHash) return false;
+
+  // Path table hashes can be prefixes of a full local pubkey.
+  return (
+    normalizedLocalHash.startsWith(normalizedHashValue) ||
+    normalizedHashValue.startsWith(normalizedLocalHash)
+  );
+};
+
+const getPathDisplayName = (
+  hashValue: string,
+  resolvedMatch: NameLookupMatch | null,
+  isLocal: boolean,
+) => {
+  if (isLocal) {
+    return {
+      name: 'This repeater',
+      matchDetail: '',
+      matchConfidence: null,
+      matchCandidates: [],
+    };
+  }
+  if (resolvedMatch) {
+    return {
+      name: resolvedMatch.name,
+      matchDetail: `${resolvedMatch.confidencePercent}% key match`,
+      matchConfidence: resolvedMatch.confidencePercent,
+      matchCandidates: resolvedMatch.candidates,
+    };
+  }
+  if (!hashValue) {
+    return {
+      name: 'Unknown contact',
+      matchDetail: '',
+      matchConfidence: null,
+      matchCandidates: [],
+    };
+  }
+  return {
+    name: 'Unknown contact',
+    matchDetail: '',
+    matchConfidence: null,
+    matchCandidates: [],
+  };
+};
+
 const getPathRows = (packet: Packet) => {
   const original = parsePathString(packet.original_path);
   const forwarded = parsePathString(packet.forwarded_path);
@@ -649,25 +870,95 @@ const getPathRows = (packet: Packet) => {
     const forwardedHash = forwarded[index] || '';
     const normalizedOriginal = originalHash.toUpperCase();
     const normalizedForwarded = forwardedHash.toUpperCase();
+    const hasSeen = Boolean(normalizedOriginal);
+    const hasRelayed = Boolean(normalizedForwarded);
+    const isUnchanged = hasSeen && hasRelayed && normalizedOriginal === normalizedForwarded;
+    const activeHash = normalizedForwarded || normalizedOriginal;
+    const isLastRelayedHop =
+      packet.transmitted && hasRelayed && forwarded.length > 0 && index === forwarded.length - 1;
+    const localMatch = isLocalHashMatch(activeHash) || isLastRelayedHop;
+    const activeDisplay = getPathDisplayName(
+      activeHash,
+      lookupNameByHashStart(activeHash),
+      localMatch,
+    );
 
     return {
       hop: index + 1,
-      original: normalizedOriginal,
-      forwarded: normalizedForwarded,
-      changed: normalizedOriginal !== normalizedForwarded,
+      hash: activeHash,
+      name: activeDisplay.name,
+      matchDetail: activeDisplay.matchDetail,
+      matchConfidence: activeDisplay.matchConfidence,
+      matchCandidates: activeDisplay.matchCandidates,
+      seen: normalizedOriginal,
+      relayed: normalizedForwarded,
+      seenName: lookupNameByHashStart(normalizedOriginal)?.name ?? null,
+      relayedName: lookupNameByHashStart(normalizedForwarded)?.name ?? null,
+      isUnchanged,
+      changedFromSeen: hasSeen && hasRelayed && !isUnchanged,
       status:
-        normalizedOriginal && normalizedForwarded
-          ? normalizedOriginal === normalizedForwarded
-            ? 'same'
-            : 'changed'
-          : normalizedOriginal
-            ? 'original-only'
-            : 'forwarded-only',
-      localOriginal: !!props.localHash && normalizedOriginal === props.localHash.toUpperCase(),
-      localForwarded:
-        !!props.localHash && normalizedForwarded === props.localHash.toUpperCase(),
+        hasSeen && hasRelayed
+          ? isUnchanged
+            ? 'unchanged'
+            : 'rewritten'
+          : hasSeen
+            ? 'seen-only'
+            : 'relayed-only',
+      localMatch,
     };
   });
+};
+
+const hasPartialPathMatchCandidates = (
+  confidence: number | null,
+  candidates: Array<{ name: string; pubkey: string; source: ContactLookupSource }>,
+): boolean => {
+  return confidence != null && confidence < 100 && candidates.length > 1;
+};
+
+const getBestPathMatchConfidence = (packet: Packet): number | null => {
+  const confidences = getPathRows(packet)
+    .map((row) => row.matchConfidence)
+    .filter((confidence): confidence is number => confidence != null);
+
+  if (confidences.length === 0) return null;
+  return Math.max(...confidences);
+};
+
+const hasLowConfidencePathMatch = (packet: Packet): boolean => {
+  return getPathRows(packet).some(
+    (row) => row.matchConfidence != null && row.matchConfidence < 50,
+  );
+};
+
+const getPathConfidenceTextClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'text-accent-cyan';
+  if (confidence == null) return 'text-content-muted';
+  if (confidence >= 80) return 'text-accent-green';
+  if (confidence >= 50) return 'text-accent-amber';
+  return 'text-accent-red';
+};
+
+const getPathConfidenceBarClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'bg-accent-cyan/opacity-heavy';
+  if (confidence == null) return 'bg-stroke-subtle';
+  if (confidence >= 80) return 'bg-accent-green/opacity-heavy';
+  if (confidence >= 50) return 'bg-accent-amber/opacity-heavy';
+  return 'bg-accent-red/opacity-heavy';
+};
+
+const getPathConfidenceBarWidth = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return '100%';
+  if (confidence == null) return '20%';
+  return `${Math.max(8, confidence)}%`;
+};
+
+const getPathHopMarkerClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'border-accent-cyan text-accent-cyan';
+  if (confidence == null) return 'border-stroke-subtle text-content-muted';
+  if (confidence >= 80) return 'border-accent-green text-accent-green';
+  if (confidence >= 50) return 'border-accent-amber text-accent-amber';
+  return 'border-accent-red text-accent-red';
 };
 
 const isPathModified = (packet: Packet) => {
@@ -1144,11 +1435,21 @@ watch(
   (isOpen) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      if (shouldRefreshContactLookup()) {
+        void refreshContactLookup();
+      }
     } else {
       document.body.style.overflow = '';
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => props.packet?.packet_hash,
+  () => {
+    expandedPathMatchHops.value = [];
+  },
 );
 </script>
 
@@ -1651,170 +1952,158 @@ watch(
                     <div v-if="getPathRows(packet).length > 0" class="py-2">
                       <div class="flex flex-wrap items-center gap-2 mb-3">
                         <span class="text-content-secondary dark:text-content-muted text-sm font-medium">
-                          Path Table
+                          Repeater Path View
                         </span>
                         <span class="text-xs px-2 py-0.5 rounded-full bg-accent-cyan/opacity-light text-accent-cyan">
-                          {{ parsePathString(packet.original_path).length }} original hops
+                          {{ getPathRows(packet).length }} hops
                         </span>
                         <span
-                          v-if="packet.transmitted && parsePathString(packet.forwarded_path).length > 0"
-                          class="text-xs px-2 py-0.5 rounded-full bg-accent-orange/opacity-light text-accent-orange"
-                        >
-                          {{ parsePathString(packet.forwarded_path).length }} forwarded hops
-                        </span>
-                        <span
-                          v-if="packet.transmitted && isPathModified(packet)"
+                          v-if="getBestPathMatchConfidence(packet) != null"
                           class="text-xs px-2 py-0.5 rounded-full bg-accent-amber/opacity-medium text-accent-amber"
                         >
-                          Modified
+                          Best match {{ getBestPathMatchConfidence(packet) }}%
+                        </span>
+                        <span
+                          v-if="hasLowConfidencePathMatch(packet)"
+                          class="text-xs px-2 py-0.5 rounded-full bg-accent-red/opacity-medium text-accent-red"
+                        >
+                          Low confidence
+                        </span>
+                        <span
+                          v-if="contactLookupLoading"
+                          class="text-xs px-2 py-0.5 rounded-full bg-background-mute text-content-muted"
+                        >
+                          Resolving names...
                         </span>
                       </div>
 
-                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-light overflow-hidden">
-                        <div class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide">
-                          <div>Hop</div>
-                          <div>Original</div>
-                          <div>Forwarded</div>
-                          <div>Status</div>
-                        </div>
-
-                        <div
-                          v-for="row in getPathRows(packet)"
-                          :key="`desktop-${row.hop}`"
-                          class="hidden md:grid grid-cols-[56px_1fr_1fr_96px] gap-3 p-3 border-t border-stroke-subtle dark:border-stroke/opacity-light items-center"
-                        >
-                          <div class="font-mono text-xs text-content-muted">
-                            #{{ row.hop }}
-                          </div>
-
-                          <div class="min-w-0">
-                            <div
-                              class="font-mono text-xs sm:text-sm rounded-md px-2 py-1 border truncate"
-                              :class="
-                                row.original
-                                  ? row.localOriginal
-                                    ? 'bg-accent-cyan/opacity-medium border-accent-cyan/opacity-heavy text-accent-cyan'
-                                    : 'bg-accent-cyan/opacity-light border-accent-cyan/opacity-medium text-content-primary'
-                                  : 'bg-background-mute/opacity-heavy border-stroke-subtle text-content-muted'
-                              "
-                              :title="row.original || 'No hop'"
-                            >
-                              {{ row.original || '-' }}
-                            </div>
-                          </div>
-
-                          <div class="min-w-0">
-                            <div
-                              class="font-mono text-xs sm:text-sm rounded-md px-2 py-1 border truncate"
-                              :class="
-                                row.forwarded
-                                  ? row.localForwarded
-                                    ? 'bg-accent-amber/opacity-medium border-accent-amber/opacity-heavy text-accent-amber'
-                                    : 'bg-accent-orange/opacity-light border-accent-orange/opacity-medium text-content-primary'
-                                  : 'bg-background-mute/opacity-heavy border-stroke-subtle text-content-muted'
-                              "
-                              :title="row.forwarded || 'No hop'"
-                            >
-                              {{ row.forwarded || '-' }}
-                            </div>
-                          </div>
-
-                          <div>
-                            <span
-                              class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                              :class="
-                                row.status === 'same'
-                                  ? 'bg-accent-green/opacity-medium text-accent-green'
-                                  : row.status === 'changed'
-                                    ? 'bg-accent-amber/opacity-medium text-accent-amber'
-                                    : row.status === 'original-only'
-                                      ? 'bg-accent-cyan/opacity-medium text-accent-cyan'
-                                      : 'bg-accent-orange/opacity-medium text-accent-orange'
-                              "
-                            >
-                              {{
-                                row.status === 'same'
-                                  ? 'Same'
-                                  : row.status === 'changed'
-                                    ? 'Changed'
-                                    : row.status === 'original-only'
-                                      ? 'Original only'
-                                      : 'Forwarded only'
-                              }}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class="md:hidden divide-y divide-stroke-subtle dark:divide-stroke/10">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-light p-3 sm:p-4">
+                        <div class="relative space-y-3">
                           <div
-                            v-for="row in getPathRows(packet)"
-                            :key="`mobile-${row.hop}`"
-                            class="p-3 space-y-2"
+                            v-for="(row, rowIndex) in getPathRows(packet)"
+                            :key="`timeline-${row.hop}`"
+                            class="relative z-10 grid grid-cols-[42px_1fr] sm:grid-cols-[52px_1fr] gap-3 items-center"
                           >
-                            <div class="flex items-center justify-between">
-                              <span class="font-mono text-xs text-content-muted">
-                                Hop #{{ row.hop }}
-                              </span>
-                              <span
-                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                                :class="
-                                  row.status === 'same'
-                                    ? 'bg-accent-green/opacity-medium text-accent-green'
-                                    : row.status === 'changed'
-                                      ? 'bg-accent-amber/opacity-medium text-accent-amber'
-                                      : row.status === 'original-only'
-                                        ? 'bg-accent-cyan/opacity-medium text-accent-cyan'
-                                        : 'bg-accent-orange/opacity-medium text-accent-orange'
-                                "
+                            <div class="relative flex items-center justify-center self-stretch">
+                              <div
+                                v-if="rowIndex > 0"
+                                class="absolute left-1/2 -translate-x-1/2 top-[-6px] bottom-[calc(50%+18px)] sm:bottom-[calc(50%+20px)] w-px bg-primary/opacity-medium"
+                              ></div>
+                              <div
+                                v-if="rowIndex < getPathRows(packet).length - 1"
+                                class="absolute left-1/2 -translate-x-1/2 top-[calc(50%+18px)] sm:top-[calc(50%+20px)] bottom-[-6px] w-px bg-primary/opacity-medium"
+                              ></div>
+                              <div
+                                class="relative z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 bg-background-mute dark:bg-surface-elevated flex items-center justify-center font-mono text-xs sm:text-sm font-semibold"
+                                :class="getPathHopMarkerClass(row.matchConfidence, row.localMatch)"
                               >
-                                {{
-                                  row.status === 'same'
-                                    ? 'Same'
-                                    : row.status === 'changed'
-                                      ? 'Changed'
-                                      : row.status === 'original-only'
-                                        ? 'Original only'
-                                        : 'Forwarded only'
-                                }}
-                              </span>
+                                #{{ row.hop }}
+                              </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-2">
-                              <div class="space-y-1 min-w-0">
-                                <div class="text-[11px] uppercase tracking-wide text-content-muted">
-                                  Original
+                            <div
+                              class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
+                            >
+                              <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                  <div
+                                    class="text-xs sm:text-sm font-bold text-content-primary truncate"
+                                    :title="row.name || 'Unknown contact'"
+                                  >
+                                    {{ row.name || 'Unknown contact' }}
+                                  </div>
+                                  <div
+                                    v-if="row.matchDetail"
+                                    class="text-[10px] sm:text-[11px] leading-tight mt-0.5"
+                                    :class="
+                                      getPathConfidenceTextClass(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      )
+                                    "
+                                  >
+                                    {{ row.matchDetail }}
+                                  </div>
+                                  <button
+                                    v-if="
+                                      hasPartialPathMatchCandidates(
+                                        row.matchConfidence,
+                                        row.matchCandidates,
+                                      )
+                                    "
+                                    type="button"
+                                    class="mt-1 text-[10px] sm:text-[11px] text-accent-cyan hover:text-primary transition-colors"
+                                    @click="togglePathMatchExpanded(row.hop)"
+                                  >
+                                    {{
+                                      isPathMatchExpanded(row.hop)
+                                        ? 'Hide possible matches'
+                                        : `Show ${row.matchCandidates.length - 1} possible matches`
+                                    }}
+                                  </button>
+                                  <div
+                                    v-else-if="row.localMatch"
+                                    class="text-[10px] sm:text-[11px] leading-tight mt-0.5 text-accent-cyan"
+                                  >
+                                    current repeater
+                                  </div>
+                                  <div
+                                    v-if="
+                                      hasPartialPathMatchCandidates(
+                                        row.matchConfidence,
+                                        row.matchCandidates,
+                                      ) && isPathMatchExpanded(row.hop)
+                                    "
+                                    class="mt-2 space-y-1"
+                                  >
+                                    <div
+                                      v-for="(candidate, candidateIndex) in row.matchCandidates.slice(1)"
+                                      :key="`${row.hop}-${candidate.pubkey}-${candidateIndex}`"
+                                      class="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] rounded-md px-2 py-1 bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light"
+                                    >
+                                      <span class="text-content-secondary dark:text-content-muted truncate">
+                                        {{ candidate.name }}
+                                      </span>
+                                      <span class="font-mono text-content-muted">
+                                        {{ formatShortPubkey(candidate.pubkey) }}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
                                 <div
-                                  class="font-mono text-xs rounded-md px-2 py-1 border truncate"
+                                  class="font-mono text-sm sm:text-lg rounded-[10px] px-3 sm:px-4 py-1.5 sm:py-2 border min-w-[64px] sm:min-w-[84px] text-center"
                                   :class="
-                                    row.original
-                                      ? row.localOriginal
+                                    row.hash
+                                      ? row.localMatch
                                         ? 'bg-accent-cyan/opacity-medium border-accent-cyan/opacity-heavy text-accent-cyan'
-                                        : 'bg-accent-cyan/opacity-light border-accent-cyan/opacity-medium text-content-primary'
+                                        : 'bg-background-mute dark:bg-white/opacity-subtle border-primary/opacity-heavy text-content-primary'
                                       : 'bg-background-mute/opacity-heavy border-stroke-subtle text-content-muted'
                                   "
-                                  :title="row.original || 'No hop'"
+                                  :title="row.hash || 'No hop'"
                                 >
-                                  {{ row.original || '-' }}
+                                  {{ row.hash || '-' }}
                                 </div>
                               </div>
 
-                              <div class="space-y-1 min-w-0">
-                                <div class="text-[11px] uppercase tracking-wide text-content-muted">
-                                  Forwarded
-                                </div>
+                              <div class="mt-2">
                                 <div
-                                  class="font-mono text-xs rounded-md px-2 py-1 border truncate"
-                                  :class="
-                                    row.forwarded
-                                      ? row.localForwarded
-                                        ? 'bg-accent-amber/opacity-medium border-accent-amber/opacity-heavy text-accent-amber'
-                                        : 'bg-accent-orange/opacity-light border-accent-orange/opacity-medium text-content-primary'
-                                      : 'bg-background-mute/opacity-heavy border-stroke-subtle text-content-muted'
-                                  "
-                                  :title="row.forwarded || 'No hop'"
+                                  class="h-1.5 rounded-full bg-background-mute dark:bg-stroke/opacity-subtle overflow-hidden border border-stroke-subtle/60 dark:border-stroke/opacity-light"
                                 >
-                                  {{ row.forwarded || '-' }}
+                                  <div
+                                    class="h-full rounded-full transition-all duration-300"
+                                    :class="
+                                      getPathConfidenceBarClass(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      )
+                                    "
+                                    :style="{
+                                      width: getPathConfidenceBarWidth(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      ),
+                                    }"
+                                  ></div>
                                 </div>
                               </div>
                             </div>
