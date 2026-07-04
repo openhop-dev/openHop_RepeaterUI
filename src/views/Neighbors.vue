@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
 import { useNeighborStore, CONTACT_TYPE_MAP } from '@/stores/neighbors';
 import type { Advert } from '@/stores/neighbors';
 import { useDataService } from '@/stores/dataService';
 import DeleteNeighborModal from '@/components/modals/DeleteNeighborModal.vue';
+import DiscoveryModal from '@/components/modals/DiscoveryModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import PingResultModal from '@/components/modals/PingResultModal.vue';
 import NeighborDetailsModal from '@/components/modals/NeighborDetailsModal.vue';
@@ -77,6 +78,42 @@ watch(filters, (value) => setPreference('neighbors_filters', value), { deep: tru
 
 // Modal state
 const showDeleteModal = ref(false);
+
+interface DiscoverySession {
+  session_id: string;
+  tag: number;
+  status: string;
+  timeout: number;
+  filter_mask: number;
+  since: number;
+  prefix_only: boolean;
+  created_at: number;
+  started_at: number | null;
+  completed_at: number | null;
+  count: number;
+  error: string | null;
+}
+
+interface DiscoveryResult {
+  pub_key: string;
+  node_hash?: string | null;
+  node_name?: string | null;
+  node_type?: number;
+  node_type_name?: string;
+  inbound_snr?: number;
+  response_snr?: number;
+  rssi?: number;
+  known_neighbor?: boolean;
+  zero_hop?: boolean;
+  advert_count?: number;
+}
+
+const showDiscoveryModal = ref(false);
+const discoveryLoading = ref(false);
+const discoveryError = ref<string | null>(null);
+const discoverySession = ref<DiscoverySession | null>(null);
+const discoveryResults = ref<DiscoveryResult[]>([]);
+let discoveryEventSource: EventSource | null = null;
 
 // Ping modal state
 const showPingModal = ref(false);
@@ -229,25 +266,131 @@ const handleUnhighlightNode = (pubkey: string) => {
   networkMapRef.value?.unhighlightNode(pubkey);
 };
 
-const handleMenuPing = async (neighbor: unknown) => {
-  const advert = neighbor as Advert;
+const closeDiscoveryStream = () => {
+  if (discoveryEventSource) {
+    discoveryEventSource.close();
+    discoveryEventSource = null;
+  }
+};
 
-  // Reset state and show modal
+const upsertDiscoveryResult = (result: DiscoveryResult) => {
+  const index = discoveryResults.value.findIndex((entry) => entry.pub_key === result.pub_key);
+  if (index >= 0) {
+    discoveryResults.value.splice(index, 1, result);
+    return;
+  }
+  discoveryResults.value = [...discoveryResults.value, result];
+};
+
+const attachDiscoveryStream = (sessionId: string) => {
+  closeDiscoveryStream();
+  const source = new EventSource(ApiService.getNeighborDiscoveryStreamUrl(sessionId));
+  discoveryEventSource = source;
+  let finalized = false;
+
+  source.addEventListener('started', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as Partial<DiscoverySession>;
+    discoverySession.value = {
+      ...(discoverySession.value as DiscoverySession),
+      ...data,
+      status: 'running',
+    };
+    discoveryLoading.value = true;
+  });
+
+  source.addEventListener('discovery_result', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as {
+      result: DiscoveryResult;
+      count: number;
+    };
+    upsertDiscoveryResult(data.result);
+    if (discoverySession.value) {
+      discoverySession.value = {
+        ...discoverySession.value,
+        count: data.count,
+      };
+    }
+  });
+
+  source.addEventListener('completed', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as {
+      status: string;
+      count: number;
+      completed_at: number;
+      error?: string | null;
+    };
+    if (discoverySession.value) {
+      discoverySession.value = {
+        ...discoverySession.value,
+        status: data.status,
+        count: data.count,
+        completed_at: data.completed_at,
+        error: data.error ?? null,
+      };
+    }
+    discoveryLoading.value = false;
+    finalized = true;
+    closeDiscoveryStream();
+  });
+
+  source.addEventListener('error', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as { error?: string };
+    discoveryError.value = data.error || 'Discovery failed';
+    discoveryLoading.value = false;
+    finalized = true;
+    closeDiscoveryStream();
+  });
+
+  source.onerror = () => {
+    if (finalized) return;
+    discoveryError.value = 'Discovery stream disconnected unexpectedly';
+    discoveryLoading.value = false;
+    closeDiscoveryStream();
+  };
+};
+
+const startDiscovery = async () => {
+  closeDiscoveryStream();
+  showDiscoveryModal.value = true;
+  discoveryLoading.value = true;
+  discoveryError.value = null;
+  discoverySession.value = null;
+  discoveryResults.value = [];
+
+  try {
+    const response = await ApiService.startNeighborDiscovery(5, 1 << 2, 0, false);
+    if (!response.success || !response.data) {
+      discoveryError.value = response.error || 'Failed to start discovery';
+      discoveryLoading.value = false;
+      return;
+    }
+
+    discoverySession.value = response.data;
+    attachDiscoveryStream(response.data.session_id);
+  } catch (error) {
+    console.error('Error starting discovery:', error);
+    discoveryError.value = error instanceof Error ? error.message : 'Failed to start discovery';
+    discoveryLoading.value = false;
+  }
+};
+
+const closeDiscoveryModal = () => {
+  closeDiscoveryStream();
+  showDiscoveryModal.value = false;
+  discoveryLoading.value = false;
+  discoveryError.value = null;
+  discoverySession.value = null;
+  discoveryResults.value = [];
+};
+
+const executePing = async (targetId: string, nodeLabel: string) => {
   pingResult.value = null;
   pingError.value = null;
   pingLoading.value = true;
-  pingNodeName.value = advert.node_name || 'Unknown Node';
+  pingNodeName.value = nodeLabel;
   showPingModal.value = true;
 
   try {
-    // Determine byte width from configured path_hash_mode (issue #133):
-    // 0 / absent = 1-byte (legacy), 1 = 2-byte, 2 = 3-byte
-    const pathHashMode = systemStore.stats?.config?.mesh?.path_hash_mode ?? 0;
-    const byteCount = pathHashMode === 2 ? 3 : pathHashMode === 1 ? 2 : 1;
-    const hexChars = byteCount * 2;
-    const targetHash = parseInt(advert.pubkey.substring(0, hexChars), 16);
-    const targetId = `0x${targetHash.toString(16).padStart(hexChars, '0')}`;
-
     const response = await ApiService.pingNeighbor(targetId, 10);
 
     if (response.success && response.data) {
@@ -261,6 +404,49 @@ const handleMenuPing = async (neighbor: unknown) => {
     pingError.value = error instanceof Error ? error.message : 'Unknown error occurred';
   } finally {
     pingLoading.value = false;
+  }
+};
+
+const handleMenuPing = async (neighbor: unknown) => {
+  const advert = neighbor as Advert;
+  const pathHashMode = systemStore.stats?.config?.mesh?.path_hash_mode ?? 0;
+  const byteCount = pathHashMode === 2 ? 3 : pathHashMode === 1 ? 2 : 1;
+  const hexChars = byteCount * 2;
+  const targetHash = parseInt(advert.pubkey.substring(0, hexChars), 16);
+  const targetId = `0x${targetHash.toString(16).padStart(hexChars, '0')}`;
+
+  await executePing(targetId, advert.node_name || 'Unknown Node');
+};
+
+const handleDiscoveryPing = async (result: DiscoveryResult) => {
+  if (!result.node_hash) return;
+  await executePing(result.node_hash, result.node_name || result.node_hash);
+};
+
+const handleDiscoveryAdd = async (result: DiscoveryResult) => {
+  try {
+    const response = await ApiService.addDiscoveredNeighbor({
+      pub_key: result.pub_key,
+      node_name: result.node_name,
+      node_type: result.node_type,
+      rssi: result.rssi,
+      response_snr: result.response_snr,
+    });
+
+    if (!response.success) {
+      discoveryError.value = response.error || 'Failed to add discovered neighbor';
+      return;
+    }
+
+    upsertDiscoveryResult({
+      ...result,
+      known_neighbor: true,
+    });
+    await neighborStore.fetchAll(selectedHours.value);
+  } catch (error) {
+    console.error('Error adding discovered neighbor:', error);
+    discoveryError.value =
+      error instanceof Error ? error.message : 'Failed to add discovered neighbor';
   }
 };
 
@@ -305,6 +491,10 @@ const confirmDelete = async (neighborId: number) => {
 onMounted(() => {
   void dataService.ensure('neighbors');
   void dataService.ensure('radioConfig');
+});
+
+onUnmounted(() => {
+  closeDiscoveryStream();
 });
 </script>
 
@@ -360,7 +550,27 @@ onMounted(() => {
       <!-- Global Filter Controls (only show if we have data) -->
       <div v-if="Object.keys(advertsByType).length > 0" class="">
         <div class="flex items-center justify-between">
-          <span class="text-content-primary text-lg font-semibold"></span>
+          <div>
+            <button
+              @click="startDiscovery"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-accent-cyan/opacity-light text-accent-cyan border border-accent-cyan/opacity-medium hover:bg-accent-cyan/opacity-medium transition-colors shadow-sm"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 18h.01M8.5 14.5a5 5 0 017 0M5 11a10 10 0 0114 0M2 7.5a15 15 0 0120 0"
+                />
+              </svg>
+              Discover Repeaters
+            </button>
+          </div>
           <div class="flex items-center gap-3">
             <!-- View Toggle Buttons -->
             <div
@@ -681,6 +891,18 @@ onMounted(() => {
       :neighbor="neighborForModal"
       @close="closeDeleteModal"
       @delete="confirmDelete"
+    />
+
+    <DiscoveryModal
+      :show="showDiscoveryModal"
+      :loading="discoveryLoading"
+      :error="discoveryError"
+      :session="discoverySession"
+      :results="discoveryResults"
+      @close="closeDiscoveryModal"
+      @rediscover="startDiscovery"
+      @ping="handleDiscoveryPing"
+      @add="handleDiscoveryAdd"
     />
 
     <!-- Ping Result Modal -->

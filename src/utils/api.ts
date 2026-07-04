@@ -759,6 +759,89 @@ export class ApiService {
     }
   }
 
+  static async startNeighborDiscovery(
+    timeout: number = 5,
+    filter_mask: number = 1 << 2,
+    since: number = 0,
+    prefix_only: boolean = false,
+  ): Promise<
+    ApiResponse<{
+      session_id: string;
+      tag: number;
+      status: string;
+      timeout: number;
+      filter_mask: number;
+      since: number;
+      prefix_only: boolean;
+      created_at: number;
+      started_at: number | null;
+      completed_at: number | null;
+      count: number;
+      error: string | null;
+    }>
+  > {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response =
+        await generatedApiClient.discoverNeighborsStart.discoverNeighborsStartCreate(
+          {
+            timeout,
+            filter_mask,
+            since,
+            prefix_only,
+          },
+          params,
+        );
+      return response.data as ApiResponse<{
+        session_id: string;
+        tag: number;
+        status: string;
+        timeout: number;
+        filter_mask: number;
+        since: number;
+        prefix_only: boolean;
+        created_at: number;
+        started_at: number | null;
+        completed_at: number | null;
+        count: number;
+        error: string | null;
+      }>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static getNeighborDiscoveryStreamUrl(sessionId: string, lastEventId?: number): string {
+    const params = new URLSearchParams({ session_id: sessionId });
+    const token = getToken();
+    if (token) {
+      params.set('token', token);
+    }
+    if (lastEventId !== undefined) {
+      params.set('last_event_id', String(lastEventId));
+    }
+    return `${API_BASE_URL}/discover_neighbors_stream?${params.toString()}`;
+  }
+
+  static async addDiscoveredNeighbor(payload: {
+    pub_key: string;
+    node_name?: string | null;
+    node_type?: number;
+    rssi?: number;
+    response_snr?: number;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.addDiscoveredNeighbor.addDiscoveredNeighborCreate(
+        payload,
+        params,
+      );
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   // Domain-specific methods for Identity management
   static async getIdentities(): Promise<IdentitiesResponse> {
     try {
