@@ -5,11 +5,15 @@ import { useDataService } from '@/stores/dataService';
 import type { RecentPacket } from '@/types/api';
 import PacketDetailsModal from '@/components/modals/PacketDetailsModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import HopConnector from '@/components/ui/HopConnector.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
+import { useSignalQuality } from '@/composables/useSignalQuality';
 import { getPreference, setPreference } from '@/utils/preferences';
 
 defineOptions({ name: 'PacketTable' });
 
 const packetStore = usePacketStore();
+const { getSignalQualityFromSNR } = useSignalQuality();
 const dataService = useDataService();
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -47,16 +51,41 @@ watch(
 // Modal state
 const selectedPacket = ref<RecentPacket | null>(null);
 const isModalOpen = ref(false);
+const selectedModalIndex = ref<number | null>(null);
+const modalDetailsRequestToken = ref(0);
+
+const isSamePacket = (
+  left: RecentPacket | null | undefined,
+  right: RecentPacket | null | undefined,
+): boolean => {
+  if (!left || !right) return false;
+  return (
+    left.packet_hash === right.packet_hash &&
+    left.timestamp === right.timestamp &&
+    left.type === right.type &&
+    left.route === right.route &&
+    left.src_hash === right.src_hash &&
+    left.dst_hash === right.dst_hash &&
+    left.length === right.length
+  );
+};
 
 // Open packet details modal, then enrich with full detail fields (header, raw_packet)
 // lazily so the list queries stay lean.
-const openPacketDetails = async (packet: RecentPacket) => {
-  selectedPacket.value = packet;
-  isModalOpen.value = true;
-  if (packet.packet_hash && (!packet.header || !packet.raw_packet)) {
+const hydrateSelectedPacket = async (packet: RecentPacket, expectedIndex: number | null) => {
+  if ((packet.id || packet.packet_hash) && (!packet.header || !packet.raw_packet)) {
+    const requestToken = ++modalDetailsRequestToken.value;
     try {
-      const full = await packetStore.getPacketByHash(packet.packet_hash);
-      if (full && selectedPacket.value?.packet_hash === packet.packet_hash) {
+      const full = packet.id != null
+        ? await packetStore.getPacketById(packet.id)
+        : await packetStore.getPacketByHash(packet.packet_hash);
+      if (
+        full &&
+        modalDetailsRequestToken.value === requestToken &&
+        selectedPacket.value &&
+        isSamePacket(selectedPacket.value, packet) &&
+        selectedModalIndex.value === expectedIndex
+      ) {
         selectedPacket.value = { ...selectedPacket.value, ...full };
       }
     } catch {
@@ -65,10 +94,46 @@ const openPacketDetails = async (packet: RecentPacket) => {
   }
 };
 
+const openPacketDetails = async (packet: RecentPacket) => {
+  const currentIndex = modalPacketOrder.value.findIndex((candidate) =>
+    isSamePacket(candidate, packet),
+  );
+  selectedModalIndex.value = currentIndex >= 0 ? currentIndex : null;
+  selectedPacket.value = packet;
+  isModalOpen.value = true;
+  await hydrateSelectedPacket(packet, selectedModalIndex.value);
+};
+
+const openPacketDetailsByIndex = async (index: number) => {
+  const targetPacket = modalPacketOrder.value[index];
+  if (!targetPacket) return;
+  selectedModalIndex.value = index;
+  selectedPacket.value = targetPacket;
+  isModalOpen.value = true;
+  await hydrateSelectedPacket(targetPacket, index);
+};
+
+const showPreviousPacket = async () => {
+  if (selectedModalIndex.value == null || selectedModalIndex.value <= 0) return;
+  await openPacketDetailsByIndex(selectedModalIndex.value - 1);
+};
+
+const showNextPacket = async () => {
+  if (
+    selectedModalIndex.value == null ||
+    selectedModalIndex.value >= modalPacketOrder.value.length - 1
+  ) {
+    return;
+  }
+  await openPacketDetailsByIndex(selectedModalIndex.value + 1);
+};
+
 // Close modal
 const closeModal = () => {
   isModalOpen.value = false;
   selectedPacket.value = null;
+  selectedModalIndex.value = null;
+  modalDetailsRequestToken.value += 1;
 };
 
 // Filter states
@@ -80,12 +145,30 @@ const newPacketsTimestamp = ref<number | null>(null);
 // Available filter options
 const packetTypes = ['all', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'];
 const routeTypes = ['all', '1', '2'];
+const expandedDuplicateGroups = ref<Set<string>>(new Set());
+
+interface PacketGroup {
+  key: string;
+  packetHash: string;
+  packets: RecentPacket[];
+  primary: RecentPacket;
+  duplicates: RecentPacket[];
+  duplicateCount: number;
+  hasDuplicates: boolean;
+}
+
+interface PacketRowMeta {
+  group: PacketGroup;
+  isPrimary: boolean;
+  duplicateIndex: number;
+}
 
 // Watch for changes and persist to localStorage
 watch(selectedType, (value) => {
   setPreference('packetTable_selectedType', value);
   currentPage.value = 1; // Reset to page 1 when filter changes
 });
+
 watch(selectedRoute, (value) => {
   setPreference('packetTable_selectedRoute', value);
   currentPage.value = 1; // Reset to page 1 when filter changes
@@ -114,16 +197,133 @@ const filteredPackets = computed(() => {
 
   return filtered;
 });
+const filteredPacketGroups = computed<PacketGroup[]>(() => {
+  const grouped = new Map<string, PacketGroup>();
+  const orderedGroups: PacketGroup[] = [];
 
-const paginatedPackets = computed(() => {
+  filteredPackets.value.forEach((packet, index) => {
+    const packetHash = packet.packet_hash?.trim();
+    const key = packetHash ? `hash:${packetHash}` : `nohash:${packet.timestamp}:${index}`;
+    const existing = grouped.get(key);
+
+    if (existing) {
+      existing.packets.push(packet);
+      return;
+    }
+
+    const group: PacketGroup = {
+      key,
+      packetHash: packetHash ?? '',
+      packets: [packet],
+      primary: packet,
+      duplicates: [],
+      duplicateCount: 0,
+      hasDuplicates: false,
+    };
+    grouped.set(key, group);
+    orderedGroups.push(group);
+  });
+
+  return orderedGroups.map((group) => {
+    const masterPrimaryIndex = group.packets.findIndex((packet) => !packet.is_duplicate);
+    const preferredPrimaryIndex =
+      masterPrimaryIndex >= 0
+        ? masterPrimaryIndex
+        : group.packets.findIndex((packet) => packet.transmitted && !packet.drop_reason);
+    const fallbackPrimaryIndex =
+      preferredPrimaryIndex >= 0
+        ? preferredPrimaryIndex
+        : group.packets.findIndex((packet) => packet.transmitted);
+    const primaryIndex = fallbackPrimaryIndex >= 0 ? fallbackPrimaryIndex : 0;
+    const primary = group.packets[primaryIndex];
+    const duplicates = group.packets.filter((_, index) => index !== primaryIndex);
+    return {
+      ...group,
+      primary,
+      duplicates,
+      duplicateCount: duplicates.length,
+      hasDuplicates: duplicates.length > 0,
+    };
+  });
+});
+
+const paginatedPacketGroups = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   const end = start + itemsPerPage;
-  return filteredPackets.value.slice(start, end);
+  return filteredPacketGroups.value.slice(start, end);
+});
+
+const modalPacketOrder = computed(() => {
+  return filteredPacketGroups.value.flatMap((group) => [group.primary, ...group.duplicates]);
+});
+
+const selectedPacketLinkedDuplicates = computed(() => {
+  const activePacket = selectedPacket.value;
+  if (!activePacket) return [];
+
+  const group = filteredPacketGroups.value.find((candidateGroup) =>
+    candidateGroup.packets.some((packet) => isSamePacket(packet, activePacket)),
+  );
+
+  return group?.packets ?? [];
+});
+
+const canNavigatePrevious = computed(() => {
+  return selectedModalIndex.value != null && selectedModalIndex.value > 0;
+});
+
+const canNavigateNext = computed(() => {
+  return (
+    selectedModalIndex.value != null &&
+    selectedModalIndex.value < modalPacketOrder.value.length - 1
+  );
+});
+
+const paginatedPacketMeta = computed(() => {
+  const meta = new Map<RecentPacket, PacketRowMeta>();
+  for (const group of paginatedPacketGroups.value) {
+    meta.set(group.primary, { group, isPrimary: true, duplicateIndex: 0 });
+    group.duplicates.forEach((packet, index) => {
+      meta.set(packet, { group, isPrimary: false, duplicateIndex: index + 1 });
+    });
+  }
+  return meta;
 });
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredPackets.value.length / itemsPerPage);
+  return Math.ceil(filteredPacketGroups.value.length / itemsPerPage);
 });
+
+watch(
+  filteredPacketGroups,
+  (groups) => {
+    const validGroupKeys = new Set(
+      groups.filter((group) => group.hasDuplicates).map((group) => group.key),
+    );
+    const cleanedExpanded = new Set(
+      [...expandedDuplicateGroups.value].filter((key) => validGroupKeys.has(key)),
+    );
+
+    if (cleanedExpanded.size !== expandedDuplicateGroups.value.size) {
+      expandedDuplicateGroups.value = cleanedExpanded;
+    }
+
+    if (totalPages.value > 0 && currentPage.value > totalPages.value) {
+      currentPage.value = totalPages.value;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  [modalPacketOrder, selectedPacket, isModalOpen],
+  ([orderedPackets, activePacket, modalOpen]) => {
+    if (!modalOpen || !activePacket) return;
+    const nextIndex = orderedPackets.findIndex((packet) => isSamePacket(packet, activePacket));
+    selectedModalIndex.value = nextIndex >= 0 ? nextIndex : null;
+  },
+  { immediate: true },
+);
 
 // Check if we're on the last page and might need more data
 const isOnLastPage = computed(() => {
@@ -139,6 +339,79 @@ const mightHaveMoreData = computed(() => {
 const shouldShowLoadMore = computed(() => {
   return isOnLastPage.value && mightHaveMoreData.value && !isLoadingMore.value;
 });
+
+const getPacketMeta = (packet: RecentPacket): PacketRowMeta | undefined => {
+  return paginatedPacketMeta.value.get(packet);
+};
+
+const isPrimaryGroupRow = (packet: RecentPacket): boolean => {
+  return getPacketMeta(packet)?.isPrimary ?? true;
+};
+
+const isDuplicateGroupRow = (packet: RecentPacket): boolean => {
+  return !isPrimaryGroupRow(packet);
+};
+const isExpandedPrimaryGroupRow = (packet: RecentPacket): boolean => {
+  return hasDuplicateGroup(packet) && duplicateGroupExpanded(packet);
+};
+
+const hasDuplicateGroup = (packet: RecentPacket): boolean => {
+  const meta = getPacketMeta(packet);
+  return Boolean(meta?.isPrimary && meta.group.hasDuplicates);
+};
+
+const duplicateCount = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary) return 0;
+  return meta.group.duplicateCount;
+};
+
+const duplicateToggleLabel = (packet: RecentPacket): string => {
+  const count = duplicateCount(packet);
+  const action = duplicateGroupExpanded(packet) ? 'Hide' : 'Show';
+  return `${action} ${count} duplicate${count === 1 ? '' : 's'}`;
+};
+
+const duplicateGroupExpanded = (packet: RecentPacket): boolean => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary) return false;
+  return expandedDuplicateGroups.value.has(meta.group.key);
+};
+
+const duplicateRowIndex = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  if (!meta || meta.isPrimary) return 0;
+  return meta.duplicateIndex;
+};
+
+const duplicateGroupSize = (packet: RecentPacket): number => {
+  const meta = getPacketMeta(packet);
+  return meta?.group.packets.length ?? 1;
+};
+
+const isFirstDuplicateRow = (packet: RecentPacket): boolean => {
+  return duplicateRowIndex(packet) === 1;
+};
+
+const visiblePacketsForGroup = (group: PacketGroup): RecentPacket[] => {
+  if (group.hasDuplicates && expandedDuplicateGroups.value.has(group.key)) {
+    return [group.primary, ...group.duplicates];
+  }
+  return [group.primary];
+};
+
+const toggleDuplicateGroup = (packet: RecentPacket): void => {
+  const meta = getPacketMeta(packet);
+  if (!meta?.isPrimary || !meta.group.hasDuplicates) return;
+
+  const next = new Set(expandedDuplicateGroups.value);
+  if (next.has(meta.group.key)) {
+    next.delete(meta.group.key);
+  } else {
+    next.add(meta.group.key);
+  }
+  expandedDuplicateGroups.value = next;
+};
 
 const formatTime = (timestamp: number) => {
   return new Date(timestamp * 1000).toLocaleTimeString(undefined, { hour12: true });
@@ -215,21 +488,21 @@ const getPacketTypeIndicatorColor = (type: number) => {
     8: 'bg-accent-green', // PATH - Green (reuse)
     9: 'bg-secondary', // TRACE - Yellow (reuse)
   };
-  return colors[type] || 'bg-gray-500';
+  return colors[type] || 'bg-background-mute';
 };
 
 const getPacketTypeColor = (type: number) => {
   const colors: Record<number, string> = {
     0: 'border-l-primary', // REQ - Primary cyan
     1: 'border-l-accent-green', // RESPONSE - Green
-    2: 'border-l-secondary', // TXT_MSG - Yellow
+    2: 'border-l-accent-amber', // TXT_MSG - Yellow
     3: 'border-l-accent-purple', // ACK - Purple
     4: 'border-l-accent-red', // ADVERT - Red
     5: 'border-l-accent-cyan', // GRP_TXT - Cyan
     6: 'border-l-primary', // GRP_DATA - Primary (reuse)
     7: 'border-l-accent-purple', // ANON_REQ - Purple (reuse)
     8: 'border-l-accent-green', // PATH - Green (reuse)
-    9: 'border-l-secondary', // TRACE - Yellow (reuse)
+    9: 'border-l-accent-amber', // TRACE - Yellow (reuse)
   };
   return colors[type] || 'border-l-gray-500';
 };
@@ -237,15 +510,15 @@ const getPacketTypeColor = (type: number) => {
 // Get LBT indicator color based on attempts
 const getLbtIndicatorColor = (packet: RecentPacket) => {
   if (!packet.transmitted || !packet.lbt_attempts || packet.lbt_attempts === 0) {
-    return 'bg-green-400'; // Clear channel or no LBT needed
+    return 'status-dot-green'; // Clear channel or no LBT needed
   }
   if (packet.lbt_attempts === 1) {
-    return 'bg-cyan-400'; // Light congestion
+    return 'status-dot-muted'; // Light congestion
   }
   if (packet.lbt_attempts === 2) {
-    return 'bg-yellow-400'; // Moderate congestion
+    return 'status-dot-amber'; // Moderate congestion
   }
-  return 'bg-orange-400'; // Heavy congestion (3+)
+  return 'status-dot-red'; // Heavy congestion (3+)
 };
 
 // Format delay value - convert to seconds if >= 1000ms
@@ -280,7 +553,7 @@ const parsePathString = (pathString?: string[] | string | null): string[] => {
 const getPathInfo = (packet: RecentPacket) => {
   const originalPath = parsePathString(packet.original_path);
   const forwardedPath = parsePathString(packet.forwarded_path);
-  const path = originalPath.length > 0 ? originalPath : forwardedPath;
+  const path = packet.transmitted && forwardedPath.length > 0 ? forwardedPath : originalPath.length > 0 ? originalPath : forwardedPath;
 
   if (path.length === 0) {
     return null;
@@ -290,6 +563,11 @@ const getPathInfo = (packet: RecentPacket) => {
     // Each entry is a full hop chunk (2/4/8 hex chars for 1/2/4-byte path modes); normalize case for display.
     nodes: path.map((hash) => hash.toUpperCase()),
   };
+};
+
+const formatHopLabel = (hops: number): string => {
+  if (hops <= 0) return 'Direct';
+  return `${hops} hop${hops > 1 ? 's' : ''}`;
 };
 
 // Extract node name from ADVERT packet payload
@@ -435,13 +713,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="glass-card rounded-[20px] p-6">
+  <div class="glass-card w-full max-w-none rounded-[20px] p-6">
     <!-- Header with title and filters -->
     <div
       class="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-6 gap-4 filter-container"
     >
       <div class="flex items-center gap-2 header-info relative">
-        <h3 class="text-content-primary dark:text-content-primary text-xl font-semibold">
+        <h3 class="text-content-primary text-xl font-semibold">
           Recent Packets
         </h3>
         <span class="text-content-secondary dark:text-content-muted text-sm packet-count">
@@ -449,7 +727,7 @@ onBeforeUnmount(() => {
         </span>
         <span
           v-if="showOnlyNewPackets"
-          class="text-primary text-xs sm:text-sm bg-primary/10 px-2 py-1 rounded-md border border-primary/20 live-mode-badge whitespace-nowrap"
+          class="text-primary text-xs sm:text-sm bg-primary/opacity-light px-2 py-1 rounded-md border border-primary/opacity-medium live-mode-badge whitespace-nowrap"
           :title="`Filter activated at ${formatFilterTime}`"
         >
           <span class="hidden sm:inline">Live Mode (since {{ formatFilterTime }})</span>
@@ -472,13 +750,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Type</label>
           <select
             v-model="selectedType"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="type in packetTypes"
               :key="type"
               :value="type"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 type === 'all' ? 'All Types' : `Type ${type} (${getPacketTypeName(parseInt(type))})`
@@ -492,13 +770,13 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Route</label>
           <select
             v-model="selectedRoute"
-            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/50"
+            class="glass-card border border-stroke-subtle dark:border-stroke rounded-[10px] px-3 py-2 text-content-primary text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium transition-all duration-200 min-w-[120px] cursor-pointer hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy"
           >
             <option
               v-for="route in routeTypes"
               :key="route"
               :value="route"
-              class="bg-surface dark:bg-surface-elevated text-content-primary dark:text-content-primary"
+              class="bg-surface dark:bg-surface-elevated text-content-primary"
             >
               {{
                 route === 'all'
@@ -514,10 +792,10 @@ onBeforeUnmount(() => {
           <label class="text-content-secondary dark:text-content-muted text-xs mb-1">Filter</label>
           <button
             @click="toggleNewPacketsFilter"
-            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 min-w-[120px]"
+            class="glass-card border rounded-[10px] px-4 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium min-w-[120px]"
             :class="{
-              'border-primary bg-primary/10 text-primary': showOnlyNewPackets,
-              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': showOnlyNewPackets,
+              'border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted hover:border-primary dark:hover:border-primary hover:text-content-primary dark:hover:text-content-primary hover:bg-primary/opacity-light':
                 !showOnlyNewPackets,
             }"
           >
@@ -530,12 +808,12 @@ onBeforeUnmount(() => {
           <label class="text-transparent text-xs mb-1">.</label>
           <button
             @click="resetFilters"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[10px] px-4 py-2 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary text-sm transition-all duration-200 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/opacity-medium"
             :disabled="selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets"
             :class="{
               'opacity-50 cursor-not-allowed hover:border-stroke-subtle dark:hover:border-stroke hover:text-content-secondary dark:hover:text-content-muted':
                 selectedType === 'all' && selectedRoute === 'all' && !showOnlyNewPackets,
-              'hover:bg-primary/10':
+              'hover:bg-primary/opacity-light':
                 selectedType !== 'all' || selectedRoute !== 'all' || showOnlyNewPackets,
             }"
           >
@@ -547,434 +825,475 @@ onBeforeUnmount(() => {
 
     <!-- Table Header - Desktop only -->
     <div
-      class="hidden lg:grid grid-cols-12 gap-2 pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
+      class="hidden lg:block w-full pb-3 border-b border-stroke-subtle dark:border-stroke text-content-secondary dark:text-content-muted text-xs uppercase mb-4"
     >
-      <div class="col-span-1">Time</div>
-      <div class="col-span-1">Type</div>
-      <div class="col-span-2">Route</div>
-      <div class="col-span-1">LEN</div>
-      <div class="col-span-2">Path/Hashes</div>
-      <div class="col-span-1">RSSI</div>
-      <div class="col-span-1">SNR</div>
-      <div class="col-span-1">Score</div>
-      <div class="col-span-1">TX Delay</div>
-      <div class="col-span-1">Status</div>
+      <div class="grid w-full grid-cols-11 gap-2">
+        <div class="col-span-1">Time</div>
+        <div class="col-span-1">Type</div>
+        <div class="col-span-2">Route</div>
+        <div class="col-span-1">LEN</div>
+        <div class="col-span-1">RSSI</div>
+        <div class="col-span-1">SNR</div>
+        <div class="col-span-1">Score</div>
+        <div class="col-span-1">TX Delay</div>
+        <div class="col-span-2">Status</div>
+      </div>
+      <div class="grid w-full grid-cols-11 gap-2 mt-2 pt-2 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
+        <div class="col-span-11">Path/Hashes</div>
+      </div>
     </div>
 
     <!-- Table Rows -->
-    <div class="space-y-4 overflow-hidden">
-      <div class="space-y-4">
+    <div class="space-y-4 w-full">
+      <div
+        v-for="group in paginatedPacketGroups"
+        :key="group.key"
+        class="space-y-2 w-full"
+        :class="group.hasDuplicates ? 'duplicate-group-container rounded-[12px] overflow-hidden' : ''"
+      >
         <div
-          v-for="(packet, index) in paginatedPackets"
-          :key="`${packet.packet_hash}_${packet.timestamp}_${index}`"
-          class="packet-row border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
-          :class="[getPacketTypeColor(packet.type), getPacketRowClass(packet)]"
+          v-for="(packet, index) in visiblePacketsForGroup(group)"
+          :key="`${group.key}_${packet.packet_hash}_${packet.timestamp}_${index}`"
+          class="packet-row w-full border-b border-stroke-subtle dark:border-dark-border/50 pb-4 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors duration-150 cursor-pointer rounded-[10px] p-2 border-l-4"
+          :class="[
+            getPacketTypeColor(packet.type),
+            getPacketRowClass(packet),
+            isDuplicateGroupRow(packet) ? 'duplicate-packet-row' : '',
+            isExpandedPrimaryGroupRow(packet) ? 'duplicate-group-expanded-row' : '',
+          ]"
           @click="openPacketDetails(packet)"
         >
-          <!-- Desktop Table View -->
-          <div class="hidden lg:grid grid-cols-12 gap-2 items-center">
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-sm">
-              {{ formatTime(packet.timestamp) }}
-            </div>
-            <div class="col-span-1 flex items-center gap-2">
-              <div
-                class="w-2 h-2 rounded-full"
-                :class="getPacketTypeIndicatorColor(packet.type)"
-              ></div>
-              <div class="flex flex-col">
-                <span class="text-content-primary dark:text-content-primary text-xs">{{
-                  getPacketTypeName(packet.type)
-                }}</span>
-                <!-- Node name for ADVERT packets - subtle text below type -->
-                <span
-                  v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                  class="text-accent-red/70 text-[10px] font-medium max-w-[80px] truncate"
-                  :title="getAdvertNodeName(packet) || undefined"
-                >
-                  {{ getAdvertNodeName(packet) }}
-                </span>
-              </div>
-            </div>
-            <div class="col-span-2">
-              <span
-                class="inline-block px-2 py-1 rounded text-xs font-medium"
-                :class="getRouteClass(packet.route)"
-              >
-                {{ getRouteTypeName(packet.route) }}
-              </span>
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.length }}B
-            </div>
-            <div class="col-span-2">
-              <div class="space-y-1">
-                <!-- Check if we have path information -->
-                <template v-if="getPathInfo(packet)">
-                  <!-- Show actual path with intermediate hops -->
-                  <div class="flex items-center gap-0.5 flex-wrap">
-                    <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
-                      <span
-                        class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
-                        :class="
-                          idx === 0
-                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
-                        "
-                        :title="node"
-                      >
-                        {{ node }}
-                      </span>
-                      <svg
-                        v-if="idx < getPathInfo(packet)!.nodes.length - 1"
-                        class="w-2.5 h-2.5 text-content-muted dark:text-content-muted/60"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M9 5l7 7-7 7"
-                        ></path>
-                      </svg>
-                    </template>
-                    <span
-                      v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted dark:text-content-muted ml-1"
-                    >
-                      ({{ getPathInfo(packet)!.hops }} hop{{
-                        getPathInfo(packet)!.hops > 1 ? 's' : ''
-                      }})
-                    </span>
-                  </div>
-                </template>
-                <template v-else>
-                  <!-- Fallback: compact src/dst (node hashes, not per-hop path chunks) -->
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono"
-                    >
-                      {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
-                    </span>
-                    <svg
-                      class="w-3 h-3 text-content-muted dark:text-content-muted/60"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M9 5l7 7-7 7"
-                      ></path>
-                    </svg>
-                    <span
-                      class="inline-block px-2 py-0.5 rounded text-xs font-mono"
-                      :class="
-                        packet.dst_hash
-                          ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
-                      "
-                    >
-                      {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
-                    </span>
-                  </div>
-                </template>
-              </div>
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
-            </div>
-            <div class="col-span-1 text-content-primary dark:text-content-primary text-xs">
-              <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
-                <div
-                  v-if="packet.transmitted"
-                  class="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                  :class="getLbtIndicatorColor(packet)"
-                ></div>
-                <span>{{ formatDelay(Number(packet.tx_delay_ms)) }}</span>
-              </div>
-            </div>
-            <div class="col-span-1">
-              <div>
-                <div class="flex items-center gap-1">
-                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                    getStatusText(packet)
-                  }}</span>
-                  <span
-                    v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
-                    title="Policy blocked"
-                  >
-                    <svg
-                      class="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
-                      ></path>
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 8l8 8"
-                      ></path>
-                    </svg>
-                  </span>
-                </div>
-                <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
-                  {{ packet.drop_reason }}
-                </p>
-              </div>
-            </div>
+          <div
+            v-if="isFirstDuplicateRow(packet)"
+            class="duplicate-group-banner mb-2 flex items-center justify-between gap-2 rounded-[8px] px-2 py-1"
+          >
+            <span class="text-[10px] font-semibold uppercase tracking-wide text-primary"
+              >Duplicate Group</span
+            >
+            <span class="text-[10px] text-content-secondary dark:text-content-muted">
+              {{ duplicateGroupSize(packet) - 1 }} duplicate{{
+                duplicateGroupSize(packet) - 1 === 1 ? '' : 's'
+              }}
+            </span>
           </div>
-
-          <!-- Mobile Condensed List View -->
-          <div class="lg:hidden space-y-2">
-            <!-- Line 1: Type badge + Timestamp + Status -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
+          <!-- Desktop Table View -->
+          <div class="hidden lg:block w-full space-y-2">
+            <div class="grid w-full grid-cols-11 gap-2 items-center">
+              <div class="col-span-1 text-content-primary text-sm">
+                {{ formatTime(packet.timestamp) }}
+              </div>
+              <div class="col-span-1 flex items-center gap-2">
                 <div
-                  class="w-2 h-2 rounded-full flex-shrink-0"
+                  class="w-2 h-2 rounded-full"
                   :class="getPacketTypeIndicatorColor(packet.type)"
                 ></div>
                 <div class="flex flex-col">
-                  <span
-                    class="text-content-primary dark:text-content-primary text-sm font-medium"
-                    >{{ getPacketTypeName(packet.type) }}</span
-                  >
-                  <!-- Node name for ADVERT packets -->
+                  <span class="text-content-primary text-xs">{{
+                    getPacketTypeName(packet.type)
+                  }}</span>
                   <span
                     v-if="packet.type === 4 && getAdvertNodeName(packet)"
-                    class="text-accent-red/70 text-[10px] font-medium leading-tight"
+                    class="text-accent-red/opacity-heavy text-[10px] font-medium max-w-[80px] truncate"
                     :title="getAdvertNodeName(packet) || undefined"
                   >
                     {{ getAdvertNodeName(packet) }}
                   </span>
                 </div>
+              </div>
+              <div class="col-span-2">
                 <span
-                  class="inline-block px-2 py-1 rounded text-xs font-medium ml-2"
+                  class="inline-block px-2 py-1 rounded text-xs font-medium"
                   :class="getRouteClass(packet.route)"
                 >
                   {{ getRouteTypeName(packet.route) }}
                 </span>
               </div>
-              <div class="flex items-center gap-2 text-right">
-                <span class="text-content-secondary dark:text-content-muted text-xs">{{
-                  formatTime(packet.timestamp)
-                }}</span>
-                <div class="flex items-center gap-1">
-                  <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
-                    getStatusText(packet)
-                  }}</span>
-                  <span
-                    v-if="isPolicyBlockedPacket(packet)"
-                    class="inline-flex items-center text-[10px] font-medium text-amber-600 dark:text-amber-300"
-                    title="Policy blocked"
-                  >
-                    <svg
-                      class="w-3 h-3"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
-                      ></path>
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8 8l8 8"
-                      ></path>
-                    </svg>
-                  </span>
-                </div>
+              <div class="col-span-1 text-content-primary text-xs">
+                {{ packet.length }}B
               </div>
-            </div>
-
-            <!-- Line 2: Path + Signal strength indicator -->
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-1.5">
-                <!-- Check if we have path information -->
-                <template v-if="getPathInfo(packet)">
-                  <!-- Show actual path with intermediate hops -->
-                  <div class="flex flex-wrap items-center gap-0.5">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
-                      >PATH</span
-                    >
-                    <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
-                      <span
-                        class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
-                        :class="
-                          idx === 0
-                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                            : 'bg-gray-500/20 text-content-muted dark:text-content-muted'
-                        "
-                        :title="node"
-                      >
-                        {{ node }}
-                      </span>
-                      <svg
-                        v-if="idx < getPathInfo(packet)!.nodes.length - 1"
-                        class="w-2.5 h-2.5 text-content-muted dark:text-content-muted/60"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="3"
-                          d="M9 5l7 7-7 7"
-                        ></path>
-                      </svg>
-                    </template>
-                    <span
-                      v-if="getPathInfo(packet)!.hops > 0"
-                      class="text-[9px] text-content-muted dark:text-content-muted ml-1"
-                    >
-                      ({{ getPathInfo(packet)!.hops }} hop{{
-                        getPathInfo(packet)!.hops > 1 ? 's' : ''
-                      }})
-                    </span>
-                  </div>
-                </template>
-                <template v-else>
-                  <!-- Fallback to src/dst display when no path info -->
-                  <!-- Source Node -->
-                  <div class="flex items-center gap-1">
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
-                      >SRC</span
-                    >
-                    <span
-                      class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono font-semibold"
-                    >
-                      {{ packet.src_hash?.slice(-4) || '????' }}
-                    </span>
-                  </div>
-
-                  <!-- Path Arrow/Indicator -->
-                  <div
-                    class="flex items-center gap-0.5 text-content-muted dark:text-content-muted/60"
-                  >
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M9 5l7 7-7 7"
-                      ></path>
-                    </svg>
-                    <span
-                      v-if="packet.route === 1"
-                      class="text-[9px] font-medium"
-                      title="Multi-hop path"
-                    >
-                      <svg
-                        class="w-2.5 h-2.5 inline"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                        ></path>
-                      </svg>
-                    </span>
-                  </div>
-
-                  <!-- Destination Node -->
-                  <div class="flex items-center gap-1">
-                    <span
-                      class="inline-block px-2 py-0.5 rounded text-xs font-mono font-semibold"
-                      :class="
-                        packet.dst_hash
-                          ? 'bg-badge-cyan-bg text-badge-cyan-text'
-                          : 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
-                      "
-                    >
-                      {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
-                    </span>
-                    <span class="text-content-muted dark:text-content-muted text-[10px] font-medium"
-                      >DST</span
-                    >
-                  </div>
-                </template>
+              <div class="col-span-1 text-content-primary text-xs">
+                {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'N/A' }}
               </div>
-              <div class="flex items-center gap-2">
-                <!-- Signal strength visual indicator -->
-                <div class="flex items-center gap-1">
-                  <div v-if="packet.snr != null" class="flex gap-0.5">
-                    <div
-                      class="w-1 h-3 rounded-sm"
-                      :class="packet.snr >= -10 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-4 rounded-sm"
-                      :class="packet.snr >= -5 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-5 rounded-sm"
-                      :class="packet.snr >= 0 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                    <div
-                      class="w-1 h-6 rounded-sm"
-                      :class="packet.snr >= 10 ? 'bg-green-400' : 'bg-white/20'"
-                    ></div>
-                  </div>
-                  <span class="text-content-primary dark:text-content-primary text-xs">{{
-                    packet.rssi != null ? packet.rssi.toFixed(0) + 'dBm' : 'TX'
-                  }}</span>
-                </div>
+              <div class="col-span-1 text-content-primary text-xs flex items-center gap-1">
+                <SignalBars v-if="packet.rssi != null" :bars="getSignalQualityFromSNR(packet.snr).bars" :color="getSignalQualityFromSNR(packet.snr).color" />
+                {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}
               </div>
-            </div>
-
-            <!-- Line 3: Technical details -->
-            <div
-              class="flex items-center justify-between text-content-secondary dark:text-content-muted text-xs"
-            >
-              <div class="flex items-center gap-3">
-                <span>{{ packet.length }}B</span>
-                <span>SNR: {{ packet.snr != null ? packet.snr.toFixed(1) + 'dB' : 'N/A' }}</span>
-                <span>Score: {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}</span>
+              <div class="col-span-1 text-content-primary text-xs">
+                {{ packet.score != null ? packet.score.toFixed(2) : 'N/A' }}
               </div>
-              <div class="flex items-center gap-2">
-                <span v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
+              <div class="col-span-1 text-content-primary text-xs">
+                <div v-if="Number(packet.tx_delay_ms) > 0" class="flex items-center gap-1">
                   <div
                     v-if="packet.transmitted"
                     class="w-1.5 h-1.5 rounded-full flex-shrink-0"
                     :class="getLbtIndicatorColor(packet)"
                   ></div>
                   <span>{{ formatDelay(Number(packet.tx_delay_ms)) }}</span>
-                </span>
+                </div>
+              </div>
+              <div class="col-span-2">
+                <div>
+                  <div class="flex items-center gap-1">
+                    <span class="text-xs font-medium" :class="getStatusClass(packet)">{{
+                      getStatusText(packet)
+                    }}</span>
+                    <span
+                      v-if="isPolicyBlockedPacket(packet)"
+                      class="inline-flex items-center text-[10px] font-medium text-accent-amber"
+                      title="Policy blocked"
+                    >
+                      <svg
+                        class="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 8l8 8"
+                        ></path>
+                      </svg>
+                    </span>
+                  </div>
+                  <div v-if="hasDuplicateGroup(packet)" class="mt-1 flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold transition-all duration-200 border bg-primary/opacity-medium hover:bg-primary/opacity-medium border-primary/opacity-heavy text-primary"
+                      @click.stop="toggleDuplicateGroup(packet)"
+                    >
+                      <svg
+                        class="w-2.5 h-2.5 transition-transform duration-200"
+                        :class="{ 'rotate-180': duplicateGroupExpanded(packet) }"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                      {{ duplicateGroupExpanded(packet) ? 'Hide' : 'Show' }}
+                      {{ duplicateCount(packet) }}
+                      duplicate{{ duplicateCount(packet) === 1 ? '' : 's' }}
+                    </button>
+                  </div>
+                  <div
+                    v-else-if="isDuplicateGroupRow(packet)"
+                    class="mt-1 text-[10px] text-content-secondary dark:text-content-muted"
+                  >
+                    Duplicate #{{ getPacketMeta(packet)?.duplicateIndex }}
+                  </div>
+                  <p v-if="packet.drop_reason" class="text-accent-red text-[8px] italic truncate">
+                    {{ packet.drop_reason }}
+                  </p>
+                </div>
               </div>
             </div>
 
-            <!-- Drop reason (if any) -->
-            <div v-if="packet.drop_reason" class="text-accent-red text-xs italic">
-              {{ packet.drop_reason }}
+            <div class="grid w-full grid-cols-11 gap-2 items-start">
+              <div class="col-span-11">
+                <div class="space-y-1">
+                  <template v-if="getPathInfo(packet)">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[9px] uppercase tracking-wide text-content-muted font-semibold">
+                        Path
+                      </span>
+                      <span class="text-[9px] text-content-muted">
+                        {{ formatHopLabel(getPathInfo(packet)!.hops) }}
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-0.5 flex-wrap">
+                      <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="idx">
+                        <span
+                          class="inline-block max-w-full truncate px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold leading-tight tracking-tight"
+                          :class="
+                            idx === 0
+                              ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                              : 'bg-background-mute/opacity-medium text-content-muted'
+                          "
+                          :title="node"
+                        >
+                          {{ node }}
+                        </span>
+                        <HopConnector
+                          v-if="idx < getPathInfo(packet)!.nodes.length - 1"
+                          :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
+                        />
+                      </template>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <div class="flex items-center gap-1">
+                      <span
+                        class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono"
+                      >
+                        {{ packet.src_hash?.slice(-4).toUpperCase() || '????' }}
+                      </span>
+                      <svg
+                        class="w-3 h-3 text-content-muted/opacity-heavy"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2.5"
+                          d="M9 5l7 7-7 7"
+                        ></path>
+                      </svg>
+                      <span
+                        class="inline-block px-2 py-0.5 rounded text-xs font-mono"
+                        :class="
+                          packet.dst_hash
+                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                            : 'bg-accent-amber/opacity-medium text-accent-amber'
+                        "
+                      >
+                        {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
+                      </span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Mobile Condensed List View -->
+          <div class="lg:hidden space-y-2">
+            <div class="mobile-packet-card space-y-3 rounded-[16px] p-4">
+              <!-- Line 1: Type/route + timestamp/status + duplicate icon -->
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-3 min-w-0">
+                  <div
+                    class="w-2 h-2 rounded-full flex-shrink-0 mt-2"
+                    :class="getPacketTypeIndicatorColor(packet.type)"
+                  ></div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-content-primary text-xl font-semibold tracking-wide">
+                        {{ getPacketTypeName(packet.type) }}
+                      </span>
+                      <span
+                        class="inline-block px-2.5 py-1 rounded text-xs font-medium"
+                        :class="getRouteClass(packet.route)"
+                      >
+                        {{ getRouteTypeName(packet.route) }}
+                      </span>
+                    </div>
+                    <span
+                      v-if="isDuplicateGroupRow(packet)"
+                      class="text-content-secondary dark:text-content-muted text-[10px] font-medium leading-tight"
+                    >
+                      Duplicate #{{ getPacketMeta(packet)?.duplicateIndex }}
+                    </span>
+                    <span
+                      v-if="packet.type === 4 && getAdvertNodeName(packet)"
+                      class="block text-accent-red/opacity-heavy text-[10px] font-medium leading-tight mt-0.5"
+                      :title="getAdvertNodeName(packet) || undefined"
+                    >
+                      {{ getAdvertNodeName(packet) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-start gap-2 flex-shrink-0">
+                  <div class="flex flex-col items-end">
+                    <span class="text-content-secondary dark:text-content-muted text-xs">{{
+                      formatTime(packet.timestamp)
+                    }}</span>
+                    <div class="mt-1 flex items-center gap-1 justify-end">
+                      <span class="text-sm font-medium" :class="getStatusClass(packet)">{{
+                        getStatusText(packet)
+                      }}</span>
+                      <span
+                        v-if="isPolicyBlockedPacket(packet)"
+                        class="inline-flex items-center text-[10px] font-medium text-accent-amber"
+                        title="Policy blocked"
+                      >
+                        <svg
+                          class="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden="true"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7l7-4z"
+                          ></path>
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 8l8 8"
+                          ></path>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    v-if="hasDuplicateGroup(packet)"
+                    type="button"
+                    class="mobile-duplicate-icon-btn relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-primary/opacity-heavy bg-primary/opacity-medium text-primary transition-colors duration-200 hover:bg-primary/opacity-medium focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
+                    :class="{
+                      'border-primary text-primary': duplicateGroupExpanded(packet),
+                    }"
+                    :title="duplicateToggleLabel(packet)"
+                    :aria-label="duplicateToggleLabel(packet)"
+                    @click.stop="toggleDuplicateGroup(packet)"
+                  >
+                    <svg
+                      class="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="9"
+                        y="9"
+                        width="11"
+                        height="11"
+                        rx="2"
+                        ry="2"
+                        stroke-width="2"
+                      />
+                      <path
+                        d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <span
+                      class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-surface dark:bg-surface-elevated border border-primary/opacity-heavy text-[10px] leading-none font-semibold text-primary flex items-center justify-center"
+                    >
+                      {{ duplicateCount(packet) }}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Path section -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-primary text-xs font-semibold uppercase tracking-wide">Path</span>
+                  <span class="text-content-muted text-xs">
+                    {{ getPathInfo(packet) ? formatHopLabel(getPathInfo(packet)!.hops) : 'Unknown' }}
+                  </span>
+                </div>
+                <template v-if="getPathInfo(packet)">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <template v-for="(node, idx) in getPathInfo(packet)!.nodes" :key="`mobile-path-${idx}`">
+                      <span
+                        class="mobile-path-chip inline-flex items-center px-2 py-1 rounded-lg text-xs font-mono font-semibold leading-tight"
+                        :class="
+                          idx === 0
+                            ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                            : 'text-content-secondary dark:text-content-muted'
+                        "
+                        :title="node"
+                      >
+                        {{ node }}
+                      </span>
+                      <HopConnector
+                        v-if="idx < getPathInfo(packet)!.nodes.length - 1"
+                        :status="packet.drop_reason ? 'drop' : (packet.transmitted ? 'forward' : 'received')"
+                      />
+                    </template>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="flex items-center gap-1">
+                    <span
+                      class="inline-block px-2 py-0.5 rounded bg-badge-cyan-bg text-badge-cyan-text text-xs font-mono font-semibold"
+                    >
+                      {{ packet.src_hash?.slice(-4) || '????' }}
+                    </span>
+                    <svg class="w-3 h-3 text-content-muted/opacity-heavy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M9 5l7 7-7 7"
+                      ></path>
+                    </svg>
+                    <span
+                      class="inline-block px-2 py-0.5 rounded text-xs font-mono font-semibold"
+                      :class="
+                        packet.dst_hash
+                          ? 'bg-badge-cyan-bg text-badge-cyan-text'
+                          : 'bg-accent-amber/opacity-medium text-accent-amber'
+                      "
+                    >
+                      {{ packet.dst_hash ? packet.dst_hash.slice(-4).toUpperCase() : 'BCAST' }}
+                    </span>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Metrics row -->
+              <div class="pt-3 border-t border-stroke-subtle/70 dark:border-stroke/opacity-heavy">
+                <div class="mobile-metrics-grid grid gap-0">
+                  <div class="mobile-metric-cell">
+                    <div class="text-content-muted uppercase tracking-wide text-[10px] mb-1">Size</div>
+                    <div class="text-content-primary text-base font-semibold">{{ packet.length }}B</div>
+                  </div>
+                  <div class="mobile-metric-cell">
+                    <div class="text-content-muted uppercase tracking-wide text-[10px] mb-1">SNR</div>
+                    <div class="text-content-primary text-base font-semibold">
+                      {{ packet.snr != null ? packet.snr.toFixed(1) + ' dB' : 'N/A' }}
+                    </div>
+                  </div>
+                  <div class="mobile-metric-cell">
+                    <div class="text-content-muted uppercase tracking-wide text-[10px] mb-1">RSSI</div>
+                    <div class="flex items-center gap-1 min-w-0">
+                      <SignalBars
+                        v-if="packet.rssi != null"
+                        :bars="getSignalQualityFromSNR(packet.snr).bars"
+                        :color="getSignalQualityFromSNR(packet.snr).color"
+                      />
+                      <span class="text-content-primary text-[11px] font-medium leading-tight">
+                        {{ packet.rssi != null ? packet.rssi.toFixed(0) + ' dBm' : 'TX' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="mobile-metric-cell">
+                    <div class="text-content-muted uppercase tracking-wide text-[10px] mb-1">Latency</div>
+                    <div class="flex items-center gap-1">
+                      <div
+                        v-if="Number(packet.tx_delay_ms) > 0 && packet.transmitted"
+                        class="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        :class="getLbtIndicatorColor(packet)"
+                      ></div>
+                      <span class="text-content-primary text-base font-semibold">
+                        {{ Number(packet.tx_delay_ms) > 0 ? formatDelay(Number(packet.tx_delay_ms)) : '--' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Drop reason (if any) -->
+              <div v-if="packet.drop_reason" class="text-accent-red text-xs italic">
+                {{ packet.drop_reason }}
+              </div>
             </div>
           </div>
         </div>
@@ -989,8 +1308,9 @@ onBeforeUnmount(() => {
       <div class="flex items-center gap-4 pagination-info">
         <span class="text-content-secondary dark:text-content-muted text-sm">
           Showing {{ (currentPage - 1) * itemsPerPage + 1 }} -
-          {{ Math.min(currentPage * itemsPerPage, filteredPackets.length) }}
-          of {{ filteredPackets.length }} packets
+          {{ Math.min(currentPage * itemsPerPage, filteredPacketGroups.length) }}
+          of {{ filteredPacketGroups.length }} hash groups
+          <span class="text-xs">({{ filteredPackets.length }} packets)</span>
         </span>
 
         <!-- Load More Records Button -->
@@ -999,7 +1319,7 @@ onBeforeUnmount(() => {
           <button
             @click="loadMoreRecords"
             :disabled="isLoadingMore"
-            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 hover:bg-primary/5"
+            class="glass-card border border-primary rounded-[8px] px-3 py-1.5 text-xs transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium hover:bg-primary/opacity-light"
             :class="{
               'text-primary border-primary cursor-pointer': !isLoadingMore,
               'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke cursor-not-allowed opacity-50':
@@ -1021,11 +1341,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage - 1"
           :disabled="currentPage <= 1"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage <= 1,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage > 1,
           }"
         >
@@ -1039,7 +1359,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage > 3"
             @click="currentPage = 1"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             1
           </button>
@@ -1059,10 +1379,10 @@ onBeforeUnmount(() => {
             }).filter((p) => p <= totalPages)"
             :key="page"
             @click="currentPage = page"
-            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 page-number"
+            class="glass-card border rounded-[8px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium page-number"
             :class="{
-              'border-primary bg-primary/10 text-primary': currentPage === page,
-              'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+              'border-primary bg-primary/opacity-light text-primary': currentPage === page,
+              'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
                 currentPage !== page,
             }"
           >
@@ -1080,7 +1400,7 @@ onBeforeUnmount(() => {
           <button
             v-if="currentPage < totalPages - 2"
             @click="currentPage = totalPages"
-            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary dark:text-content-primary hover:text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+            class="glass-card border border-stroke-subtle dark:border-stroke hover:border-primary dark:hover:border-primary rounded-[8px] px-3 py-2 text-sm text-content-primary hover:text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
           >
             {{ totalPages }}
           </button>
@@ -1090,11 +1410,11 @@ onBeforeUnmount(() => {
         <button
           @click="currentPage = currentPage + 1"
           :disabled="currentPage >= totalPages"
-          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20 prev-next-btn"
+          class="glass-card border rounded-[10px] px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium prev-next-btn"
           :class="{
-            'border-stroke-subtle dark:border-stroke text-content-muted dark:text-content-muted cursor-not-allowed opacity-50':
+            'border-stroke-subtle dark:border-stroke text-content-muted cursor-not-allowed opacity-50':
               currentPage >= totalPages,
-            'border-stroke-subtle dark:border-stroke text-content-primary dark:text-content-primary hover:border-primary hover:text-primary hover:bg-primary/5':
+            'border-stroke-subtle dark:border-stroke text-content-primary hover:border-primary dark:hover:border-primary hover:text-primary hover:bg-primary/opacity-light':
               currentPage < totalPages,
           }"
         >
@@ -1116,7 +1436,7 @@ onBeforeUnmount(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs">•</span>
         <button
           @click="loadMoreRecords"
-          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/5 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/20"
+          class="glass-card border border-primary rounded-[8px] px-4 py-2 text-sm text-primary hover:bg-primary/opacity-light transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-primary/opacity-medium"
         >
           Load {{ Math.min(200, maxLimit - currentLimit) }} more records
         </button>
@@ -1139,7 +1459,18 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Packet Details Modal -->
-  <PacketDetailsModal :packet="selectedPacket" :isOpen="isModalOpen" @close="closeModal" />
+  <PacketDetailsModal
+    :packet="selectedPacket"
+    :packets="modalPacketOrder"
+    :linkedDuplicatePackets="selectedPacketLinkedDuplicates"
+    :currentIndex="selectedModalIndex"
+    :canGoPrevious="canNavigatePrevious"
+    :canGoNext="canNavigateNext"
+    :isOpen="isModalOpen"
+    @previous="showPreviousPacket"
+    @next="showNextPacket"
+    @close="closeModal"
+  />
 </template>
 
 <style scoped>
@@ -1200,22 +1531,102 @@ onBeforeUnmount(() => {
 .packet-list-enter-active .packet-row {
   background: linear-gradient(
     90deg,
-    rgba(78, 201, 176, 0.1) 0%,
-    rgba(78, 201, 176, 0.05) 50%,
+    color-mix(in srgb, var(--color-accent-green) 10%, transparent) 0%,
+    color-mix(in srgb, var(--color-accent-green) 5%, transparent) 50%,
     transparent 100%
   );
-  box-shadow: 0 0 20px rgba(78, 201, 176, 0.2);
-  border-left: 3px solid rgba(78, 201, 176, 0.6);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent-green) 20%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--color-accent-green) 60%, transparent);
   border-radius: 8px;
   padding-left: 12px;
 }
 
 /* Subtle hover effect */
 .packet-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
   border-radius: 8px;
   transition: background 0.2s ease;
 }
+.duplicate-packet-row {
+  border-left-width: 3px;
+  background: linear-gradient(
+    96deg,
+    color-mix(in srgb, var(--color-primary) 11%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 26%,
+    color-mix(in srgb, var(--color-primary) 5%, transparent) 52%,
+    color-mix(in srgb, var(--color-primary) 3%, transparent) 74%,
+    transparent 90%
+  );
+}
+
+.duplicate-group-container {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 35%, var(--color-border-subtle));
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)) 0%,
+    color-mix(in srgb, var(--color-primary) 5%, var(--color-surface)) 38%,
+    color-mix(in srgb, var(--color-primary) 3%, var(--color-surface)) 72%,
+    color-mix(in srgb, var(--color-primary) 2%, var(--color-surface)) 100%
+  );
+}
+
+.duplicate-group-expanded-row {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.duplicate-group-banner {
+  border: 1px dashed color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: linear-gradient(
+    92deg,
+    color-mix(in srgb, var(--color-primary) 14%, transparent) 0%,
+    color-mix(in srgb, var(--color-primary) 11%, transparent) 46%,
+    color-mix(in srgb, var(--color-primary) 8%, transparent) 100%
+  );
+}
+.mobile-packet-card {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, var(--color-border-subtle));
+  background: linear-gradient(
+    142deg,
+    color-mix(in srgb, var(--color-primary) 10%, var(--color-surface)) 0%,
+    color-mix(in srgb, var(--color-primary) 6%, var(--color-surface)) 48%,
+    color-mix(in srgb, var(--color-primary) 4%, var(--color-surface)) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 24%, transparent),
+    0 10px 24px color-mix(in srgb, var(--color-background) 45%, transparent);
+}
+
+.mobile-path-chip {
+  border: 1px solid color-mix(in srgb, var(--color-primary) 24%, var(--color-border-subtle));
+  background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+}
+
+.mobile-duplicate-icon-btn {
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.mobile-metrics-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mobile-metric-cell {
+  min-width: 0;
+  padding: 0 0.5rem;
+}
+
+.mobile-metric-cell:first-child {
+  padding-left: 0;
+}
+
+.mobile-metric-cell + .mobile-metric-cell {
+  border-left: 1px solid color-mix(in srgb, var(--color-border-subtle) 70%, transparent);
+}
+
+:global(.dark) .mobile-metric-cell + .mobile-metric-cell {
+  border-left-color: color-mix(in srgb, var(--color-border) 65%, transparent);
+}
+
+
 
 @media (max-width: 1023px) {
   /* Better mobile filter layout - keep filters in a more compact grid */
@@ -1370,6 +1781,36 @@ onBeforeUnmount(() => {
   .load-more-section button {
     font-size: 0.6rem;
     padding: 0.375rem 0.75rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .mobile-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem 0.75rem;
+  }
+
+  .mobile-metric-cell {
+    padding: 0;
+    border-left: none;
+  }
+
+  .mobile-metric-cell:nth-child(2n) {
+    padding-left: 0.5rem;
+    border-left: 1px solid color-mix(in srgb, var(--color-border-subtle) 70%, transparent);
+  }
+
+  :global(.dark) .mobile-metric-cell:nth-child(2n) {
+    border-left-color: color-mix(in srgb, var(--color-border) 65%, transparent);
+  }
+
+  .mobile-metric-cell:nth-child(n + 3) {
+    padding-top: 0.375rem;
+    border-top: 1px solid color-mix(in srgb, var(--color-border-subtle) 60%, transparent);
+  }
+
+  :global(.dark) .mobile-metric-cell:nth-child(n + 3) {
+    border-top-color: color-mix(in srgb, var(--color-border) 55%, transparent);
   }
 }
 </style>

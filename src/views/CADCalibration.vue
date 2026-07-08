@@ -13,19 +13,67 @@ const systemStore = useSystemStore();
 // Detect theme for chart colors
 const isDarkMode = computed(() => document.documentElement.classList.contains('dark'));
 
+const cssVar = (name: string, fallback: string): string => {
+  if (typeof window === 'undefined') return fallback;
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
+const toRgba = (color: string, alpha: number): string => {
+  const value = color.trim();
+  const clamped = Math.max(0, Math.min(1, alpha));
+
+  const hexMatch = value.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (hexMatch) {
+    const hex = hexMatch[1];
+    const normalized = hex.length === 3
+      ? hex.split('').map((ch) => ch + ch).join('')
+      : hex;
+    const int = Number.parseInt(normalized, 16);
+    const r = (int >> 16) & 255;
+    const g = (int >> 8) & 255;
+    const b = int & 255;
+    return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+  }
+
+  const rgbMatch = value.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (rgbMatch) {
+    const [, r, g, b] = rgbMatch;
+    return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+  }
+
+  const rgbaMatch = value.match(/^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)$/i);
+  if (rgbaMatch) {
+    const [, r, g, b] = rgbaMatch;
+    return `rgba(${r}, ${g}, ${b}, ${clamped})`;
+  }
+
+  return value;
+};
+
 // Theme-aware chart colors
 const getChartColors = () => {
   const dark = isDarkMode.value;
+  const heading = cssVar('--color-text-primary', dark ? '#f9fafb' : '#111827');
+  const muted = cssVar('--color-text-muted', dark ? '#9ca3af' : '#6b7280');
+  const secondary = cssVar('--color-text-secondary', dark ? '#d1d5db' : '#374151');
+  const border = cssVar('--color-border-subtle', dark ? '#4b5563' : '#d1d5db');
+  const cyan = cssVar('--color-accent-cyan', '#06b6d4');
+  const green = cssVar('--color-accent-green', '#10b981');
+
   return {
-    title: dark ? '#F9FAFB' : '#111827', // text-content-primary
-    subtitle: dark ? '#9CA3AF' : '#6B7280', // text-content-muted
-    axis: dark ? '#D1D5DB' : '#374151', // text-content-secondary
-    tick: dark ? '#9CA3AF' : '#6B7280', // text-content-muted
-    grid: dark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(107, 114, 128, 0.15)',
-    zeroline: dark ? 'rgba(148, 163, 184, 0.2)' : 'rgba(107, 114, 128, 0.25)',
-    line: dark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(107, 114, 128, 0.35)',
-    colorbarBorder: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
-    markerLine: dark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
+    title: heading,
+    subtitle: muted,
+    axis: secondary,
+    tick: muted,
+    grid: toRgba(border, dark ? 0.3 : 0.4),
+    zeroline: toRgba(border, dark ? 0.45 : 0.55),
+    line: toRgba(border, dark ? 0.6 : 0.7),
+    colorbarBorder: toRgba(border, dark ? 0.55 : 0.65),
+    markerLine: toRgba(border, dark ? 0.55 : 0.65),
+    heatmapZero: toRgba(muted, 0.4),
+    heatmapLow: toRgba(cyan, 0.3),
+    heatmapMid: toRgba(cyan, 0.6),
+    heatmapHigh: toRgba(green, 0.9),
   };
 };
 
@@ -118,10 +166,10 @@ function initChart() {
         size: 12,
         color: [],
         colorscale: [
-          [0, 'rgba(75, 85, 99, 0.4)'], // Gray for 0% (no detection)
-          [0.1, 'rgba(6, 182, 212, 0.3)'], // Light cyan for low detection
-          [0.5, 'rgba(6, 182, 212, 0.6)'], // Medium cyan for medium detection
-          [1, 'rgba(16, 185, 129, 0.9)'], // Green for high detection
+          [0, colors.heatmapZero],
+          [0.1, colors.heatmapLow],
+          [0.5, colors.heatmapMid],
+          [1, colors.heatmapHigh],
         ],
         showscale: true,
         colorbar: {
@@ -130,7 +178,7 @@ function initChart() {
             font: { color: colors.axis, size: 14 },
           },
           tickfont: { color: colors.tick },
-          bgcolor: 'rgba(0,0,0,0)',
+          bgcolor: 'transparent',
           bordercolor: colors.colorbarBorder,
           borderwidth: 1,
           thickness: 15,
@@ -175,8 +223,8 @@ function initChart() {
       zerolinecolor: colors.zeroline,
       linecolor: colors.line,
     },
-    plot_bgcolor: 'rgba(0, 0, 0, 0)',
-    paper_bgcolor: 'rgba(0, 0, 0, 0)',
+    plot_bgcolor: 'transparent',
+    paper_bgcolor: 'transparent',
     font: { color: colors.title, family: 'Inter, system-ui, sans-serif' },
     margin: { l: 80, r: 80, t: 100, b: 80 },
     showlegend: false,
@@ -492,7 +540,7 @@ onUnmounted(() => {
   <div class="p-6 space-y-6">
     <!-- Header -->
     <div>
-      <h1 class="text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h1 class="text-2xl font-bold text-content-primary">
         CAD Calibration Tool
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-2">
@@ -507,7 +555,7 @@ onUnmounted(() => {
           <button
             @click="startCalibration"
             :disabled="isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-green/10 hover:bg-accent-green/20 disabled:bg-gray-500/10 text-accent-green disabled:text-gray-400 rounded-lg border border-accent-green/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-green/opacity-light hover:bg-accent-green/opacity-medium disabled:bg-background-mute/opacity-light text-accent-green disabled:text-content-muted rounded-lg border border-accent-green/opacity-medium disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <polygon points="5 3 19 12 5 21 5 3"></polygon>
@@ -521,7 +569,7 @@ onUnmounted(() => {
           <button
             @click="stopCalibration"
             :disabled="!isRunning"
-            class="flex items-center gap-3 px-6 py-3 bg-accent-red/10 hover:bg-accent-red/20 disabled:bg-gray-500/10 text-accent-red disabled:text-gray-400 rounded-lg border border-accent-red/30 disabled:border-gray-500/20 transition-colors disabled:cursor-not-allowed"
+            class="flex items-center gap-3 px-6 py-3 bg-accent-red/opacity-light hover:bg-accent-red/opacity-medium disabled:bg-background-mute/opacity-light text-accent-red disabled:text-content-muted rounded-lg border border-accent-red/opacity-medium disabled:border-stroke-subtle/20 transition-colors disabled:cursor-not-allowed"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="6" y="6" width="12" height="12"></rect>
@@ -538,10 +586,10 @@ onUnmounted(() => {
     <!-- Status and Progress -->
     <div class="glass-card rounded-[15px] p-6 space-y-4">
       <!-- Status message -->
-      <div class="text-content-primary dark:text-content-primary">{{ statusMessage }}</div>
+      <div class="text-content-primary">{{ statusMessage }}</div>
 
       <!-- Info row: fixed height, swaps between config and results -->
-      <div class="flex items-center justify-between gap-4 px-4 bg-primary/10 border border-primary/30 rounded-lg h-[52px] overflow-hidden">
+      <div class="flex items-center justify-between gap-4 px-4 bg-primary/opacity-light border border-primary/opacity-medium rounded-lg h-[52px] overflow-hidden">
         <!-- Config (before complete) -->
         <div v-if="!showResults && showRangeInfo && rangeInfo" class="text-content-primary dark:text-primary text-sm">
           <strong>Configuration:</strong>
@@ -549,11 +597,11 @@ onUnmounted(() => {
           {{ (rangeInfo.peak_max - rangeInfo.peak_min + 1) * (rangeInfo.min_max - rangeInfo.min_min + 1) }} tests
         </div>
         <!-- Placeholder before calibration starts -->
-        <div v-else-if="!showResults" class="text-content-muted dark:text-content-muted text-sm italic">
+        <div v-else-if="!showResults" class="text-content-muted text-sm italic">
           Awaiting calibration…
         </div>
         <!-- Results (when complete) -->
-        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary dark:text-content-primary text-sm">
+        <div v-else-if="showBestResult && bestCalibrationResult" class="text-content-primary text-sm">
           <span class="text-accent-green font-medium">Optimal settings found — </span>
           Peak: <strong>{{ bestCalibrationResult.det_peak }}</strong>,
           Min: <strong>{{ bestCalibrationResult.det_min }}</strong>,
@@ -578,7 +626,7 @@ onUnmounted(() => {
 
       <!-- Progress bar (always present, height never changes) -->
       <div class="space-y-2">
-        <div class="w-full bg-white/10 rounded-full h-2">
+        <div class="w-full bg-white/opacity-light rounded-full h-2">
           <div
             class="bg-gradient-to-r from-primary to-accent-green h-2 rounded-full transition-all duration-300"
             :style="{

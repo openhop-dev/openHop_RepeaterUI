@@ -3,7 +3,7 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Backup &amp; Restore</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Backup &amp; Restore</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Export, import, and restore your repeater configuration</p>
       </div>
     </div>
@@ -11,11 +11,11 @@
     <!-- HTTP Security Warning -->
     <div
       v-if="isInsecure"
-      class="rounded-lg border-2 border-red-500/50 dark:border-red-400/40 bg-red-100 dark:bg-red-500/10 p-4"
+      class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
     >
       <div class="flex items-start gap-3">
         <svg
-          class="w-6 h-6 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
+          class="w-6 h-6 text-accent-red shrink-0 mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -28,10 +28,10 @@
           />
         </svg>
         <div>
-          <h4 class="text-sm font-semibold text-red-700 dark:text-red-400">
+          <h4 class="text-sm font-semibold text-accent-red">
             Unencrypted Connection
           </h4>
-          <p class="text-xs text-red-600 dark:text-red-400/80 mt-1">
+          <p class="text-xs text-accent-red mt-1">
             This page is served over <strong>HTTP</strong>, not HTTPS. Exported data (including
             identity keys) will be transmitted in <strong>plain text</strong>. Only use these
             features on a trusted local network.
@@ -44,7 +44,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Export Settings
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -75,10 +75,10 @@
           Export Settings
         </span>
       </button>
-      <p v-if="exportSuccess" class="text-xs text-green-600 dark:text-green-400 mt-2">
+      <p v-if="exportSuccess" class="text-xs text-accent-green mt-2">
         {{ exportSuccess }}
       </p>
-      <p v-if="exportError" class="text-xs text-red-500 dark:text-red-400 mt-2">
+      <p v-if="exportError" class="text-xs text-accent-red mt-2">
         {{ exportError }}
       </p>
     </div>
@@ -87,7 +87,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Full Backup
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -99,9 +99,9 @@
       </div>
 
       <div
-        class="rounded-lg border border-red-500/30 dark:border-red-400/30 bg-red-50 dark:bg-red-500/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium bg-accent-red/opacity-light p-3 mb-4"
       >
-        <p class="text-xs text-red-700 dark:text-red-400">
+        <p class="text-xs text-accent-red">
           <strong>Contains sensitive data.</strong> The backup file will include plain-text
           passwords and private keys. Store it securely and never share it.
         </p>
@@ -110,7 +110,7 @@
       <div v-if="!showFullBackupConfirm">
         <button
           @click="showFullBackupConfirm = true"
-          class="px-4 py-2 bg-red-500/20 dark:bg-red-400/20 hover:bg-red-500/30 dark:hover:bg-red-400/30 text-red-900 dark:text-red-200 rounded-lg border border-red-500/50 dark:border-red-400/40 transition-colors text-sm"
+          class="cfg-btn-danger"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,11 +128,11 @@
 
       <div
         v-if="showFullBackupConfirm"
-        class="rounded-lg border-2 border-red-500/50 dark:border-red-400/40 bg-red-50 dark:bg-red-500/10 p-4"
+        class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
       >
         <div class="flex items-start gap-3">
           <svg
-            class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
+            class="w-5 h-5 text-accent-red shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -145,10 +145,10 @@
             />
           </svg>
           <div class="flex-1">
-            <h4 class="text-sm font-semibold text-red-700 dark:text-red-400">
+            <h4 class="text-sm font-semibold text-accent-red">
               Confirm Full Backup
             </h4>
-            <p class="text-xs text-red-600 dark:text-red-400/80 mt-1">
+            <p class="text-xs text-accent-red mt-1">
               This will export <strong>all secrets in plain text</strong> including admin/guest
               passwords, JWT secret, and your repeater's private identity key{{
                 isInsecure ? ' over an unencrypted HTTP connection' : ''
@@ -158,14 +158,14 @@
               <button
                 @click="exportFullBackup"
                 :disabled="fullBackupExporting"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors text-sm disabled:opacity-50"
+                class="cfg-btn-danger"
               >
                 {{ fullBackupExporting ? 'Exporting…' : 'Yes, Export Full Backup' }}
               </button>
               <button
                 @click="showFullBackupConfirm = false"
                 :disabled="fullBackupExporting"
-                class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors text-sm"
+                class="btn-secondary"
               >
                 Cancel
               </button>
@@ -174,10 +174,10 @@
         </div>
       </div>
 
-      <p v-if="fullBackupSuccess" class="text-xs text-green-600 dark:text-green-400 mt-2">
+      <p v-if="fullBackupSuccess" class="text-xs text-accent-green mt-2">
         {{ fullBackupSuccess }}
       </p>
-      <p v-if="fullBackupError" class="text-xs text-red-500 dark:text-red-400 mt-2">
+      <p v-if="fullBackupError" class="text-xs text-accent-red mt-2">
         {{ fullBackupError }}
       </p>
     </div>
@@ -186,7 +186,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Import Configuration
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -200,7 +200,7 @@
       <!-- File picker -->
       <div class="space-y-3">
         <label
-          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/20 hover:border-cyan-500/50 dark:hover:border-primary/50 transition-colors"
+          class="flex items-center gap-3 cursor-pointer px-4 py-3 bg-background-mute dark:bg-background/30 rounded-lg border-2 border-dashed border-stroke-subtle dark:border-stroke/opacity-heavy hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-colors"
         >
           <svg
             class="w-5 h-5 text-content-secondary dark:text-content-muted"
@@ -230,9 +230,9 @@
         <!-- Preview after file selected -->
         <div
           v-if="importPreview"
-          class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10"
+          class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
         >
-          <h4 class="text-sm font-medium text-content-primary dark:text-content-primary mb-2">
+          <h4 class="text-sm font-medium text-content-primary mb-2">
             Import Preview
           </h4>
           <div
@@ -250,7 +250,7 @@
                 importPreview.meta.includes_secrets === 'true' ||
                 importPreview.meta.includes_secrets === true
               "
-              class="text-amber-600 dark:text-amber-400 font-medium"
+              class="text-accent-amber font-medium"
             >
               &#9888; Full backup — will restore passwords and identity keys
             </p>
@@ -267,7 +267,7 @@
         <div v-if="importPreview && !showImportConfirm">
           <button
             @click="showImportConfirm = true"
-            class="px-4 py-2 bg-amber-500/20 dark:bg-amber-400/20 hover:bg-amber-500/30 dark:hover:bg-amber-400/30 text-amber-900 dark:text-amber-200 rounded-lg border border-amber-500/50 dark:border-amber-400/40 transition-colors text-sm"
+            class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium text-accent-amber rounded-lg border border-accent-amber/opacity-heavy transition-colors text-sm"
           >
             Review &amp; Import
           </button>
@@ -276,11 +276,11 @@
         <!-- Confirm dialog -->
         <div
           v-if="showImportConfirm"
-          class="rounded-lg border-2 border-amber-500/50 dark:border-amber-400/40 bg-amber-50 dark:bg-amber-500/10 p-4"
+          class="rounded-lg border-2 border-accent-amber/opacity-heavy bg-accent-amber/opacity-light p-4"
         >
           <div class="flex items-start gap-3">
             <svg
-              class="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
+              class="w-5 h-5 text-accent-amber shrink-0 mt-0.5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -293,10 +293,10 @@
               />
             </svg>
             <div class="flex-1">
-              <h4 class="text-sm font-semibold text-amber-800 dark:text-amber-300">
+              <h4 class="text-sm font-semibold text-accent-amber">
                 Confirm Import
               </h4>
-              <p class="text-xs text-amber-700 dark:text-amber-300/80 mt-1">
+              <p class="text-xs text-accent-amber mt-1">
                 This will overwrite current settings for:
                 <strong>{{ importPreviewSections }}</strong
                 >.
@@ -312,14 +312,14 @@
                 <button
                   @click="importConfig"
                   :disabled="importing"
-                  class="px-4 py-2 bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600 text-white rounded-lg transition-colors text-sm disabled:opacity-50"
+                  class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium text-accent-amber rounded-lg border border-accent-amber/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {{ importing ? 'Importing…' : 'Yes, Import' }}
                 </button>
                 <button
                   @click="cancelImport"
                   :disabled="importing"
-                  class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors text-sm"
+                  class="btn-secondary"
                 >
                   Cancel
                 </button>
@@ -328,10 +328,10 @@
           </div>
         </div>
 
-        <p v-if="importSuccess" class="text-xs text-green-600 dark:text-green-400 mt-2">
+        <p v-if="importSuccess" class="text-xs text-accent-green mt-2">
           {{ importSuccess }}
         </p>
-        <p v-if="importError" class="text-xs text-red-500 dark:text-red-400 mt-2">
+        <p v-if="importError" class="text-xs text-accent-red mt-2">
           {{ importError }}
         </p>
       </div>
@@ -341,7 +341,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-1">
+          <h3 class="text-lg font-semibold text-content-primary mb-1">
             Export Identity Key
           </h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
@@ -353,9 +353,9 @@
 
       <!-- Danger warning -->
       <div
-        class="rounded-lg border border-red-500/30 dark:border-red-400/30 bg-red-50 dark:bg-red-500/10 p-3 mb-4"
+        class="rounded-lg border border-accent-red/opacity-medium bg-accent-red/opacity-light p-3 mb-4"
       >
-        <p class="text-xs text-red-700 dark:text-red-400">
+        <p class="text-xs text-accent-red">
           <strong>Sensitive data.</strong> The identity key is the repeater's private key. Anyone
           with this key can impersonate your node. Store the exported file securely and never share
           it.
@@ -365,7 +365,7 @@
       <div v-if="!showIdentityConfirm">
         <button
           @click="showIdentityConfirm = true"
-          class="px-4 py-2 bg-red-500/20 dark:bg-red-400/20 hover:bg-red-500/30 dark:hover:bg-red-400/30 text-red-900 dark:text-red-200 rounded-lg border border-red-500/50 dark:border-red-400/40 transition-colors text-sm"
+          class="cfg-btn-danger"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,11 +384,11 @@
       <!-- Identity confirm -->
       <div
         v-if="showIdentityConfirm && !identityData"
-        class="rounded-lg border-2 border-red-500/50 dark:border-red-400/40 bg-red-50 dark:bg-red-500/10 p-4"
+        class="rounded-lg border-2 border-accent-red/opacity-heavy bg-accent-red/opacity-light p-4"
       >
         <div class="flex items-start gap-3">
           <svg
-            class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
+            class="w-5 h-5 text-accent-red shrink-0 mt-0.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -401,8 +401,8 @@
             />
           </svg>
           <div class="flex-1">
-            <h4 class="text-sm font-semibold text-red-700 dark:text-red-400">Are you sure?</h4>
-            <p class="text-xs text-red-600 dark:text-red-400/80 mt-1">
+            <h4 class="text-sm font-semibold text-accent-red">Are you sure?</h4>
+            <p class="text-xs text-accent-red mt-1">
               This will transmit your private key
               {{ isInsecure ? 'over an unencrypted HTTP connection. ' : '' }}
               and download it as a file.
@@ -411,14 +411,14 @@
               <button
                 @click="exportIdentity"
                 :disabled="identityExporting"
-                class="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white rounded-lg transition-colors text-sm disabled:opacity-50"
+                class="cfg-btn-danger"
               >
                 {{ identityExporting ? 'Exporting…' : 'Yes, Export Key' }}
               </button>
               <button
                 @click="showIdentityConfirm = false"
                 :disabled="identityExporting"
-                class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg transition-colors text-sm"
+                class="btn-secondary"
               >
                 Cancel
               </button>
@@ -430,10 +430,10 @@
       <!-- Identity result (show details before download) -->
       <div
         v-if="identityData"
-        class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/10 space-y-2"
+        class="bg-background-mute dark:bg-background/30 rounded-lg p-4 border border-stroke-subtle dark:border-stroke/opacity-light space-y-2"
       >
         <div class="flex items-center justify-between">
-          <h4 class="text-sm font-medium text-content-primary dark:text-content-primary">
+          <h4 class="text-sm font-medium text-content-primary">
             Key Exported
           </h4>
           <button
@@ -458,10 +458,10 @@
             <span class="font-mono text-[10px] break-all">{{ identityData.public_key_hex }}</span>
           </p>
         </div>
-        <p class="text-xs text-green-600 dark:text-green-400">File downloaded successfully.</p>
+        <p class="text-xs text-accent-green">File downloaded successfully.</p>
       </div>
 
-      <p v-if="identityError" class="text-xs text-red-500 dark:text-red-400 mt-2">
+      <p v-if="identityError" class="text-xs text-accent-red mt-2">
         {{ identityError }}
       </p>
     </div>
@@ -495,7 +495,7 @@ async function exportConfig() {
     const a = document.createElement('a');
     a.href = url;
     const ts = (res.data.meta?.exported_at || new Date().toISOString()).replace(/[:.]/g, '-');
-    a.download = `pymc-repeater-settings-${ts}.json`;
+    a.download = `openhop-repeater-settings-${ts}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -529,7 +529,7 @@ async function exportFullBackup() {
     const a = document.createElement('a');
     a.href = url;
     const ts = (res.data.meta?.exported_at || new Date().toISOString()).replace(/[:.]/g, '-');
-    a.download = `pymc-repeater-full-backup-${ts}.json`;
+    a.download = `openhop-repeater-full-backup-${ts}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -661,7 +661,7 @@ async function exportIdentity() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `pymc-identity-${res.data.node_address || 'key'}.hex`;
+    a.download = `openhop-identity-${res.data.node_address || 'key'}.hex`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

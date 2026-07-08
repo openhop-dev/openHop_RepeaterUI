@@ -122,7 +122,7 @@ const handleClose = () => {
           />
         </svg>
         <div>
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Confirm Deletion
           </h3>
           <p class="text-content-secondary dark:text-content-muted text-sm mt-1">
@@ -147,7 +147,7 @@ const handleClose = () => {
       <!-- Children Warning -->
       <div
         v-if="childrenToAffect.length > 0"
-        class="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 mb-6"
+        class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-4 mb-6"
       >
         <div class="flex items-start gap-3">
           <svg
@@ -172,7 +172,7 @@ const handleClose = () => {
               <div
                 v-for="child in childrenToAffect.slice(0, 10)"
                 :key="child.id"
-                class="flex items-center gap-2 text-xs text-content-secondary dark:text-content-primary/80"
+                class="flex items-center gap-2 text-xs text-content-secondary dark:text-content-primary/opacity-heavy"
               >
                 <svg
                   v-if="child.name.startsWith('#')"
@@ -207,8 +207,8 @@ const handleClose = () => {
                   class="px-1 py-0.5 text-xs rounded"
                   :class="
                     child.floodPolicy === 'allow'
-                      ? 'bg-accent-green/20 text-accent-green'
-                      : 'bg-accent-red/20 text-accent-red'
+                      ? 'bg-accent-green/opacity-medium text-accent-green'
+                      : 'bg-accent-red/opacity-medium text-accent-red'
                   "
                 >
                   {{ child.floodPolicy }}
@@ -227,7 +227,7 @@ const handleClose = () => {
 
       <!-- Move Option (only show if there are children and available targets) -->
       <div v-if="childrenToAffect.length > 0 && moveTargets.length > 0" class="mb-6">
-        <h4 class="text-content-primary dark:text-content-primary font-medium text-sm mb-3">
+        <h4 class="text-content-primary font-medium text-sm mb-3">
           Move children to another region:
         </h4>
 
@@ -235,7 +235,7 @@ const handleClose = () => {
         <div class="mb-3">
           <div class="relative">
             <svg
-              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-content-muted dark:text-content-muted"
+              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-content-muted"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -258,7 +258,7 @@ const handleClose = () => {
 
         <!-- Region List -->
         <div
-          class="space-y-2 max-h-40 overflow-y-auto border border-stroke-subtle dark:border-stroke/20 rounded-lg p-3 bg-gray-50 dark:bg-white/5"
+          class="space-y-2 max-h-40 overflow-y-auto border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg p-3 bg-background-mute dark:bg-white/opacity-subtle"
         >
           <div
             v-if="filteredMoveTargets.length === 0"
@@ -269,7 +269,7 @@ const handleClose = () => {
           <label
             v-for="target in filteredMoveTargets"
             :key="target.id"
-            class="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-stroke-subtle dark:hover:bg-white/10 transition-colors group"
+            class="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-colors group"
           >
             <!-- Custom Radio Button -->
             <div class="relative">
@@ -280,7 +280,7 @@ const handleClose = () => {
                 class="sr-only peer"
               />
               <div
-                class="w-4 h-4 border-2 border-stroke dark:border-stroke/30 rounded-full group-hover:border-stroke dark:group-hover:border-stroke/50 peer-checked:border-primary peer-checked:bg-primary/20 transition-all"
+                class="w-4 h-4 border-2 border-stroke dark:border-stroke/opacity-medium rounded-full group-hover:border-stroke dark:group-hover:border-stroke/opacity-heavy peer-checked:border-primary peer-checked:bg-primary/opacity-medium transition-all"
               >
                 <div
                   class="w-2 h-2 rounded-full bg-primary scale-0 peer-checked:scale-100 transition-transform absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
@@ -302,14 +302,14 @@ const handleClose = () => {
                   d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
                 />
               </svg>
-              <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+              <span class="text-content-primary font-mono text-sm">{{
                 target.name
               }}</span>
 
               <!-- Children count badge -->
               <span
                 v-if="target.children.length > 0"
-                class="ml-auto px-2 py-0.5 bg-background-mute dark:bg-stroke/10 text-content-secondary dark:text-content-muted text-xs rounded-full"
+                class="ml-auto px-2 py-0.5 bg-background-mute dark:bg-stroke/opacity-subtle text-content-secondary dark:text-content-muted text-xs rounded-full"
               >
                 {{ target.children.length }}
               </span>
@@ -322,7 +322,7 @@ const handleClose = () => {
       <div class="flex gap-3">
         <button
           @click="handleClose"
-          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-primary dark:text-content-primary rounded-lg transition-colors"
+          class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
         >
           Cancel
         </button>

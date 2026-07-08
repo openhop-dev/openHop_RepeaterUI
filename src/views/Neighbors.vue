@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import ApiService from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
 import { useNeighborStore, CONTACT_TYPE_MAP } from '@/stores/neighbors';
 import type { Advert } from '@/stores/neighbors';
 import { useDataService } from '@/stores/dataService';
 import DeleteNeighborModal from '@/components/modals/DeleteNeighborModal.vue';
+import DiscoveryModal from '@/components/modals/DiscoveryModal.vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import PingResultModal from '@/components/modals/PingResultModal.vue';
 import NeighborDetailsModal from '@/components/modals/NeighborDetailsModal.vue';
@@ -24,11 +25,11 @@ const contactTypes = CONTACT_TYPE_MAP;
 
 // Contact type colors for styling
 const contactTypeColors = {
-  0: '#6b7280', // gray-500
-  1: '#60a5fa', // blue-400
-  2: '#34d399', // emerald-400
-  3: '#a855f7', // purple-500
-  4: '#f59e0b', // amber-500
+  0: 'var(--color-text-muted)',
+  1: 'var(--color-primary)',
+  2: 'var(--color-accent-green)',
+  3: 'var(--color-secondary)',
+  4: 'var(--color-accent-cyan)',
 } as const;
 
 // State — backed by neighborStore
@@ -77,6 +78,42 @@ watch(filters, (value) => setPreference('neighbors_filters', value), { deep: tru
 
 // Modal state
 const showDeleteModal = ref(false);
+
+interface DiscoverySession {
+  session_id: string;
+  tag: number;
+  status: string;
+  timeout: number;
+  filter_mask: number;
+  since: number;
+  prefix_only: boolean;
+  created_at: number;
+  started_at: number | null;
+  completed_at: number | null;
+  count: number;
+  error: string | null;
+}
+
+interface DiscoveryResult {
+  pub_key: string;
+  node_hash?: string | null;
+  node_name?: string | null;
+  node_type?: number;
+  node_type_name?: string;
+  inbound_snr?: number;
+  response_snr?: number;
+  rssi?: number;
+  known_neighbor?: boolean;
+  zero_hop?: boolean;
+  advert_count?: number;
+}
+
+const showDiscoveryModal = ref(false);
+const discoveryLoading = ref(false);
+const discoveryError = ref<string | null>(null);
+const discoverySession = ref<DiscoverySession | null>(null);
+const discoveryResults = ref<DiscoveryResult[]>([]);
+let discoveryEventSource: EventSource | null = null;
 
 // Ping modal state
 const showPingModal = ref(false);
@@ -229,25 +266,131 @@ const handleUnhighlightNode = (pubkey: string) => {
   networkMapRef.value?.unhighlightNode(pubkey);
 };
 
-const handleMenuPing = async (neighbor: unknown) => {
-  const advert = neighbor as Advert;
+const closeDiscoveryStream = () => {
+  if (discoveryEventSource) {
+    discoveryEventSource.close();
+    discoveryEventSource = null;
+  }
+};
 
-  // Reset state and show modal
+const upsertDiscoveryResult = (result: DiscoveryResult) => {
+  const index = discoveryResults.value.findIndex((entry) => entry.pub_key === result.pub_key);
+  if (index >= 0) {
+    discoveryResults.value.splice(index, 1, result);
+    return;
+  }
+  discoveryResults.value = [...discoveryResults.value, result];
+};
+
+const attachDiscoveryStream = (sessionId: string) => {
+  closeDiscoveryStream();
+  const source = new EventSource(ApiService.getNeighborDiscoveryStreamUrl(sessionId));
+  discoveryEventSource = source;
+  let finalized = false;
+
+  source.addEventListener('started', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as Partial<DiscoverySession>;
+    discoverySession.value = {
+      ...(discoverySession.value as DiscoverySession),
+      ...data,
+      status: 'running',
+    };
+    discoveryLoading.value = true;
+  });
+
+  source.addEventListener('discovery_result', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as {
+      result: DiscoveryResult;
+      count: number;
+    };
+    upsertDiscoveryResult(data.result);
+    if (discoverySession.value) {
+      discoverySession.value = {
+        ...discoverySession.value,
+        count: data.count,
+      };
+    }
+  });
+
+  source.addEventListener('completed', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as {
+      status: string;
+      count: number;
+      completed_at: number;
+      error?: string | null;
+    };
+    if (discoverySession.value) {
+      discoverySession.value = {
+        ...discoverySession.value,
+        status: data.status,
+        count: data.count,
+        completed_at: data.completed_at,
+        error: data.error ?? null,
+      };
+    }
+    discoveryLoading.value = false;
+    finalized = true;
+    closeDiscoveryStream();
+  });
+
+  source.addEventListener('error', (event) => {
+    const data = JSON.parse((event as MessageEvent).data) as { error?: string };
+    discoveryError.value = data.error || 'Discovery failed';
+    discoveryLoading.value = false;
+    finalized = true;
+    closeDiscoveryStream();
+  });
+
+  source.onerror = () => {
+    if (finalized) return;
+    discoveryError.value = 'Discovery stream disconnected unexpectedly';
+    discoveryLoading.value = false;
+    closeDiscoveryStream();
+  };
+};
+
+const startDiscovery = async () => {
+  closeDiscoveryStream();
+  showDiscoveryModal.value = true;
+  discoveryLoading.value = true;
+  discoveryError.value = null;
+  discoverySession.value = null;
+  discoveryResults.value = [];
+
+  try {
+    const response = await ApiService.startNeighborDiscovery(5, 1 << 2, 0, false);
+    if (!response.success || !response.data) {
+      discoveryError.value = response.error || 'Failed to start discovery';
+      discoveryLoading.value = false;
+      return;
+    }
+
+    discoverySession.value = response.data;
+    attachDiscoveryStream(response.data.session_id);
+  } catch (error) {
+    console.error('Error starting discovery:', error);
+    discoveryError.value = error instanceof Error ? error.message : 'Failed to start discovery';
+    discoveryLoading.value = false;
+  }
+};
+
+const closeDiscoveryModal = () => {
+  closeDiscoveryStream();
+  showDiscoveryModal.value = false;
+  discoveryLoading.value = false;
+  discoveryError.value = null;
+  discoverySession.value = null;
+  discoveryResults.value = [];
+};
+
+const executePing = async (targetId: string, nodeLabel: string) => {
   pingResult.value = null;
   pingError.value = null;
   pingLoading.value = true;
-  pingNodeName.value = advert.node_name || 'Unknown Node';
+  pingNodeName.value = nodeLabel;
   showPingModal.value = true;
 
   try {
-    // Determine byte width from configured path_hash_mode (issue #133):
-    // 0 / absent = 1-byte (legacy), 1 = 2-byte, 2 = 3-byte
-    const pathHashMode = systemStore.stats?.config?.mesh?.path_hash_mode ?? 0;
-    const byteCount = pathHashMode === 2 ? 3 : pathHashMode === 1 ? 2 : 1;
-    const hexChars = byteCount * 2;
-    const targetHash = parseInt(advert.pubkey.substring(0, hexChars), 16);
-    const targetId = `0x${targetHash.toString(16).padStart(hexChars, '0')}`;
-
     const response = await ApiService.pingNeighbor(targetId, 10);
 
     if (response.success && response.data) {
@@ -261,6 +404,49 @@ const handleMenuPing = async (neighbor: unknown) => {
     pingError.value = error instanceof Error ? error.message : 'Unknown error occurred';
   } finally {
     pingLoading.value = false;
+  }
+};
+
+const handleMenuPing = async (neighbor: unknown) => {
+  const advert = neighbor as Advert;
+  const pathHashMode = systemStore.stats?.config?.mesh?.path_hash_mode ?? 0;
+  const byteCount = pathHashMode === 2 ? 3 : pathHashMode === 1 ? 2 : 1;
+  const hexChars = byteCount * 2;
+  const targetHash = parseInt(advert.pubkey.substring(0, hexChars), 16);
+  const targetId = `0x${targetHash.toString(16).padStart(hexChars, '0')}`;
+
+  await executePing(targetId, advert.node_name || 'Unknown Node');
+};
+
+const handleDiscoveryPing = async (result: DiscoveryResult) => {
+  if (!result.node_hash) return;
+  await executePing(result.node_hash, result.node_name || result.node_hash);
+};
+
+const handleDiscoveryAdd = async (result: DiscoveryResult) => {
+  try {
+    const response = await ApiService.addDiscoveredNeighbor({
+      pub_key: result.pub_key,
+      node_name: result.node_name,
+      node_type: result.node_type,
+      rssi: result.rssi,
+      response_snr: result.response_snr,
+    });
+
+    if (!response.success) {
+      discoveryError.value = response.error || 'Failed to add discovered neighbor';
+      return;
+    }
+
+    upsertDiscoveryResult({
+      ...result,
+      known_neighbor: true,
+    });
+    await neighborStore.fetchAll(selectedHours.value);
+  } catch (error) {
+    console.error('Error adding discovered neighbor:', error);
+    discoveryError.value =
+      error instanceof Error ? error.message : 'Failed to add discovered neighbor';
   }
 };
 
@@ -306,6 +492,10 @@ onMounted(() => {
   void dataService.ensure('neighbors');
   void dataService.ensure('radioConfig');
 });
+
+onUnmounted(() => {
+  closeDiscoveryStream();
+});
 </script>
 
 <template>
@@ -321,11 +511,11 @@ onMounted(() => {
     <!-- Error State -->
     <div
       v-else-if="error"
-      class="bg-red-50 dark:bg-accent-red/10 border border-red-300 dark:border-accent-red/20 rounded-[15px] p-6"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-light border border-accent-red dark:border-accent-red/opacity-medium rounded-[15px] p-6"
     >
       <div class="flex items-center gap-3">
         <svg
-          class="w-5 h-5 text-red-600 dark:text-accent-red"
+          class="w-5 h-5 text-accent-red dark:text-accent-red"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -338,8 +528,8 @@ onMounted(() => {
           />
         </svg>
         <div>
-          <h3 class="text-red-600 dark:text-accent-red font-medium">Error Loading Neighbors</h3>
-          <p class="text-red-500 dark:text-accent-red/80 text-sm">{{ error }}</p>
+          <h3 class="text-accent-red dark:text-accent-red font-medium">Error Loading Neighbors</h3>
+          <p class="text-accent-red dark:text-accent-red/opacity-heavy text-sm">{{ error }}</p>
         </div>
       </div>
     </div>
@@ -360,11 +550,31 @@ onMounted(() => {
       <!-- Global Filter Controls (only show if we have data) -->
       <div v-if="Object.keys(advertsByType).length > 0" class="">
         <div class="flex items-center justify-between">
-          <span class="text-content-primary dark:text-content-primary text-lg font-semibold"></span>
+          <div>
+            <button
+              @click="startDiscovery"
+              class="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-accent-cyan/opacity-light text-accent-cyan border border-accent-cyan/opacity-medium hover:bg-accent-cyan/opacity-medium transition-colors shadow-sm"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 18h.01M8.5 14.5a5 5 0 017 0M5 11a10 10 0 0114 0M2 7.5a15 15 0 0120 0"
+                />
+              </svg>
+              Discover Repeaters
+            </button>
+          </div>
           <div class="flex items-center gap-3">
             <!-- View Toggle Buttons -->
             <div
-              class="hidden lg:flex bg-background-mute dark:bg-surface-elevated/30 backdrop-blur rounded-lg border border-stroke-subtle dark:border-stroke/10 mb p-1"
+              class="hidden lg:flex bg-background-mute dark:bg-surface-elevated/30 backdrop-blur rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light mb p-1"
             >
               <!-- Comfortable View Button -->
               <button
@@ -372,8 +582,8 @@ onMounted(() => {
                 :class="[
                   'p-2 rounded-md transition-colors',
                   !isCompactView
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+                    ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
                 ]"
                 title="Comfortable view"
               >
@@ -411,8 +621,8 @@ onMounted(() => {
                 :class="[
                   'p-2 rounded-md transition-colors',
                   isCompactView
-                    ? 'bg-primary/20 text-primary border border-primary/30'
-                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/10',
+                    ? 'bg-primary/opacity-medium text-primary border border-primary/opacity-medium'
+                    : 'text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light',
                 ]"
                 title="Compact view"
               >
@@ -460,7 +670,7 @@ onMounted(() => {
                 :value="selectedHours"
                 @change="changeHours(+($event.target as HTMLSelectElement).value)"
                 :disabled="loading"
-                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/20 focus:outline-none focus:border-primary/50 disabled:opacity-50"
+                class="text-xs px-2 py-1.5 rounded-lg bg-background-mute dark:bg-white/opacity-subtle text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium focus:outline-none focus:border-primary/opacity-heavy disabled:opacity-50"
               >
                 <option v-for="opt in hoursOptions" :key="opt.value" :value="opt.value">
                   {{ opt.label }}
@@ -475,8 +685,8 @@ onMounted(() => {
                 :class="[
                   'px-3 py-1.5 text-xs rounded-lg transition-colors border',
                   showAllMapContacts
-                    ? 'bg-primary/20 text-primary border-primary/30'
-                    : 'bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20',
+                    ? 'bg-primary/opacity-medium text-primary border-primary/opacity-medium'
+                    : 'bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium',
                 ]"
               >
                 Map: {{ showAllMapContacts ? 'All Contacts' : 'Zero Hop' }}
@@ -487,8 +697,8 @@ onMounted(() => {
                 :class="[
                   'px-3 py-1.5 text-xs rounded-lg transition-colors border',
                   hasActiveFilters
-                    ? 'bg-primary/20 text-primary border-primary/30'
-                    : 'bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20',
+                    ? 'bg-primary/opacity-medium text-primary border-primary/opacity-medium'
+                    : 'bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium',
                 ]"
               >
                 <svg
@@ -507,7 +717,7 @@ onMounted(() => {
                 Filters
                 <span
                   v-if="hasActiveFilters"
-                  class="ml-1 bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30 text-xs px-1.5 py-0.5 rounded-full font-medium"
+                  class="ml-1 bg-accent-cyan/opacity-medium text-accent-cyan border border-accent-cyan/opacity-medium text-xs px-1.5 py-0.5 rounded-full font-medium"
                 >
                   Active
                 </span>
@@ -516,7 +726,7 @@ onMounted(() => {
               <button
                 v-if="hasActiveFilters"
                 @click="resetFilters"
-                class="px-3 py-1.5 text-xs rounded-lg bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/20 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors"
+                class="px-3 py-1.5 text-xs rounded-lg bg-background-mute dark:bg-white/opacity-light text-content-secondary dark:text-content-primary border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium transition-colors"
               >
                 Clear Filters
               </button>
@@ -527,7 +737,7 @@ onMounted(() => {
         <!-- Filter Panel -->
         <div
           v-show="showFilters"
-          class="bg-background dark:bg-background/30 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-4 mt-4 space-y-4"
+          class="bg-background dark:bg-background/30 border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-4 mt-4 space-y-4"
         >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <!-- Zero Hop Filter -->
@@ -538,7 +748,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.zeroHop"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none"
               >
                 <option value="all">All Nodes</option>
                 <option value="true">Zero Hop Only</option>
@@ -554,7 +764,7 @@ onMounted(() => {
               >
               <select
                 v-model="filters.routeType"
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none"
               >
                 <option value="all">All Types</option>
                 <option value="direct">Direct</option>
@@ -574,7 +784,7 @@ onMounted(() => {
                 v-model="filters.searchText"
                 type="text"
                 placeholder="Node name or pubkey..."
-                class="w-full bg-surface dark:bg-surface/50 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-3 py-2 text-content-primary dark:text-content-primary text-sm focus:border-primary/50 focus:outline-none placeholder-gray-400 dark:placeholder-white/40"
+                class="w-full bg-surface dark:bg-surface/opacity-heavy border border-stroke-subtle dark:border-stroke/opacity-medium rounded-lg px-3 py-2 text-content-primary text-sm focus:border-primary/opacity-heavy focus:outline-none placeholder-content-muted dark:placeholder-content-muted"
               />
             </div>
           </div>
@@ -626,7 +836,7 @@ onMounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">
+        <h3 class="text-content-primary text-lg font-medium mb-2">
           No Neighbors Found
         </h3>
         <p class="text-content-secondary dark:text-content-muted">
@@ -634,7 +844,7 @@ onMounted(() => {
         </p>
         <button
           @click="loadAllAdverts"
-          class="mt-4 px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors"
+          class="mt-4 px-4 py-2 bg-primary/opacity-medium text-primary border border-primary/opacity-medium rounded-lg hover:bg-primary/opacity-medium transition-colors"
         >
           Refresh
         </button>
@@ -660,7 +870,7 @@ onMounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">
+        <h3 class="text-content-primary text-lg font-medium mb-2">
           No neighbors match your filters
         </h3>
         <p class="text-content-secondary dark:text-content-muted mb-4">
@@ -668,7 +878,7 @@ onMounted(() => {
         </p>
         <button
           @click="resetFilters"
-          class="px-4 py-2 bg-primary/20 text-primary border border-primary/30 rounded-lg hover:bg-primary/30 transition-colors"
+          class="px-4 py-2 bg-primary/opacity-medium text-primary border border-primary/opacity-medium rounded-lg hover:bg-primary/opacity-medium transition-colors"
         >
           Clear Filters
         </button>
@@ -681,6 +891,18 @@ onMounted(() => {
       :neighbor="neighborForModal"
       @close="closeDeleteModal"
       @delete="confirmDelete"
+    />
+
+    <DiscoveryModal
+      :show="showDiscoveryModal"
+      :loading="discoveryLoading"
+      :error="discoveryError"
+      :session="discoverySession"
+      :results="discoveryResults"
+      @close="closeDiscoveryModal"
+      @rediscover="startDiscovery"
+      @ping="handleDiscoveryPing"
+      @add="handleDiscoveryAdd"
     />
 
     <!-- Ping Result Modal -->

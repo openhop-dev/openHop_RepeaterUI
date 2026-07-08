@@ -1,5 +1,12 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
 import ApiService from '@/utils/api';
+import { useSystemStore } from '@/stores/system';
+
+const getTargetHashHexChars = (): number => {
+  const pathHashMode = useSystemStore().stats?.config?.mesh?.path_hash_mode ?? 0;
+  const byteCount = pathHashMode === 2 ? 3 : pathHashMode === 1 ? 2 : 1;
+  return byteCount * 2;
+};
 
 export class PingCommand extends BaseCommand {
   name = 'ping';
@@ -32,10 +39,21 @@ export class PingCommand extends BaseCommand {
     // Resolve target to pubkey hash
     let targetId: string | null = null;
 
-    // Check if target is already a hex format (0xXX or just XX)
-    const hexMatch = target.match(/^(0x)?([0-9a-fA-F]{1,2})$/);
+    const hexChars = getTargetHashHexChars();
+
+    // Check if target is already a hex format using the configured path hash width.
+    const hexMatch = target.match(/^(0x)?([0-9a-fA-F]{1,6})$/);
     if (hexMatch) {
-      const hex = hexMatch[2].padStart(2, '0');
+      if (hexMatch[2].length > hexChars) {
+        this.writeError(
+          term,
+          `Invalid target hash. Current path hash mode expects up to ${hexChars} hex digits`,
+        );
+        writePrompt();
+        return;
+      }
+
+      const hex = hexMatch[2].padStart(hexChars, '0');
       targetId = `0x${hex}`;
     } else {
       // Fetch neighbors and search by name
@@ -60,8 +78,7 @@ export class PingCommand extends BaseCommand {
             );
 
             if (match && match.pubkey) {
-              // Extract first byte (2 hex chars) from pubkey as target hash
-              targetId = `0x${match.pubkey.substring(0, 2)}`;
+              targetId = `0x${match.pubkey.substring(0, hexChars)}`;
               found = true;
               break;
             }

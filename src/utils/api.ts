@@ -71,6 +71,12 @@ type DeleteTransportKeyResponse = EndpointApiResponse<
 type UnscopedFloodPolicyResponse = EndpointApiResponse<
   (typeof generatedApiClient)['unscopedFloodPolicy']['unscopedFloodPolicyCreate']
 >;
+type DefaultRegionResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['defaultRegion']['defaultRegionList']
+>;
+type UpdateDefaultRegionResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['defaultRegion']['defaultRegionCreate']
+>;
 type PolicyDocumentResponse = ApiResponse<PolicyDocumentData>;
 type PolicyValidationResponse = ApiResponse<PolicyValidationResult>;
 type DeleteAdvertResponse = EndpointApiResponse<(typeof generatedApiClient)['advert']['advertDelete']>;
@@ -552,6 +558,31 @@ export class ApiService {
     }
   }
 
+  static async getDefaultRegion(): Promise<DefaultRegionResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.defaultRegion.defaultRegionList(params);
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async updateDefaultRegion(
+    default_region: string | null,
+  ): Promise<UpdateDefaultRegionResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.defaultRegion.defaultRegionCreate(
+        { default_region },
+        params,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   static async getPolicyDocument(): Promise<PolicyDocumentResponse> {
     try {
       const params = await this.getGeneratedRequestParams();
@@ -697,7 +728,6 @@ export class ApiService {
       timestamp: string;
       level: string;
       logger?: string;
-      raw_message?: string;
       exception?: string;
       module?: string;
       pathname?: string;
@@ -760,6 +790,89 @@ export class ApiService {
     }
   }
 
+  static async startNeighborDiscovery(
+    timeout: number = 5,
+    filter_mask: number = 1 << 2,
+    since: number = 0,
+    prefix_only: boolean = false,
+  ): Promise<
+    ApiResponse<{
+      session_id: string;
+      tag: number;
+      status: string;
+      timeout: number;
+      filter_mask: number;
+      since: number;
+      prefix_only: boolean;
+      created_at: number;
+      started_at: number | null;
+      completed_at: number | null;
+      count: number;
+      error: string | null;
+    }>
+  > {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response =
+        await generatedApiClient.discoverNeighborsStart.discoverNeighborsStartCreate(
+          {
+            timeout,
+            filter_mask,
+            since,
+            prefix_only,
+          },
+          params,
+        );
+      return response.data as ApiResponse<{
+        session_id: string;
+        tag: number;
+        status: string;
+        timeout: number;
+        filter_mask: number;
+        since: number;
+        prefix_only: boolean;
+        created_at: number;
+        started_at: number | null;
+        completed_at: number | null;
+        count: number;
+        error: string | null;
+      }>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static getNeighborDiscoveryStreamUrl(sessionId: string, lastEventId?: number): string {
+    const params = new URLSearchParams({ session_id: sessionId });
+    const token = getToken();
+    if (token) {
+      params.set('token', token);
+    }
+    if (lastEventId !== undefined) {
+      params.set('last_event_id', String(lastEventId));
+    }
+    return `${API_BASE_URL}/discover_neighbors_stream?${params.toString()}`;
+  }
+
+  static async addDiscoveredNeighbor(payload: {
+    pub_key: string;
+    node_name?: string | null;
+    node_type?: number;
+    rssi?: number;
+    response_snr?: number;
+  }): Promise<ApiResponse<Record<string, unknown>>> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.addDiscoveredNeighbor.addDiscoveredNeighborCreate(
+        payload,
+        params,
+      );
+      return response.data as ApiResponse<Record<string, unknown>>;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   // Domain-specific methods for Identity management
   static async getIdentities(): Promise<IdentitiesResponse> {
     try {
@@ -801,7 +914,12 @@ export class ApiService {
             | {
                 admin_password?: string;
                 guest_password?: string;
+                allow_read_only?: boolean;
                 max_posts?: number;
+                max_clients?: number;
+                node_name?: string;
+                latitude?: number;
+                longitude?: number;
               }
             | undefined,
         },

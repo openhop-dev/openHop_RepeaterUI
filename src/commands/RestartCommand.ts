@@ -16,7 +16,7 @@ interface RestartResponse {
 
 export class RestartCommand extends BaseCommand {
   name = 'restart';
-  description = 'Restart the pymc-repeater service';
+  description = 'Restart the openhop-repeater service';
   aliases = ['reboot'];
 
   matches(input: string): boolean {
@@ -58,7 +58,7 @@ export class RestartCommand extends BaseCommand {
         this.writeLine(term, '');
         this.writeInfo(
           term,
-          'You may need to manually restart: sudo systemctl restart pymc-repeater',
+          'You may need to manually restart: sudo systemctl restart openhop-repeater',
         );
       }
     } catch (error: unknown) {
@@ -90,18 +90,18 @@ export class RestartCommand extends BaseCommand {
         this.writeLine(term, '');
         this.writeInfo(
           term,
-          "Run: sudo bash -c 'mkdir -p /etc/polkit-1/rules.d && cat > /etc/polkit-1/rules.d/10-pymc-repeater.rules <<EOF",
+          "Run: sudo bash -c 'mkdir -p /etc/polkit-1/rules.d && cat > /etc/polkit-1/rules.d/10-openhop-repeater.rules <<EOF",
         );
         this.writeInfo(term, 'polkit.addRule(function(action, subject) {');
         this.writeInfo(term, '    if (action.id == "org.freedesktop.systemd1.manage-units" &&');
-        this.writeInfo(term, '        action.lookup("unit") == "pymc-repeater.service" &&');
+        this.writeInfo(term, '        action.lookup("unit") == "openhop-repeater.service" &&');
         this.writeInfo(term, '        subject.user == "repeater") { return polkit.Result.YES; }');
         this.writeInfo(term, '});');
         this.writeInfo(term, "EOF'");
       } else {
         this.writeError(term, 'Restart failed: ' + (err.message || 'Unknown error'));
         this.writeLine(term, '');
-        this.writeInfo(term, 'Try manually: sudo systemctl restart pymc-repeater');
+        this.writeInfo(term, 'Try manually: sudo systemctl restart openhop-repeater');
       }
     }
 

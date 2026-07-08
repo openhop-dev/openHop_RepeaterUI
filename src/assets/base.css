@@ -2,176 +2,245 @@
 @tailwind components;
 @tailwind utilities;
 
-/* color palette from <https://github.com/vuejs/theme> */
+/* ============================================================
+   OpenHop Design System
+   ============================================================ */
+
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  /* Brand */
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+  --openhop-blue: #3b82f6;
+  --openhop-blue-light: #60a5fa;
 
-  --vt-c-indigo: #2c3e50;
+  --openhop-purple: #8b5cf6;
+  --openhop-purple-light: #a855f7;
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  --openhop-gradient: linear-gradient(
+    135deg,
+    var(--openhop-blue) 0%,
+    var(--openhop-purple) 100%
+  );
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
-}
+  /* Surfaces */
 
-/* semantic color variables for this project */
-:root {
-  /* Surface colors */
   --color-surface: #ffffff;
-  --color-surface-elevated: #ffffff;
-  --color-background: #f5f7fa;
-  --color-background-soft: #f8f8f8;
-  --color-background-mute: #ebeef2;
+  --color-surface-elevated: #f8fbff;
 
-  /* Text colors - WCAG AA compliant on white */
-  --color-text-primary: #111827; /* 16:1 contrast */
-  --color-text-secondary: #374151; /* 9.5:1 contrast */
-  --color-text-muted: #6b7280; /* 4.6:1 contrast */
-  --color-heading: #030712; /* 19.5:1 contrast */
-  --color-text: #374151; /* 9.5:1 contrast */
+  /* Cool-tinted neutrals to complement blue/purple brand accents */
+  --color-background: #f6f8ff;
+  --color-background-soft: #eef3ff;
+  --color-background-mute: #e4eafb;
 
-  /* Border colors - 3:1 for UI components */
-  --color-border: #9ca3af; /* 2.7:1 - visible borders */
-  --color-border-subtle: #d1d5db; /* subtle dividers */
-  --color-border-hover: #6b7280; /* 4.6:1 - hover state */
+  /* Typography */
 
-  /* Accent colors - accessible versions for text on white */
-  --color-primary: #0d7377; /* 5.0:1 - teal */
-  --color-secondary: #92610a; /* 5.3:1 - amber */
-  --color-accent-green: #15803d; /* 5.0:1 - green */
-  --color-accent-purple: #7c3aed; /* 5.4:1 - purple */
-  --color-accent-red: #dc2626; /* 4.6:1 - red */
-  --color-accent-cyan: #0e7490; /* 5.0:1 - cyan */
+  --color-heading: #020617;
+
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+
+  --color-text: var(--color-text-secondary);
+
+  /* Borders */
+
+  --color-border: #cbd5e1;
+  --color-border-subtle: #e2e8f0;
+  --color-border-hover: #94a3b8;
+
+  /* Brand accents */
+
+  --color-primary: var(--openhop-blue);
+  --color-secondary: var(--openhop-purple);
+
+  --color-accent-cyan: #38bdf8;
+  --color-accent-green: #22c55e;
+  --color-accent-green-light: #86efac;
+  --color-accent-orange: #c2410c;
+  --color-accent-amber: #f59e0b;
+  --color-accent-purple: var(--openhop-purple);
+  --color-accent-red: #ef4444;
+
+  /* Filled backgrounds */
+
+  --color-primary-bg: #dbeafe;
+  --color-secondary-bg: #ede9fe;
+
+  --color-accent-cyan-bg: #e0f2fe;
+  --color-accent-green-bg: #dcfce7;
+  --color-accent-purple-bg: #ede9fe;
+  --color-accent-red-bg: #fee2e2;
+
+  /* Badges */
+
+  --color-badge-cyan-bg: #dbeafe;
+  --color-badge-cyan-text: #2563eb;
+
+  --color-badge-neutral-bg: #f1f5f9;
+  --color-badge-neutral-text: #334155;
+
+  /* Glassmorphism */
+
+  --color-glass-bg: rgba(255, 255, 255, 0.72);
+
+  --color-glass-border: rgba(59, 130, 246, 0.08);
+
+  --color-glass-shadow:
+    0 8px 32px rgba(59, 130, 246, 0.06),
+    0 2px 8px rgba(0, 0, 0, 0.03);
+
+  --color-glass-green-bg: linear-gradient(
+    135deg,
+    rgba(34, 197, 94, 0.12),
+    rgba(34, 197, 94, 0.04)
+  );
+
+  --color-glass-green-border: rgba(34, 197, 94, 0.18);
+
+  --color-glass-orange-bg: linear-gradient(
+    135deg,
+    rgba(251, 146, 60, 0.12),
+    rgba(251, 146, 60, 0.04)
+  );
+
+  --color-glass-orange-border: rgba(251, 146, 60, 0.18);
 
   --section-gap: 160px;
 
-  /* Accent colors - background fills (light, for dark text on top) */
-  --color-primary-bg: #aae8e8;
-  --color-secondary-bg: #ffc246;
-  --color-accent-green-bg: #a5e5b6;
-  --color-accent-purple-bg: #eba0fc;
-  --color-accent-red-bg: #fb787b;
-  --color-accent-cyan-bg: #d1e6e4;
+  color-scheme: light;
 
-  /* Badge/pill colors - inverted style (dark bg in dark mode, light bg in light mode) */
-  --color-badge-cyan-bg: #d1e6e4; /* Light teal background */
-  --color-badge-cyan-text: #0d7377; /* Dark teal text */
-  --color-badge-neutral-bg: #e5e7eb; /* Light gray background */
-  --color-badge-neutral-text: #374151; /* Dark gray text */
+  --nav-hover-label-shadow:
+    0 0 8px rgba(59, 130, 246, 0.25);
 
-  /* Glass card colors */
-  --color-glass-bg: rgba(255, 255, 255, 0.75);
-  --color-glass-border: rgba(0, 0, 0, 0.06);
-  --color-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --color-glass-green-bg: linear-gradient(
-    91deg,
-    rgba(165, 229, 182, 0.35) 1.17%,
-    rgba(165, 229, 182, 0.15) 99.82%
-  );
-  --color-glass-green-border: rgba(165, 229, 182, 0.3);
-  --color-glass-green-shadow: 0 4px 12px rgba(165, 229, 182, 0.15);
-  --color-glass-orange-bg: linear-gradient(
-    91deg,
-    rgba(245, 158, 11, 0.25) 1.17%,
-    rgba(245, 158, 11, 0.12) 99.82%
-  );
-  --color-glass-orange-border: rgba(245, 158, 11, 0.25);
-  --color-glass-orange-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+  --nav-hover-icon-shadow:
+    drop-shadow(0 0 4px rgba(59, 130, 246, 0.35));
 }
 
-/* Dark mode */
+/* ============================================================
+   Dark Mode
+   ============================================================ */
+
 .dark {
-  /* Surface colors */
-  --color-surface: #0f1112;
-  --color-surface-elevated: #1a1e1f;
-  --color-background: #09090b;
-  --color-background-soft: #111314;
-  --color-background-mute: #1a1e1f;
+  /* Brand */
 
-  /* Text colors */
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #d1d5db;
-  --color-text-muted: #9ca3af;
+  --openhop-blue: #60a5fa;
+  --openhop-purple: #a855f7;
+
+  --openhop-gradient: linear-gradient(
+    135deg,
+    var(--openhop-blue) 0%,
+    var(--openhop-purple) 100%
+  );
+
+  /* Surfaces */
+
+  /* Deep blue-slate dark ramp for rich depth */
+  --color-background: #05070d;
+  --color-background-soft: #05070d;
+  --color-background-mute: #0d121f;
+
+  --color-surface: #05070d;
+  --color-surface-elevated: #0d121f;
+
+  /* Typography */
+
   --color-heading: #ffffff;
-  --color-text: #adadad;
 
-  /* Border colors */
-  --color-border: #4b4b4b;
-  --color-border-subtle: #374151;
-  --color-border-hover: #6b7280;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
 
-  /* Accent colors - text/icons (same in dark, already vibrant) */
-  --color-primary: #aae8e8;
-  --color-secondary: #ffc246;
-  --color-accent-green: #a5e5b6;
-  --color-accent-purple: #eba0fc;
-  --color-accent-red: #fb787b;
-  --color-accent-cyan: #d1e6e4;
+  --color-text: var(--color-text-secondary);
 
-  /* Accent colors - background fills */
-  --color-primary-bg: #0d7377;
-  --color-secondary-bg: #92610a;
-  --color-accent-green-bg: #15803d;
-  --color-accent-purple-bg: #7c3aed;
-  --color-accent-red-bg: #dc2626;
-  --color-accent-cyan-bg: #0e7490;
+  /* Borders */
 
-  /* Badge/pill colors - inverted style (dark bg in dark mode, light bg in light mode) */
-  --color-badge-cyan-bg: #223231; /* Dark teal background */
-  --color-badge-cyan-text: #d1e6e4; /* Light teal text */
-  --color-badge-neutral-bg: #374151; /* Dark gray background */
-  --color-badge-neutral-text: #d1d5db; /* Light gray text */
+  --color-border: #374151;
+  --color-border-subtle: #1f2937;
+  --color-border-hover: #4b5563;
 
-  /* Glass card colors */
-  --color-glass-bg: rgba(0, 0, 0, 0.4);
-  --color-glass-border: rgba(255, 255, 255, 0.05);
-  --color-glass-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  /* Brand accents */
+
+  --color-primary: var(--openhop-blue);
+  --color-secondary: var(--openhop-purple);
+
+  --color-accent-cyan: #38bdf8;
+  --color-accent-green: #4ade80;
+  --color-accent-green-light: #bbf7d0;
+  --color-accent-orange: #ea580c;
+  --color-accent-amber: #fbbf24;
+  --color-accent-purple: #c084fc;
+  --color-accent-red: #f87171;
+
+  /* Filled backgrounds */
+
+  --color-primary-bg: #1e3a8a;
+  --color-secondary-bg: #581c87;
+
+  --color-accent-cyan-bg: #164e63;
+  --color-accent-green-bg: #14532d;
+  --color-accent-purple-bg: #581c87;
+  --color-accent-red-bg: #7f1d1d;
+
+  /* Badges */
+
+  --color-badge-cyan-bg: rgba(59, 130, 246, 0.15);
+  --color-badge-cyan-text: #93c5fd;
+
+  --color-badge-neutral-bg: #1f2937;
+  --color-badge-neutral-text: #cbd5e1;
+
+  /* Glassmorphism */
+
+  --color-glass-bg: rgba(17, 24, 39, 0.72);
+
+  --color-glass-border: rgba(96, 165, 250, 0.08);
+
+  --color-glass-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.35);
+
   --color-glass-green-bg: linear-gradient(
-    91deg,
-    rgba(21, 128, 61, 0.25) 1.17%,
-    rgba(21, 128, 61, 0.1) 99.82%
+    135deg,
+    rgba(34, 197, 94, 0.15),
+    rgba(34, 197, 94, 0.05)
   );
-  --color-glass-green-border: rgba(165, 229, 182, 0.15);
-  --color-glass-green-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  --color-glass-green-border: rgba(34, 197, 94, 0.15);
+
   --color-glass-orange-bg: linear-gradient(
-    91deg,
-    rgba(245, 158, 11, 0.25) 1.17%,
-    rgba(245, 158, 11, 0.12) 99.82%
+    135deg,
+    rgba(251, 146, 60, 0.15),
+    rgba(251, 146, 60, 0.05)
   );
-  --color-glass-orange-border: rgba(245, 158, 11, 0.15);
-  --color-glass-orange-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  --color-glass-orange-border: rgba(251, 146, 60, 0.15);
+
+  color-scheme: dark;
+
+  --nav-hover-label-shadow:
+    0 0 4px var(--color-surface),
+    0 0 10px var(--openhop-blue),
+    0 0 20px var(--openhop-purple);
+
+  --nav-hover-icon-shadow:
+    drop-shadow(0 0 5px var(--openhop-blue));
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
+html,
+body,
+#app {
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
-button {
-  cursor: pointer;
+.dark html,
+.dark body,
+.dark #app {
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
 body {
   min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
+  font-size: 15px;
   line-height: 1.6;
   font-family:
     Inter,
@@ -186,26 +255,21 @@ body {
     'Droid Sans',
     'Helvetica Neue',
     sans-serif;
-  font-size: 15px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    color 0.5s,
+    background-color 0.5s;
 }
 
-/* Native form control theming for browser-rendered UI (e.g., dropdowns/autofill). */
-:root {
-  color-scheme: light;
-  --nav-hover-label-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 50%, transparent);
-  --nav-hover-icon-shadow: drop-shadow(0 0 4px color-mix(in srgb, var(--color-primary) 50%, transparent));
-}
-
-.dark {
-  color-scheme: dark;
-  --nav-hover-label-shadow: 0 0 2px var(--color-surface), 0 0 6px var(--color-primary), 0 0 12px var(--color-primary);
-  --nav-hover-icon-shadow: drop-shadow(0 0 3px var(--color-primary));
-}
-
-/* Avoid forcing a bright custom surface on native dropdown controls in dark mode. */
-.dark select {
-  background-color: transparent !important;
+/* Global heading styles with Michroma font */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Michroma', sans-serif;
+  font-weight: 700;
 }

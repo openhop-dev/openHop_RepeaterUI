@@ -28,6 +28,9 @@ function nextTempId() { return _nextTempId--; }
 // ── Flood policy ──────────────────────────────────────────────────────────
 const unscopedFloodPolicy = ref<'allow' | 'deny'>('deny');
 let snapshotUnscopedPolicy: 'allow' | 'deny' = 'deny';
+const defaultRegion = ref<string | null>(null);
+const defaultRegionInput = ref('');
+let snapshotDefaultRegion: string | null = null;
 
 const statsFloodAllow = computed(() => systemStore.stats?.config?.mesh?.unscoped_flood_allow ?? null);
 watch(statsFloodAllow, (val) => {
@@ -111,11 +114,25 @@ const loadTransportKeys = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await ApiService.getTransportKeys();
-    if (response.success && response.data) {
-      transportKeysData.value = buildTreeFromApiData(response.data as any[]);
+    const [keysResponse, defaultRegionResponse] = await Promise.all([
+      ApiService.getTransportKeys(),
+      ApiService.getDefaultRegion(),
+    ]);
+
+    if (keysResponse.success && keysResponse.data) {
+      transportKeysData.value = buildTreeFromApiData(keysResponse.data as any[]);
     } else {
-      error.value = response.error || 'Failed to load regions';
+      error.value = keysResponse.error || 'Failed to load regions';
+    }
+
+    if (defaultRegionResponse.success) {
+      const loadedDefault = defaultRegionResponse.data?.default_region ?? null;
+      defaultRegion.value = loadedDefault;
+      if (!isEditing.value) {
+        defaultRegionInput.value = loadedDefault ?? '';
+      }
+    } else if (!error.value) {
+      error.value = defaultRegionResponse.error || 'Failed to load default region';
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -130,6 +147,8 @@ onMounted(loadTransportKeys);
 function startEditing() {
   snapshot = cloneTree(transportKeysData.value);
   snapshotUnscopedPolicy = unscopedFloodPolicy.value;
+  snapshotDefaultRegion = defaultRegion.value;
+  defaultRegionInput.value = defaultRegion.value ?? '';
   isEditing.value = true;
   saveError.value = null;
 }
@@ -137,10 +156,20 @@ function startEditing() {
 function cancelEditing() {
   if (snapshot) transportKeysData.value = cloneTree(snapshot);
   unscopedFloodPolicy.value = snapshotUnscopedPolicy;
+  defaultRegion.value = snapshotDefaultRegion;
+  defaultRegionInput.value = snapshotDefaultRegion ?? '';
   snapshot = null;
   isEditing.value = false;
   saveError.value = null;
   treeStore.setSelectedNode(null);
+}
+
+function normalizeDefaultRegionInput(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '<null>') {
+    return null;
+  }
+  return trimmed;
 }
 
 async function saveChanges() {
@@ -199,6 +228,13 @@ async function saveChanges() {
     // 4. Flood policy
     if (unscopedFloodPolicy.value !== snapshotUnscopedPolicy) {
       await ApiService.updateUnscopedFloodPolicy(unscopedFloodPolicy.value === 'allow');
+    }
+
+    // 5. Default region
+    const currentDefaultRegion = normalizeDefaultRegionInput(defaultRegionInput.value);
+    if (currentDefaultRegion !== snapshotDefaultRegion) {
+      await ApiService.updateDefaultRegion(currentDefaultRegion);
+      defaultRegion.value = currentDefaultRegion;
     }
 
     await loadTransportKeys();
@@ -318,7 +354,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Header -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
           Region Configuration
         </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
@@ -352,15 +388,15 @@ defineExpose({ requestLeave, isEditing });
     </div>
 
     <!-- Save Error -->
-    <div v-if="saveError" class="bg-red-100 dark:bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-      <p class="text-red-600 dark:text-red-400 text-sm">{{ saveError }}</p>
+    <div v-if="saveError" class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy rounded-lg p-3">
+      <p class="text-accent-red text-sm">{{ saveError }}</p>
     </div>
 
     <!-- Unscoped Flood Control -->
     <div class="cfg-section">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h4 class="text-xs sm:text-sm font-medium text-content-primary dark:text-content-primary mb-1">
+          <h4 class="text-xs sm:text-sm font-medium text-content-primary mb-1">
             Unscoped Flood Policy (*)
           </h4>
           <p class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
@@ -369,7 +405,7 @@ defineExpose({ requestLeave, isEditing });
         </div>
         <div
           :class="[
-            'flex bg-background-mute dark:bg-stroke/5 rounded-lg border border-stroke-subtle dark:border-stroke/20 p-0.5 sm:p-1',
+            'flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5 sm:p-1',
             !isEditing ? 'opacity-50 pointer-events-none' : '',
           ]"
         >
@@ -378,7 +414,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'deny'
-                ? 'bg-accent-red/20 text-accent-red border border-accent-red/50'
+                ? 'bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -389,7 +425,7 @@ defineExpose({ requestLeave, isEditing });
             :class="[
               'px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded transition-colors',
               unscopedFloodPolicy === 'allow'
-                ? 'bg-accent-green/20 text-accent-green border border-accent-green/50'
+                ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-heavy'
                 : 'text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-secondary',
             ]"
           >
@@ -399,10 +435,39 @@ defineExpose({ requestLeave, isEditing });
       </div>
     </div>
 
+    <!-- Default Region Control -->
+    <div class="cfg-section">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h4 class="text-xs sm:text-sm font-medium text-content-primary mb-1">
+            Default Region Scope
+          </h4>
+          <p class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
+            Used for locally-originated flood adverts. Current: {{ defaultRegion || '<null>' }}
+          </p>
+        </div>
+        <div class="w-full sm:w-auto sm:min-w-[320px] flex items-center gap-2">
+          <input
+            v-model="defaultRegionInput"
+            :disabled="!isEditing || isSaving"
+            class="cfg-input flex-1"
+            placeholder="Region name or &lt;null&gt;"
+          />
+          <button
+            @click="defaultRegionInput = ''"
+            :disabled="!isEditing || isSaving"
+            class="cfg-btn-secondary whitespace-nowrap"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Tree Viewer -->
     <div class="cfg-section space-y-4" @click="isEditing && treeStore.setSelectedNode(null)">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">Regions</h3>
-      <p v-if="isEditing" class="text-xs text-content-muted dark:text-content-muted pb-1">
+      <h3 class="text-lg font-semibold text-content-primary">Regions</h3>
+      <p v-if="isEditing" class="text-xs text-content-muted pb-1">
         To add a child region, click on a region to select it, then click "Add Region".
       </p>
 
@@ -423,8 +488,8 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Empty State -->
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
-        <div class="text-content-muted dark:text-content-muted mb-2">No regions found</div>
-        <div class="text-content-muted dark:text-content-muted/60 text-sm">
+        <div class="text-content-muted mb-2">No regions found</div>
+        <div class="text-content-muted/opacity-heavy text-sm">
           Click "Edit Settings" then "Add Region" to get started
         </div>
       </div>

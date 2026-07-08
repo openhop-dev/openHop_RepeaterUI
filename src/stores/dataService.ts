@@ -145,6 +145,21 @@ export const useDataService = defineStore('dataService', () => {
 
   // Runs all HTTP fetches sequentially by phase, then resolves.
   // WebSocket connection is opened by useConnectionLifecycle AFTER this resolves.
+  async function _pool(tasks: Array<() => Promise<void>>, concurrency: number): Promise<void> {
+    const queue = [...tasks];
+    let active = 0;
+    return new Promise((resolve) => {
+      function next() {
+        if (queue.length === 0 && active === 0) { resolve(); return; }
+        while (active < concurrency && queue.length > 0) {
+          active++;
+          queue.shift()!().finally(() => { active--; next(); });
+        }
+      }
+      next();
+    });
+  }
+
   async function bootstrap(): Promise<void> {
     if (_bootstrapped) return;
     _bootstrapped = true;
@@ -167,19 +182,16 @@ export const useDataService = defineStore('dataService', () => {
       statsSubStatus.value = null;
     }
 
-    // Phase 2: Secondary — packet data in parallel
-    await Promise.allSettled([
-      _runStep('packetStats', () => packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); })),
-      _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
-      _runStep('recentPackets', () => packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); })),
-    ]);
-
-    // Phase 3: Background — all in parallel (neighbors is slowest)
-    await Promise.allSettled([
-      _runStep('sparklines', () => packetStore.initializeSparklineHistory().then(() => { _lastFetch.set('sparklines', Date.now()); })),
-      _runStep('advertTier', () => _fetchAdvertTier()),
-      _runStep('neighbors', () => neighborStore.fetchAll(neighborStore.currentHours).then(() => {})),
-    ]);
+    // Phases 2+3: pool with concurrency 3 — next task fires as soon as a slot opens
+    const secondaryTasks: Array<() => Promise<void>> = [
+      () => _runStep('packetStats', () => packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); })),
+      () => _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
+      () => _runStep('recentPackets', () => packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); })),
+      () => _runStep('sparklines', () => packetStore.initializeSparklineHistory().then(() => { _lastFetch.set('sparklines', Date.now()); })),
+      () => _runStep('advertTier', () => _fetchAdvertTier()),
+      () => _runStep('neighbors', () => neighborStore.fetchAll(neighborStore.currentHours).then(() => {})),
+    ];
+    await _pool(secondaryTasks, 3);
 
     isBootstrapping.value = false;
     _startPolling();

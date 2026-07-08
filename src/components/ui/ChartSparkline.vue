@@ -58,6 +58,22 @@ const props = withDefaults(defineProps<Props>(), {
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 const chartInstance = ref<ChartJS | null>(null);
 
+const resolveChartColor = (color: string): string => {
+  const trimmed = color.trim();
+  if (typeof window === 'undefined') return trimmed;
+
+  let resolved = trimmed;
+  for (let i = 0; i < 4 && resolved.startsWith('var('); i++) {
+    const match = resolved.match(/^var\(\s*(--[\w-]+)\s*(?:,\s*([^\)]+))?\s*\)$/);
+    if (!match) break;
+    const [, varName, fallback] = match;
+    const token = window.getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    resolved = token || (fallback?.trim() ?? resolved);
+  }
+
+  return resolved;
+};
+
 // ============================================================================
 // Data Processing
 // ============================================================================
@@ -126,7 +142,7 @@ const createChart = () => {
   const datasets: any[] = [
     {
       data: data,
-      borderColor: props.color,
+      borderColor: resolveChartColor(props.color),
       borderWidth: 2.5,
       fill: false,
       tension: 0.4,
@@ -139,7 +155,7 @@ const createChart = () => {
   if (secData.length >= 2 && props.secondaryColor) {
     datasets.push({
       data: secData,
-      borderColor: props.secondaryColor,
+      borderColor: resolveChartColor(props.secondaryColor),
       borderWidth: 2,
       borderDash: [4, 3],
       fill: false,
@@ -207,7 +223,7 @@ const updateChart = () => {
       // Add secondary dataset dynamically if chart was created without it
       chartInstance.value.data.datasets.push({
         data: secData,
-        borderColor: props.secondaryColor,
+        borderColor: resolveChartColor(props.secondaryColor),
         borderWidth: 2,
         borderDash: [4, 3],
         fill: false,
@@ -235,7 +251,17 @@ watch(
   () => props.color,
   () => {
     if (chartInstance.value) {
-      chartInstance.value.data.datasets[0].borderColor = props.color;
+      chartInstance.value.data.datasets[0].borderColor = resolveChartColor(props.color);
+      chartInstance.value.update('none');
+    }
+  },
+);
+
+watch(
+  () => props.secondaryColor,
+  () => {
+    if (chartInstance.value && chartInstance.value.data.datasets.length > 1) {
+      chartInstance.value.data.datasets[1].borderColor = resolveChartColor(props.secondaryColor);
       chartInstance.value.update('none');
     }
   },
@@ -284,8 +310,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .sparkline-card {
-  background: rgba(255, 255, 255, 0.75);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+  border: 1px solid var(--color-border-subtle);
   border-radius: 12px;
   padding: 12px 14px;
   backdrop-filter: blur(50px);
@@ -295,14 +321,14 @@ onBeforeUnmount(() => {
     border-color 0.3s ease,
     box-shadow 0.3s ease;
   box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.04),
-    0 1px 3px rgba(0, 0, 0, 0.02);
+    0 4px 16px color-mix(in srgb, var(--color-background) 18%, transparent),
+    0 1px 3px color-mix(in srgb, var(--color-background) 10%, transparent);
 }
 
 .dark .sparkline-card {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 .card-header {
@@ -313,7 +339,7 @@ onBeforeUnmount(() => {
 }
 
 .card-title {
-  color: rgba(75, 85, 99, 0.7);
+  color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 500;
   text-transform: uppercase;
@@ -322,7 +348,7 @@ onBeforeUnmount(() => {
 }
 
 .dark .card-title {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-muted);
 }
 
 .card-value {

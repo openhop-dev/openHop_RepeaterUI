@@ -12,6 +12,7 @@ const props = defineProps<{
   item: NavItemConfig
   depth?: number
   precedesActive?: boolean
+  searchActive?: boolean
 }>()
 
 const route = useRoute()
@@ -69,6 +70,7 @@ const { getRestoredFold, recordFold } = useSidebarPin()
 // Initialise from saved pin state when available, otherwise default to closed.
 const restored = isGroup.value ? getRestoredFold(props.item.id) : null
 const expanded = ref(restored !== null ? restored : false)
+const visibleExpanded = computed(() => (props.searchActive && isGroup.value) || expanded.value)
 
 watch(
   hasActiveDescendant,
@@ -100,14 +102,13 @@ function handleClick() {
 const isChild = computed(() => depth.value > 0)
 
 const buttonClass = computed(() => {
-  const py = isChild.value ? 'py-2' : 'py-3'
-  const base = `w-full rounded-[10px] ${py} flex items-center gap-2 text-sm font-medium transition-all duration-200`
+  const base = `w-full rounded-[10px] py-1.5 flex items-center gap-1.5 text-sm font-medium transition-all duration-200`
   const indent = isChild.value ? 'pl-2 pr-2' : 'pl-4 pr-2'
 
   if (isActive.value) {
     return `${base} ${indent} text-primary font-semibold border border-transparent`
   }
-  return `${base} ${indent} text-content-primary dark:text-content-primary hover:text-primary border border-transparent`
+  return `${base} ${indent} text-content-primary hover:text-primary border border-transparent`
 })
 
 const iconClass = computed(() =>
@@ -129,13 +130,13 @@ const iconClass = computed(() =>
       <span class="nav-label flex-1 text-left">{{ item.label }}</span>
       <ChevronDown
         v-if="isGroup"
-        :class="['w-3 h-3 flex-shrink-0 transition-transform duration-200 text-content-muted', expanded ? 'rotate-180' : '']"
+        :class="['w-3 h-3 flex-shrink-0 transition-transform duration-200 text-content-muted', visibleExpanded ? 'rotate-180' : '']"
       />
     </button>
 
     <Transition name="nav-expand">
       <div
-        v-if="isGroup && expanded"
+        v-if="isGroup && visibleExpanded"
         :class="['nav-children mt-0 space-y-0', depth === 0 ? 'nav-root-children ml-[23px]' : 'nav-nested-children ml-[15px]']"
       >
         <NavItem
@@ -144,6 +145,7 @@ const iconClass = computed(() =>
           :item="child"
           :depth="depth + 1"
           :precedes-active="activeChildIndex >= 0 && i < activeChildIndex"
+          :search-active="searchActive"
         />
       </div>
     </Transition>
@@ -168,11 +170,11 @@ const iconClass = computed(() =>
  * Tick (.nav-tick span):  real DOM element so positioning is unambiguous.
  *
  * Three roles, identified by class on the child div's root:
- *   nav-item-active     — the selected leaf. Overlay stops at tick (18px).
+ *   nav-item-active     — the selected leaf. Overlay stops at tick (16px).
  *   nav-has-active      — an ancestor of the selected leaf. Also stops at tick.
  *   nav-precedes-active — a sibling before the active/has-active child. Full height.
  *
- * py-2 child button: 8 + 20 + 8 = 36px → centre = 18px
+ * py-1.5 child button: 6 + 20 + 6 = 32px → centre = 16px
  */
 
 .nav-children > div { position: relative; }
@@ -187,7 +189,7 @@ const iconClass = computed(() =>
 }
 .nav-root-children   > div:first-child::before { top: -10px; }
 .nav-nested-children > div:first-child::before { top: -8px; }
-.nav-children        > div:last-child::before  { bottom: calc(100% - 18px); }
+.nav-children        > div:last-child::before  { bottom: calc(100% - 16px); }
 
 /* ── Layer 2: primary overlay ── */
 
@@ -195,7 +197,7 @@ const iconClass = computed(() =>
 .nav-children > .nav-item-active::after {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: calc(100% - 18px);
+  left: 0; top: 0; bottom: calc(100% - 16px);
   width: 1px;
   background: var(--color-primary);
 }
@@ -204,7 +206,7 @@ const iconClass = computed(() =>
 .nav-children > .nav-has-active::after {
   content: '';
   position: absolute;
-  left: 0; top: 0; bottom: calc(100% - 18px);
+  left: 0; top: 0; bottom: calc(100% - 16px);
   width: 1px;
   background: var(--color-primary);
 }
@@ -235,7 +237,7 @@ button:hover svg        { filter: var(--nav-hover-icon-shadow); }
 /* ── Tick ── */
 .nav-tick {
   position: absolute;
-  left: 0; top: 18px;
+  left: 0; top: 16px;
   width: 4px; height: 1px;
   pointer-events: none;
   background: var(--color-border-subtle);

@@ -13,6 +13,7 @@ export interface PacketStats {
 }
 
 export interface RecentPacket {
+  id?: number;
   timestamp: number;
   packet_hash: string;
   type: number;
@@ -183,6 +184,7 @@ export interface SystemStats {
     mesh?: {
       path_hash_mode?: number; // 0 = 1-byte, 1 = 2-byte, 2 = 3-byte
       unscoped_flood_allow?: boolean;
+      default_region?: string | null;
     };
     sensors?: {
       enabled?: boolean;

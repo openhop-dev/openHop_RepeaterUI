@@ -297,7 +297,7 @@ async function startInstall() {
                 if (installState.value === 'installing' || installState.value === 'complete') {
                   stopEventSource();
                   installState.value = 'restarting';
-                  appendLine('[pyMC updater] Service is restarting — waiting for it to come back…');
+                  appendLine('[openHop updater] Service is restarting — waiting for it to come back…');
                   waitForRestart();
                 }
               }, 8000);
@@ -345,7 +345,7 @@ async function startInstall() {
     // Transition to the restart-wait flow instead of showing an error.
     if (pipDone.value && installState.value !== 'error') {
       installState.value = 'restarting';
-      appendLine('[pyMC updater] Connection lost — waiting for service restart…');
+      appendLine('[openHop updater] Connection lost — waiting for service restart…');
       waitForRestart();
       return;
     }
@@ -379,7 +379,7 @@ async function waitForRestart() {
   }
 
   if (!wentDown) {
-    appendLine('[pyMC updater] Service did not appear to stop — assuming fast restart');
+    appendLine('[openHop updater] Service did not appear to stop — assuming fast restart');
   }
 
   // --- Phase 2: wait for the service to come back UP (max 60 s) ---
@@ -491,13 +491,13 @@ function reloadPage() {
       @click="handleBackdropClick"
     >
       <div
-        class="bg-white dark:bg-surface-elevated rounded-[20px] w-full max-w-lg border border-stroke-subtle dark:border-white/10 shadow-2xl flex flex-col max-h-[90vh]"
+        class="bg-white dark:bg-surface-elevated rounded-[20px] w-full max-w-lg border border-stroke-subtle dark:border-white/opacity-light shadow-2xl flex flex-col max-h-[90vh]"
         @click.stop
       >
         <!-- Header -->
         <div class="flex items-center justify-between p-6 pb-0 shrink-0">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-xl bg-primary/opacity-light flex items-center justify-center">
               <svg
                 class="w-5 h-5 text-primary"
                 fill="none"
@@ -513,10 +513,10 @@ function reloadPage() {
               </svg>
             </div>
             <div>
-              <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary">
+              <h3 class="text-lg font-semibold text-content-primary">
                 OTA Update
               </h3>
-              <p class="text-xs text-content-muted dark:text-content-muted">
+              <p class="text-xs text-content-muted">
                 Update over the air from GitHub
               </p>
             </div>
@@ -542,17 +542,17 @@ function reloadPage() {
           <!-- Version info -->
           <div class="grid grid-cols-2 gap-3">
             <div
-              class="bg-background-mute dark:bg-background-mute rounded-xl p-3 border border-stroke-subtle dark:border-stroke/10"
+              class="bg-background-mute dark:bg-background-mute rounded-xl p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
             >
               <p class="text-xs text-content-muted mb-1">Installed</p>
               <p
-                class="text-sm font-mono font-medium text-content-primary dark:text-content-primary"
+                class="text-sm font-mono font-medium text-content-primary"
               >
                 {{ localCurrentVersion || '—' }}
               </p>
             </div>
             <div
-              class="bg-background-mute dark:bg-background-mute rounded-xl p-3 border border-stroke-subtle dark:border-stroke/10"
+              class="bg-background-mute dark:bg-background-mute rounded-xl p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
               :class="
                 localHasUpdate
                   ? 'border-l-2 border-l-accent-red'
@@ -577,10 +577,10 @@ function reloadPage() {
           <!-- GitHub rate limit warning -->
           <div
             v-if="props.rateLimitUntil"
-            class="flex items-start gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-3"
+            class="flex items-start gap-3 bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-light border border-accent-amber dark:border-accent-amber/opacity-medium rounded-xl p-3"
           >
             <svg
-              class="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"
+              class="w-4 h-4 shrink-0 mt-0.5 text-accent-amber"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -592,7 +592,7 @@ function reloadPage() {
                 d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
               />
             </svg>
-            <div class="text-xs text-amber-800 dark:text-amber-300">
+            <div class="text-xs text-accent-amber">
               <p class="font-semibold mb-0.5">GitHub API rate limit reached</p>
               <p>
                 Version checks are paused until
@@ -611,7 +611,7 @@ function reloadPage() {
           <!-- Up to date notice -->
           <div
             v-if="!localHasUpdate && localCurrentVersion && !checkingVersion"
-            class="flex items-center gap-2 bg-green-50 dark:bg-surface border border-green-200 dark:border-accent-green/30 border-l-2 border-l-green-600 dark:border-l-accent-green rounded-xl p-3 text-sm text-green-800 dark:text-content-primary"
+            class="flex items-center gap-2 bg-accent-green/opacity-light dark:bg-surface border border-accent-green dark:border-accent-green/opacity-medium border-l-2 border-l-green-600 dark:border-l-accent-green rounded-xl p-3 text-sm text-accent-green dark:text-content-primary"
           >
             <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -628,7 +628,7 @@ function reloadPage() {
           <div v-if="changelog.length > 0 || changelogLoading" class="space-y-1">
             <button
               @click="changelogOpen = !changelogOpen"
-              class="flex items-center justify-between w-full text-xs font-medium text-content-secondary dark:text-content-secondary uppercase tracking-wide py-1 hover:text-content-primary transition-colors"
+              class="flex items-center justify-between w-full text-xs font-medium text-content-secondary uppercase tracking-wide py-1 hover:text-content-primary transition-colors"
             >
               <span>What's New</span>
               <span class="flex items-center gap-1">
@@ -652,7 +652,7 @@ function reloadPage() {
             </button>
             <div
               v-if="changelogOpen"
-              class="bg-background-mute dark:bg-black/30 rounded-xl border border-stroke-subtle dark:border-stroke/10 overflow-hidden"
+              class="bg-background-mute dark:bg-black/30 rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light overflow-hidden"
             >
               <div
                 class="max-h-52 overflow-y-auto divide-y divide-stroke-subtle dark:divide-stroke/10"
@@ -662,7 +662,7 @@ function reloadPage() {
                   :key="entry.sha"
                   :href="entry.url"
                   target="_blank"
-                  class="flex gap-3 px-3 py-2.5 hover:bg-background-soft dark:hover:bg-surface/50 transition-colors group"
+                  class="flex gap-3 px-3 py-2.5 hover:bg-background-soft dark:hover:bg-surface/opacity-heavy transition-colors group"
                 >
                   <span class="font-mono text-[10px] text-content-muted shrink-0 mt-0.5 pt-px">{{
                     entry.short_sha
@@ -699,7 +699,7 @@ function reloadPage() {
           <!-- Channel selector -->
           <div class="space-y-2">
             <label
-              class="text-xs font-medium text-content-secondary dark:text-content-secondary uppercase tracking-wide"
+              class="text-xs font-medium text-content-secondary uppercase tracking-wide"
             >
               Release Channel
             </label>
@@ -707,14 +707,14 @@ function reloadPage() {
               <select
                 v-model="selectedChannel"
                 :disabled="loadingChannels || installState === 'installing' || installState === 'verified' || checkingVersion"
-                class="flex-1 bg-background-mute dark:bg-surface border border-stroke-subtle dark:border-stroke/20 rounded-xl px-3 py-2 text-sm text-content-primary dark:text-content-primary disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary"
+                class="flex-1 bg-background-mute dark:bg-surface border border-stroke-subtle dark:border-stroke/opacity-medium rounded-xl px-3 py-2 text-sm text-content-primary disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 <option v-for="ch in channels" :key="ch" :value="ch">{{ ch }}</option>
               </select>
               <button
                 @click="applyChannel"
                 :disabled="loadingChannels || installState === 'installing' || installState === 'verified' || checkingVersion"
-                class="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
+                class="px-4 py-2 bg-primary/opacity-light hover:bg-primary/opacity-medium text-primary rounded-xl text-sm font-medium disabled:opacity-50 transition-colors"
               >
                 {{ loadingChannels || checkingVersion ? '…' : 'Apply' }}
               </button>
@@ -756,9 +756,9 @@ function reloadPage() {
               </span>
               <span
                 v-else-if="installState === 'restarting'"
-                class="flex items-center gap-1 text-xs text-yellow-500"
+                class="flex items-center gap-1 text-xs text-accent-amber"
               >
-                <span class="inline-block w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                <span class="inline-block w-2 h-2 rounded-full bg-accent-amber/opacity-light animate-pulse"></span>
                 {{ restartPhase === 'going-down' ? 'Stopping service…' : 'Waiting for service…' }}
               </span>
               <span
@@ -774,7 +774,7 @@ function reloadPage() {
             </div>
             <div
               ref="logContainer"
-              class="bg-zinc-900 dark:bg-black/60 rounded-xl p-3 h-52 overflow-y-auto font-mono text-xs text-green-400 leading-relaxed border border-stroke/20"
+              class="bg-surface-elevated dark:bg-black/opacity-heavy rounded-xl p-3 h-52 overflow-y-auto font-mono text-xs text-accent-green leading-relaxed border border-stroke/opacity-medium"
             >
               <div
                 v-for="(line, i) in logLines"
@@ -786,7 +786,7 @@ function reloadPage() {
                     line.includes('error') ||
                     line.includes('ERROR') ||
                     line.includes('Failed'),
-                  'text-yellow-400': line.includes('WARNING') || line.includes('⚠'),
+                  'text-accent-amber': line.includes('WARNING') || line.includes('⚠'),
                   'text-accent-green': line.includes('✓') || line.includes('Successfully'),
                   'text-content-muted/60': line.includes('keepalive'),
                 }"
@@ -806,7 +806,7 @@ function reloadPage() {
               </div>
               <div
                 v-else-if="installState === 'restarting'"
-                class="flex items-center gap-2 mt-2 text-yellow-400"
+                class="flex items-center gap-2 mt-2 text-accent-amber"
               >
                 <Spinner size="xs" class="inline-block" />
                 {{
@@ -828,7 +828,7 @@ function reloadPage() {
           <!-- Restarting indicator (before log has content) -->
           <div
             v-if="installState === 'restarting' && restartPhase === 'verifying'"
-            class="flex items-center gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-3 text-sm text-primary"
+            class="flex items-center gap-3 bg-primary/opacity-light dark:bg-primary/opacity-light border border-primary/opacity-medium rounded-xl p-3 text-sm text-primary"
           >
             <Spinner size="sm" class="shrink-0" />
             <div>
@@ -840,7 +840,7 @@ function reloadPage() {
           </div>
           <div v-else-if="installState === 'restarting' && logLines.length === 0">
             <div
-              class="flex items-center gap-3 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3 text-sm text-yellow-800 dark:text-yellow-400"
+              class="flex items-center gap-3 bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-light border border-accent-amber dark:border-accent-amber/opacity-medium rounded-xl p-3 text-sm text-accent-amber"
             >
               <Spinner size="sm" class="shrink-0" />
               <div>
@@ -861,7 +861,7 @@ function reloadPage() {
           <!-- Verified: version confirmed correct after restart -->
           <div
             v-if="installState === 'verified'"
-            class="bg-green-50 dark:bg-surface-elevated border border-green-200 dark:border-accent-green/40 rounded-xl p-4"
+            class="bg-accent-green/opacity-light dark:bg-surface-elevated border border-accent-green dark:border-accent-green/opacity-heavy rounded-xl p-4"
           >
             <div class="flex items-center gap-3">
               <div
@@ -902,11 +902,11 @@ function reloadPage() {
           <!-- Verify failed: service came back but version doesn't match -->
           <div
             v-if="installState === 'verify-failed'"
-            class="bg-red-50 dark:bg-accent-red/10 border border-accent-red/40 rounded-xl p-4 space-y-3"
+            class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-light border border-accent-red/opacity-heavy rounded-xl p-4 space-y-3"
           >
             <div class="flex items-center gap-3">
               <div
-                class="w-9 h-9 rounded-full bg-accent-red/15 flex items-center justify-center shrink-0"
+                class="w-9 h-9 rounded-full bg-accent-red/opacity-light flex items-center justify-center shrink-0"
               >
                 <svg
                   class="w-5 h-5 text-accent-red"
@@ -924,7 +924,7 @@ function reloadPage() {
               </div>
               <div class="flex-1 min-w-0">
                 <p class="font-semibold text-accent-red">Installation may have failed</p>
-                <p class="text-xs text-accent-red/80 mt-0.5">
+                <p class="text-xs text-accent-red/opacity-heavy mt-0.5">
                   {{ installError || 'Version mismatch after restart' }}
                 </p>
               </div>
@@ -933,13 +933,13 @@ function reloadPage() {
               v-if="postRestartVersion || localLatestVersion"
               class="grid grid-cols-2 gap-2 text-xs"
             >
-              <div class="bg-white/50 dark:bg-black/20 rounded-lg px-3 py-2">
+              <div class="bg-white/opacity-heavy dark:bg-black/opacity-medium rounded-lg px-3 py-2">
                 <p class="text-content-muted mb-0.5">Expected</p>
                 <p class="font-mono font-semibold text-content-primary">
                   {{ localLatestVersion || '—' }}
                 </p>
               </div>
-              <div class="bg-white/50 dark:bg-black/20 rounded-lg px-3 py-2">
+              <div class="bg-white/opacity-heavy dark:bg-black/opacity-medium rounded-lg px-3 py-2">
                 <p class="text-content-muted mb-0.5">Reported</p>
                 <p class="font-mono font-semibold text-accent-red">
                   {{ postRestartVersion || 'unknown' }}
@@ -949,7 +949,7 @@ function reloadPage() {
             <button
               v-if="logLines.length > 0"
               @click="logVisible = !logVisible"
-              class="w-full text-xs text-accent-red/70 hover:text-accent-red underline underline-offset-2 hover:no-underline transition-all"
+              class="w-full text-xs text-accent-red/opacity-heavy hover:text-accent-red underline underline-offset-2 hover:no-underline transition-all"
             >
               {{ logVisible ? 'Hide install log' : 'View install log' }}
             </button>
@@ -964,12 +964,12 @@ function reloadPage() {
             class="flex-1 py-3 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             :class="
               installState === 'verified' || installState === 'complete'
-                ? 'bg-accent-green/20 text-accent-green border border-accent-green/50 cursor-default'
+                ? 'bg-accent-green/opacity-medium text-accent-green border border-accent-green/opacity-heavy cursor-default'
                 : installState === 'error' || installState === 'verify-failed'
-                  ? 'bg-accent-red/20 hover:bg-accent-red/30 text-accent-red border border-accent-red/50'
+                  ? 'bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red border border-accent-red/opacity-heavy'
                   : installState === 'restarting'
-                    ? 'bg-yellow-500/20 text-yellow-600 cursor-default'
-                    : 'bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50'
+                    ? 'bg-accent-amber/opacity-medium text-accent-amber cursor-default'
+                    : 'bg-primary/opacity-medium hover:bg-primary/opacity-medium text-primary border border-primary/opacity-heavy'
             "
           >
             <span
@@ -991,7 +991,7 @@ function reloadPage() {
           <button
             v-if="installState !== 'installing' && installState !== 'restarting' && installState !== 'verified'"
             @click="emit('close')"
-            class="px-6 py-3 rounded-xl border border-stroke-subtle dark:border-stroke/20 text-content-secondary hover:text-content-primary hover:bg-background-mute transition-colors text-sm"
+            class="px-6 py-3 rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary hover:text-content-primary hover:bg-background-mute transition-colors text-sm"
           >
             Close
           </button>

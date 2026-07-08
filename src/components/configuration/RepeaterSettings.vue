@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import Spinner from '@/components/ui/Spinner.vue';
 import { useSystemStore } from '@/stores/system';
 import type { SystemStats } from '@/types/api';
 import apiClient from '@/utils/api';
@@ -289,7 +290,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure repeater identity, location, and network settings</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -322,33 +323,33 @@ defineExpose({ requestLeave, isEditing });
     <!-- Success Message -->
     <div
       v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/10 border border-green-300 dark:border-green-500/30 rounded-lg p-3"
+      class="bg-accent-green/opacity-light dark:bg-accent-green/opacity-light border border-accent-green dark:border-accent-green/opacity-medium rounded-lg p-3"
     >
-      <p class="text-green-700 dark:text-green-400 text-sm">{{ successMessage }}</p>
+      <p class="text-accent-green text-sm">{{ successMessage }}</p>
     </div>
 
     <!-- Error Message -->
     <div
       v-if="error"
-      class="bg-red-100 dark:bg-red-500/10 border border-red-300 dark:border-red-500/30 rounded-lg p-3"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-light border border-accent-red dark:border-accent-red/opacity-medium rounded-lg p-3"
     >
-      <p class="text-red-700 dark:text-red-400 text-sm">{{ error }}</p>
+      <p class="text-accent-red text-sm">{{ error }}</p>
     </div>
 
     <!-- General Settings -->
     <div class="cfg-section space-y-3">
-      <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary pb-2">General Settings</h3>
+      <h3 class="text-lg font-semibold text-content-primary pb-2">General Settings</h3>
 
       <!-- Node Name -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Node Name</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm break-all"
+          class="text-content-primary font-mono text-sm break-all"
         >
           {{ nodeName }}
         </div>
@@ -364,19 +365,19 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Local Hash (Read-only) -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Local Hash</span
         >
-        <span class="text-content-primary dark:text-content-primary font-mono text-xs break-all">{{
+        <span class="text-content-primary font-mono text-xs break-all">{{
           localHash
         }}</span>
       </div>
 
       <!-- Public Key (Read-only) -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span
           class="text-content-secondary dark:text-content-muted text-xs sm:text-sm flex-shrink-0"
@@ -384,13 +385,13 @@ defineExpose({ requestLeave, isEditing });
         >
         <div class="flex items-center gap-2 min-w-0 sm:justify-end">
           <span
-            class="text-content-primary dark:text-content-primary font-mono text-xs break-all sm:text-right min-w-0"
+            class="text-content-primary font-mono text-xs break-all sm:text-right min-w-0"
             >{{ publicKey }}</span
           >
           <button
             v-if="isEditing"
             @click="openKeygenDialog"
-            class="flex-shrink-0 px-2 py-1 text-xs bg-primary/10 hover:bg-primary/20 text-content-secondary dark:text-content-muted rounded border border-primary/30 transition-colors whitespace-nowrap"
+            class="flex-shrink-0 px-2 py-1 text-xs bg-primary/opacity-light hover:bg-primary/opacity-medium text-content-secondary dark:text-content-muted rounded border border-primary/opacity-medium transition-colors whitespace-nowrap"
           >
             Generate New Key
           </button>
@@ -399,24 +400,24 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Mode (Read-only) -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Mode</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+        <span class="text-content-primary font-mono text-sm">{{
           mode
         }}</span>
       </div>
 
       <!-- Path hash length -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Path hash length</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ pathHashModeDisplay }}
         </div>
@@ -439,7 +440,7 @@ defineExpose({ requestLeave, isEditing });
           >
           <div
             v-if="!isEditing"
-            class="text-content-primary dark:text-content-primary font-mono text-sm sm:ml-4"
+            class="text-content-primary font-mono text-sm sm:ml-4"
           >
             {{ advertInterval }}
           </div>
@@ -448,14 +449,14 @@ defineExpose({ requestLeave, isEditing });
               v-model.number="advertIntervalInput"
               type="number"
               min="0"
-              max="48"
+              max="168"
               class="cfg-input w-20"
             />
-            <span class="text-content-muted dark:text-content-muted text-sm">hours</span>
+            <span class="text-content-muted text-sm">hours</span>
           </div>
         </div>
-        <span class="text-content-muted dark:text-content-muted text-xs"
-          >How often the repeater sends an advertisement packet (0 = disabled, 3-48 hours)</span
+        <span class="text-content-muted text-xs"
+          >How often the repeater sends an advertisement packet (0 = disabled, 3-168 hours)</span
         >
       </div>
     </div>
@@ -463,7 +464,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Location Settings -->
     <div class="cfg-section space-y-3">
       <div class="pb-2">
-        <h3 class="text-lg font-semibold text-content-primary dark:text-content-primary mb-3">Location Settings</h3>
+        <h3 class="text-lg font-semibold text-content-primary mb-3">Location Settings</h3>
         <button
           v-if="isEditing"
           @click="openMapPicker"
@@ -479,9 +480,9 @@ defineExpose({ requestLeave, isEditing });
       </div>
 
       <!-- Manual Latitude -->
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Latitude</span>
-        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
           {{ latitude }}
         </div>
         <input
@@ -498,7 +499,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Manual Longitude -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Longitude</span>
-        <div v-if="!isEditing" class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
           {{ longitude }}
         </div>
         <input
@@ -526,16 +527,16 @@ defineExpose({ requestLeave, isEditing });
     <Teleport to="body">
       <div
         v-if="showKeygenDialog"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        class="modal-backdrop"
         @click.self="showKeygenDialog = false"
       >
         <div
-          class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] shadow-2xl w-full max-w-md p-6 space-y-4"
+          class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] shadow-2xl w-full max-w-md p-6 space-y-4"
         >
-          <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+          <h3 class="text-xl font-semibold text-content-primary">
             Generate Vanity Identity Key
           </h3>
-          <p class="text-xs text-content-muted dark:text-content-muted">
+          <p class="text-xs text-content-muted">
             Generate a new Ed25519 identity key whose public key starts with your chosen hex prefix
             (0-9, A-F). Longer prefixes take more time to find.
           </p>
@@ -552,14 +553,14 @@ defineExpose({ requestLeave, isEditing });
               :maxlength="maxPrefixLength"
               placeholder="e.g. F8A1"
               :disabled="keygenGenerating"
-              class="cfg-input py-2 placeholder-gray-400 dark:placeholder-white/40 font-mono uppercase disabled:opacity-50"
+              class="cfg-input py-2 placeholder-content-muted dark:placeholder-content-muted font-mono uppercase disabled:opacity-50"
             />
-            <p v-if="keygenPrefix && !isValidPrefix" class="text-red-500 text-xs mt-1">
+            <p v-if="keygenPrefix && !isValidPrefix" class="text-accent-red text-xs mt-1">
               Enter 1-{{ maxPrefixLength }} valid hex characters (0-9, A-F)
             </p>
             <p
               v-else-if="difficultyHint"
-              class="text-content-muted dark:text-content-muted text-xs mt-1"
+              class="text-content-muted text-xs mt-1"
             >
               {{ difficultyHint }}
             </p>
@@ -570,7 +571,7 @@ defineExpose({ requestLeave, isEditing });
             <button
               @click="keygenAdvanced = !keygenAdvanced"
               :disabled="keygenGenerating"
-              class="text-xs text-content-muted dark:text-content-muted hover:text-content-secondary dark:hover:text-content-secondary transition-colors disabled:opacity-50 flex items-center gap-1"
+              class="text-xs text-content-muted hover:text-content-secondary dark:hover:text-content-secondary transition-colors disabled:opacity-50 flex items-center gap-1"
             >
               <svg
                 class="w-3 h-3 transition-transform"
@@ -590,12 +591,12 @@ defineExpose({ requestLeave, isEditing });
             </button>
             <div
               v-if="keygenAdvanced"
-              class="mt-2 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+              class="mt-2 bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg p-3"
             >
-              <p class="text-amber-600 dark:text-amber-400 text-xs font-medium">
+              <p class="text-accent-amber text-xs font-medium">
                 Extended prefix mode (up to 8 characters)
               </p>
-              <p class="text-amber-600 dark:text-amber-500 text-xs mt-1">
+              <p class="text-accent-amber text-xs mt-1">
                 Prefixes longer than 4 characters require exponentially more attempts and can take a
                 very long time or may not complete at all. The request may time out.
               </p>
@@ -605,54 +606,35 @@ defineExpose({ requestLeave, isEditing });
           <!-- Generating Progress -->
           <div
             v-if="keygenGenerating"
-            class="flex items-center gap-3 bg-blue-500/10 border border-blue-500/30 rounded-lg p-3"
+            class="flex items-center gap-3 bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-3"
           >
-            <svg
-              class="animate-spin h-5 w-5 text-blue-500 flex-shrink-0"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              />
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
+            <Spinner size="sm" class="flex-shrink-0" />
             <div>
-              <p class="text-blue-700 dark:text-blue-400 text-xs font-medium">
+              <p class="text-primary text-xs font-medium">
                 Searching for key with prefix "{{ keygenPrefix.toUpperCase() }}"...
               </p>
-              <p class="text-blue-600 dark:text-blue-500 text-xs mt-0.5">
+              <p class="text-primary text-xs mt-0.5">
                 Elapsed: {{ keygenElapsed }}s
               </p>
             </div>
           </div>
 
           <!-- Error -->
-          <div v-if="keygenError" class="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <p class="text-red-600 dark:text-red-400 text-sm">{{ keygenError }}</p>
+          <div v-if="keygenError" class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-3">
+            <p class="text-accent-red text-sm">{{ keygenError }}</p>
           </div>
 
           <!-- Result -->
           <div
             v-if="keygenResult"
-            class="bg-green-500/10 border border-green-600/40 dark:border-green-500/30 rounded-lg p-3 space-y-2"
+            class="bg-accent-green/opacity-light border border-accent-green/opacity-heavy dark:border-accent-green/opacity-medium rounded-lg p-3 space-y-2"
           >
-            <p class="text-green-600 dark:text-green-400 text-sm font-medium">
+            <p class="text-accent-green text-sm font-medium">
               Key found in {{ keygenResult.attempts.toLocaleString() }} attempts
             </p>
             <div>
-              <span class="text-xs text-content-muted dark:text-content-muted">Public Key:</span>
-              <p class="font-mono text-xs break-all text-content-primary dark:text-content-primary">
+              <span class="text-xs text-content-muted">Public Key:</span>
+              <p class="font-mono text-xs break-all text-content-primary">
                 {{ keygenResult.public_hex }}
               </p>
             </div>
@@ -661,12 +643,12 @@ defineExpose({ requestLeave, isEditing });
           <!-- Apply Confirmation -->
           <div
             v-if="showApplyConfirm && keygenResult"
-            class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3"
+            class="bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg p-3"
           >
-            <p class="text-amber-600 dark:text-amber-400 text-sm font-medium">
+            <p class="text-accent-amber text-sm font-medium">
               Warning: This will replace your current identity key.
             </p>
-            <p class="text-amber-600 dark:text-amber-500 text-xs mt-1">
+            <p class="text-accent-amber text-xs mt-1">
               Your node address and public key will change. Other nodes will need to re-discover
               you. This cannot be undone unless you have a backup.
             </p>
@@ -674,14 +656,14 @@ defineExpose({ requestLeave, isEditing });
               <button
                 @click="applyGeneratedKey"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs transition-colors disabled:opacity-50"
+                class="px-3 py-1.5 bg-accent-red/opacity-light hover:bg-accent-red/opacity-light text-white rounded-lg text-xs transition-colors disabled:opacity-50"
               >
                 {{ keygenApplying ? 'Applying...' : 'Confirm Replace Key' }}
               </button>
               <button
                 @click="showApplyConfirm = false"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 text-xs transition-colors"
+                class="btn-secondary-xs"
               >
                 Cancel
               </button>
@@ -693,7 +675,7 @@ defineExpose({ requestLeave, isEditing });
             <button
               @click="showKeygenDialog = false"
               :disabled="keygenGenerating"
-              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors"
+              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors"
             >
               Close
             </button>
@@ -718,7 +700,7 @@ defineExpose({ requestLeave, isEditing });
               <button
                 v-if="!showApplyConfirm"
                 @click="showApplyConfirm = true"
-                class="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-600 dark:text-red-400 rounded-lg border border-red-500/50 text-sm transition-colors"
+                class="cfg-btn-danger"
               >
                 Apply Key
               </button>

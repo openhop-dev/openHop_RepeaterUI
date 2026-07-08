@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import SignalBars from '@/components/ui/SignalBars.vue';
+import ApiService from '@/utils/api';
 defineOptions({ name: 'PacketDetailsModal' });
 
 const { getSignalQuality } = useSignalQuality();
 
 interface Packet {
+  id?: number;
   packet_hash: string;
   timestamp: number;
   type: number;
@@ -38,6 +40,11 @@ interface Packet {
 
 interface Props {
   packet: Packet | null;
+  packets?: Packet[];
+  linkedDuplicatePackets?: Packet[];
+  currentIndex?: number | null;
+  canGoPrevious?: boolean;
+  canGoNext?: boolean;
   isOpen: boolean;
   localHash?: string;
 }
@@ -45,10 +52,182 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits<{
   close: [];
+  previous: [];
+  next: [];
 }>();
 
 // Toggle for showing binary values
 const showBinaryValues = ref(false);
+
+type ContactLookupSource = 'contact' | 'advert';
+
+interface ContactLookupEntry {
+  pubkey: string;
+  name: string;
+  source: ContactLookupSource;
+}
+
+type UnknownRecord = Record<string, unknown>;
+
+const contactLookupEntries = ref<ContactLookupEntry[]>([]);
+const contactLookupLoading = ref(false);
+const contactLookupFetchedAt = ref<number | null>(null);
+
+const CONTACT_LOOKUP_TTL_MS = 5 * 60 * 1000;
+const ADVERT_CONTACT_TYPES = ['Unknown', 'Chat Node', 'Repeater', 'Room Server', 'Hybrid Node'];
+
+const isRecord = (value: unknown): value is UnknownRecord => {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const normalizeHex = (value: unknown): string => {
+  if (typeof value !== 'string') return '';
+  return value.replace(/^0x/i, '').replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+};
+
+const extractNameValue = (item: UnknownRecord, keys: string[]): string => {
+  for (const key of keys) {
+    const value = item[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return '';
+};
+
+const extractArrayPayload = (response: unknown): UnknownRecord[] => {
+  if (Array.isArray(response)) {
+    return response.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  if (!isRecord(response)) {
+    return [];
+  }
+
+  const data = response.data;
+  if (Array.isArray(data)) {
+    return data.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  if (isRecord(data) && Array.isArray(data.data)) {
+    return data.data.filter((item): item is UnknownRecord => isRecord(item));
+  }
+
+  return [];
+};
+
+const toLookupEntries = (
+  items: UnknownRecord[],
+  source: ContactLookupSource,
+): ContactLookupEntry[] => {
+  return items
+    .map((item) => {
+      const pubkey = normalizeHex(item.pub_key ?? item.pubkey ?? item.public_key);
+      const name = extractNameValue(item, ['name', 'node_name', 'display_name', 'alias']);
+      if (!pubkey || !name) {
+        return null;
+      }
+      return { pubkey, name, source };
+    })
+    .filter((entry): entry is ContactLookupEntry => entry !== null);
+};
+
+const shouldRefreshContactLookup = (): boolean => {
+  if (contactLookupFetchedAt.value == null) return true;
+  return Date.now() - contactLookupFetchedAt.value > CONTACT_LOOKUP_TTL_MS;
+};
+
+const refreshContactLookup = async () => {
+  if (contactLookupLoading.value) return;
+
+  contactLookupLoading.value = true;
+  try {
+    const [contactsResponse, advertResponses] = await Promise.all([
+      ApiService.get('/companion/contacts'),
+      Promise.all(
+        ADVERT_CONTACT_TYPES.map((contactType) =>
+          ApiService.get('/adverts_by_contact_type', {
+            contact_type: contactType,
+            hours: 168,
+            limit: 500,
+          }).catch(() => null),
+        ),
+      ),
+    ]);
+
+    const contactEntries = toLookupEntries(extractArrayPayload(contactsResponse), 'contact');
+    const advertEntries = advertResponses.flatMap((response) => {
+      if (!response) return [];
+      return toLookupEntries(extractArrayPayload(response), 'advert');
+    });
+
+    // Prefer companion contact names; use advert names as fallback.
+    const dedupedByPubkey = new Map<string, ContactLookupEntry>();
+    [...contactEntries, ...advertEntries].forEach((entry) => {
+      if (!dedupedByPubkey.has(entry.pubkey)) {
+        dedupedByPubkey.set(entry.pubkey, entry);
+      }
+    });
+
+    contactLookupEntries.value = Array.from(dedupedByPubkey.values());
+    contactLookupFetchedAt.value = Date.now();
+  } catch {
+    // Best-effort enrichment only. Keep existing UI data when lookups fail.
+  } finally {
+    contactLookupLoading.value = false;
+  }
+};
+
+interface NameLookupMatch {
+  name: string;
+  confidencePercent: number;
+  candidates: Array<{
+    name: string;
+    pubkey: string;
+    source: ContactLookupSource;
+  }>;
+}
+
+const expandedPathMatchHops = ref<number[]>([]);
+
+const isPathMatchExpanded = (hop: number): boolean => {
+  return expandedPathMatchHops.value.includes(hop);
+};
+
+const togglePathMatchExpanded = (hop: number) => {
+  if (isPathMatchExpanded(hop)) {
+    expandedPathMatchHops.value = expandedPathMatchHops.value.filter((value) => value !== hop);
+    return;
+  }
+  expandedPathMatchHops.value = [...expandedPathMatchHops.value, hop];
+};
+
+const formatShortPubkey = (pubkey: string): string => {
+  if (pubkey.length <= 10) return pubkey;
+  return `${pubkey.slice(0, 6)}...${pubkey.slice(-4)}`;
+};
+
+const lookupNameByHashStart = (hashStart: string): NameLookupMatch | null => {
+  const normalizedHashStart = normalizeHex(hashStart);
+  if (!normalizedHashStart) return null;
+
+  const matches = contactLookupEntries.value.filter((entry) =>
+    entry.pubkey.startsWith(normalizedHashStart),
+  );
+
+  if (matches.length === 0) return null;
+
+  const bestMatch = matches[0];
+  const uniquePubkeys = new Set(matches.map((entry) => entry.pubkey));
+  // Confidence is based on uniqueness in the known DB for this prefix.
+  const confidencePercent = Math.max(1, Math.round(100 / uniquePubkeys.size));
+
+  return {
+    name: bestMatch.name,
+    confidencePercent,
+    candidates: matches.slice(0, 8),
+  };
+};
 
 // Format timestamp
 const formatFullTime = (timestamp: number) => {
@@ -57,10 +236,10 @@ const formatFullTime = (timestamp: number) => {
 
 // Get status styling
 const getStatusClass = (packet: Packet) => {
-  if (!packet.transmitted) return 'text-red-600 dark:text-red-400';
-  if (packet.is_duplicate) return 'text-amber-600 dark:text-amber-400';
-  if (packet.drop_reason) return 'text-red-600 dark:text-red-400';
-  return 'text-green-600 dark:text-green-400';
+  if (!packet.transmitted) return 'text-accent-red';
+  if (packet.is_duplicate) return 'text-accent-amber';
+  if (packet.drop_reason) return 'text-accent-red';
+  return 'text-accent-green';
 };
 
 const getStatusText = (packet: Packet) => {
@@ -68,6 +247,163 @@ const getStatusText = (packet: Packet) => {
   if (packet.is_duplicate) return 'Duplicate';
   if (packet.drop_reason) return 'Dropped';
   return 'Forwarded';
+};
+
+interface PacketDifference {
+  label: string;
+  currentValue: string;
+  duplicateValue: string;
+}
+
+interface LinkedDuplicateSummary {
+  packet: Packet;
+  effectivePath: string;
+  differences: PacketDifference[];
+}
+
+const showPacketNavigation = computed(() => {
+  return (props.packets?.length ?? 0) > 1;
+});
+const canGoPrevious = computed(() => Boolean(props.canGoPrevious));
+const canGoNext = computed(() => Boolean(props.canGoNext));
+
+const packetPositionLabel = computed(() => {
+  const totalPackets = props.packets?.length ?? 0;
+  if (totalPackets === 0) return '';
+  if (props.currentIndex == null || props.currentIndex < 0) {
+    return `- / ${totalPackets}`;
+  }
+  return `${props.currentIndex + 1} / ${totalPackets}`;
+});
+
+const isSamePacket = (left: Packet, right: Packet): boolean => {
+  if (left.id != null && right.id != null) {
+    return left.id === right.id;
+  }
+  return (
+    left.packet_hash === right.packet_hash &&
+    left.timestamp === right.timestamp &&
+    left.type === right.type &&
+    left.route === right.route &&
+    left.src_hash === right.src_hash &&
+    left.dst_hash === right.dst_hash &&
+    left.length === right.length
+  );
+};
+
+const formatComparableValue = (
+  value: string | number | boolean | null | undefined,
+  suffix = '',
+  decimals: number | null = null,
+): string => {
+  if (value == null) return 'N/A';
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return 'N/A';
+    const normalized = decimals == null ? value.toString() : value.toFixed(decimals);
+    return `${normalized}${suffix}`;
+  }
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+  return value || 'N/A';
+};
+
+const formatPathForCompare = (path?: string[] | string | null): string => {
+  const parsed = parsePathString(path);
+  if (parsed.length === 0) return 'None';
+  return parsed.join(' → ').toUpperCase();
+};
+
+const getEffectivePath = (packet: Packet): string[] => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+
+  if (packet.transmitted && forwarded.length > 0) {
+    return forwarded;
+  }
+
+  if (original.length > 0) {
+    return original;
+  }
+
+  return forwarded;
+};
+
+const formatEffectivePathForCompare = (packet: Packet): string => {
+  return formatPathForCompare(getEffectivePath(packet));
+};
+
+const collectPacketDifferences = (base: Packet, duplicate: Packet): PacketDifference[] => {
+  const differences: PacketDifference[] = [];
+  const addDifference = (label: string, currentValue: string, duplicateValue: string) => {
+    if (currentValue !== duplicateValue) {
+      differences.push({ label, currentValue, duplicateValue });
+    }
+  };
+
+  addDifference('Type', getPacketTypeName(base.type), getPacketTypeName(duplicate.type));
+  addDifference('Route', getRouteName(base.route), getRouteName(duplicate.route));
+  addDifference('Status', getStatusText(base), getStatusText(duplicate));
+  addDifference('Length', `${base.length}B`, `${duplicate.length}B`);
+  addDifference(
+    'RSSI',
+    formatComparableValue(base.rssi, ' dBm', 0),
+    formatComparableValue(duplicate.rssi, ' dBm', 0),
+  );
+  addDifference(
+    'SNR',
+    formatComparableValue(base.snr, ' dB', 1),
+    formatComparableValue(duplicate.snr, ' dB', 1),
+  );
+  addDifference(
+    'Score',
+    formatComparableValue(base.score, '', 2),
+    formatComparableValue(duplicate.score, '', 2),
+  );
+  addDifference(
+    'TX Delay',
+    formatComparableValue(base.tx_delay_ms, ' ms', 1),
+    formatComparableValue(duplicate.tx_delay_ms, ' ms', 1),
+  );
+  addDifference('Source', formatComparableValue(base.src_hash), formatComparableValue(duplicate.src_hash));
+  addDifference(
+    'Destination',
+    formatComparableValue(base.dst_hash || 'Broadcast'),
+    formatComparableValue(duplicate.dst_hash || 'Broadcast'),
+  );
+  addDifference(
+    'Drop Reason',
+    formatComparableValue(base.drop_reason || 'None'),
+    formatComparableValue(duplicate.drop_reason || 'None'),
+  );
+  return differences;
+};
+
+const linkedDuplicateSummaries = computed<LinkedDuplicateSummary[]>(() => {
+  const basePacket = props.packet;
+  const candidatePackets = props.linkedDuplicatePackets ?? [];
+  if (!basePacket || candidatePackets.length === 0) {
+    return [];
+  }
+
+  return candidatePackets
+    .filter((candidate) => !isSamePacket(candidate, basePacket))
+    .map((duplicate) => ({
+      packet: duplicate,
+      effectivePath: formatEffectivePathForCompare(duplicate),
+      differences: collectPacketDifferences(basePacket, duplicate),
+    }))
+    .sort((left, right) => right.packet.timestamp - left.packet.timestamp);
+});
+
+const showPreviousPacket = () => {
+  if (!canGoPrevious.value) return;
+  emit('previous');
+};
+
+const showNextPacket = () => {
+  if (!canGoNext.value) return;
+  emit('next');
 };
 
 // Enhanced packet type mapping (MeshCore official specification)
@@ -474,6 +810,163 @@ const parsePathString = (pathString?: string[] | string | null): string[] => {
   return [];
 };
 
+const isLocalHashMatch = (hashValue: string): boolean => {
+  const normalizedHashValue = normalizeHex(hashValue);
+  const normalizedLocalHash = normalizeHex(props.localHash);
+
+  if (!normalizedHashValue || !normalizedLocalHash) return false;
+
+  // Path table hashes can be prefixes of a full local pubkey.
+  return (
+    normalizedLocalHash.startsWith(normalizedHashValue) ||
+    normalizedHashValue.startsWith(normalizedLocalHash)
+  );
+};
+
+const getPathDisplayName = (
+  hashValue: string,
+  resolvedMatch: NameLookupMatch | null,
+  isLocal: boolean,
+) => {
+  if (isLocal) {
+    return {
+      name: 'This repeater',
+      matchDetail: '',
+      matchConfidence: null,
+      matchCandidates: [],
+    };
+  }
+  if (resolvedMatch) {
+    return {
+      name: resolvedMatch.name,
+      matchDetail: `${resolvedMatch.confidencePercent}% key match`,
+      matchConfidence: resolvedMatch.confidencePercent,
+      matchCandidates: resolvedMatch.candidates,
+    };
+  }
+  if (!hashValue) {
+    return {
+      name: 'Unknown contact',
+      matchDetail: '',
+      matchConfidence: null,
+      matchCandidates: [],
+    };
+  }
+  return {
+    name: 'Unknown contact',
+    matchDetail: '',
+    matchConfidence: null,
+    matchCandidates: [],
+  };
+};
+
+const getPathRows = (packet: Packet) => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+  const maxLength = Math.max(original.length, forwarded.length);
+
+  return Array.from({ length: maxLength }, (_, index) => {
+    const originalHash = original[index] || '';
+    const forwardedHash = forwarded[index] || '';
+    const normalizedOriginal = originalHash.toUpperCase();
+    const normalizedForwarded = forwardedHash.toUpperCase();
+    const hasSeen = Boolean(normalizedOriginal);
+    const hasRelayed = Boolean(normalizedForwarded);
+    const isUnchanged = hasSeen && hasRelayed && normalizedOriginal === normalizedForwarded;
+    const activeHash = normalizedForwarded || normalizedOriginal;
+    const isLastRelayedHop =
+      packet.transmitted && hasRelayed && forwarded.length > 0 && index === forwarded.length - 1;
+    const localMatch = isLocalHashMatch(activeHash) || isLastRelayedHop;
+    const activeDisplay = getPathDisplayName(
+      activeHash,
+      lookupNameByHashStart(activeHash),
+      localMatch,
+    );
+
+    return {
+      hop: index + 1,
+      hash: activeHash,
+      name: activeDisplay.name,
+      matchDetail: activeDisplay.matchDetail,
+      matchConfidence: activeDisplay.matchConfidence,
+      matchCandidates: activeDisplay.matchCandidates,
+      seen: normalizedOriginal,
+      relayed: normalizedForwarded,
+      seenName: lookupNameByHashStart(normalizedOriginal)?.name ?? null,
+      relayedName: lookupNameByHashStart(normalizedForwarded)?.name ?? null,
+      isUnchanged,
+      changedFromSeen: hasSeen && hasRelayed && !isUnchanged,
+      status:
+        hasSeen && hasRelayed
+          ? isUnchanged
+            ? 'unchanged'
+            : 'rewritten'
+          : hasSeen
+            ? 'seen-only'
+            : 'relayed-only',
+      localMatch,
+    };
+  });
+};
+
+const hasPartialPathMatchCandidates = (
+  confidence: number | null,
+  candidates: Array<{ name: string; pubkey: string; source: ContactLookupSource }>,
+): boolean => {
+  return confidence != null && confidence < 100 && candidates.length > 1;
+};
+
+const getBestPathMatchConfidence = (packet: Packet): number | null => {
+  const confidences = getPathRows(packet)
+    .map((row) => row.matchConfidence)
+    .filter((confidence): confidence is number => confidence != null);
+
+  if (confidences.length === 0) return null;
+  return Math.max(...confidences);
+};
+
+const hasLowConfidencePathMatch = (packet: Packet): boolean => {
+  return getPathRows(packet).some(
+    (row) => row.matchConfidence != null && row.matchConfidence < 50,
+  );
+};
+
+const getPathConfidenceTextClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'text-accent-cyan';
+  if (confidence == null) return 'text-content-muted';
+  if (confidence >= 80) return 'text-accent-green';
+  if (confidence >= 50) return 'text-accent-amber';
+  return 'text-accent-red';
+};
+
+const getPathConfidenceBarClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'bg-accent-cyan/opacity-heavy';
+  if (confidence == null) return 'bg-stroke-subtle';
+  if (confidence >= 80) return 'bg-accent-green/opacity-heavy';
+  if (confidence >= 50) return 'bg-accent-amber/opacity-heavy';
+  return 'bg-accent-red/opacity-heavy';
+};
+
+const getPathConfidenceBarWidth = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return '100%';
+  if (confidence == null) return '20%';
+  return `${Math.max(8, confidence)}%`;
+};
+
+const getPathHopMarkerClass = (confidence: number | null, isLocal: boolean): string => {
+  if (isLocal) return 'border-accent-cyan text-accent-cyan';
+  if (confidence == null) return 'border-stroke-subtle text-content-muted';
+  if (confidence >= 80) return 'border-accent-green text-accent-green';
+  if (confidence >= 50) return 'border-accent-amber text-accent-amber';
+  return 'border-accent-red text-accent-red';
+};
+
+const isPathModified = (packet: Packet) => {
+  const original = parsePathString(packet.original_path);
+  const forwarded = parsePathString(packet.forwarded_path);
+  return JSON.stringify(original) !== JSON.stringify(forwarded);
+};
+
 // Parse packet structure using raw packet data or fallback to individual fields
 const parsePacketStructure = (
   packet?: Packet,
@@ -851,7 +1344,7 @@ const parsePacketStructure = (
 
 // Get signal quality class for SNR values (using RSSI-based utility)
 const getSnrClass = (snr: number | null, rssi: number | null) => {
-  if (snr == null || rssi == null) return 'text-content-muted dark:text-content-muted';
+  if (snr == null || rssi == null) return 'text-content-muted';
 
   const quality = getSignalQuality(rssi);
   return quality.color;
@@ -874,28 +1367,28 @@ const getLbtCongestionLevel = (attempts: number) => {
   if (attempts === 0)
     return {
       level: 'none',
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-400/20',
+      color: 'text-accent-green',
+      bgColor: 'bg-accent-green/opacity-medium',
       label: 'Clear Channel',
     };
   if (attempts <= 1)
     return {
       level: 'low',
-      color: 'text-cyan-600 dark:text-cyan-400',
-      bgColor: 'bg-cyan-400/20',
+      color: 'text-accent-cyan',
+      bgColor: 'bg-accent-cyan/opacity-medium',
       label: 'Light Traffic',
     };
   if (attempts <= 2)
     return {
       level: 'moderate',
-      color: 'text-yellow-600 dark:text-yellow-400',
-      bgColor: 'bg-yellow-400/20',
+      color: 'text-accent-amber',
+      bgColor: 'bg-accent-amber/opacity-medium',
       label: 'Moderate Congestion',
     };
   return {
     level: 'high',
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-400/20',
+    color: 'text-accent-orange',
+    bgColor: 'bg-accent-orange/opacity-medium',
     label: 'Heavy Congestion',
   };
 };
@@ -910,6 +1403,22 @@ const formatDelayTime = (ms: number) => {
 const handleKeyDown = (event: KeyboardEvent) => {
   if (event.key === 'Escape') {
     emit('close');
+    return;
+  }
+
+  if (event.key === 'ArrowUp') {
+    if (canGoPrevious.value) {
+      event.preventDefault();
+      emit('previous');
+    }
+    return;
+  }
+
+  if (event.key === 'ArrowDown') {
+    if (canGoNext.value) {
+      event.preventDefault();
+      emit('next');
+    }
   }
 };
 
@@ -926,11 +1435,21 @@ watch(
   (isOpen) => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      if (shouldRefreshContactLookup()) {
+        void refreshContactLookup();
+      }
     } else {
       document.body.style.overflow = '';
     }
   },
   { immediate: true },
+);
+
+watch(
+  () => props.packet?.packet_hash,
+  () => {
+    expandedPathMatchHops.value = [];
+  },
 );
 </script>
 
@@ -939,39 +1458,82 @@ watch(
     <Transition name="modal" appear>
       <div
         v-if="isOpen && packet"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+        class="modal-backdrop overflow-hidden !p-2 sm:!p-4"
         @click="handleBackdropClick"
         @keydown="handleKeyDown"
         tabindex="0"
       >
-        <!-- Backdrop with blur -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
-
         <!-- Modal Content -->
-        <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col" @click.stop>
+        <div class="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
           <div
-            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/20 flex flex-col h-full overflow-hidden"
+            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[16px] sm:rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/opacity-medium flex flex-col h-full overflow-hidden"
           >
             <!-- Header -->
-            <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
-              <div>
-                <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between p-4 sm:p-6 lg:p-8 pb-3 sm:pb-4 shrink-0 gap-3 sm:gap-4">
+              <div class="min-w-0 flex-1">
+                <h2 class="text-lg sm:text-2xl font-bold text-content-primary mb-1">
                   Packet Details
                 </h2>
-                <p class="text-content-secondary dark:text-content-muted text-sm">
-                  {{ getPacketTypeName(packet.type) }} - {{ getRouteName(packet.route) }}
-                </p>
+                <div class="flex flex-wrap gap-2 mt-2">
+                  <span class="inline-flex items-center rounded-full bg-accent-cyan/opacity-light text-accent-cyan px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                    {{ getPacketTypeName(packet.type) }}
+                  </span>
+                  <span class="inline-flex items-center rounded-full bg-accent-orange/opacity-light text-accent-orange px-2 py-0.5 text-[11px] sm:text-xs font-medium max-w-full truncate">
+                    {{ getRouteName(packet.route) }}
+                  </span>
+                </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0">
+                <div v-if="showPacketNavigation" class="flex items-center gap-2">
+                  <div
+                    class="flex items-center rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium overflow-hidden bg-background-mute dark:bg-white/opacity-subtle"
+                  >
+                    <button
+                      type="button"
+                      class="w-8 h-8 flex items-center justify-center text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      :disabled="!canGoPrevious"
+                      title="Previous packet (↑)"
+                      @click="showPreviousPacket"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 15l7-7 7 7"
+                        ></path>
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="w-8 h-8 flex items-center justify-center text-content-secondary dark:text-content-muted hover:text-primary hover:bg-primary/opacity-light transition-colors border-l border-stroke-subtle dark:border-stroke/opacity-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                      :disabled="!canGoNext"
+                      title="Next packet (↓)"
+                      @click="showNextPacket"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 9l-7 7-7-7"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                  <span class="text-xs text-content-secondary dark:text-content-muted font-medium">
+                    {{ packetPositionLabel }}
+                  </span>
+                </div>
                 <!-- Binary Toggle Button -->
                 <button
                   @click="showBinaryValues = !showBinaryValues"
-                  class="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200"
+                  class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all duration-200"
                   :class="
                     showBinaryValues
-                      ? 'bg-cyan-500/20 border border-cyan-400/30 text-cyan-600 dark:text-cyan-400'
-                      : 'bg-background-mute dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted'
+                      ? 'bg-accent-cyan/opacity-medium border border-accent-cyan/opacity-medium text-accent-cyan'
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted'
                   "
                   :title="showBinaryValues ? 'Hide binary values' : 'Show binary values'"
                 >
@@ -987,8 +1549,11 @@ watch(
                 </button>
                 <!-- Close Button -->
                 <button
+                  type="button"
                   @click="emit('close')"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/10 hover:bg-stroke-subtle dark:hover:bg-white/20 transition-colors duration-200 text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+                  aria-label="Close packet details"
+                  title="Close"
+                  class="w-9 h-9 flex items-center justify-center rounded-lg bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium transition-colors duration-200 text-content-secondary dark:text-content-primary hover:text-content-primary dark:hover:text-content-primary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -1003,76 +1568,76 @@ watch(
             </div>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar px-8">
+            <div class="flex-1 overflow-y-auto custom-scrollbar px-4 sm:px-6 lg:px-8">
               <!-- Section 1: Basic Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-cyan-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-cyan/opacity-light mr-3"></div>
                   Basic Information
                 </h3>
-                <div class="glass-card bg-white/5 rounded-[15px] p-4">
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-3">
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Timestamp</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-sm"
+                          class="text-content-primary font-mono text-sm"
                           >{{ formatFullTime(packet.timestamp) }}</span
                         >
                       </div>
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Packet Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs break-all"
+                          class="text-content-primary font-mono text-xs break-all"
                           >{{ packet.packet_hash }}</span
                         >
                       </div>
                       <div
                         v-if="packet.header"
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Header</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           >{{ packet.header }}</span
                         >
                       </div>
                     </div>
                     <div class="space-y-3">
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Type</span
                         >
-                        <span class="text-content-primary dark:text-content-primary font-semibold"
+                        <span class="text-content-primary font-semibold"
                           >{{ packet.type }} ({{ getPacketTypeName(packet.type) }})</span
                         >
                       </div>
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Route</span
                         >
-                        <span class="text-content-primary dark:text-content-primary font-semibold"
+                        <span class="text-content-primary font-semibold"
                           >{{ packet.route }} ({{ getRouteName(packet.route) }})</span
                         >
                       </div>
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Status</span
@@ -1086,25 +1651,80 @@ watch(
                 </div>
               </div>
 
+              <!-- Section: Linked Duplicates -->
+              <div v-if="linkedDuplicateSummaries.length > 0" class="mb-6">
+                <h3
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
+                >
+                  <div class="w-2 h-2 rounded-full bg-accent-amber/opacity-heavy mr-3"></div>
+                  Linked Duplicates ({{ linkedDuplicateSummaries.length }})
+                </h3>
+                <div
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light space-y-3"
+                >
+                  <div
+                    v-for="(duplicateSummary, duplicateIndex) in linkedDuplicateSummaries"
+                    :key="`${duplicateSummary.packet.packet_hash}_${duplicateSummary.packet.timestamp}_${duplicateIndex}`"
+                    class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
+                  >
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                      <span class="text-content-primary text-sm font-semibold">
+                        Duplicate #{{ duplicateIndex + 1 }}
+                      </span>
+                      <span class="text-content-secondary dark:text-content-muted text-xs font-mono">
+                        {{ formatFullTime(duplicateSummary.packet.timestamp) }}
+                      </span>
+                    </div>
+
+                    <div class="mb-2 flex flex-wrap items-start justify-between gap-2 py-1 border-b border-stroke-subtle/60 dark:border-stroke/opacity-light">
+                      <span class="text-content-secondary dark:text-content-muted text-xs">
+                        Path
+                      </span>
+                      <span class="text-content-primary text-xs font-mono break-all text-right">
+                        {{ duplicateSummary.effectivePath }}
+                      </span>
+                    </div>
+
+                    <div v-if="duplicateSummary.differences.length > 0" class="space-y-1">
+                      <div
+                        v-for="difference in duplicateSummary.differences"
+                        :key="`${duplicateSummary.packet.timestamp}_${difference.label}`"
+                        class="flex flex-wrap items-start justify-between gap-2 py-1 border-b border-stroke-subtle/60 dark:border-stroke/opacity-light last:border-b-0"
+                      >
+                        <span class="text-content-secondary dark:text-content-muted text-xs">
+                          {{ difference.label }}
+                        </span>
+                        <span class="text-content-primary text-xs font-mono break-all text-right">
+                          {{ difference.currentValue }} → {{ difference.duplicateValue }}
+                        </span>
+                      </div>
+                    </div>
+                    <p v-else class="text-content-secondary dark:text-content-muted text-xs italic">
+                      No additional field differences beyond timestamp.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <!-- Section 2: Payload Data -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-orange-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-orange/opacity-light mr-3"></div>
                   Payload Data
                 </h3>
                 <div
-                  class="bg-gray-50 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
                 >
                   <div class="space-y-3">
                     <div
-                      class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                      class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                     >
                       <span class="text-content-secondary dark:text-content-muted text-sm"
                         >Payload Length</span
                       >
-                      <span class="text-content-primary dark:text-content-primary"
+                      <span class="text-content-primary"
                         >{{ packet.payload_length || packet.length }} bytes</span
                       >
                     </div>
@@ -1115,7 +1735,7 @@ watch(
 
                       <!-- Raw Hex Display -->
                       <div
-                        class="glass-card bg-background-mute dark:bg-black/30 rounded-[10px] p-4 mb-4"
+                        class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-4 mb-4"
                       >
                         <div
                           class="text-content-secondary dark:text-content-muted text-xs mb-2 font-semibold"
@@ -1124,7 +1744,7 @@ watch(
                         </div>
                         <div class="w-full overflow-x-auto">
                           <pre
-                            class="text-content-primary dark:text-content-primary/90 text-xs font-mono whitespace-pre leading-relaxed min-w-full"
+                            class="text-content-primary/opacity-heavy text-xs font-mono whitespace-pre leading-relaxed min-w-full"
                             >{{ formatPayload(packet.payload) }}</pre
                           >
                         </div>
@@ -1133,7 +1753,11 @@ watch(
                       <!-- Packet Structure Analysis -->
                       <div
                         v-for="(section, sectionIndex) in parsePacketStructure(packet).filter(
-                          (s) => !s.name.includes('Parse Error'),
+                          (s) =>
+                            !s.name.includes('Parse Error') &&
+                            !['Path Length', 'Path Data', 'Original Path', 'Forwarded Path'].includes(
+                              s.name,
+                            ),
                         )"
                         :key="sectionIndex"
                         class="mb-4"
@@ -1141,29 +1765,29 @@ watch(
                         <!-- Section Header -->
                         <div class="flex items-center justify-between mb-3">
                           <h4
-                            class="text-content-secondary dark:text-content-primary/80 text-sm font-semibold"
+                            class="text-content-secondary dark:text-content-primary/opacity-heavy text-sm font-semibold"
                           >
                             {{ section.name }}
                           </h4>
-                          <span class="text-content-muted dark:text-content-muted text-xs"
+                          <span class="text-content-muted text-xs"
                             >Bytes {{ section.byteRange }}</span
                           >
                         </div>
 
                         <!-- Hex Input Display -->
-                        <div class="bg-background-mute dark:bg-black/40 rounded-[8px] p-3 mb-3">
+                        <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[8px] p-3 mb-3">
                           <div
-                            class="font-mono text-xs text-content-primary dark:text-content-primary break-all whitespace-pre-wrap leading-relaxed"
+                            class="font-mono text-xs text-content-primary break-all whitespace-pre-wrap leading-relaxed"
                           >
                             {{ section.hexData }}
                           </div>
                         </div>
 
                         <!-- Field Breakdown Table -->
-                        <div class="bg-gray-50 dark:bg-white/5 rounded-[10px] overflow-hidden">
+                        <div class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[10px] overflow-hidden">
                           <!-- Desktop Table Header -->
                           <div
-                            class="hidden md:grid gap-3 p-3 bg-background-mute dark:bg-white/10 text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide"
+                            class="hidden md:grid gap-3 p-3 bg-background-mute dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted text-xs font-semibold uppercase tracking-wide"
                             :class="showBinaryValues ? 'grid-cols-4' : 'grid-cols-3'"
                           >
                             <div class="min-w-0">Bits</div>
@@ -1176,25 +1800,25 @@ watch(
                           <div
                             v-for="(field, fieldIndex) in section.fields"
                             :key="fieldIndex"
-                            class="hidden md:grid gap-3 p-3 border-b border-stroke-subtle dark:border-stroke/5 last:border-b-0 hover:bg-background-mute dark:hover:bg-stroke/5 transition-colors"
+                            class="hidden md:grid gap-3 p-3 border-b border-stroke-subtle dark:border-stroke/opacity-light last:border-b-0 hover:bg-background-mute dark:hover:bg-stroke/opacity-subtle transition-colors"
                             :class="showBinaryValues ? 'grid-cols-4' : 'grid-cols-3'"
                           >
-                            <div class="text-cyan-500 text-sm font-mono break-words min-w-0">
+                            <div class="text-accent-cyan text-sm font-mono break-words min-w-0">
                               {{ field.bits }}
                             </div>
                             <div
-                              class="text-content-primary dark:text-content-primary text-sm break-words min-w-0"
+                              class="text-content-primary text-sm break-words min-w-0"
                             >
                               {{ field.name }}
                             </div>
                             <div
-                              class="text-content-primary dark:text-content-primary text-sm font-semibold break-all min-w-0 overflow-hidden"
+                              class="text-content-primary text-sm font-semibold break-all min-w-0 overflow-hidden"
                             >
                               <span class="block" :title="field.value">{{ field.value }}</span>
                             </div>
                             <div
                               v-if="showBinaryValues"
-                              class="text-orange-500 text-xs font-mono break-all min-w-0 overflow-hidden"
+                              class="text-accent-orange text-xs font-mono break-all min-w-0 overflow-hidden"
                             >
                               <span class="block" :title="field.binary">{{ field.binary }}</span>
                             </div>
@@ -1204,7 +1828,7 @@ watch(
                           <div
                             v-for="(field, fieldIndex) in section.fields"
                             :key="`mobile-${fieldIndex}`"
-                            class="md:hidden p-3 border-b border-stroke-subtle dark:border-stroke/5 last:border-b-0 space-y-2"
+                            class="md:hidden p-3 border-b border-stroke-subtle dark:border-stroke/opacity-light last:border-b-0 space-y-2"
                           >
                             <div class="grid grid-cols-2 gap-2">
                               <div>
@@ -1212,7 +1836,7 @@ watch(
                                   class="text-content-secondary dark:text-content-muted text-xs uppercase tracking-wide"
                                   >Bits:</span
                                 >
-                                <div class="text-cyan-500 text-sm font-mono break-words">
+                                <div class="text-accent-cyan text-sm font-mono break-words">
                                   {{ field.bits }}
                                 </div>
                               </div>
@@ -1222,7 +1846,7 @@ watch(
                                   >Field:</span
                                 >
                                 <div
-                                  class="text-content-primary dark:text-content-primary text-sm break-words"
+                                  class="text-content-primary text-sm break-words"
                                 >
                                   {{ field.name }}
                                 </div>
@@ -1234,7 +1858,7 @@ watch(
                                 >Value:</span
                               >
                               <div
-                                class="text-content-primary dark:text-content-primary text-sm font-semibold break-all"
+                                class="text-content-primary text-sm font-semibold break-all"
                                 :title="field.value"
                               >
                                 {{ field.value }}
@@ -1246,7 +1870,7 @@ watch(
                                 >Binary:</span
                               >
                               <div
-                                class="text-orange-500 text-xs font-mono break-all"
+                                class="text-accent-orange text-xs font-mono break-all"
                                 :title="field.binary"
                               >
                                 {{ field.binary }}
@@ -1258,7 +1882,7 @@ watch(
                         <!-- Additional Info -->
                         <div
                           v-if="section.description"
-                          class="text-content-muted dark:text-content-muted text-xs italic mt-2 px-1"
+                          class="text-content-muted text-xs italic mt-2 px-1"
                         >
                           {{ section.description }}
                         </div>
@@ -1268,7 +1892,7 @@ watch(
                       <span class="text-content-secondary dark:text-content-muted text-sm"
                         >Payload:</span
                       >
-                      <span class="text-content-muted dark:text-content-muted ml-2">None</span>
+                      <span class="text-content-muted ml-2">None</span>
                     </div>
                   </div>
                 </div>
@@ -1277,28 +1901,28 @@ watch(
               <!-- Section 3: Path Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-purple-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full status-dot-secondary mr-3"></div>
                   Path Information
                 </h3>
                 <div
-                  class="bg-gray-50 dark:bg-white/5 rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/10"
+                  class="bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4 border border-stroke-subtle dark:border-stroke/opacity-light"
                 >
                   <div class="space-y-4">
                     <!-- Source and Destination -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Source Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.src_hash === props.localHash
-                              ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                              ? 'bg-accent-cyan/opacity-medium text-accent-cyan px-1 rounded'
                               : ''
                           "
                         >
@@ -1306,16 +1930,16 @@ watch(
                         </span>
                       </div>
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Destination Hash</span
                         >
                         <span
-                          class="text-content-primary dark:text-content-primary font-mono text-xs"
+                          class="text-content-primary font-mono text-xs"
                           :class="
                             props.localHash && packet.dst_hash === props.localHash
-                              ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                              ? 'bg-accent-cyan/opacity-medium text-accent-cyan px-1 rounded'
                               : ''
                           "
                         >
@@ -1324,161 +1948,166 @@ watch(
                       </div>
                     </div>
 
-                    <!-- Original Path -->
-                    <div v-if="parsePathString(packet.original_path).length > 0" class="py-2">
-                      <div class="text-content-secondary dark:text-content-muted text-sm mb-2">
-                        Original Path
+                    <!-- Path Comparison Table -->
+                    <div v-if="getPathRows(packet).length > 0" class="py-2">
+                      <div class="flex flex-wrap items-center gap-2 mb-3">
+                        <span class="text-content-secondary dark:text-content-muted text-sm font-medium">
+                          Repeater Path View
+                        </span>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-accent-cyan/opacity-light text-accent-cyan">
+                          {{ getPathRows(packet).length }} hops
+                        </span>
+                        <span
+                          v-if="getBestPathMatchConfidence(packet) != null"
+                          class="text-xs px-2 py-0.5 rounded-full bg-accent-amber/opacity-medium text-accent-amber"
+                        >
+                          Best match {{ getBestPathMatchConfidence(packet) }}%
+                        </span>
+                        <span
+                          v-if="hasLowConfidencePathMatch(packet)"
+                          class="text-xs px-2 py-0.5 rounded-full bg-accent-red/opacity-medium text-accent-red"
+                        >
+                          Low confidence
+                        </span>
+                        <span
+                          v-if="contactLookupLoading"
+                          class="text-xs px-2 py-0.5 rounded-full bg-background-mute text-content-muted"
+                        >
+                          Resolving names...
+                        </span>
                       </div>
-                      <div class="bg-background-mute dark:bg-black/20 rounded-[10px] p-4">
-                        <div class="flex items-center flex-wrap gap-2">
-                          <template
-                            v-for="(hash, index) in parsePathString(packet.original_path)"
-                            :key="index"
+
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-light p-3 sm:p-4">
+                        <div class="relative space-y-3">
+                          <div
+                            v-for="(row, rowIndex) in getPathRows(packet)"
+                            :key="`timeline-${row.hop}`"
+                            class="relative z-10 grid grid-cols-[42px_1fr] sm:grid-cols-[52px_1fr] gap-3 items-center"
                           >
-                            <!-- Node Shape -->
-                            <div class="flex items-center">
-                              <div class="relative group">
-                                <!-- Node container with hexagon-like shape -->
-                                <div
-                                  class="relative px-3 py-2 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border border-cyan-400/40 rounded-lg transform transition-all hover:scale-105"
-                                >
-                                  <!-- Full hop chunk (1/2/4 bytes per segment) -->
-                                  <div
-                                    class="font-mono text-[10px] font-semibold tracking-tight text-content-primary dark:text-content-primary/90 sm:text-xs"
-                                  >
-                                    {{ hash.toUpperCase() }}
-                                  </div>
-                                </div>
-                                <!-- Tooltip: use solid dark surface; do not use bg-content-primary (text token as bg → light “empty” box in dark theme) -->
-                                <div
-                                  class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 font-mono text-xs text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
-                                >
-                                  Node: {{ hash.toUpperCase() }}
-                                </div>
-                              </div>
-                              <!-- Arrow (except for last item) -->
+                            <div class="relative flex items-center justify-center self-stretch">
                               <div
-                                v-if="index < parsePathString(packet.original_path).length - 1"
-                                class="mx-2 text-cyan-600 dark:text-cyan-400/60"
+                                v-if="rowIndex > 0"
+                                class="absolute left-1/2 -translate-x-1/2 top-[-6px] bottom-[calc(50%+18px)] sm:bottom-[calc(50%+20px)] w-px bg-primary/opacity-medium"
+                              ></div>
+                              <div
+                                v-if="rowIndex < getPathRows(packet).length - 1"
+                                class="absolute left-1/2 -translate-x-1/2 top-[calc(50%+18px)] sm:top-[calc(50%+20px)] bottom-[-6px] w-px bg-primary/opacity-medium"
+                              ></div>
+                              <div
+                                class="relative z-10 w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 bg-background-mute dark:bg-surface-elevated flex items-center justify-center font-mono text-xs sm:text-sm font-semibold"
+                                :class="getPathHopMarkerClass(row.matchConfidence, row.localMatch)"
                               >
-                                <svg
-                                  class="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="3"
-                                    d="M9 5l7 7-7 7"
-                                  ></path>
-                                </svg>
+                                #{{ row.hop }}
                               </div>
                             </div>
-                          </template>
-                        </div>
-                      </div>
-                    </div>
 
-                    <!-- Forwarded Path (if transmitted and different) -->
-                    <div
-                      v-if="packet.transmitted && parsePathString(packet.forwarded_path).length > 0"
-                      class="py-2"
-                    >
-                      <div
-                        class="text-content-secondary dark:text-content-muted text-sm mb-2 flex items-center"
-                      >
-                        Forwarded Path
-                        <svg
-                          v-if="
-                            JSON.stringify(parsePathString(packet.original_path)) !==
-                            JSON.stringify(parsePathString(packet.forwarded_path))
-                          "
-                          class="w-4 h-4 ml-2 text-yellow-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          ></path>
-                        </svg>
-                        <span
-                          v-if="
-                            JSON.stringify(parsePathString(packet.original_path)) !==
-                            JSON.stringify(parsePathString(packet.forwarded_path))
-                          "
-                          class="text-yellow-500 text-xs ml-1"
-                          >(Modified)</span
-                        >
-                      </div>
-                      <div class="bg-background-mute dark:bg-black/20 rounded-[10px] p-4">
-                        <div class="flex items-center flex-wrap gap-2">
-                          <template
-                            v-for="(hash, index) in parsePathString(packet.forwarded_path)"
-                            :key="index"
-                          >
-                            <!-- Node Shape -->
-                            <div class="flex items-center">
-                              <div class="relative group">
-                                <!-- Node container with hexagon-like shape -->
-                                <div
-                                  class="relative px-3 py-2 bg-gradient-to-br from-orange-500/20 to-yellow-500/20 border border-orange-500 dark:border-orange-400/40 rounded-lg transform transition-all hover:scale-105"
-                                  :class="
-                                    props.localHash && hash === props.localHash
-                                      ? 'bg-gradient-to-br from-yellow-400/30 to-orange-400/30 border-yellow-300 shadow-yellow-400/20 shadow-lg'
-                                      : 'hover:border-orange-500 dark:border-orange-400/60'
-                                  "
-                                >
-                                  <!-- Full hop chunk (1/2/4 bytes per segment) -->
+                            <div
+                              class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-3 border border-stroke-subtle dark:border-stroke/opacity-light"
+                            >
+                              <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
                                   <div
-                                    class="font-mono text-[10px] font-semibold tracking-tight sm:text-xs"
+                                    class="text-xs sm:text-sm font-bold text-content-primary truncate"
+                                    :title="row.name || 'Unknown contact'"
+                                  >
+                                    {{ row.name || 'Unknown contact' }}
+                                  </div>
+                                  <div
+                                    v-if="row.matchDetail"
+                                    class="text-[10px] sm:text-[11px] leading-tight mt-0.5"
                                     :class="
-                                      props.localHash && hash === props.localHash
-                                        ? 'text-yellow-200'
-                                        : 'text-white/90'
+                                      getPathConfidenceTextClass(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      )
                                     "
                                   >
-                                    {{ hash.toUpperCase() }}
+                                    {{ row.matchDetail }}
                                   </div>
-                                  <!-- Local node indicator -->
+                                  <button
+                                    v-if="
+                                      hasPartialPathMatchCandidates(
+                                        row.matchConfidence,
+                                        row.matchCandidates,
+                                      )
+                                    "
+                                    type="button"
+                                    class="mt-1 text-[10px] sm:text-[11px] text-accent-cyan hover:text-primary transition-colors"
+                                    @click="togglePathMatchExpanded(row.hop)"
+                                  >
+                                    {{
+                                      isPathMatchExpanded(row.hop)
+                                        ? 'Hide possible matches'
+                                        : `Show ${row.matchCandidates.length - 1} possible matches`
+                                    }}
+                                  </button>
                                   <div
-                                    v-if="props.localHash && hash === props.localHash"
-                                    class="absolute -top-1 -right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"
+                                    v-else-if="row.localMatch"
+                                    class="text-[10px] sm:text-[11px] leading-tight mt-0.5 text-accent-cyan"
+                                  >
+                                    current repeater
+                                  </div>
+                                  <div
+                                    v-if="
+                                      hasPartialPathMatchCandidates(
+                                        row.matchConfidence,
+                                        row.matchCandidates,
+                                      ) && isPathMatchExpanded(row.hop)
+                                    "
+                                    class="mt-2 space-y-1"
+                                  >
+                                    <div
+                                      v-for="(candidate, candidateIndex) in row.matchCandidates.slice(1)"
+                                      :key="`${row.hop}-${candidate.pubkey}-${candidateIndex}`"
+                                      class="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] rounded-md px-2 py-1 bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light"
+                                    >
+                                      <span class="text-content-secondary dark:text-content-muted truncate">
+                                        {{ candidate.name }}
+                                      </span>
+                                      <span class="font-mono text-content-muted">
+                                        {{ formatShortPubkey(candidate.pubkey) }}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div
+                                  class="font-mono text-sm sm:text-lg rounded-[10px] px-3 sm:px-4 py-1.5 sm:py-2 border min-w-[64px] sm:min-w-[84px] text-center"
+                                  :class="
+                                    row.hash
+                                      ? row.localMatch
+                                        ? 'bg-accent-cyan/opacity-medium border-accent-cyan/opacity-heavy text-accent-cyan'
+                                        : 'bg-background-mute dark:bg-white/opacity-subtle border-primary/opacity-heavy text-content-primary'
+                                      : 'bg-background-mute/opacity-heavy border-stroke-subtle text-content-muted'
+                                  "
+                                  :title="row.hash || 'No hop'"
+                                >
+                                  {{ row.hash || '-' }}
+                                </div>
+                              </div>
+
+                              <div class="mt-2">
+                                <div
+                                  class="h-1.5 rounded-full bg-background-mute dark:bg-stroke/opacity-subtle overflow-hidden border border-stroke-subtle/60 dark:border-stroke/opacity-light"
+                                >
+                                  <div
+                                    class="h-full rounded-full transition-all duration-300"
+                                    :class="
+                                      getPathConfidenceBarClass(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      )
+                                    "
+                                    :style="{
+                                      width: getPathConfidenceBarWidth(
+                                        row.matchConfidence,
+                                        row.localMatch,
+                                      ),
+                                    }"
                                   ></div>
                                 </div>
-                                <!-- Tooltip: solid dark surface for contrast in light and dark mode -->
-                                <div
-                                  class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 font-mono text-xs text-white opacity-0 shadow-lg ring-1 ring-white/10 transition-opacity group-hover:opacity-100"
-                                >
-                                  {{ hash.toUpperCase() }}
-                                </div>
-                              </div>
-                              <!-- Arrow (except for last item) -->
-                              <div
-                                v-if="index < parsePathString(packet.forwarded_path).length - 1"
-                                class="mx-1 text-orange-600 dark:text-orange-400/60"
-                              >
-                                <svg
-                                  class="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M9 5l7 7-7 7"
-                                  ></path>
-                                </svg>
                               </div>
                             </div>
-                          </template>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1489,27 +2118,27 @@ watch(
               <!-- Section 4: Signal & Processing -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4 flex items-center"
+                  class="text-base sm:text-lg font-semibold text-content-primary mb-4 flex items-center"
                 >
-                  <div class="w-2 h-2 rounded-full bg-green-400 mr-3"></div>
+                  <div class="w-2 h-2 rounded-full bg-accent-green/opacity-light mr-3"></div>
                   Signal & Processing
                 </h3>
-                <div class="glass-card bg-gray-50 dark:bg-white/5 rounded-[15px] p-4">
+                <div class="glass-card bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle rounded-[15px] p-4">
                   <!-- RF Metrics -->
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         RSSI
                       </div>
-                      <div class="text-lg font-bold text-content-primary dark:text-content-primary">
+                      <div class="text-lg font-bold text-content-primary">
                         {{ typeof packet.rssi === 'number' ? packet.rssi : 'N/A' }}
                       </div>
-                      <div class="text-content-muted dark:text-content-muted text-xs">dBm</div>
+                      <div class="text-content-muted text-xs">dBm</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         SNR
@@ -1517,15 +2146,15 @@ watch(
                       <div class="text-lg font-bold" :class="getSnrClass(packet.snr, packet.rssi)">
                         {{ typeof packet.snr === 'number' ? packet.snr.toFixed(1) : 'N/A' }}
                       </div>
-                      <div class="text-content-muted dark:text-content-muted text-xs">dB</div>
+                      <div class="text-content-muted text-xs">dB</div>
                     </div>
                     <div
-                      class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                      class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] col-span-2 md:col-span-1"
                     >
                       <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                         Score
                       </div>
-                      <div class="text-lg font-bold text-content-primary dark:text-content-primary">
+                      <div class="text-lg font-bold text-content-primary">
                         {{ typeof packet.score === 'number' ? packet.score.toFixed(3) : 'N/A' }}
                       </div>
                     </div>
@@ -1547,7 +2176,7 @@ watch(
                     <div class="text-content-secondary dark:text-content-muted text-sm mb-2">
                       Signal Quality
                     </div>
-                    <div class="text-content-muted dark:text-content-muted text-sm italic">
+                    <div class="text-content-muted text-sm italic">
                       N/A (TX Packet)
                     </div>
                   </div>
@@ -1568,17 +2197,17 @@ watch(
                       <div
                         v-for="(pathSnr, index) in packet.path_snr_details"
                         :key="index"
-                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-black/20 rounded-[8px]"
+                        class="flex items-center justify-between p-2 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[8px]"
                       >
                         <div class="flex items-center gap-3">
-                          <span class="text-content-muted dark:text-content-muted text-sm"
+                          <span class="text-content-muted text-sm"
                             >{{ index + 1 }}.</span
                           >
                           <span
-                            class="font-mono text-xs text-content-primary dark:text-content-primary"
+                            class="font-mono text-xs text-content-primary"
                             :class="
                               props.localHash && pathSnr.hash === props.localHash
-                                ? 'bg-cyan-400/20 text-cyan-600 dark:text-cyan-300 px-1 rounded'
+                                ? 'bg-accent-cyan/opacity-medium text-accent-cyan px-1 rounded'
                                 : ''
                             "
                           >
@@ -1595,7 +2224,7 @@ watch(
                   <!-- LBT Metrics (only for transmitted packets) -->
                   <div
                     v-if="packet.transmitted && packet.lbt_attempts !== undefined"
-                    class="mt-6 pt-4 border-t border-stroke-subtle dark:border-stroke/10"
+                    class="mt-6 pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light"
                   >
                     <div
                       class="text-content-secondary dark:text-content-muted text-sm mb-3 flex items-center"
@@ -1617,16 +2246,16 @@ watch(
                     </div>
 
                     <!-- LBT Summary Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
                       <!-- Attempts Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] col-span-2 md:col-span-1"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           CAD Attempts
                         </div>
                         <div
-                          class="text-2xl font-bold text-content-primary dark:text-content-primary"
+                          class="text-2xl font-bold text-content-primary"
                         >
                           {{ packet.lbt_attempts }}
                         </div>
@@ -1634,13 +2263,13 @@ watch(
 
                       <!-- Total Delay Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Total LBT Delay
                         </div>
                         <div
-                          class="text-2xl font-bold text-content-primary dark:text-content-primary"
+                          class="text-2xl font-bold text-content-primary"
                         >
                           {{
                             formatDelayTime(
@@ -1651,14 +2280,14 @@ watch(
                             )
                           }}
                         </div>
-                        <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                        <div class="text-content-muted text-xs mt-1">
                           {{ parseLbtDelays(packet.lbt_backoff_delays_ms).length }} backoffs
                         </div>
                       </div>
 
                       <!-- Channel Status Card -->
                       <div
-                        class="text-center p-3 glass-card bg-background-mute dark:bg-black/20 rounded-[10px]"
+                        class="text-center p-3 glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px]"
                       >
                         <div class="text-content-secondary dark:text-content-muted text-xs mb-1">
                           Channel Status
@@ -1667,13 +2296,13 @@ watch(
                           class="text-lg font-bold"
                           :class="
                             packet.lbt_channel_busy
-                              ? 'text-yellow-600 dark:text-yellow-400'
-                              : 'text-green-600 dark:text-green-400'
+                              ? 'text-accent-amber'
+                              : 'text-accent-green'
                           "
                         >
                           {{ packet.lbt_channel_busy ? 'BUSY' : 'CLEAR' }}
                         </div>
-                        <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                        <div class="text-content-muted text-xs mt-1">
                           {{ packet.lbt_channel_busy ? 'Waited for clear' : 'Immediate TX' }}
                         </div>
                       </div>
@@ -1682,7 +2311,7 @@ watch(
                     <!-- Backoff Pattern Visualization (if there were retries) -->
                     <div
                       v-if="parseLbtDelays(packet.lbt_backoff_delays_ms).length > 0"
-                      class="glass-card bg-background-mute dark:bg-black/20 rounded-[10px] p-4"
+                      class="glass-card bg-background-mute dark:bg-white/opacity-subtle rounded-[10px] p-4"
                     >
                       <div
                         class="text-content-secondary dark:text-content-muted text-xs mb-3 font-semibold"
@@ -1707,7 +2336,7 @@ watch(
                           <!-- Delay bar -->
                           <div class="flex-1 relative">
                             <div
-                              class="h-8 rounded-lg overflow-hidden bg-background-mute dark:bg-stroke/5 relative"
+                              class="h-8 rounded-lg overflow-hidden bg-background-mute dark:bg-stroke/opacity-subtle relative"
                             >
                               <div
                                 class="h-full rounded-lg transition-all duration-300"
@@ -1727,7 +2356,7 @@ watch(
                                 <!-- Delay text overlay -->
                                 <div class="absolute inset-0 flex items-center px-3">
                                   <span
-                                    class="text-content-primary dark:text-content-primary text-xs font-mono font-semibold"
+                                    class="text-content-primary text-xs font-mono font-semibold"
                                     >{{ formatDelayTime(delay) }}</span
                                   >
                                 </div>
@@ -1737,7 +2366,7 @@ watch(
 
                           <!-- Percentage of total -->
                           <div class="flex-shrink-0 w-12 text-left">
-                            <span class="text-content-muted dark:text-content-muted text-xs">
+                            <span class="text-content-muted text-xs">
                               {{
                                 Math.round(
                                   (delay /
@@ -1756,15 +2385,15 @@ watch(
                   </div>
 
                   <!-- Processing Info -->
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="space-y-2">
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >TX Delay</span
                         >
-                        <span class="text-content-primary dark:text-content-primary">
+                        <span class="text-content-primary">
                           {{
                             Number(packet.tx_delay_ms) > 0
                               ? Number(packet.tx_delay_ms).toFixed(1) + 'ms'
@@ -1773,7 +2402,7 @@ watch(
                         </span>
                       </div>
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Transmitted</span
@@ -1781,8 +2410,8 @@ watch(
                         <span
                           :class="
                             packet.transmitted
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
+                              ? 'text-accent-green'
+                              : 'text-accent-red'
                           "
                         >
                           {{ packet.transmitted ? 'Yes' : 'No' }}
@@ -1791,7 +2420,7 @@ watch(
                     </div>
                     <div class="space-y-2">
                       <div
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Is Duplicate</span
@@ -1799,8 +2428,8 @@ watch(
                         <span
                           :class="
                             packet.is_duplicate
-                              ? 'text-amber-600 dark:text-amber-400'
-                              : 'text-content-muted dark:text-content-muted'
+                              ? 'text-accent-amber'
+                              : 'text-content-muted'
                           "
                         >
                           {{ packet.is_duplicate ? 'Yes' : 'No' }}
@@ -1808,12 +2437,12 @@ watch(
                       </div>
                       <div
                         v-if="packet.drop_reason"
-                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/10"
+                        class="flex justify-between py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light"
                       >
                         <span class="text-content-secondary dark:text-content-muted text-sm"
                           >Drop Reason</span
                         >
-                        <span class="text-red-600 dark:text-red-400 text-sm">{{
+                        <span class="text-accent-red text-sm">{{
                           packet.drop_reason
                         }}</span>
                       </div>
@@ -1825,11 +2454,13 @@ watch(
 
             <!-- Footer -->
             <div
-              class="p-8 pt-4 border-t border-stroke-subtle dark:border-stroke/10 flex justify-end flex-shrink-0"
+              class="p-4 sm:p-6 lg:p-8 pt-3 sm:pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light flex justify-end flex-shrink-0"
             >
               <button
+                type="button"
                 @click="emit('close')"
-                class="px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-cyan-400/30 rounded-[10px] text-content-primary dark:text-content-primary transition-all duration-200 backdrop-blur-sm"
+                aria-label="Close packet details"
+                class="w-full sm:w-auto px-6 py-2 bg-gradient-to-r from-cyan-500/20 to-cyan-400/20 hover:from-cyan-500/30 hover:to-cyan-400/30 border border-accent-cyan/opacity-medium rounded-[10px] text-content-primary transition-all duration-200 backdrop-blur-sm"
               >
                 Close
               </button>
@@ -1861,7 +2492,7 @@ watch(
 /* Custom scrollbar */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-surface) 35%, transparent) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -1869,17 +2500,17 @@ watch(
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-surface) 12%, transparent);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
 }
 
 /* Glass card enhancement */

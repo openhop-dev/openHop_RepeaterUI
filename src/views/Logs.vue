@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import ApiService, { API_SERVER_URL } from '@/utils/api';
-import { getToken } from '@/utils/auth';
+import { getToken, isTokenExpired } from '@/utils/auth';
+import { useAppRuntimeStore } from '@/stores/appRuntime';
 import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'LogsView' });
@@ -14,7 +15,6 @@ interface LogEntry {
   timestamp: string;
   level: string;
   logger?: string;
-  raw_message?: string;
   exception?: string;
   module?: string;
   pathname?: string;
@@ -46,6 +46,7 @@ const lastEventAt = ref<string | null>(null);
 const logContainer = ref<HTMLElement | null>(null);
 const eventSource = ref<EventSource | null>(null);
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+const appRuntime = useAppRuntimeStore();
 
 const setsEqual = (left: Set<string>, right: Set<string>): boolean => {
   if (left.size !== right.size) return false;
@@ -62,7 +63,6 @@ const extractLoggerName = (entry: LogEntry): string => {
 };
 
 const cleanLogMessage = (entry: LogEntry): string => {
-  if (entry.raw_message) return entry.raw_message;
   const match = entry.message.match(
     /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} - [^-]+ - (?:DEBUG|INFO|WARNING|ERROR|WARN) - (.+)$/,
   );
@@ -94,37 +94,37 @@ const formatDateTime = (timestamp: string): string => {
 
 const getLevelClass = (level: string): string => {
   const levelMap: Record<string, string> = {
-    ERROR: 'text-red-600 dark:text-red-300 bg-red-500/10 border-red-500/20',
-    WARNING: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
-    WARN: 'text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20',
-    INFO: 'text-sky-700 dark:text-sky-300 bg-sky-500/10 border-sky-500/20',
-    DEBUG: 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20',
+    ERROR: 'text-accent-red bg-accent-red/opacity-light border-accent-red/opacity-medium',
+    WARNING: 'text-accent-amber bg-accent-amber/opacity-light border-accent-amber/opacity-medium',
+    WARN: 'text-accent-amber bg-accent-amber/opacity-light border-accent-amber/opacity-medium',
+    INFO: 'text-accent-cyan bg-accent-cyan/opacity-light border-accent-cyan/opacity-medium',
+    DEBUG: 'text-content-muted bg-background-mute/opacity-light border-slate-500/20',
   };
-  return levelMap[level] || 'text-slate-600 dark:text-slate-300 bg-slate-500/10 border-slate-500/20';
+  return levelMap[level] || 'text-content-muted bg-background-mute/opacity-light border-slate-500/20';
 };
 
 const getLevelFilterClass = (level: string, enabled: boolean): string => {
   if (!enabled) {
-    return 'border-stroke-subtle dark:border-stroke/20 text-content-muted dark:text-content-muted bg-background-mute/70 dark:bg-white/5 hover:bg-background-mute dark:hover:bg-white/10';
+    return 'border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle hover:bg-background-mute dark:hover:bg-white/opacity-light';
   }
 
   const enabledMap: Record<string, string> = {
-    ERROR: 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-300',
-    WARNING: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    WARN: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    INFO: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-    DEBUG: 'border-slate-500/40 bg-slate-500/10 text-slate-700 dark:text-slate-300',
+    ERROR: 'border-accent-red/opacity-heavy bg-accent-red/opacity-light text-accent-red',
+    WARNING: 'border-accent-amber/opacity-heavy bg-accent-amber/opacity-light text-accent-amber',
+    WARN: 'border-accent-amber/opacity-heavy bg-accent-amber/opacity-light text-accent-amber',
+    INFO: 'border-accent-cyan/opacity-heavy bg-accent-cyan/opacity-light text-accent-cyan',
+    DEBUG: 'border-slate-500/40 bg-background-mute/opacity-light text-content-muted',
   };
-  return enabledMap[level] || 'border-primary/40 bg-primary/10 text-primary';
+  return enabledMap[level] || 'border-primary/opacity-heavy bg-primary/opacity-light text-primary';
 };
 
 const streamStatusClass = computed(() => {
   const classMap: Record<StreamState, string> = {
-    connecting: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
-    live: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-    paused: 'border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-300',
-    reconnecting: 'border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-    offline: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300',
+    connecting: 'border-accent-amber/opacity-medium bg-accent-amber/opacity-light text-accent-amber',
+    live: 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green',
+    paused: 'border-stroke/opacity-medium bg-background-mute text-content-muted',
+    reconnecting: 'border-accent-amber/opacity-medium bg-accent-amber/opacity-light text-accent-amber',
+    offline: 'border-accent-red/opacity-medium bg-accent-red/opacity-light text-accent-red',
   };
   return classMap[streamState.value];
 });
@@ -254,7 +254,6 @@ function normalizeLogEntry(entry: Partial<LogEntry>): LogEntry {
     timestamp: String(entry.timestamp ?? new Date().toISOString()),
     level: String(entry.level ?? 'INFO'),
     logger: entry.logger ? String(entry.logger) : undefined,
-    raw_message: entry.raw_message ? String(entry.raw_message) : undefined,
     exception: entry.exception ? String(entry.exception) : undefined,
     module: entry.module ? String(entry.module) : undefined,
     pathname: entry.pathname ? String(entry.pathname) : undefined,
@@ -432,6 +431,12 @@ function connectStream() {
       return;
     }
 
+    if (!getToken() || isTokenExpired()) {
+      disconnectStream('offline');
+      void appRuntime.handleAuthFailure('expired');
+      return;
+    }
+
     if (eventSource.value) {
       eventSource.value.close();
       eventSource.value = null;
@@ -518,10 +523,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="space-y-6">
-    <div class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/10 rounded-[15px] p-6 space-y-5">
+    <div class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-6 space-y-5">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 class="text-content-primary dark:text-content-primary text-2xl font-semibold mb-2">
+          <h1 class="text-content-primary text-2xl font-semibold mb-2">
             System Logs
           </h1>
           <p class="text-content-secondary dark:text-content-muted max-w-2xl">
@@ -552,24 +557,24 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Visible</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ filteredLogCount }}</div>
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-content-muted">Visible</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ filteredLogCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ totalLogCount }} retained lines</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Logger Filters</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ visibleLoggerCount }}</div>
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-content-muted">Logger Filters</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLoggerCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLoggers.size }} selected</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Level Filters</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary dark:text-content-primary">{{ visibleLevelCount }}</div>
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-content-muted">Level Filters</div>
+          <div class="mt-1 text-xl font-semibold text-content-primary">{{ visibleLevelCount }}</div>
           <div class="text-xs text-content-secondary dark:text-content-muted">of {{ allLevels.size }} selected</div>
         </div>
-        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/60 dark:bg-white/5 px-4 py-3">
-          <div class="text-xs uppercase tracking-wide text-content-muted dark:text-content-muted">Last Activity</div>
-          <div class="mt-1 text-sm font-semibold text-content-primary dark:text-content-primary">
+        <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/opacity-subtle px-4 py-3">
+          <div class="text-xs uppercase tracking-wide text-content-muted">Last Activity</div>
+          <div class="mt-1 text-sm font-semibold text-content-primary">
             {{ lastEventAt ? formatDateTime(lastEventAt) : 'Waiting for stream' }}
           </div>
           <div class="text-xs text-content-secondary dark:text-content-muted">
@@ -578,10 +583,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-stroke-subtle dark:border-stroke/20 bg-background-main dark:bg-surface-900 p-4 space-y-4">
+      <div class="rounded-2xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-main dark:bg-surface-900 p-4 space-y-4">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
           <div class="xl:col-span-8">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted mb-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
               Search Logs
             </label>
             <input
@@ -592,7 +597,7 @@ onBeforeUnmount(() => {
             />
           </div>
           <div class="xl:col-span-4">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted dark:text-content-muted mb-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-muted mb-2">
               Actions
             </label>
             <div class="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -608,10 +613,10 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/40 dark:bg-white/[0.03] p-4">
+          <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/[0.03] p-4">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div>
-                <div class="text-sm font-semibold text-content-primary dark:text-content-primary">Level Filters</div>
+                <div class="text-sm font-semibold text-content-primary">Level Filters</div>
                 <div class="text-xs text-content-secondary dark:text-content-muted">{{ visibleLevelCount }} of {{ allLevels.size }} selected</div>
               </div>
               <div class="flex items-center gap-2">
@@ -634,13 +639,13 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="rounded-xl border border-stroke-subtle dark:border-stroke/20 bg-background-mute/40 dark:bg-white/[0.03] overflow-hidden">
+          <div class="rounded-xl border border-stroke-subtle dark:border-stroke/opacity-medium bg-background-mute/opacity-heavy dark:bg-white/[0.03] overflow-hidden">
             <button
               @click="showLoggerFilters = !showLoggerFilters"
               class="w-full flex items-center justify-between px-4 py-3 text-left"
             >
               <div>
-                <div class="text-sm font-semibold text-content-primary dark:text-content-primary">Logger Filters</div>
+                <div class="text-sm font-semibold text-content-primary">Logger Filters</div>
                 <div class="text-xs text-content-secondary dark:text-content-muted">{{ visibleLoggerCount }} of {{ allLoggers.size }} selected</div>
               </div>
               <svg class="w-4 h-4 text-content-muted transition-transform" :class="{ 'rotate-180': showLoggerFilters }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -648,7 +653,7 @@ onBeforeUnmount(() => {
               </svg>
             </button>
 
-            <div v-if="showLoggerFilters" class="border-t border-stroke-subtle dark:border-stroke/20 px-4 py-4 space-y-3">
+            <div v-if="showLoggerFilters" class="border-t border-stroke-subtle dark:border-stroke/opacity-medium px-4 py-4 space-y-3">
               <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <input
                   v-model="loggerSearch"
@@ -671,8 +676,8 @@ onBeforeUnmount(() => {
                     :class="[
                       'px-3 py-1.5 text-xs border rounded-full transition-colors',
                       enabledLoggers.has(logger)
-                        ? 'bg-primary/10 border-primary/40 text-primary'
-                        : 'bg-background-main dark:bg-white/5 border-stroke-subtle dark:border-stroke/20 text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/10',
+                        ? 'bg-primary/opacity-light border-primary/opacity-heavy text-primary'
+                        : 'bg-background-main dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-medium text-content-secondary dark:text-content-muted hover:bg-background-mute dark:hover:bg-white/opacity-light',
                     ]"
                   >
                     {{ logger }}
@@ -688,19 +693,19 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/10 rounded-[15px] overflow-hidden">
+    <div class="glass-card backdrop-blur border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] overflow-hidden">
       <div v-if="loadingInitial && allLogs.length === 0" class="p-8 text-center">
         <Spinner class="mx-auto mb-4" />
         <p class="text-content-secondary dark:text-content-muted">Loading log history...</p>
       </div>
 
       <div v-else-if="error && allLogs.length === 0" class="p-8 text-center">
-        <div class="text-red-600 dark:text-red-400 mb-4">
+        <div class="text-accent-red mb-4">
           <svg class="w-12 h-12 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 class="text-content-primary dark:text-content-primary text-lg font-medium mb-2">Error Loading Logs</h3>
+        <h3 class="text-content-primary text-lg font-medium mb-2">Error Loading Logs</h3>
         <p class="text-content-secondary dark:text-content-muted mb-4">{{ error }}</p>
         <button @click="loadLogs('refresh')" class="btn-primary">Try Again</button>
       </div>
@@ -708,26 +713,26 @@ onBeforeUnmount(() => {
       <div v-else class="relative">
         <div
           ref="logContainer"
-          class="max-h-[70vh] overflow-y-auto bg-slate-950/95 text-slate-100"
+          class="max-h-[70vh] overflow-y-auto bg-background-mute dark:bg-background-mute/opacity-heavy text-content-primary"
           @scroll="handleLogScroll"
         >
-          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-slate-300">
-            <h3 class="text-lg font-medium text-white mb-2">No Logs to Display</h3>
-            <p class="text-sm text-slate-400">The current search and filter settings removed every retained line.</p>
+          <div v-if="filteredLogs.length === 0" class="p-10 text-center text-content-secondary">
+            <h3 class="text-lg font-medium text-content-primary mb-2">No Logs to Display</h3>
+            <p class="text-sm text-content-muted">The current search and filter settings removed every retained line.</p>
           </div>
 
-          <div v-else class="divide-y divide-white/5">
+          <div v-else class="divide-y divide-stroke-subtle dark:divide-white/opacity-subtle">
             <div
               v-for="(log, index) in filteredLogs"
               :key="log.id ?? `${log.timestamp}-${index}`"
               class="px-3 py-1 transition-colors cursor-pointer"
-              :class="selectedLogId === log.id ? 'bg-white/10' : 'hover:bg-white/5'"
+              :class="selectedLogId === log.id ? 'bg-stroke-subtle dark:bg-white/opacity-subtle' : 'hover:bg-stroke-subtle/50 dark:hover:bg-white/opacity-light'"
               @click="selectLog(log)"
             >
               <div class="flex flex-col gap-0.5 xl:flex-row xl:items-start">
                 <div class="flex flex-wrap items-center gap-1.5 xl:min-w-[260px] xl:max-w-[260px] xl:flex-none">
-                  <span class="text-[11px] text-slate-400">{{ formatTime(log.timestamp) }}</span>
-                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-white/10 bg-white/5 text-slate-200">
+                  <span class="text-[11px] text-content-muted">{{ formatTime(log.timestamp) }}</span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-semibold rounded-full border border-stroke-subtle dark:border-white/opacity-light bg-stroke-subtle/50 dark:bg-white/opacity-subtle text-content-secondary dark:text-content-muted">
                     {{ extractLoggerName(log) }}
                   </span>
                   <span :class="['px-1.5 py-0.5 text-[10px] font-semibold rounded-full border', getLevelClass(log.level)]">
@@ -735,38 +740,38 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div class="min-w-0 flex-1">
-                  <div class="text-xs leading-4 break-words text-slate-100">
+                  <div class="text-xs leading-4 break-words text-content-primary">
                     {{ cleanLogMessage(log) }}
                   </div>
 
-                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-white/10 bg-black/20 p-3 space-y-3 text-xs text-slate-300">
+                  <div v-if="selectedLogId === log.id" class="mt-3 rounded-xl border border-stroke-subtle dark:border-white/opacity-light bg-background-mute dark:bg-black/opacity-medium p-3 space-y-3 text-xs text-content-secondary">
                     <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Timestamp</div>
-                        <div class="mt-1 text-slate-200">{{ formatDateTime(log.timestamp) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Timestamp</div>
+                        <div class="mt-1 text-content-primary">{{ formatDateTime(log.timestamp) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Logger</div>
-                        <div class="mt-1 text-slate-200">{{ extractLoggerName(log) }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Logger</div>
+                        <div class="mt-1 text-content-primary">{{ extractLoggerName(log) }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Module</div>
-                        <div class="mt-1 text-slate-200">{{ log.module || '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Module</div>
+                        <div class="mt-1 text-content-primary">{{ log.module || '—' }}</div>
                       </div>
                       <div>
-                        <div class="uppercase tracking-wide text-slate-500">Line</div>
-                        <div class="mt-1 text-slate-200">{{ log.line ?? '—' }}</div>
+                        <div class="uppercase tracking-wide text-content-muted">Line</div>
+                        <div class="mt-1 text-content-primary">{{ log.line ?? '—' }}</div>
                       </div>
                     </div>
 
                     <div>
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Full Message</div>
-                      <pre class="whitespace-pre-wrap break-words text-slate-100">{{ log.message }}</pre>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Full Message</div>
+                      <pre class="whitespace-pre-wrap break-words text-content-primary">{{ log.message }}</pre>
                     </div>
 
                     <div v-if="log.exception">
-                      <div class="uppercase tracking-wide text-slate-500 mb-1">Exception</div>
-                      <pre class="whitespace-pre-wrap break-words text-red-200">{{ log.exception }}</pre>
+                      <div class="uppercase tracking-wide text-content-muted mb-1">Exception</div>
+                      <pre class="whitespace-pre-wrap break-words text-accent-red/opacity-heavy">{{ log.exception }}</pre>
                     </div>
                   </div>
                 </div>
@@ -776,7 +781,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="!followTail && pendingNewLogs" class="absolute bottom-4 right-4">
-          <button @click="jumpToLatest" class="rounded-full border border-primary/40 bg-primary text-white px-4 py-2 shadow-lg">
+          <button @click="jumpToLatest" class="rounded-full border border-primary/opacity-heavy bg-primary/opacity-medium hover:bg-primary/opacity-medium text-primary px-4 py-2 shadow-lg">
             {{ pendingNewLogs }} new line{{ pendingNewLogs === 1 ? '' : 's' }}
           </button>
         </div>

@@ -497,12 +497,12 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title pyMC Repeater API
+ * @title openHop Repeater API
  * @version 1.0.0
  * @baseUrl /api
- * @contact pyMC Repeater (https://github.com/rightup/pyMC_Repeater)
+ * @contact openHop Repeater (https://github.com/openhop-dev/openhop_repeater)
  *
- * REST API for pyMC Repeater - LoRa mesh network repeater with room server functionality.
+ * REST API for openHop Repeater - LoRa mesh network repeater with room server functionality.
  *
  * ## Features
  * - System statistics and monitoring
@@ -1265,6 +1265,29 @@ export class Api<
         ...params,
       }),
   };
+  packetById = {
+    /**
+     * No description
+     *
+     * @tags Packets
+     * @name PacketByIdList
+     * @summary Get packet by ID
+     * @request GET:/packet_by_id
+     */
+    packetByIdList: (
+      query: {
+        /** Packet database ID to lookup */
+        packet_id: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/packet_by_id`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+  };
   packetTypeStats = {
     /**
      * @description Statistics broken down by packet type
@@ -1927,6 +1950,61 @@ export class Api<
         ...params,
       }),
   };
+  defaultRegion = {
+    /**
+     * @description Get current mesh default region used for locally-originated flood adverts.
+     *
+     * @tags Network Policy
+     * @name DefaultRegionList
+     * @summary Get default region
+     * @request GET:/default_region
+     * @secure
+     */
+    defaultRegionList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            default_region?: string | null;
+          };
+          message?: string;
+          error?: string;
+        },
+        any
+      >({
+        path: `/default_region`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Set or clear mesh default region. Pass null to clear.
+     *
+     * @tags Network Policy
+     * @name DefaultRegionCreate
+     * @summary Update default region
+     * @request POST:/default_region
+     * @secure
+     */
+    defaultRegionCreate: (
+      data: {
+        /** Region name to set, or null to clear. */
+        default_region: string | null;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/default_region`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   pingNeighbor = {
     /**
      * @description Send ping to a specific neighbor node
@@ -1967,6 +2045,136 @@ export class Api<
         any
       >({
         path: `/ping_neighbor`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  discoverNeighborsStart = {
+    /**
+     * @description Start a short-lived discovery broadcast session and return a session ID for SSE streaming.
+     *
+     * @tags Network Policy
+     * @name DiscoverNeighborsStartCreate
+     * @summary Start neighbor discovery session
+     * @request POST:/discover_neighbors_start
+     */
+    discoverNeighborsStartCreate: (
+      data?: {
+        /**
+         * @min 1
+         * @max 60
+         * @default 5
+         */
+        timeout?: number;
+        /**
+         * @min 0
+         * @max 255
+         * @default 4
+         */
+        filter_mask?: number;
+        /**
+         * @min 0
+         * @default 0
+         */
+        since?: number;
+        /** @default false */
+        prefix_only?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            session_id?: string;
+            tag?: number;
+            status?: string;
+            timeout?: number;
+            filter_mask?: number;
+            since?: number;
+            prefix_only?: boolean;
+            created_at?: number;
+            started_at?: number | null;
+            completed_at?: number | null;
+            count?: number;
+            error?: string | null;
+          };
+          message?: string;
+          error?: string;
+        },
+        any
+      >({
+        path: `/discover_neighbors_start`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  discoverNeighborsStream = {
+    /**
+     * @description Stream live neighbor discovery session events via Server-Sent Events (SSE).
+     *
+     * @tags Network Policy
+     * @name DiscoverNeighborsStreamList
+     * @summary Stream discovery events
+     * @request GET:/discover_neighbors_stream
+     * @secure
+     */
+    discoverNeighborsStreamList: (
+      query: {
+        session_id: string;
+        last_event_id?: number;
+        /** JWT token for EventSource clients that cannot send Authorization headers. */
+        token?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<string, any>({
+        path: `/discover_neighbors_stream`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+  };
+  addDiscoveredNeighbor = {
+    /**
+     * @description Persist a discovered node into the adverts/neighbors store for future management.
+     *
+     * @tags Network Policy
+     * @name AddDiscoveredNeighborCreate
+     * @summary Add discovered node as neighbor
+     * @request POST:/add_discovered_neighbor
+     * @secure
+     */
+    addDiscoveredNeighborCreate: (
+      data: {
+        /** Hex pubkey (8-byte or 32-byte form). */
+        pub_key: string;
+        node_name?: string | null;
+        node_type?: number;
+        rssi?: number | null;
+        response_snr?: number | null;
+        snr?: number | null;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: object;
+          message?: string;
+          error?: string;
+        },
+        any
+      >({
+        path: `/add_discovered_neighbor`,
         method: "POST",
         body: data,
         secure: true,

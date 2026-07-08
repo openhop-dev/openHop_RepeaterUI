@@ -55,12 +55,18 @@ export class SetCommand extends BaseCommand {
       this.writeLine(term, '');
       this.writeLine(term, '  \x1b[33mIdentity:\x1b[0m');
       this.writeLine(term, '  \x1b[36mname <name>\x1b[0m              Node name');
+      this.writeLine(term, '  \x1b[36mowner.info <text>\x1b[0m       Owner info text');
       this.writeLine(term, '  \x1b[36mlat <-90 to 90>\x1b[0m          Latitude');
       this.writeLine(term, '  \x1b[36mlon <-180 to 180>\x1b[0m        Longitude');
       this.writeLine(term, '');
       this.writeLine(term, '  \x1b[33mRepeater:\x1b[0m');
       this.writeLine(term, '  \x1b[36mmode <forward|monitor|no_tx>\x1b[0m   Repeater mode');
       this.writeLine(term, '  \x1b[36mduty <on|off>\x1b[0m            Duty cycle enforcement');
+      this.writeLine(term, '  \x1b[36mpath.hash.mode <0-2>\x1b[0m     Path hash mode');
+      this.writeLine(
+        term,
+        '  \x1b[36mloop.detect <off|minimal|moderate|strict>\x1b[0m  Loop detection mode',
+      );
       this.writeLine(term, '  \x1b[36mflood.max <0-64>\x1b[0m         Max flood hops');
       this.writeLine(term, '  \x1b[36madvert.interval <mins>\x1b[0m   Local advert interval');
       this.writeLine(term, '');
@@ -257,6 +263,25 @@ export class SetCommand extends BaseCommand {
           break;
         }
 
+        case 'owner.info': {
+          if (!value) {
+            stopLoading();
+            this.writeError(term, 'Owner info cannot be empty');
+            writePrompt();
+            return;
+          }
+          response = await ApiService.post<UpdateConfigResponse>(
+            '/update_radio_config',
+            {
+              owner_info: value.replace(/\|/g, '\n'),
+            },
+            {
+              timeout: 30000,
+            },
+          );
+          break;
+        }
+
         case 'lat': {
           const lat = parseFloat(value);
           if (isNaN(lat) || lat < -90 || lat > 90) {
@@ -365,6 +390,46 @@ export class SetCommand extends BaseCommand {
           break;
         }
 
+        case 'path.hash.mode': {
+          const mode = parseInt(value);
+          if (isNaN(mode) || mode < 0 || mode > 2) {
+            stopLoading();
+            this.writeError(term, 'path.hash.mode must be 0, 1, or 2');
+            writePrompt();
+            return;
+          }
+          response = await ApiService.post<UpdateConfigResponse>(
+            '/update_radio_config',
+            {
+              path_hash_mode: mode,
+            },
+            {
+              timeout: 30000,
+            },
+          );
+          break;
+        }
+
+        case 'loop.detect': {
+          const mode = value.toLowerCase();
+          if (!['off', 'minimal', 'moderate', 'strict'].includes(mode)) {
+            stopLoading();
+            this.writeError(term, 'loop.detect must be off, minimal, moderate, or strict');
+            writePrompt();
+            return;
+          }
+          response = await ApiService.post<UpdateConfigResponse>(
+            '/update_radio_config',
+            {
+              loop_detect: mode,
+            },
+            {
+              timeout: 30000,
+            },
+          );
+          break;
+        }
+
         case 'flood.max': {
           const hops = parseInt(value);
           if (isNaN(hops) || hops < 0 || hops > 64) {
@@ -387,9 +452,9 @@ export class SetCommand extends BaseCommand {
 
         case 'flood.advert.interval': {
           const hours = parseInt(value);
-          if (isNaN(hours) || (hours !== 0 && (hours < 3 || hours > 48))) {
+          if (isNaN(hours) || (hours !== 0 && (hours < 3 || hours > 168))) {
             stopLoading();
-            this.writeError(term, 'Flood advert interval must be 0 (off) or 3-48 hours');
+            this.writeError(term, 'Flood advert interval must be 0 (off) or 3-168 hours');
             writePrompt();
             return;
           }
@@ -462,7 +527,7 @@ export class SetCommand extends BaseCommand {
         if (data.restart_required) {
           this.writeLine(term, '');
           this.writeWarning(term, '⚠ Service restart required for changes to take effect');
-          this.writeInfo(term, 'Run: sudo systemctl restart pymc_repeater');
+          this.writeInfo(term, 'Run: sudo systemctl restart openhop-repeater');
         } else if (data.message && !data.live_update) {
           this.writeLine(term, '');
           this.writeInfo(term, data.message);

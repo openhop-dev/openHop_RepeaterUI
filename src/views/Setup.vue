@@ -121,12 +121,12 @@ const connectionFilters: Array<{ key: ConnectionType; title: string; description
   {
     key: 'usb',
     title: 'USB Connection',
-    description: 'USB-attached modems including CH341 and pyMC USB modem.',
+    description: 'USB-attached modems including CH341 and openHop USB modem.',
   },
   {
     key: 'network',
     title: 'Network Wi-Fi Based',
-    description: 'Remote modem reached over LAN/Wi-Fi using pyMC TCP.',
+    description: 'Remote modem reached over LAN/Wi-Fi using openHop TCP.',
   },
 ];
 
@@ -262,7 +262,7 @@ const stepTitles = [
             >{{ Math.round(progressPercentage) }}% Complete</span
           >
         </div>
-        <div class="h-2 bg-stroke-subtle dark:bg-stroke/10 rounded-full overflow-hidden">
+        <div class="h-2 bg-stroke-subtle dark:bg-stroke/opacity-subtle rounded-full overflow-hidden">
           <div
             class="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
             :style="{ width: `${progressPercentage}%` }"
@@ -272,7 +272,7 @@ const stepTitles = [
 
       <!-- Main Card -->
       <div
-        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[20px] p-6 sm:p-8 md:p-12"
+        class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[20px] p-6 sm:p-8 md:p-12"
       >
         <!-- Step Indicator -->
         <div class="flex justify-center mb-8">
@@ -283,10 +283,10 @@ const stepTitles = [
               :class="[
                 'w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all',
                 step === setupStore.currentStep
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary/opacity-medium text-primary'
                   : step < setupStore.currentStep
-                    ? 'bg-primary/30 text-content-secondary dark:text-content-primary/70'
-                    : 'bg-background-mute dark:bg-stroke/10 text-content-muted dark:text-content-muted',
+                    ? 'bg-primary/opacity-medium text-content-secondary dark:text-content-primary/opacity-heavy'
+                    : 'bg-background-mute dark:bg-stroke/opacity-subtle text-content-muted',
               ]"
             >
               {{ step }}
@@ -297,7 +297,7 @@ const stepTitles = [
         <!-- Step Content -->
         <div class="mb-8">
           <h2
-            class="text-2xl sm:text-3xl font-bold text-content-primary dark:text-content-primary mb-2 text-center"
+            class="text-2xl sm:text-3xl font-bold text-content-primary mb-2 text-center"
           >
             {{ stepTitles[setupStore.currentStep - 1] }}
           </h2>
@@ -306,7 +306,7 @@ const stepTitles = [
           <div v-if="setupStore.currentStep === 1" class="space-y-6 mt-8">
             <div class="text-center space-y-4">
               <div
-                class="w-20 h-20 mx-auto bg-primary/20 rounded-full flex items-center justify-center mb-6"
+                class="w-20 h-20 mx-auto bg-primary/opacity-medium rounded-full flex items-center justify-center mb-6"
               >
                 <svg
                   class="w-10 h-10 text-primary"
@@ -322,12 +322,12 @@ const stepTitles = [
                   />
                 </svg>
               </div>
-              <p class="text-content-secondary dark:text-content-primary/70 text-lg">
-                Welcome to your pyMC Repeater! Let's get you set up in just a few steps.
+              <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-lg">
+                Welcome to your Repeater! Let's get you set up in just a few steps.
               </p>
-              <div class="bg-primary/10 border border-primary/30 rounded-lg p-4 text-left">
+              <div class="bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-4 text-left">
                 <p class="text-primary text-sm font-medium mb-2">You'll configure:</p>
-                <ul class="space-y-2 text-content-secondary dark:text-content-primary/70 text-sm">
+                <ul class="space-y-2 text-content-secondary dark:text-content-primary/opacity-heavy text-sm">
                   <li class="flex items-center gap-2">
                     <svg
                       class="w-4 h-4 text-primary"
@@ -399,13 +399,13 @@ const stepTitles = [
 
           <!-- Node Name Step -->
           <div v-else-if="setupStore.currentStep === 2" class="space-y-6 mt-8">
-            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+            <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-center mb-6">
               Choose a unique name for your repeater. This will be used for identification on the
               mesh network.
             </p>
             <div class="max-w-md mx-auto">
               <label
-                class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                 >Repeater Name</label
               >
               <input
@@ -423,7 +423,7 @@ const stepTitles = [
 
           <!-- Connection Type Step -->
           <div v-else-if="setupStore.currentStep === 3" class="space-y-6 mt-8">
-            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+            <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-center mb-6">
               Choose how your radio hardware connects to this repeater.
             </p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
@@ -434,23 +434,23 @@ const stepTitles = [
                 :class="[
                   'p-6 rounded-[16px] border transition-all duration-300 text-left backdrop-blur-sm min-h-[220px] flex flex-col',
                   setupStore.selectedHardwareConnection === connection.key
-                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
-                    : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                    : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                 ]"
               >
                 <div
                   :class="[
                     'mb-5 w-16 h-16 rounded-2xl flex items-center justify-center border transition-all duration-300',
                     setupStore.selectedHardwareConnection === connection.key
-                      ? 'bg-primary/20 border-primary/40 shadow-md shadow-primary/20'
-                      : 'bg-white/60 dark:bg-white/10 border-stroke-subtle dark:border-stroke/20',
+                      ? 'bg-primary/opacity-medium border-primary/opacity-heavy shadow-md shadow-primary/20'
+                      : 'bg-white/60 dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-medium',
                   ]"
                 >
                   <Cpu v-if="connection.key === 'gpio'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
                   <Usb v-else-if="connection.key === 'usb'" class="w-9 h-9 text-primary" :stroke-width="1.8" />
                   <Wifi v-else class="w-9 h-9 text-primary" :stroke-width="1.8" />
                 </div>
-                <div class="font-semibold text-lg text-content-primary dark:text-content-primary mb-2">
+                <div class="font-semibold text-lg text-content-primary mb-2">
                   {{ connection.title }}
                 </div>
                 <div class="text-sm text-content-secondary dark:text-content-muted">
@@ -489,8 +489,8 @@ const stepTitles = [
                     :class="[
                       'w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 transition-all',
                       setupStore.selectedHardware
-                        ? 'bg-primary text-white'
-                        : 'bg-primary text-white',
+                        ? 'bg-primary/opacity-medium text-primary'
+                        : 'bg-primary/opacity-medium text-primary',
                     ]"
                   >
                     <svg v-if="setupStore.selectedHardware" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -498,7 +498,7 @@ const stepTitles = [
                     </svg>
                     <span v-else>1</span>
                   </div>
-                  <h3 class="font-semibold text-content-primary dark:text-content-primary">Select your hardware board</h3>
+                  <h3 class="font-semibold text-content-primary">Select your hardware board</h3>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-10">
                   <button
@@ -511,13 +511,13 @@ const stepTitles = [
                     :class="[
                       'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
                       setupStore.selectedHardware?.key === hardware.key
-                        ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
-                        : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                        ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                        : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                     ]"
                   >
                     <div class="flex items-start justify-between gap-2">
                       <div>
-                        <div class="font-medium text-content-primary dark:text-content-primary mb-1">
+                        <div class="font-medium text-content-primary mb-1">
                           {{ hardware.name }}
                         </div>
                         <div class="text-sm text-content-secondary dark:text-content-muted">
@@ -546,10 +546,10 @@ const stepTitles = [
                 >
                   <!-- Step divider -->
                   <div class="flex items-center gap-3 mb-4">
-                    <div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-primary/opacity-medium text-primary flex items-center justify-center text-sm font-semibold flex-shrink-0">
                       2
                     </div>
-                    <h3 class="font-semibold text-content-primary dark:text-content-primary">
+                    <h3 class="font-semibold text-content-primary">
                       Configure the connection to your modem
                     </h3>
                   </div>
@@ -562,9 +562,9 @@ const stepTitles = [
                     "
                     class="pl-10"
                   >
-                    <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
+                    <div class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
                       <div>
-                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                        <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
                           Serial Port
                         </label>
                         <div class="space-y-2">
@@ -590,7 +590,7 @@ const stepTitles = [
                             </select>
                             <button
                               type="button"
-                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/10 text-sm text-content-primary dark:text-content-primary bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 disabled:opacity-50"
+                              class="px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light text-sm text-content-primary bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light disabled:opacity-50"
                               :disabled="serialDevicesLoading"
                               @click="loadSerialDevices"
                             >
@@ -613,13 +613,13 @@ const stepTitles = [
 
                           <p
                             v-if="serialDevicesError"
-                            class="text-xs text-red-600 dark:text-red-400"
+                            class="text-xs text-accent-red"
                           >
                             {{ serialDevicesError }}
                           </p>
                         </div>
-                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
-                          The USB-CDC device path for your modem. If you have the pyMC udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
+                        <p class="text-content-muted text-xs mt-2">
+                          The USB-CDC device path for your modem. If you have the openHop udev rule installed it may appear as <span class="font-mono">/dev/lora-modem</span>.
                         </p>
                       </div>
                     </div>
@@ -630,10 +630,10 @@ const stepTitles = [
                     v-else-if="setupStore.selectedHardware.key.toLowerCase() === 'pymc_tcp'"
                     class="pl-10"
                   >
-                    <div class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-[12px] p-5 space-y-4">
+                    <div class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-[12px] p-5 space-y-4">
                       <div>
-                        <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
-                          Modem Hostname or IP Address <span class="text-red-500">*</span>
+                        <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
+                          Modem Hostname or IP Address <span class="text-accent-red">*</span>
                         </label>
                         <input
                           v-model="setupStore.tcpHost"
@@ -641,13 +641,13 @@ const stepTitles = [
                           class="modal-input px-4 py-3 font-mono"
                           placeholder="pymc-3e2834.local"
                         />
-                        <p class="text-content-muted dark:text-content-muted text-xs mt-2">
-                          mDNS hostname, LAN IP, or domain name of the pyMC Wi-Fi modem.
+                        <p class="text-content-muted text-xs mt-2">
+                          mDNS hostname, LAN IP, or domain name of the openHop Wi-Fi modem.
                         </p>
                       </div>
                       <div class="grid grid-cols-2 gap-4">
                         <div>
-                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
                             Port
                           </label>
                           <input
@@ -658,10 +658,10 @@ const stepTitles = [
                             class="modal-input px-4 py-3"
                             placeholder="5055"
                           />
-                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Default is 5055.</p>
+                          <p class="text-content-muted text-xs mt-2">Default is 5055.</p>
                         </div>
                         <div>
-                          <label class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-1.5">
+                          <label class="block text-content-primary/opacity-heavy text-sm font-medium mb-1.5">
                             Auth Token
                             <span class="font-normal text-content-muted ml-1">(optional)</span>
                           </label>
@@ -671,7 +671,7 @@ const stepTitles = [
                             class="modal-input px-4 py-3"
                             placeholder="Leave blank if none"
                           />
-                          <p class="text-content-muted dark:text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
+                          <p class="text-content-muted text-xs mt-2">Must match the token set in the modem firmware.</p>
                         </div>
                       </div>
                     </div>
@@ -683,7 +683,7 @@ const stepTitles = [
 
           <!-- Radio Preset Step -->
           <div v-else-if="setupStore.currentStep === 5" class="space-y-6 mt-8">
-            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+            <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-center mb-6">
               Choose a radio configuration preset for your region or create a custom configuration
             </p>
             <div
@@ -712,13 +712,13 @@ const stepTitles = [
                     'p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm relative overflow-hidden',
                     !setupStore.useCustomRadio &&
                     setupStore.selectedRadioPreset?.title === preset.title
-                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
-                      : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                   ]"
                 >
                   <div class="relative z-10">
                     <div
-                      class="font-medium text-content-primary dark:text-content-primary mb-1 flex items-start justify-between gap-2"
+                      class="font-medium text-content-primary mb-1 flex items-start justify-between gap-2"
                     >
                       <span class="flex items-center gap-2">
                         <span class="text-2xl">{{ getFlagEmoji(preset.title) }}</span>
@@ -744,33 +744,33 @@ const stepTitles = [
                       {{ preset.description }}
                     </div>
                     <div class="grid grid-cols-2 gap-2 text-xs">
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">Freq</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
+                        <div class="text-content-muted">Freq</div>
+                        <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.frequency }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">BW</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
+                        <div class="text-content-muted">BW</div>
+                        <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.bandwidth }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">SF</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
+                        <div class="text-content-muted">SF</div>
+                        <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.spreading_factor }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1">
-                        <div class="text-content-muted dark:text-content-muted">CR</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1">
+                        <div class="text-content-muted">CR</div>
+                        <div class="text-content-primary/opacity-heavy font-medium">
                           {{ preset.coding_rate }}
                         </div>
                       </div>
-                      <div class="bg-gray-50 dark:bg-white/5 rounded px-2 py-1 col-span-2">
-                        <div class="text-content-muted dark:text-content-muted">TX Power</div>
-                        <div class="text-content-primary dark:text-content-primary/80 font-medium">
+                      <div class="bg-background-mute dark:bg-white/opacity-subtle rounded px-2 py-1 col-span-2">
+                        <div class="text-content-muted">TX Power</div>
+                        <div class="text-content-primary/opacity-heavy font-medium">
                           {{ setupStore.selectedHardware?.config?.tx_power ?? (preset.tx_power || '14') }} dBm
                         </div>
                       </div>
@@ -780,7 +780,7 @@ const stepTitles = [
               </div>
 
               <!-- Custom Configuration Option -->
-              <div class="border-t border-stroke-subtle dark:border-stroke/10 pt-6">
+              <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light pt-6">
                 <button
                   @click="
                     setupStore.useCustomRadio = !setupStore.useCustomRadio;
@@ -789,13 +789,13 @@ const stepTitles = [
                   :class="[
                     'w-full p-4 rounded-[12px] border transition-all duration-300 text-left backdrop-blur-sm',
                     setupStore.useCustomRadio
-                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/50 shadow-lg shadow-primary/20'
-                      : 'bg-background-mute dark:bg-white/5 border-stroke-subtle dark:border-stroke/10 hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20',
+                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                      : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
                   ]"
                 >
                   <div class="flex items-center justify-between mb-2">
                     <div
-                      class="font-medium text-content-primary dark:text-content-primary flex items-center gap-2"
+                      class="font-medium text-content-primary flex items-center gap-2"
                     >
                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -827,7 +827,7 @@ const stepTitles = [
                   <div v-if="setupStore.useCustomRadio" class="mt-4 grid grid-cols-2 gap-4">
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                         >Frequency (MHz)</label
                       >
                       <input
@@ -840,7 +840,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                         >Bandwidth (kHz)</label
                       >
                       <input
@@ -852,7 +852,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                         >Spreading Factor</label
                       >
                       <select
@@ -869,7 +869,7 @@ const stepTitles = [
                     </div>
                     <div>
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                         >Coding Rate</label
                       >
                       <select
@@ -884,7 +884,7 @@ const stepTitles = [
                     </div>
                     <div class="col-span-2 sm:col-span-1">
                       <label
-                        class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                        class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                         >TX Power (dBm)</label
                       >
                       <input
@@ -895,7 +895,7 @@ const stepTitles = [
                         class="modal-input px-4 py-2.5"
                         placeholder="14"
                       />
-                      <p class="text-content-muted dark:text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
+                      <p class="text-content-muted text-xs mt-2">SX1262 range: -9 to +22 dBm</p>
                     </div>
                   </div>
                 </Transition>
@@ -905,13 +905,13 @@ const stepTitles = [
 
           <!-- Security Step -->
           <div v-else-if="setupStore.currentStep === 6" class="space-y-6 mt-8">
-            <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+            <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-center mb-6">
               Set a secure admin password to protect your repeater
             </p>
             <div class="max-w-md mx-auto space-y-4">
               <div>
                 <label
-                  class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                  class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                   >Admin Password</label
                 >
                 <input
@@ -924,7 +924,7 @@ const stepTitles = [
               </div>
               <div>
                 <label
-                  class="block text-content-primary dark:text-content-primary/90 text-sm font-medium mb-2"
+                  class="block text-content-primary/opacity-heavy text-sm font-medium mb-2"
                   >Confirm Password</label
                 >
                 <input
@@ -940,12 +940,12 @@ const stepTitles = [
                   setupStore.confirmPassword &&
                   setupStore.adminPassword !== setupStore.confirmPassword
                 "
-                class="text-red-600 dark:text-red-400 text-sm"
+                class="text-accent-red text-sm"
               >
                 Passwords do not match
               </div>
               <div
-                class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-sm text-yellow-800 dark:text-yellow-200"
+                class="bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg p-3 text-sm text-accent-amber"
               >
                 <strong>Important:</strong> Remember this password - you'll need it to access the
                 dashboard.
@@ -957,7 +957,7 @@ const stepTitles = [
         <!-- Error Message -->
         <div
           v-if="setupStore.error"
-          class="mb-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-600 dark:text-red-200"
+          class="mb-6 bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-4 text-accent-red"
         >
           {{ setupStore.error }}
         </div>
@@ -967,7 +967,7 @@ const stepTitles = [
           <button
             v-if="setupStore.canGoBack"
             @click="handleBack"
-            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 text-content-primary dark:text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/10 hover:border-stroke dark:hover:border-stroke/20 transition-all duration-300 font-medium"
+            class="px-6 py-3 rounded-[12px] bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium transition-all duration-300 font-medium"
           >
             Back
           </button>
@@ -980,8 +980,8 @@ const stepTitles = [
             class="px-8 py-3 rounded-[12px] font-semibold transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             :class="
               setupStore.canGoNext && !setupStore.isSubmitting
-                ? 'bg-primary hover:bg-primary/90 text-white border border-primary hover:border-primary/80'
-                : 'bg-background-mute dark:bg-stroke/5 text-content-muted dark:text-content-muted border border-stroke-subtle dark:border-stroke/10'
+                ? 'bg-primary/opacity-medium hover:bg-primary/opacity-heavy text-primary border border-primary/opacity-heavy hover:border-primary/opacity-heavy'
+                : 'bg-background-mute dark:bg-stroke/opacity-subtle text-content-muted border border-stroke-subtle dark:border-stroke/opacity-light'
             "
           >
             <Spinner v-if="setupStore.isSubmitting" size="sm" color="white" />
@@ -1021,19 +1021,19 @@ const stepTitles = [
     <Transition name="modal">
       <div
         v-if="showDialog"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        class="modal-backdrop"
         @click="closeDialog"
       >
         <div
-          class="bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
+          class="setup-dialog bg-white dark:bg-surface-elevated backdrop-blur-xl max-w-md w-full p-8 rounded-[24px] border border-stroke-subtle dark:border-white/opacity-medium"
           @click.stop
         >
           <div class="flex justify-center mb-6">
             <div
-              class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center"
+              class="w-16 h-16 rounded-full bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium flex items-center justify-center"
             >
               <svg
-                class="w-8 h-8 text-red-600 dark:text-red-400"
+                class="w-8 h-8 text-accent-red"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1048,16 +1048,16 @@ const stepTitles = [
             </div>
           </div>
           <h3
-            class="text-2xl font-bold text-content-primary dark:text-content-primary text-center mb-4"
+            class="text-2xl font-bold text-content-primary text-center mb-4"
           >
             {{ dialogTitle }}
           </h3>
-          <p class="text-content-secondary dark:text-content-primary/70 text-center mb-6">
+          <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-center mb-6">
             {{ dialogMessage }}
           </p>
           <button
             @click="closeDialog"
-            class="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red"
+            class="w-full px-6 py-3 rounded-lg font-medium transition-colors bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red"
           >
             Close
           </button>
@@ -1075,9 +1075,13 @@ const stepTitles = [
 
 <style scoped>
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in srgb, var(--color-surface) 45%, transparent);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.setup-dialog {
+  box-shadow: var(--color-glass-shadow);
 }
 
 /* Modal transition */

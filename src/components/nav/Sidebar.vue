@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, provide, watch, onMounted, onUnmounted } from 'vue';
+import { computed, ref, provide, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { NAV_ACTION_HANDLERS_KEY } from '@/config/navActionHandlers';
 import { useSystemStore } from '@/stores/system';
@@ -16,9 +16,8 @@ import { navigationItems, knownCapabilities } from '@/config/navigation';
 import type { NavItemConfig } from '@/config/navigation';
 import { useTheme } from '@/composables/useTheme';
 import { useSidebarPin } from '@/composables/useSidebarPin';
-import { Pin } from '@lucide/vue';
-import logoDark from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Dark.png';
-import logoLight from '@/assets/logo/transparent/logo_pyMC_RBGA_640-Light.png';
+import { Pin, X } from '@lucide/vue';
+import openHopLogo from '@/assets/logo/openhop_transparent_trim.png';
 
 defineOptions({ name: 'SidebarNav' });
 
@@ -31,7 +30,7 @@ const systemStore = useSystemStore();
 const dataService = useDataService();
 const packetStore = usePacketStore();
 const { theme } = useTheme();
-const logoSrc = computed(() => theme.value === 'dark' ? logoDark : logoLight);
+const logoSrc = computed(() => openHopLogo);
 const { isPinned, togglePin } = useSidebarPin();
 
 const pinIconClass = computed(() =>
@@ -40,9 +39,10 @@ const pinIconClass = computed(() =>
 
 const pinButtonClass = computed(() =>
   isPinned.value
-    ? 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
-    : 'absolute top-[6px] right-0 z-10 w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
+    ? 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-primary opacity-100'
+    : 'w-6 h-6 rounded-md flex items-center justify-center transition-all duration-200 text-content-muted hover:text-content-primary',
 );
+
 
 // ── Mobile detection ──────────────────────────────────────────────────────────
 
@@ -139,7 +139,43 @@ function filterNavItems(items: NavItemConfig[]): NavItemConfig[] {
     );
 }
 
-const visibleNavItems = computed(() => filterNavItems(navigationItems));
+const navSearch = ref('');
+const navSearchInput = ref<HTMLInputElement | null>(null);
+
+function clearNavSearch() {
+  navSearch.value = '';
+  nextTick(() => navSearchInput.value?.focus());
+}
+
+function filterNavItemsBySearch(items: NavItemConfig[], query: string): NavItemConfig[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+
+  return items.reduce<NavItemConfig[]>((acc, item) => {
+    const matchesSelf =
+      item.label.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      (item.route?.toLowerCase().includes(q) ?? false);
+
+    if (!item.children?.length) {
+      if (matchesSelf) acc.push(item);
+      return acc;
+    }
+
+    const matchedChildren = filterNavItemsBySearch(item.children, q);
+    if (matchesSelf) {
+      acc.push(item);
+      return acc;
+    }
+    if (matchedChildren.length > 0) {
+      acc.push({ ...item, children: matchedChildren });
+    }
+    return acc;
+  }, []);
+}
+
+const capabilityFilteredNavItems = computed(() => filterNavItems(navigationItems));
+const visibleNavItems = computed(() => filterNavItemsBySearch(capabilityFilteredNavItems.value, navSearch.value));
 
 // ── Status card ───────────────────────────────────────────────────────────────
 
@@ -150,10 +186,10 @@ const activePenalties = computed(() => dataService.advertTier.activePenalties);
 
 const adaptiveTierClass = computed(() => {
   switch (currentTier.value) {
-    case 'quiet':    return 'bg-accent-green/20 text-accent-green border-accent-green/50';
-    case 'normal':   return 'bg-primary/20 text-primary border-primary/50';
-    case 'busy':     return 'bg-secondary/20 text-secondary border-secondary/50';
-    case 'congested': return 'bg-accent-red/20 text-accent-red border-accent-red/50';
+    case 'quiet':    return 'bg-primary/opacity-medium text-primary border-primary/opacity-heavy';
+    case 'normal':   return 'bg-primary/opacity-medium text-primary border-primary/opacity-heavy';
+    case 'busy':     return 'bg-accent-amber/opacity-medium text-accent-amber border-accent-amber/opacity-heavy';
+    case 'congested': return 'bg-accent-red/opacity-medium text-accent-red border-accent-red/opacity-heavy';
     default:         return 'bg-surface-elevated text-content-muted border-stroke-subtle';
   }
 });
@@ -172,7 +208,7 @@ const dutyCycleBarStyle = computed(() => {
       ? 'var(--color-accent-red)'
       : percentage > 70
         ? 'var(--color-secondary)'
-        : 'var(--color-accent-green)',
+        : 'var(--color-primary)',
   };
 });
 
@@ -205,7 +241,7 @@ const currentTime = computed(() => {
     <Transition name="backdrop">
       <div
         v-if="isMobile && mobileOpen"
-        class="fixed inset-0 z-[249] bg-black/30 backdrop-blur-sm"
+        class="fixed inset-0 z-[249] bg-black/opacity-heavy backdrop-blur-sm"
         @click="emit('close')"
       />
     </Transition>
@@ -224,23 +260,26 @@ const currentTime = computed(() => {
       :class="[
         'h-full p-6 overflow-y-auto overscroll-contain scrollbar-hide',
         isMobile
-          ? 'bg-white/95 dark:bg-black/20 backdrop-blur-xl border border-stroke dark:border-white/10 rounded-2xl shadow-2xl'
+          ? 'bg-surface dark:bg-black/opacity-medium backdrop-blur-xl border border-stroke dark:border-white/opacity-light rounded-2xl shadow-2xl'
           : 'glass-card',
       ]"
     >
       <!-- Header: logo + optional mobile close button -->
       <div :class="['mb-4', isMobile ? 'flex items-start justify-between' : '']">
         <div>
-          <div :class="['flex', isMobile ? 'mb-2' : 'mb-3 justify-center']">
-            <img :src="logoSrc" alt="pyMC" :class="isMobile ? 'h-[5rem]' : 'h-[6.5rem]'" />
+          <div :class="['flex', isMobile ? 'mb-0' : 'mb-0 justify-center']">
+            <img :src="logoSrc" alt="openHop" class="logo-image" :class="isMobile ? 'h-[130px]' : 'h-[154px]'" />
           </div>
+          <h2 class="text-content-primary text-center text-lg sm:text-xl font-heading font-bold mb-3">
+            Repeater
+          </h2>
           <p class="text-content-secondary dark:text-content-muted text-sm">
             {{ systemStore.nodeName }}
             <span
               :class="[
                 'inline-block w-2 h-2 rounded-full ml-2',
                 systemStore.statusBadge.text === 'Active'
-                  ? 'bg-accent-green'
+                  ? 'bg-primary'
                   : systemStore.statusBadge.text === 'Monitor Mode'
                     ? 'bg-secondary'
                     : 'bg-accent-red',
@@ -253,34 +292,34 @@ const currentTime = computed(() => {
           </p>
 
           <!-- Status card -->
-          <div class="mt-3 rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white dark:bg-white/5 overflow-hidden">
+          <div class="mt-3 rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-white dark:bg-white/opacity-subtle overflow-hidden">
             <div class="p-2">
               <div class="flex items-center justify-between">
-                <span class="text-content-muted dark:text-content-muted text-[10px] uppercase tracking-wide">Adaptive</span>
+                <span class="text-content-muted text-[10px] uppercase tracking-wide">Adaptive</span>
                 <div :class="['inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-semibold', adaptiveTierClass]">
                   {{ currentTier.toUpperCase() }}
                 </div>
               </div>
-              <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted dark:text-content-muted">
-                <span class="text-accent-green">OK: {{ advertsAllowed }}</span>
+              <div class="flex items-center gap-3 mt-1.5 text-[10px] text-content-muted">
+                <span class="text-primary">OK: {{ advertsAllowed }}</span>
                 <span class="text-accent-red">Drop: {{ advertsDropped }}</span>
-                <span v-if="activePenalties > 0" class="text-secondary">Pen: {{ activePenalties }}</span>
+                <span v-if="activePenalties > 0" class="text-accent-amber">Pen: {{ activePenalties }}</span>
               </div>
-              <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/10">
-                <div class="flex items-center justify-between text-[10px] text-content-muted dark:text-content-muted mb-1">
+              <div v-if="systemStore.dutyCycleEnabled" class="mt-2 pt-2 border-t border-stroke-subtle dark:border-white/opacity-light">
+                <div class="flex items-center justify-between text-[10px] text-content-muted mb-1">
                   <span>Duty Cycle</span>
-                  <span class="text-content-primary dark:text-content-primary">
+                  <span class="text-content-primary">
                     {{ systemStore.dutyCycleUtilization.toFixed(1) }}% / {{ systemStore.dutyCycleMax.toFixed(1) }}%
                   </span>
                 </div>
-                <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                <div class="w-full h-1 bg-white/opacity-light rounded-full overflow-hidden">
                   <div class="h-full rounded-full transition-all duration-300" :style="dutyCycleBarStyle" />
                 </div>
               </div>
               <NoiseFloorSparkline />
             </div>
             <!-- Mode -->
-            <div class="flex border-t border-stroke-subtle dark:border-white/10">
+            <div class="flex border-t border-stroke-subtle dark:border-white/opacity-light">
               <button
                 v-for="opt in modeOptions"
                 :key="opt.id"
@@ -289,15 +328,15 @@ const currentTime = computed(() => {
                 :disabled="changingMode"
                 @click="handleSetMode(opt.id as 'forward' | 'monitor' | 'no_tx')"
                 :class="[
-                  'flex-1 py-2 text-xs font-medium transition-all duration-200 border-r border-stroke-subtle dark:border-white/10 last:border-r-0',
+                  'flex-1 py-2 text-xs font-medium transition-all duration-200 border-r border-stroke-subtle dark:border-white/opacity-light last:border-r-0',
                   changingMode ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
                   systemStore.currentMode === opt.id
                     ? opt.id === 'forward'
-                      ? 'bg-mode-segment-forward text-accent-green'
+                      ? 'bg-mode-segment-forward text-primary'
                       : opt.id === 'monitor'
-                        ? 'bg-secondary/20 text-secondary'
+                        ? 'bg-accent-amber/opacity-medium text-accent-amber'
                         : 'bg-mode-segment-no-tx text-accent-red'
-                    : 'text-content-primary dark:text-content-primary hover:bg-white/5 dark:hover:bg-white/5',
+                    : 'text-content-primary hover:bg-white/opacity-light dark:hover:bg-white/opacity-light',
                 ]"
               >
                 {{ changingMode && systemStore.currentMode !== opt.id ? '…' : opt.label }}
@@ -315,19 +354,48 @@ const currentTime = computed(() => {
       </div>
 
       <!-- Nav items -->
-      <div class="relative mb-8 space-y-2">
-        <button
-          @click="togglePin"
-          :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
-          :class="pinButtonClass"
+      <div class="mb-8 space-y-2">
+        <div class="flex items-center gap-1 mb-2">
+          <div class="relative flex-1">
+            <input
+              ref="navSearchInput"
+              v-model="navSearch"
+              type="text"
+              placeholder="Search menu..."
+              class="w-full h-8 rounded-[10px] border border-stroke-subtle dark:border-stroke/opacity-medium bg-surface dark:bg-white/opacity-subtle px-3 pr-8 text-xs text-content-primary placeholder:text-content-muted focus:outline-none focus:ring-1 focus:ring-primary/opacity-heavy"
+            />
+            <button
+              v-if="navSearch"
+              type="button"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 inline-flex items-center justify-center text-content-muted hover:text-content-primary transition-colors"
+              title="Clear search"
+              @click="clearNavSearch"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <button
+            @click="togglePin"
+            :title="isPinned ? 'Unpin menu layout' : 'Pin menu layout'"
+            :class="pinButtonClass"
+          >
+            <Pin :class="pinIconClass" />
+          </button>
+        </div>
+
+        <p
+          v-if="navSearch.trim().length > 0 && visibleNavItems.length === 0"
+          class="text-xs text-content-muted px-1"
         >
-          <Pin :class="pinIconClass" />
-        </button>
+          No menu items match "{{ navSearch }}"
+        </p>
+
         <NavItem
           v-for="item in visibleNavItems"
           :key="item.id"
           :item="item"
           :depth="0"
+          :search-active="navSearch.trim().length > 0"
         />
       </div>
 
@@ -335,7 +403,7 @@ const currentTime = computed(() => {
       <button
         v-if="isMobile"
         @click="handleLogout"
-        class="w-full glass-card-orange hover:bg-accent-red/10 rounded-[10px] py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-content-primary dark:text-white transition-all mb-6"
+        class="w-full glass-card-orange hover:bg-accent-red/opacity-light rounded-[10px] py-3 px-4 flex items-center justify-center gap-2 text-sm font-medium text-content-primary transition-all mb-6"
       >
         <svg class="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
           <path d="M13 3H15C16.1046 3 17 3.89543 17 5V15C17 16.1046 16.1046 17 15 17H13M8 7L4 10.5M4 10.5L8 14M4 10.5H13" stroke-linecap="round" stroke-linejoin="round" />
@@ -345,21 +413,21 @@ const currentTime = computed(() => {
 
       <!-- Version badges -->
       <div class="mb-4">
-        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-blue-500/30 dark:border-blue-400/50 bg-blue-500/10 dark:bg-blue-400/20">
+        <div v-if="isDevBuild" class="mb-2 glass-card px-3 py-2 rounded-lg border border-accent-cyan/opacity-medium bg-accent-cyan/opacity-light">
           <div class="flex items-center justify-center gap-2">
-            <svg class="w-4 h-4 text-blue-500 dark:text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+            <svg class="w-4 h-4 text-accent-cyan flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
             </svg>
-            <span class="text-blue-500 dark:text-blue-400 text-xs font-semibold">Development Build</span>
+            <span class="text-accent-cyan text-xs font-semibold">Development Build</span>
           </div>
         </div>
 
         <div @click="showVersionDetails = !showVersionDetails" class="cursor-pointer transition-all duration-200 hover:scale-[1.02]">
           <div class="flex items-center gap-2">
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-yellow-600 dark:text-yellow-400 border-yellow-500/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', repeaterVersion.isDev ? 'text-accent-amber border-accent-amber/opacity-medium' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               R:v{{ repeaterVersion.base }}{{ repeaterVersion.isDev ? '-dev' + repeaterVersion.devNumber : '' }}
             </span>
-            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-yellow-600 dark:text-yellow-400 border-yellow-500/30' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
+            <span :class="['glass-card px-2 py-1 text-xs font-medium rounded border transition-colors', coreVersion.isDev ? 'text-accent-amber border-accent-amber/opacity-medium' : 'text-content-secondary dark:text-content-muted border-stroke-subtle dark:border-stroke']">
               Core:v{{ coreVersion.base }}{{ coreVersion.isDev ? '-dev' + coreVersion.devNumber : '' }}
             </span>
             <svg :class="['w-3 h-3 text-content-muted transition-transform duration-200', showVersionDetails ? 'rotate-180' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,7 +435,7 @@ const currentTime = computed(() => {
             </svg>
           </div>
 
-          <div v-if="showVersionDetails" class="mt-2 glass-card px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/30 space-y-2 text-xs animate-fade-in">
+          <div v-if="showVersionDetails" class="mt-2 glass-card px-3 py-2 rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium space-y-2 text-xs animate-fade-in">
             <div class="space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-content-muted font-medium">Repeater:</span>
@@ -377,11 +445,11 @@ const currentTime = computed(() => {
                 <div>Dev Build: {{ repeaterVersion.devNumber }}</div>
                 <div v-if="repeaterVersion.commit" class="flex items-center gap-1">
                   <span>Commit:</span>
-                  <code class="bg-white/5 dark:bg-black/20 px-1 py-0.5 rounded">{{ repeaterVersion.commit }}</code>
+                  <code class="bg-white/opacity-light dark:bg-black/opacity-medium px-1 py-0.5 rounded">{{ repeaterVersion.commit }}</code>
                 </div>
               </div>
             </div>
-            <div class="border-t border-stroke-subtle dark:border-stroke/20" />
+            <div class="border-t border-stroke-subtle dark:border-stroke/opacity-medium" />
             <div class="space-y-1">
               <div class="flex items-center justify-between">
                 <span class="text-content-muted font-medium">Core:</span>
@@ -391,7 +459,7 @@ const currentTime = computed(() => {
                 <div>Dev Build: {{ coreVersion.devNumber }}</div>
                 <div v-if="coreVersion.commit" class="flex items-center gap-1">
                   <span>Commit:</span>
-                  <code class="bg-white/5 dark:bg-black/20 px-1 py-0.5 rounded">{{ coreVersion.commit }}</code>
+                  <code class="bg-white/opacity-light dark:bg-black/opacity-medium px-1 py-0.5 rounded">{{ coreVersion.commit }}</code>
                 </div>
               </div>
             </div>
@@ -409,26 +477,26 @@ const currentTime = computed(() => {
       </div>
 
       <div class="flex flex-col items-center justify-center mb-4">
-        <p class="text-content-muted dark:text-content-muted text-[10px] mb-1 tracking-wide uppercase opacity-70">Powered by</p>
+        <p class="text-content-muted text-[10px] mb-1 tracking-wide uppercase opacity-70">Powered by</p>
         <a href="https://meshcore.io" target="_blank" rel="noopener noreferrer" title="MeshCore">
           <img src="@/assets/meshcore.svg" alt="MeshCore" class="h-4 opacity-70 dark:invert-0 invert" />
         </a>
       </div>
 
       <div class="flex items-center justify-center gap-3">
-        <a href="https://discord.gg/qreAsnmJ" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Discord">
+        <a href="https://discord.gg/6dYjGpPSK" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Discord">
           <DiscordIcon class="w-5 h-5 text-white group-hover:text-indigo-500 transition-colors" />
         </a>
-        <a href="https://pymc.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-cyan-50 dark:hover:bg-cyan-500/20 hover:border-cyan-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="pyMC Website">
-          <svg class="w-5 h-5 text-white group-hover:text-cyan-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <a href="https://openhop.dev" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-primary/opacity-medium dark:hover:bg-primary/opacity-medium hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="openHop Website">
+          <svg class="w-5 h-5 text-white group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 21a9.004 9.004 0 008.716-6M12 21a9.004 9.004 0 01-8.716-6M12 21c1.656 0 3-4.03 3-9s-1.344-9-3-9m0 18c-1.656 0-3-4.03-3-9s1.344-9 3-9m0 0a9.004 9.004 0 018.716 6M12 3a9.004 9.004 0 00-8.716 6M3.284 9h17.432M3.284 15h17.432" />
           </svg>
         </a>
-        <a href="https://github.com/pyMC-dev/pyMC_Repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-primary/20 dark:hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
+        <a href="https://github.com/openhop-dev/openhop-repeater" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-primary/opacity-medium dark:hover:bg-primary/opacity-medium hover:border-primary/opacity-heavy dark:hover:border-primary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="GitHub">
           <GitHubIcon class="w-5 h-5 text-white group-hover:text-primary transition-colors" />
         </a>
-        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 hover:bg-yellow-50 dark:hover:bg-yellow-500/20 hover:border-yellow-500/50 transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
-          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-yellow-500 transition-colors" />
+        <a href="https://buymeacoffee.com/rightup" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-content-primary dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-medium hover:bg-secondary/opacity-light hover:border-secondary/opacity-heavy dark:hover:border-secondary/opacity-heavy transition-all duration-300 hover:scale-110 group backdrop-blur-sm" title="Buy Me a Coffee">
+          <CoffeeIcon class="w-5 h-5 text-white group-hover:text-secondary transition-colors" />
         </a>
       </div>
     </div>

@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import ApiService, { API_SERVER_URL } from '@/utils/api';
-import { getToken } from '@/utils/auth';
+import { getToken, isTokenExpired } from '@/utils/auth';
+import { useAppRuntimeStore } from '@/stores/appRuntime';
 import type { GPSDiagnostics, GPSSatellite } from '@/types/api';
 
 defineOptions({ name: 'GPSDiagnosticsView' });
@@ -66,6 +67,7 @@ const error = ref<string | null>(null);
 const lastLoaded = ref<Date | null>(null);
 const showRawSnapshot = ref(false);
 const eventSource = ref<EventSource | null>(null);
+const appRuntime = useAppRuntimeStore();
 const globeStage = ref<HTMLElement | null>(null);
 const globeCanvas = ref<HTMLCanvasElement | null>(null);
 const globeWebglFailed = ref(false);
@@ -164,6 +166,12 @@ const connectEventSource = () => {
   };
 
   eventSource.value.onerror = () => {
+    if (!getToken() || isTokenExpired()) {
+      closeEventSource();
+      void appRuntime.handleAuthFailure('expired');
+      return;
+    }
+
     if (!gps.value) {
       error.value = 'GPS live stream disconnected. Reconnecting...';
       isLoading.value = false;
@@ -239,13 +247,13 @@ const summaryCards = computed(() => [
     label: 'Coordinates',
     value: formatCoordinate(position.value.latitude, position.value.longitude),
     note: `${formatValue(positionMeta.value.source_label)} | altitude: ${formatValue(position.value.altitude_m, 'm')}`,
-    valueClass: 'text-content-heading dark:text-white',
+    valueClass: 'text-content-heading',
   },
   {
     label: 'Satellites',
     value: `${formatValue(satellites.value.used_count)} / ${formatValue(satellites.value.in_view_count)}`,
     note: `SNR avg: ${formatValue(satellites.value.snr?.avg, 'dB')}`,
-    valueClass: 'text-content-heading dark:text-white',
+    valueClass: 'text-content-heading',
   },
   {
     label: 'Freshness',
@@ -254,13 +262,13 @@ const summaryCards = computed(() => [
         ? 'n/a'
         : `${formatValue(status.value.age_seconds)}s`,
     note: status.value.last_update || 'last update unknown',
-    valueClass: status.value.stale ? 'text-secondary' : 'text-content-heading dark:text-white',
+    valueClass: status.value.stale ? 'text-secondary' : 'text-content-heading',
   },
   {
     label: 'GPS Time',
     value: gpsTime.value.utc_time ?? 'n/a',
     note: gpsTime.value.date ?? 'no date',
-    valueClass: gpsTime.value.utc_time ? 'text-content-heading dark:text-white' : 'text-content-muted',
+    valueClass: gpsTime.value.utc_time ? 'text-content-heading' : 'text-content-muted',
   },
 ]);
 
@@ -527,7 +535,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   scene.add(keyLight);
 
   const earthMaterial = new THREE.MeshStandardMaterial({
-    color: new THREE.Color(cssVar('--color-primary', '#0d7377')),
+    color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
     roughness: 0.62,
     metalness: 0.04,
   });
@@ -554,7 +562,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const grid = new THREE.Mesh(
     new THREE.SphereGeometry(1.006, 28, 18),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(cssVar('--color-primary', '#aae8e8')),
+      color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
       wireframe: true,
       transparent: true,
       opacity: 0.16,
@@ -563,7 +571,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const atmosphere = new THREE.Mesh(
     new THREE.SphereGeometry(1.045, 48, 24),
     new THREE.MeshBasicMaterial({
-      color: new THREE.Color(cssVar('--color-primary', '#aae8e8')),
+      color: new THREE.Color(cssVar('--color-primary', 'deepskyblue')),
       transparent: true,
       opacity: 0.1,
       side: THREE.BackSide,
@@ -678,13 +686,13 @@ const createSatelliteGlobe = (): GlobeRenderer => {
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     roundedRect(context, 20, 14, 152, 48, 16);
-    context.fillStyle = 'rgba(3, 8, 10, 0.88)';
+    context.fillStyle = cssVar('--color-glass-bg', 'black');
     context.fill();
     context.lineWidth = 3;
     context.strokeStyle = color;
     context.stroke();
-    context.fillStyle = '#ffffff';
-    context.shadowColor = 'rgba(0, 0, 0, 0.92)';
+    context.fillStyle = cssVar('--color-heading', 'white');
+    context.shadowColor = cssVar('--color-background', 'black');
     context.shadowBlur = 7;
     context.fillText(text, 96, 39);
     const texture = new THREE.CanvasTexture(labelCanvas);
@@ -764,8 +772,8 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   ): SatEntry => {
     const satPosition = computeSatPosition(satellite, basis, userPosition);
     const color = satellite.used
-      ? cssVar('--color-accent-green', '#a5e5b6')
-      : cssVar('--color-primary', '#aae8e8');
+      ? cssVar('--color-accent-green', 'limegreen')
+      : cssVar('--color-primary', 'deepskyblue');
     const radius = 0.024 + (satellite.snr / 60) * 0.042;
     const meshMat = new THREE.MeshBasicMaterial({
       color: new THREE.Color(color),
@@ -817,7 +825,7 @@ const createSatelliteGlobe = (): GlobeRenderer => {
   const addReceiver = (latitude: number, longitude: number) => {
     const userPosition = latLonVector(latitude, longitude, 1.022);
     const basis = localBasis(latitude, longitude);
-    const receiverColor = cssVar('--color-accent-green', '#a5e5b6');
+    const receiverColor = cssVar('--color-accent-green', 'limegreen');
     const receiver = new THREE.Mesh(
       new THREE.SphereGeometry(0.032, 18, 14),
       new THREE.MeshBasicMaterial({ color: new THREE.Color(receiverColor) }),
@@ -874,8 +882,8 @@ const createSatelliteGlobe = (): GlobeRenderer => {
       const key = satellite.prn;
       const newPos = computeSatPosition(satellite, basis, userPosition);
       const color = satellite.used
-        ? cssVar('--color-accent-green', '#a5e5b6')
-        : cssVar('--color-primary', '#aae8e8');
+        ? cssVar('--color-accent-green', 'limegreen')
+        : cssVar('--color-primary', 'deepskyblue');
       const lineOpacity = satellite.used ? 0.46 : 0.26;
 
       const existing = satelliteEntries.get(key);
@@ -1073,14 +1081,14 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
     <!-- ── Header ─────────────────────────────────────────────────────────── -->
     <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-content-heading dark:text-white">GPS Diagnostics</h1>
+        <h1 class="text-2xl font-semibold text-content-heading">GPS Diagnostics</h1>
         <p class="text-sm text-content-muted">
           Live NMEA receiver state, parsed fix data, and satellite visibility.
         </p>
       </div>
       <button
         type="button"
-        class="rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white/80 dark:bg-white/10 px-4 py-2 text-sm font-semibold text-content-primary dark:text-white transition-colors hover:bg-white dark:hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+        class="rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-surface dark:bg-white/opacity-light px-4 py-2 text-sm font-semibold text-content-primary transition-colors hover:bg-white dark:hover:bg-white/opacity-medium disabled:cursor-not-allowed disabled:opacity-60"
         :disabled="isLoading"
         @click="fetchGps"
       >
@@ -1090,7 +1098,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 
     <div
       v-if="error"
-      class="rounded-[10px] border border-accent-red/30 bg-accent-red/10 px-4 py-3 text-sm text-accent-red"
+      class="rounded-[10px] border border-accent-red/opacity-medium bg-accent-red/opacity-light px-4 py-3 text-sm text-accent-red"
     >
       {{ error }}
     </div>
@@ -1128,7 +1136,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
         <section class="glass-card p-5">
           <div class="mb-3 flex items-start justify-between gap-3">
             <div>
-              <h2 class="text-lg font-semibold text-content-heading dark:text-white">
+              <h2 class="text-lg font-semibold text-content-heading">
                 Satellites
               </h2>
               <p class="text-xs text-content-muted">
@@ -1137,7 +1145,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
               </p>
             </div>
             <div class="flex items-center gap-2">
-              <span class="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              <span class="rounded-full border border-primary/opacity-medium bg-primary/opacity-light px-3 py-1 text-xs font-semibold text-primary">
                 {{ globeCountLabel }}
               </span>
               <!-- Globe / Table inner toggle -->
@@ -1232,7 +1240,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
                     class="sat-row"
                     :class="{ 'sat-row-stale': row.stale }"
                   >
-                    <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary dark:text-white'">
+                    <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary'">
                       {{ row.prn }}
                     </td>
                     <td class="py-2 pr-4">
@@ -1256,29 +1264,29 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 
         <!-- Position card -->
         <section class="glass-card p-5">
-          <h2 class="mb-4 text-lg font-semibold text-content-heading dark:text-white">Position</h2>
+          <h2 class="mb-4 text-lg font-semibold text-content-heading">Position</h2>
           <div class="space-y-3 text-sm">
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Display source</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatValue(positionMeta.source_label || positionMeta.source) }}</span>
+              <span class="break-words text-content-primary">{{ formatValue(positionMeta.source_label || positionMeta.source) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Display location</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatCoordinate(position.latitude, position.longitude) }}</span>
+              <span class="break-words text-content-primary">{{ formatCoordinate(position.latitude, position.longitude) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">GPS location</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatCoordinate(gpsPosition.latitude, gpsPosition.longitude) }}</span>
+              <span class="break-words text-content-primary">{{ formatCoordinate(gpsPosition.latitude, gpsPosition.longitude) }}</span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Manual location</span>
-              <span class="break-words text-content-primary dark:text-white">
+              <span class="break-words text-content-primary">
                 {{ manualPosition ? formatCoordinate(manualPosition.latitude, manualPosition.longitude) : 'n/a' }}
               </span>
             </div>
             <div class="grid grid-cols-[150px_minmax(0,1fr)] gap-3">
               <span class="text-content-muted">Policy</span>
-              <span class="break-words text-content-primary dark:text-white">{{ formatValue(positionMeta.policy) }}</span>
+              <span class="break-words text-content-primary">{{ formatValue(positionMeta.policy) }}</span>
             </div>
           </div>
         </section>
@@ -1288,7 +1296,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
     <!-- ══════════════════════ SATELLITES TAB ════════════════════════════════ -->
     <div v-show="activeTab === 'satellites'">
       <section class="glass-card p-5">
-        <h2 class="mb-4 text-lg font-semibold text-content-heading dark:text-white">Satellites In View</h2>
+        <h2 class="mb-4 text-lg font-semibold text-content-heading">Satellites In View</h2>
         <div class="overflow-x-auto">
           <table class="w-full min-w-[540px] text-left text-sm">
             <thead class="border-b border-stroke-subtle text-xs uppercase text-content-muted">
@@ -1307,7 +1315,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
                 class="sat-row"
                 :class="{ 'sat-row-stale': row.stale }"
               >
-                <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary dark:text-white'">
+                <td class="py-2 pr-4 font-medium" :class="row.used ? 'text-accent-green' : 'text-content-primary'">
                   {{ row.prn }}
                 </td>
                 <td class="py-2 pr-4">
@@ -1344,7 +1352,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
             class="accordion-header"
             @click="toggleGroup(group.title)"
           >
-            <span class="font-semibold text-content-heading dark:text-white">{{ group.title }}</span>
+            <span class="font-semibold text-content-heading">{{ group.title }}</span>
             <svg
               class="accordion-chevron"
               :class="{ 'accordion-chevron-open': openGroups.has(group.title) }"
@@ -1365,7 +1373,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
             <div class="grid grid-cols-[minmax(110px,0.75fr)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
               <template v-for="row in group.rows" :key="`${group.title}-${row[0]}`">
                 <div class="text-content-muted">{{ row[0] }}</div>
-                <div class="break-words font-medium text-content-primary dark:text-white">{{ formatValue(row[1], row[2]) }}</div>
+                <div class="break-words font-medium text-content-primary">{{ formatValue(row[1], row[2]) }}</div>
               </template>
             </div>
           </div>
@@ -1379,7 +1387,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
           class="accordion-header"
           @click="toggleGroup('__nmea__')"
         >
-          <span class="font-semibold text-content-heading dark:text-white">Recent NMEA Sentences</span>
+          <span class="font-semibold text-content-heading">Recent NMEA Sentences</span>
           <svg
             class="accordion-chevron"
             :class="{ 'accordion-chevron-open': openGroups.has('__nmea__') }"
@@ -1424,10 +1432,10 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
       <!-- Raw snapshot (collapsed by default) -->
       <section class="glass-card p-5">
         <div class="flex items-center justify-between gap-3">
-          <h2 class="text-lg font-semibold text-content-heading dark:text-white">Raw Snapshot</h2>
+          <h2 class="text-lg font-semibold text-content-heading">Raw Snapshot</h2>
           <button
             type="button"
-            class="rounded-[10px] border border-stroke-subtle dark:border-white/10 bg-white/70 dark:bg-white/10 px-3 py-1.5 text-xs font-semibold text-content-primary dark:text-white hover:bg-white dark:hover:bg-white/20"
+            class="rounded-[10px] border border-stroke-subtle dark:border-white/opacity-light bg-surface dark:bg-white/opacity-light px-3 py-1.5 text-xs font-semibold text-content-primary hover:bg-white dark:hover:bg-white/opacity-medium"
             @click="showRawSnapshot = !showRawSnapshot"
           >
             {{ showRawSnapshot ? 'Hide' : 'Show' }}
@@ -1435,7 +1443,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
         </div>
         <pre
           v-if="showRawSnapshot"
-          class="mt-4 max-h-[440px] overflow-auto rounded-[10px] border border-stroke-subtle bg-background-soft p-4 text-xs text-content-primary dark:border-white/10 dark:bg-black/20 dark:text-white"
+          class="mt-4 max-h-[440px] overflow-auto rounded-[10px] border border-stroke-subtle bg-background-soft p-4 text-xs text-content-primary dark:border-white/opacity-light dark:bg-black/opacity-medium dark:text-on-dark"
           >{{ rawSnapshot }}</pre
         >
       </section>
@@ -1456,7 +1464,11 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
       color-mix(in srgb, var(--color-primary) 24%, transparent),
       transparent 34%
     ),
-    radial-gradient(circle at 48% 50%, rgba(255, 255, 255, 0.14), transparent 20%),
+    radial-gradient(
+      circle at 48% 50%,
+      color-mix(in srgb, var(--color-surface) 14%, transparent),
+      transparent 20%
+    ),
     linear-gradient(145deg, var(--color-background-soft), var(--color-background));
   overflow: hidden;
   cursor: grab;
@@ -1477,12 +1489,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
   position: absolute;
   z-index: 2;
   min-width: 154px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--color-glass-border);
   border-radius: 12px;
-  background: rgba(5, 10, 12, 0.92);
-  color: #ffffff;
+  background: color-mix(in srgb, var(--color-surface-elevated) 92%, transparent);
+  color: var(--color-heading);
   padding: 10px 11px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.36);
+  box-shadow: var(--color-glass-shadow);
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 22px));
 }
@@ -1504,11 +1516,11 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .tooltip-key {
-  color: rgba(255, 255, 255, 0.66);
+  color: var(--color-text-muted);
 }
 
 .tooltip-value {
-  color: #ffffff;
+  color: var(--color-heading);
   font-weight: 700;
   text-align: right;
 }
@@ -1601,7 +1613,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 .page-tabs {
   display: flex;
   gap: 2px;
-  border-bottom: 1px solid var(--color-border-subtle, rgba(0,0,0,0.1));
+  border-bottom: 1px solid var(--color-border-subtle);
   padding-bottom: 0;
 }
 
@@ -1609,7 +1621,7 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
   padding: 8px 18px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   border-bottom: 2px solid transparent;
   transition: color 0.18s, border-color 0.18s;
   margin-bottom: -1px;
@@ -1621,29 +1633,29 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .page-tab:hover {
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
 }
 
 .page-tab-active {
-  color: var(--color-primary, #aae8e8);
-  border-bottom-color: var(--color-primary, #aae8e8);
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 /* ── Inner (Globe / Table) tabs ───────────────────────────────────────────── */
 .inner-tabs {
   display: flex;
   gap: 2px;
-  border: 1px solid var(--color-border-subtle, rgba(255,255,255,0.1));
+  border: 1px solid var(--color-border-subtle);
   border-radius: 8px;
   padding: 2px;
-  background: rgba(255,255,255,0.04);
+  background: color-mix(in srgb, var(--color-surface) 22%, transparent);
 }
 
 .inner-tab {
   padding: 4px 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   border-radius: 6px;
   border: none;
   background: none;
@@ -1652,12 +1664,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .inner-tab:hover {
-  color: var(--color-text-primary, #fff);
+  color: var(--color-text-primary);
 }
 
 .inner-tab-active {
-  background: var(--color-primary, #aae8e8);
-  color: #000;
+  background: var(--color-primary);
+  color: var(--color-heading);
 }
 
 /* ── Accordion ────────────────────────────────────────────────────────────── */
@@ -1676,12 +1688,12 @@ const rawSnapshot = computed(() => JSON.stringify(gps.value ?? {}, null, 2));
 }
 
 .accordion-header:hover {
-  background: rgba(255,255,255,0.04);
+  background: color-mix(in srgb, var(--color-surface) 22%, transparent);
 }
 
 .accordion-chevron {
   flex-shrink: 0;
-  color: var(--color-text-muted, #888);
+  color: var(--color-text-muted);
   transition: transform 0.2s ease;
 }
 
