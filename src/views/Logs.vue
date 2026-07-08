@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import ApiService, { API_SERVER_URL } from '@/utils/api';
-import { getToken } from '@/utils/auth';
+import { getToken, isTokenExpired } from '@/utils/auth';
+import { useAppRuntimeStore } from '@/stores/appRuntime';
 import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'LogsView' });
@@ -45,6 +46,7 @@ const lastEventAt = ref<string | null>(null);
 const logContainer = ref<HTMLElement | null>(null);
 const eventSource = ref<EventSource | null>(null);
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+const appRuntime = useAppRuntimeStore();
 
 const setsEqual = (left: Set<string>, right: Set<string>): boolean => {
   if (left.size !== right.size) return false;
@@ -426,6 +428,12 @@ function connectStream() {
   source.onerror = () => {
     if (!liveStreamingEnabled.value) {
       disconnectStream('paused');
+      return;
+    }
+
+    if (!getToken() || isTokenExpired()) {
+      disconnectStream('offline');
+      void appRuntime.handleAuthFailure('expired');
       return;
     }
 

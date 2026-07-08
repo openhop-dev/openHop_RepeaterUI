@@ -3,7 +3,8 @@ import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import ApiService, { API_SERVER_URL } from '@/utils/api';
-import { getToken } from '@/utils/auth';
+import { getToken, isTokenExpired } from '@/utils/auth';
+import { useAppRuntimeStore } from '@/stores/appRuntime';
 import type { GPSDiagnostics, GPSSatellite } from '@/types/api';
 
 defineOptions({ name: 'GPSDiagnosticsView' });
@@ -66,6 +67,7 @@ const error = ref<string | null>(null);
 const lastLoaded = ref<Date | null>(null);
 const showRawSnapshot = ref(false);
 const eventSource = ref<EventSource | null>(null);
+const appRuntime = useAppRuntimeStore();
 const globeStage = ref<HTMLElement | null>(null);
 const globeCanvas = ref<HTMLCanvasElement | null>(null);
 const globeWebglFailed = ref(false);
@@ -164,6 +166,12 @@ const connectEventSource = () => {
   };
 
   eventSource.value.onerror = () => {
+    if (!getToken() || isTokenExpired()) {
+      closeEventSource();
+      void appRuntime.handleAuthFailure('expired');
+      return;
+    }
+
     if (!gps.value) {
       error.value = 'GPS live stream disconnected. Reconnecting...';
       isLoading.value = false;

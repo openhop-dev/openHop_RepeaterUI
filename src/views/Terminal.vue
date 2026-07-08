@@ -95,7 +95,10 @@ const PARAM_SUGGESTIONS: Record<string, string[]> = {
     'af',
     'mode',
     'repeat',
+    'owner.info',
     'flood.max',
+    'path.hash.mode',
+    'loop.detect',
     'advert.interval',
     'duty',
     'duty.max',
@@ -111,15 +114,20 @@ const PARAM_SUGGESTIONS: Record<string, string[]> = {
     'direct.txdelay',
     'rxdelay',
     'name',
+    'owner.info',
     'lat',
     'lon',
     'mode',
     'duty',
+    'path.hash.mode',
+    'loop.detect',
     'flood.max',
     'advert.interval',
     'flood.advert.interval',
   ],
   ping: [], // Will be populated dynamically
+  'neighbor.remove': ['--all'],
+  region: ['default'],
 };
 
 // Value suggestions for parameters
@@ -127,6 +135,11 @@ const PARAM_VALUE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   set: {
     mode: ['forward', 'monitor'],
     duty: ['on', 'off'],
+    'path.hash.mode': ['0', '1', '2'],
+    'loop.detect': ['off', 'minimal', 'moderate', 'strict'],
+  },
+  region: {
+    default: ['<null>'],
   },
 };
 
@@ -149,7 +162,10 @@ const PARAM_DESCRIPTIONS: Record<string, Record<string, string>> = {
     af: 'Airtime factor',
     mode: 'Repeater mode',
     repeat: 'Repeat on/off',
+    'owner.info': 'Owner info text',
     'flood.max': 'Max flood hops',
+    'path.hash.mode': 'Path hash mode (0-2)',
+    'loop.detect': 'Loop detection mode',
     'advert.interval': 'Advert interval',
     duty: 'Duty cycle enabled',
     'duty.max': 'Max airtime %',
@@ -165,16 +181,25 @@ const PARAM_DESCRIPTIONS: Record<string, Record<string, string>> = {
     'direct.txdelay': 'Direct TX delay (0.0-5.0)',
     rxdelay: 'RX delay base (>= 0)',
     name: 'Node name',
+    'owner.info': 'Owner info text',
     lat: 'Latitude (-90 to 90)',
     lon: 'Longitude (-180 to 180)',
     mode: 'Repeater mode (forward/monitor/no_tx)',
     duty: 'Duty cycle (on/off)',
+    'path.hash.mode': 'Path hash mode (0-2)',
+    'loop.detect': 'Loop detection mode',
     'flood.max': 'Max flood hops (0-64)',
     'advert.interval': 'Advert interval (0 or 1-10080 mins)',
     'flood.advert.interval': 'Flood advert (0 or 3-48 hrs)',
   },
   ping: {
     // Descriptions will be shown for static suggestions if any added
+  },
+  'neighbor.remove': {
+    '--all': 'Remove all neighbors',
+  },
+  region: {
+    default: 'Get or set default region scope',
   },
 };
 
@@ -279,13 +304,13 @@ onMounted(() => {
   const reset = '\x1b[0m';
 
   term.writeln('');
-  term.writeln(`${logoColor}    ██████  ██    ██ ███    ███  ██████${reset}`);
-  term.writeln(`${logoColor}    ██   ██  ██  ██  ████  ████ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██████    ████   ██ ████ ██ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██         ██    ██  ██  ██ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██         ██    ██      ██  ██████${reset}`);
+  term.writeln(`${logoColor}    ██████  ██████  ███████ ███    ██ ██   ██  ██████  ██████ ${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██   ██ ██      ████   ██ ██   ██ ██    ██ ██   ██${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██████  █████   ██ ██  ██ ███████ ██    ██ ██████ ${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██      ██      ██  ██ ██ ██   ██ ██    ██ ██     ${reset}`);
+  term.writeln(`${logoColor}    ██████  ██      ███████ ██   ████ ██   ██  ██████  ██     ${reset}`);
   term.writeln('');
-  term.writeln(`${titleColor}    Repeater Terminal${reset}`);
+  term.writeln(`${titleColor}    openHop Repeater Terminal${reset}`);
   term.writeln('');
   term.writeln(`${hintColor}    Type ${cmdColor}help${hintColor} for available commands${reset}`);
   term.writeln('');

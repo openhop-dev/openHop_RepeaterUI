@@ -449,14 +449,14 @@ defineExpose({ requestLeave, isEditing });
               v-model.number="advertIntervalInput"
               type="number"
               min="0"
-              max="48"
+              max="168"
               class="cfg-input w-20"
             />
             <span class="text-content-muted text-sm">hours</span>
           </div>
         </div>
         <span class="text-content-muted text-xs"
-          >How often the repeater sends an advertisement packet (0 = disabled, 3-48 hours)</span
+          >How often the repeater sends an advertisement packet (0 = disabled, 3-168 hours)</span
         >
       </div>
     </div>

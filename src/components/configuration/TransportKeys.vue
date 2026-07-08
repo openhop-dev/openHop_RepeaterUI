@@ -28,6 +28,9 @@ function nextTempId() { return _nextTempId--; }
 // ── Flood policy ──────────────────────────────────────────────────────────
 const unscopedFloodPolicy = ref<'allow' | 'deny'>('deny');
 let snapshotUnscopedPolicy: 'allow' | 'deny' = 'deny';
+const defaultRegion = ref<string | null>(null);
+const defaultRegionInput = ref('');
+let snapshotDefaultRegion: string | null = null;
 
 const statsFloodAllow = computed(() => systemStore.stats?.config?.mesh?.unscoped_flood_allow ?? null);
 watch(statsFloodAllow, (val) => {
@@ -111,11 +114,25 @@ const loadTransportKeys = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const response = await ApiService.getTransportKeys();
-    if (response.success && response.data) {
-      transportKeysData.value = buildTreeFromApiData(response.data as any[]);
+    const [keysResponse, defaultRegionResponse] = await Promise.all([
+      ApiService.getTransportKeys(),
+      ApiService.getDefaultRegion(),
+    ]);
+
+    if (keysResponse.success && keysResponse.data) {
+      transportKeysData.value = buildTreeFromApiData(keysResponse.data as any[]);
     } else {
-      error.value = response.error || 'Failed to load regions';
+      error.value = keysResponse.error || 'Failed to load regions';
+    }
+
+    if (defaultRegionResponse.success) {
+      const loadedDefault = defaultRegionResponse.data?.default_region ?? null;
+      defaultRegion.value = loadedDefault;
+      if (!isEditing.value) {
+        defaultRegionInput.value = loadedDefault ?? '';
+      }
+    } else if (!error.value) {
+      error.value = defaultRegionResponse.error || 'Failed to load default region';
     }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -130,6 +147,8 @@ onMounted(loadTransportKeys);
 function startEditing() {
   snapshot = cloneTree(transportKeysData.value);
   snapshotUnscopedPolicy = unscopedFloodPolicy.value;
+  snapshotDefaultRegion = defaultRegion.value;
+  defaultRegionInput.value = defaultRegion.value ?? '';
   isEditing.value = true;
   saveError.value = null;
 }
@@ -137,10 +156,20 @@ function startEditing() {
 function cancelEditing() {
   if (snapshot) transportKeysData.value = cloneTree(snapshot);
   unscopedFloodPolicy.value = snapshotUnscopedPolicy;
+  defaultRegion.value = snapshotDefaultRegion;
+  defaultRegionInput.value = snapshotDefaultRegion ?? '';
   snapshot = null;
   isEditing.value = false;
   saveError.value = null;
   treeStore.setSelectedNode(null);
+}
+
+function normalizeDefaultRegionInput(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === '<null>') {
+    return null;
+  }
+  return trimmed;
 }
 
 async function saveChanges() {
@@ -199,6 +228,13 @@ async function saveChanges() {
     // 4. Flood policy
     if (unscopedFloodPolicy.value !== snapshotUnscopedPolicy) {
       await ApiService.updateUnscopedFloodPolicy(unscopedFloodPolicy.value === 'allow');
+    }
+
+    // 5. Default region
+    const currentDefaultRegion = normalizeDefaultRegionInput(defaultRegionInput.value);
+    if (currentDefaultRegion !== snapshotDefaultRegion) {
+      await ApiService.updateDefaultRegion(currentDefaultRegion);
+      defaultRegion.value = currentDefaultRegion;
     }
 
     await loadTransportKeys();
@@ -394,6 +430,35 @@ defineExpose({ requestLeave, isEditing });
             ]"
           >
             ALLOW
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Default Region Control -->
+    <div class="cfg-section">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h4 class="text-xs sm:text-sm font-medium text-content-primary mb-1">
+            Default Region Scope
+          </h4>
+          <p class="text-content-secondary dark:text-content-muted text-[10px] sm:text-xs">
+            Used for locally-originated flood adverts. Current: {{ defaultRegion || '<null>' }}
+          </p>
+        </div>
+        <div class="w-full sm:w-auto sm:min-w-[320px] flex items-center gap-2">
+          <input
+            v-model="defaultRegionInput"
+            :disabled="!isEditing || isSaving"
+            class="cfg-input flex-1"
+            placeholder="Region name or &lt;null&gt;"
+          />
+          <button
+            @click="defaultRegionInput = ''"
+            :disabled="!isEditing || isSaving"
+            class="cfg-btn-secondary whitespace-nowrap"
+          >
+            Clear
           </button>
         </div>
       </div>

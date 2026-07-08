@@ -19,6 +19,7 @@ interface DiscoveryResult {
   response_snr?: number;
   rssi?: number;
   known_neighbor?: boolean;
+  is_self?: boolean;
   zero_hop?: boolean;
   advert_count?: number;
 }
@@ -176,6 +177,12 @@ const formatNodeLabel = (result: DiscoveryResult) => {
                       >
                         Known neighbor
                       </span>
+                      <span
+                        v-if="result.is_self"
+                        class="text-xs px-2 py-0.5 rounded-full bg-accent-cyan/opacity-light text-accent-cyan border border-accent-cyan/opacity-medium"
+                      >
+                        Local node
+                      </span>
                     </div>
                     <div class="mt-1 text-xs font-mono text-content-secondary dark:text-content-muted break-all">
                       {{ result.pub_key }}
@@ -201,7 +208,7 @@ const formatNodeLabel = (result: DiscoveryResult) => {
                   </div>
                   <div class="shrink-0 flex items-center gap-2">
                     <button
-                      v-if="!result.known_neighbor"
+                      v-if="!result.known_neighbor && !result.is_self"
                       @click="add(result)"
                       class="px-3 py-2 text-sm rounded-lg bg-accent-green/opacity-light text-accent-green border border-accent-green/opacity-medium hover:bg-accent-green/opacity-medium transition-colors"
                     >

@@ -15,6 +15,9 @@ import { AclCommand } from './AclCommand';
 import { RoomsCommand } from './RoomsCommand';
 import { RestartCommand } from './RestartCommand';
 import { PingCommand } from './PingCommand';
+import { DiscoverNeighborsCommand } from './DiscoverNeighborsCommand';
+import { NeighborRemoveCommand } from './NeighborRemoveCommand';
+import { RegionCommand } from './RegionCommand';
 
 export class CommandRegistry {
   private commands: BaseCommand[] = [];
@@ -36,6 +39,9 @@ export class CommandRegistry {
     const roomsCmd = new RoomsCommand();
     const restartCmd = new RestartCommand();
     const pingCmd = new PingCommand();
+    const discoverNeighborsCmd = new DiscoverNeighborsCommand();
+    const neighborRemoveCmd = new NeighborRemoveCommand();
+    const regionCmd = new RegionCommand();
 
     // Help command needs access to all commands
     const helpCmd = new HelpCommand([
@@ -54,6 +60,9 @@ export class CommandRegistry {
       roomsCmd,
       restartCmd,
       pingCmd,
+      discoverNeighborsCmd,
+      neighborRemoveCmd,
+      regionCmd,
     ]);
 
     this.commands = [
@@ -73,6 +82,9 @@ export class CommandRegistry {
       roomsCmd,
       restartCmd,
       pingCmd,
+      discoverNeighborsCmd,
+      neighborRemoveCmd,
+      regionCmd,
     ];
   }
 

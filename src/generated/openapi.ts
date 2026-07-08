@@ -1950,6 +1950,61 @@ export class Api<
         ...params,
       }),
   };
+  defaultRegion = {
+    /**
+     * @description Get current mesh default region used for locally-originated flood adverts.
+     *
+     * @tags Network Policy
+     * @name DefaultRegionList
+     * @summary Get default region
+     * @request GET:/default_region
+     * @secure
+     */
+    defaultRegionList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            default_region?: string | null;
+          };
+          message?: string;
+          error?: string;
+        },
+        any
+      >({
+        path: `/default_region`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Set or clear mesh default region. Pass null to clear.
+     *
+     * @tags Network Policy
+     * @name DefaultRegionCreate
+     * @summary Update default region
+     * @request POST:/default_region
+     * @secure
+     */
+    defaultRegionCreate: (
+      data: {
+        /** Region name to set, or null to clear. */
+        default_region: string | null;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<SuccessResponse, any>({
+        path: `/default_region`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   pingNeighbor = {
     /**
      * @description Send ping to a specific neighbor node

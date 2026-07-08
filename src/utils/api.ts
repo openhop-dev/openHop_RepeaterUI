@@ -71,6 +71,12 @@ type DeleteTransportKeyResponse = EndpointApiResponse<
 type UnscopedFloodPolicyResponse = EndpointApiResponse<
   (typeof generatedApiClient)['unscopedFloodPolicy']['unscopedFloodPolicyCreate']
 >;
+type DefaultRegionResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['defaultRegion']['defaultRegionList']
+>;
+type UpdateDefaultRegionResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['defaultRegion']['defaultRegionCreate']
+>;
 type PolicyDocumentResponse = ApiResponse<PolicyDocumentData>;
 type PolicyValidationResponse = ApiResponse<PolicyValidationResult>;
 type DeleteAdvertResponse = EndpointApiResponse<(typeof generatedApiClient)['advert']['advertDelete']>;
@@ -544,6 +550,31 @@ export class ApiService {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.unscopedFloodPolicy.unscopedFloodPolicyCreate(
         { unscoped_flood_allow: allow },
+        params,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getDefaultRegion(): Promise<DefaultRegionResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.defaultRegion.defaultRegionList(params);
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async updateDefaultRegion(
+    default_region: string | null,
+  ): Promise<UpdateDefaultRegionResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.defaultRegion.defaultRegionCreate(
+        { default_region },
         params,
       );
       return response.data;

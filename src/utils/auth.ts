@@ -43,10 +43,10 @@ export function clearToken(): void {
 
 /**
  * Check if user is authenticated (has valid token)
- * Note: This only checks if token exists, not if it's expired
  */
 export function isAuthenticated(): boolean {
-  return getToken() !== null;
+  const token = getToken();
+  return Boolean(token) && !isTokenExpired();
 }
 
 export interface JWTPayload {
