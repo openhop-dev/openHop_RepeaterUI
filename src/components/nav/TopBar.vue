@@ -285,7 +285,7 @@ const toggleMobileSidebar = () => {
           </div>
         </div>
         <a
-          href="https://github.com/openhop-dev/openhope-repeater/issues/new"
+          href="https://github.com/openhop-dev/openhop-repeater/issues/new"
           target="_blank"
           rel="noopener noreferrer"
           class="topbar-icon-btn hidden sm:flex"
@@ -440,7 +440,7 @@ const toggleMobileSidebar = () => {
                   Install Update
                 </button>
                 <a
-                  href="https://github.com/openhop-dev/openhope-repeater"
+                  href="https://github.com/openhop-dev/openhop-repeater"
                   target="_blank"
                   class="text-xs text-content-muted hover:text-content-secondary underline"
                 >

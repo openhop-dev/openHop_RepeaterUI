@@ -32,7 +32,7 @@ defineOptions({ name: 'HelpView' });
         </p>
 
         <a
-          href="https://github.com/openhop-dev/openhope-repeater/wiki"
+          href="https://github.com/openhop-dev/openhop-repeater/wiki"
           target="_blank"
           rel="noopener noreferrer"
           class="inline-flex items-center gap-2 font-medium py-3 px-6 rounded-xl transition-colors bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"
