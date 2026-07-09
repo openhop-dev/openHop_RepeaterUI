@@ -25,6 +25,33 @@ const showTxPowerNoticeModal = ref(false);
 const txPowerNoticeConfirmed = ref(false);
 const txPowerNoticeAcknowledged = ref(false);
 const nextActionButtonRef = ref<HTMLElement | null>(null);
+const setupMode = ref<'new' | 'restore' | null>(null);
+const backupInputRef = ref<HTMLInputElement | null>(null);
+const backupFile = ref<File | null>(null);
+const isRestoringBackup = ref(false);
+const restartModalMessage = ref('Setup complete. The service is restarting. This may take up to a minute.');
+const restartModalTitle = ref('Service Restart Required');
+const restartModalStartImmediately = ref(true);
+
+const RESTORE_SECTION_HINTS = new Set([
+  'repeater',
+  'mesh',
+  'radio',
+  'sx1262',
+  'ch341',
+  'kiss',
+  'pymc_usb',
+  'pymc_tcp',
+  'mqtt_brokers',
+  'mqtt',
+  'identities',
+  'delays',
+  'web',
+  'letsmesh',
+  'glass',
+  'logging',
+  'radio_type',
+]);
 
 const selectedTxPowerForWarning = computed(() => {
   if (setupStore.useCustomRadio) {
@@ -110,6 +137,17 @@ const progressPercentage = computed(() => {
   return (setupStore.currentStep / setupStore.totalSteps) * 100;
 });
 
+const canProceed = computed(() => {
+  if (setupStore.currentStep === 1) {
+    return setupMode.value === 'new';
+  }
+  return setupStore.canGoNext;
+});
+
+const showWizardNavigation = computed(() => {
+  return !(setupStore.currentStep === 1 && setupMode.value === 'restore');
+});
+
 type ConnectionType = 'gpio' | 'usb' | 'network';
 
 const connectionFilters: Array<{ key: ConnectionType; title: string; description: string }> = [
@@ -172,6 +210,10 @@ function scrollToNextAction() {
 }
 
 async function handleNext() {
+  if (setupStore.currentStep === 1 && setupMode.value !== 'new') {
+    return;
+  }
+
   if (
     setupStore.currentStep === 5 &&
     setupStore.canGoNext &&
@@ -186,6 +228,9 @@ async function handleNext() {
     // Complete setup
     const result = await setupStore.completeSetup();
     if (result.success) {
+      restartModalTitle.value = 'Service Restart Required';
+      restartModalMessage.value = 'Setup complete. The service is restarting. This may take up to a minute.';
+      restartModalStartImmediately.value = true;
       showRestartModal.value = true;
     } else {
       // Show error dialog
@@ -196,6 +241,83 @@ async function handleNext() {
     }
   } else {
     setupStore.nextStep();
+  }
+}
+
+function selectSetupMode(mode: 'new' | 'restore') {
+  setupMode.value = mode;
+  if (mode === 'restore') {
+    setupStore.error = null;
+  }
+}
+
+function openBackupPicker() {
+  backupInputRef.value?.click();
+}
+
+function handleBackupSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  backupFile.value = input.files?.[0] || null;
+}
+
+function extractConfigFromBackup(payload: unknown): Record<string, unknown> | null {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const root = payload as Record<string, unknown>;
+  const wrappedData = root.data;
+  if (wrappedData && typeof wrappedData === 'object') {
+    const wrappedConfig = (wrappedData as Record<string, unknown>).config;
+    if (wrappedConfig && typeof wrappedConfig === 'object') {
+      return wrappedConfig as Record<string, unknown>;
+    }
+  }
+
+  const directConfig = root.config;
+  if (directConfig && typeof directConfig === 'object') {
+    return directConfig as Record<string, unknown>;
+  }
+
+  if (Object.keys(root).some((key) => RESTORE_SECTION_HINTS.has(key))) {
+    return root;
+  }
+
+  return null;
+}
+
+async function restoreBackup() {
+  if (!backupFile.value || isRestoringBackup.value) return;
+
+  isRestoringBackup.value = true;
+  setupStore.error = null;
+
+  try {
+    const raw = await backupFile.value.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      throw new Error('Backup file is not valid JSON.');
+    }
+
+    const config = extractConfigFromBackup(parsed);
+    if (!config) {
+      throw new Error('Backup file does not contain a valid config payload.');
+    }
+
+    const result = await ApiService.importConfig(config);
+    if (!result.success) {
+      throw new Error(result.error || 'Restore failed.');
+    }
+
+    restartModalTitle.value = 'Restore Applied';
+    restartModalMessage.value = 'Backup restored successfully. Restart the service to apply all settings.';
+    restartModalStartImmediately.value = false;
+    showRestartModal.value = true;
+  } catch (error: unknown) {
+    const e = error as { message?: string };
+    setupStore.error = e.message || 'Failed to restore backup';
+  } finally {
+    isRestoringBackup.value = false;
   }
 }
 
@@ -253,7 +375,7 @@ const stepTitles = [
 
     <div class="w-full max-w-4xl relative z-10">
       <!-- Progress Bar -->
-      <div class="mb-8">
+      <div class="mb-8" v-if="showWizardNavigation">
         <div class="flex justify-between mb-2">
           <span class="text-content-secondary dark:text-content-muted text-sm"
             >Step {{ setupStore.currentStep }} of {{ setupStore.totalSteps }}</span
@@ -275,7 +397,7 @@ const stepTitles = [
         class="bg-white dark:bg-surface-elevated backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[20px] p-6 sm:p-8 md:p-12"
       >
         <!-- Step Indicator -->
-        <div class="flex justify-center mb-8">
+        <div v-if="showWizardNavigation" class="flex justify-center mb-8">
           <div class="flex gap-2">
             <div
               v-for="step in setupStore.totalSteps"
@@ -304,8 +426,103 @@ const stepTitles = [
 
           <!-- Welcome Step -->
           <div v-if="setupStore.currentStep === 1" class="space-y-6 mt-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+              <button
+                type="button"
+                @click="selectSetupMode('restore')"
+                :class="[
+                  'p-6 rounded-[16px] border transition-all duration-300 text-left backdrop-blur-sm min-h-[180px] flex flex-col justify-between',
+                  setupMode === 'restore'
+                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                    : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                ]"
+              >
+                <div>
+                  <div class="w-12 h-12 rounded-xl bg-primary/opacity-medium text-primary flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 12l4 4m0 0l4-4m-4 4V4" />
+                    </svg>
+                  </div>
+                  <h3 class="text-xl font-semibold text-content-primary mb-2">Restore Backup</h3>
+                  <p class="text-sm text-content-secondary dark:text-content-muted">
+                    Import a previously exported config and apply it to this repeater.
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                @click="selectSetupMode('new')"
+                :class="[
+                  'p-6 rounded-[16px] border transition-all duration-300 text-left backdrop-blur-sm min-h-[180px] flex flex-col justify-between',
+                  setupMode === 'new'
+                    ? 'bg-gradient-to-r from-primary/20 to-primary/10 border-primary/opacity-heavy shadow-lg shadow-primary/20'
+                    : 'bg-background-mute dark:bg-white/opacity-subtle border-stroke-subtle dark:border-stroke/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke dark:hover:border-stroke/opacity-medium',
+                ]"
+              >
+                <div>
+                  <div class="w-12 h-12 rounded-xl bg-primary/opacity-medium text-primary flex items-center justify-center mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h3 class="text-xl font-semibold text-content-primary mb-2">Set Up New Repeater</h3>
+                  <p class="text-sm text-content-secondary dark:text-content-muted">
+                    Run the step-by-step wizard for a fresh repeater configuration.
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            <div
+              v-if="setupMode === 'restore'"
+              class="max-w-3xl mx-auto bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-[16px] p-5"
+            >
+              <input
+                ref="backupInputRef"
+                type="file"
+                accept="application/json,.json"
+                class="hidden"
+                @change="handleBackupSelected"
+              />
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <button
+                  type="button"
+                  @click="openBackupPicker"
+                  class="px-5 py-3 rounded-[12px] bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light text-content-primary hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-all duration-300 font-medium"
+                >
+                  Choose Backup File
+                </button>
+                <div class="text-sm text-content-secondary dark:text-content-muted truncate">
+                  {{ backupFile ? backupFile.name : 'No file selected' }}
+                </div>
+              </div>
+
+
+              <div class="mt-4">
+                <button
+                  type="button"
+                  @click="restoreBackup"
+                  :disabled="!backupFile || isRestoringBackup"
+                  class="px-6 py-3 rounded-[12px] font-semibold transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="
+                    backupFile && !isRestoringBackup
+                      ? 'bg-primary/opacity-medium hover:bg-primary/opacity-heavy text-primary border border-primary/opacity-heavy'
+                      : 'bg-background-mute dark:bg-stroke/opacity-subtle text-content-muted border border-stroke-subtle dark:border-stroke/opacity-light'
+                  "
+                >
+                  <Spinner v-if="isRestoringBackup" size="sm" color="white" />
+                  <span>{{ isRestoringBackup ? 'Restoring backup...' : 'Restore Backup' }}</span>
+                </button>
+              </div>
+            </div>
+
             <div class="text-center space-y-4">
+              <div v-if="setupMode === null" class="text-content-secondary dark:text-content-muted text-sm">
+                Choose one option above to continue.
+              </div>
               <div
+                v-if="setupMode === 'new'"
                 class="w-20 h-20 mx-auto bg-primary/opacity-medium rounded-full flex items-center justify-center mb-6"
               >
                 <svg
@@ -322,10 +539,10 @@ const stepTitles = [
                   />
                 </svg>
               </div>
-              <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-lg">
+              <p v-if="setupMode === 'new'" class="text-content-secondary dark:text-content-primary/opacity-heavy text-lg">
                 Welcome to your Repeater! Let's get you set up in just a few steps.
               </p>
-              <div class="bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-4 text-left">
+              <div v-if="setupMode === 'new'" class="bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-4 text-left">
                 <p class="text-primary text-sm font-medium mb-2">You'll configure:</p>
                 <ul class="space-y-2 text-content-secondary dark:text-content-primary/opacity-heavy text-sm">
                   <li class="flex items-center gap-2">
@@ -963,7 +1180,7 @@ const stepTitles = [
         </div>
 
         <!-- Navigation Buttons -->
-        <div class="flex justify-between gap-4">
+        <div v-if="showWizardNavigation" class="flex justify-between gap-4">
           <button
             v-if="setupStore.canGoBack"
             @click="handleBack"
@@ -976,10 +1193,10 @@ const stepTitles = [
           <button
             ref="nextActionButtonRef"
             @click="handleNext"
-            :disabled="!setupStore.canGoNext || setupStore.isSubmitting"
+            :disabled="!canProceed || setupStore.isSubmitting"
             class="px-8 py-3 rounded-[12px] font-semibold transition-all duration-300 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             :class="
-              setupStore.canGoNext && !setupStore.isSubmitting
+              canProceed && !setupStore.isSubmitting
                 ? 'bg-primary/opacity-medium hover:bg-primary/opacity-heavy text-primary border border-primary/opacity-heavy hover:border-primary/opacity-heavy'
                 : 'bg-background-mute dark:bg-stroke/opacity-subtle text-content-muted border border-stroke-subtle dark:border-stroke/opacity-light'
             "
@@ -1067,8 +1284,9 @@ const stepTitles = [
 
     <RestartModal
       v-model="showRestartModal"
-      :start-immediately="true"
-      message="Setup complete. The service is restarting. This may take up to a minute."
+      :title="restartModalTitle"
+      :start-immediately="restartModalStartImmediately"
+      :message="restartModalMessage"
     />
   </div>
 </template>
