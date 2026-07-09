@@ -12,7 +12,7 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "api:generate": "swagger-typescript-api generate --path ../pyMC_Repeater/repeater/web/openapi.yaml --output ./src/generated --name openapi.ts",
+    "api:generate": "swagger-typescript-api generate --path ../openhop-repeater/repeater/web/openapi.yaml --output ./src/generated --name openapi.ts",
     "api:check": "npm run api:generate && git diff --exit-code -- src/generated/openapi.ts",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
