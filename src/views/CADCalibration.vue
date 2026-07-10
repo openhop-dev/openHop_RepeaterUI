@@ -97,6 +97,11 @@ interface RangeInfo {
 interface CalibrationUpdate {
   type: 'status' | 'progress' | 'result' | 'complete' | 'completed' | 'error';
   message?: string;
+  results?: {
+    best?: CalibrationResult;
+    recommended?: CalibrationResult;
+    total_tests?: number;
+  };
   test_ranges?: RangeInfo;
   current?: number;
   total?: number;
@@ -113,6 +118,7 @@ const startTime = ref<number | null>(null);
 const eventSource = ref<EventSource | null>(null);
 const calibrationData = ref<Record<string, CalibrationResult>>({});
 const bestCalibrationResult = ref<CalibrationResult | null>(null);
+const backendRecommendedResult = ref<CalibrationResult | null>(null);
 const individualSamples = ref<unknown[]>([]);
 const allTestResults = ref<Record<string, unknown>>({});
 
@@ -273,7 +279,7 @@ async function startCalibration() {
   try {
     const result = await ApiService.post('/cad-calibration-start', {
       samples,
-      delay_ms: delay,
+      delay,
     });
 
     if (result.success) {
@@ -288,6 +294,7 @@ async function startCalibration() {
       individualSamples.value = [];
       allTestResults.value = {};
       bestCalibrationResult.value = null;
+      backendRecommendedResult.value = null;
 
       // Reset UI
       showRangeInfo.value = false;
@@ -422,6 +429,12 @@ function handleCalibrationUpdate(data: CalibrationUpdate) {
       isRunning.value = false;
       statusMessage.value = data.message || 'Calibration completed';
 
+      if (data.results?.recommended) {
+        backendRecommendedResult.value = data.results.recommended;
+      } else if (data.results?.best) {
+        backendRecommendedResult.value = data.results.best;
+      }
+
       // Update global calibration state
       systemStore.setCadCalibrationRunning(false);
 
@@ -463,6 +476,14 @@ function updateStats() {
 // Calculate and show results
 function calculateAndShowResults() {
   showResults.value = true;
+
+  // Prefer backend-selected result when available.
+  if (backendRecommendedResult.value) {
+    bestCalibrationResult.value = backendRecommendedResult.value;
+    showBestResult.value = true;
+    showNoResults.value = false;
+    return;
+  }
 
   // Find best result
   let bestResult = null;
