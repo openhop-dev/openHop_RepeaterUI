@@ -97,6 +97,10 @@ type SendRoomServerAdvertResponse = EndpointApiResponse<
 type ImportConfigResponse = EndpointApiResponse<
   (typeof generatedApiClient)['configImport']['configImportCreate']
 >;
+export type LbtDiagnosticsApiResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['lbtDiagnostics']['lbtDiagnosticsList']
+>;
+export type LbtDiagnosticsPayload = NonNullable<LbtDiagnosticsApiResponse['data']>;
 
 const toAxiosHeaders = (headers?: HeadersInit): Record<string, string> | undefined => {
   if (!headers) {
@@ -452,6 +456,18 @@ export class ApiService {
     try {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.serialPorts.serialPortsList(params);
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getLbtDiagnostics(
+    query?: Parameters<(typeof generatedApiClient)['lbtDiagnostics']['lbtDiagnosticsList']>[0],
+  ): Promise<LbtDiagnosticsApiResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.lbtDiagnostics.lbtDiagnosticsList(query, params);
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);

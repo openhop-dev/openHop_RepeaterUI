@@ -24,6 +24,235 @@ export interface ErrorResponse {
   error?: string;
 }
 
+export interface LbtDiagnosticsResponse {
+  /** Selected range start timestamp (Unix epoch seconds) */
+  start_time: number;
+  /** Selected range end timestamp (Unix epoch seconds) */
+  end_time: number;
+  /**
+   * Aggregation interval in seconds
+   * @min 60
+   * @max 3600
+   */
+  bucket_seconds: number;
+  /**
+   * Attempt count threshold used for severe contention classification
+   * @min 2
+   * @max 16
+   */
+  severe_attempt_threshold: number;
+  summary: LbtSummary;
+  buckets: LbtBucket[];
+  /** Packet types present in the selected range, sorted by transmission volume. */
+  packet_types: LbtPacketTypeSummary[];
+  /** Sparse per-packet-type bucket diagnostics (only combinations with transmissions). */
+  packet_type_buckets: LbtPacketTypeBucket[];
+  correlations: LbtCorrelationSet;
+  limitations: string[];
+}
+
+export interface LbtPacketTypeSummary {
+  /** Raw packet type code from packet records. */
+  packet_type: number;
+  /** Human-readable packet type label. */
+  packet_type_label: string;
+  /** @min 0 */
+  transmissions: number;
+  /** @min 0 */
+  retry_packets: number;
+  /** @format float */
+  retry_rate_pct?: number | null;
+}
+
+export interface LbtPacketTypeBucket {
+  /** Bucket timestamp (Unix epoch seconds) */
+  timestamp: number;
+  /** Raw packet type code from packet records. */
+  packet_type: number;
+  /** Human-readable packet type label. */
+  packet_type_label: string;
+  /** @min 0 */
+  transmissions: number;
+  /** @min 0 */
+  total_attempts: number;
+  /** @min 0 */
+  first_attempt_success: number;
+  /** @min 0 */
+  retry_packets: number;
+  /** @format float */
+  retry_rate_pct?: number | null;
+  /** @format float */
+  first_attempt_success_rate_pct?: number | null;
+  /** @format float */
+  avg_attempts?: number | null;
+  /** @min 0 */
+  attempts_1: number;
+  /** @min 0 */
+  attempts_2: number;
+  /** @min 0 */
+  attempts_3: number;
+  /** @min 0 */
+  attempts_4_plus: number;
+  /** @min 0 */
+  attempts_3_plus: number;
+  /** @format float */
+  attempts_3_plus_pct?: number | null;
+  /** @min 0 */
+  max_attempts: number;
+  /** @min 0 */
+  failed_transmissions: number;
+  /** @min 0 */
+  severe_contention_count: number;
+  rf: LbtRfBucket;
+}
+
+export interface LbtSummary {
+  /** @min 0 */
+  total_transmissions: number;
+  /** @min 0 */
+  total_attempts: number;
+  /** @min 0 */
+  first_attempt_success: number;
+  /** @min 0 */
+  retry_packets: number;
+  /** @format float */
+  retry_rate_pct?: number | null;
+  /** @format float */
+  first_attempt_success_rate_pct?: number | null;
+  /** @format float */
+  avg_attempts?: number | null;
+  /** @format float */
+  median_attempts?: number | null;
+  /** @format float */
+  p95_attempts?: number | null;
+  /** @min 0 */
+  max_attempts: number;
+  /** @min 0 */
+  attempts_1: number;
+  /** @min 0 */
+  attempts_2: number;
+  /** @min 0 */
+  attempts_3: number;
+  /** @min 0 */
+  attempts_4_plus: number;
+  /** @min 0 */
+  attempts_3_plus: number;
+  /** @format float */
+  attempts_3_plus_pct?: number | null;
+  /** @format float */
+  attempts_4_plus_pct?: number | null;
+  /** @min 0 */
+  failed_transmissions: number;
+  /** @min 0 */
+  busy_channel_events: number;
+  /** @min 0 */
+  severe_contention_count: number;
+  /** @format float */
+  severe_contention_pct?: number | null;
+  /**
+   * @min 2
+   * @max 16
+   */
+  severe_attempt_threshold: number;
+  has_lbt_data: boolean;
+  worst_bucket?: LbtWorstBucket | null;
+}
+
+export interface LbtWorstBucket {
+  timestamp: number;
+  /** @format float */
+  retry_rate_pct: number;
+  /** @format float */
+  attempts_3_plus_pct: number;
+  /** @min 0 */
+  max_attempts: number;
+  /** @min 0 */
+  transmissions: number;
+}
+
+export interface LbtBucket {
+  /** Bucket timestamp (Unix epoch seconds) */
+  timestamp: number;
+  /** @min 0 */
+  transmissions: number;
+  /** @min 0 */
+  total_attempts: number;
+  /** @min 0 */
+  first_attempt_success: number;
+  /** @min 0 */
+  retry_packets: number;
+  /** @format float */
+  retry_rate_pct?: number | null;
+  /** @format float */
+  first_attempt_success_rate_pct?: number | null;
+  /** @format float */
+  avg_attempts?: number | null;
+  /** @format float */
+  median_attempts?: number | null;
+  /** @format float */
+  p95_attempts?: number | null;
+  /** @min 0 */
+  max_attempts: number;
+  /** @min 0 */
+  attempts_1: number;
+  /** @min 0 */
+  attempts_2: number;
+  /** @min 0 */
+  attempts_3: number;
+  /** @min 0 */
+  attempts_4_plus: number;
+  /** @min 0 */
+  attempts_3_plus: number;
+  /** @format float */
+  attempts_3_plus_pct?: number | null;
+  /** @format float */
+  attempts_4_plus_pct?: number | null;
+  /** @min 0 */
+  failed_transmissions: number;
+  /** @min 0 */
+  busy_channel_events: number;
+  /** @min 0 */
+  severe_contention_count: number;
+  /** @format float */
+  severe_contention_pct?: number | null;
+  rf: LbtRfBucket;
+}
+
+export interface LbtRfBucket {
+  /** @format float */
+  avg_rssi?: number | null;
+  /** @format float */
+  avg_snr?: number | null;
+  /** @format float */
+  packet_loss_rate_pct?: number | null;
+  /** @min 0 */
+  traffic_volume: number;
+  /** @min 0 */
+  rx_count: number;
+  /** @min 0 */
+  tx_count: number;
+  /** @min 0 */
+  drop_count: number;
+}
+
+export interface LbtCorrelationSet {
+  retry_rate_vs_avg_snr: LbtCorrelationValue;
+  retry_rate_vs_avg_rssi: LbtCorrelationValue;
+  retry_rate_vs_packet_loss_rate: LbtCorrelationValue;
+  retry_rate_vs_traffic_volume: LbtCorrelationValue;
+}
+
+export interface LbtCorrelationValue {
+  /**
+   * Pearson coefficient in range [-1, 1] when enough samples exist
+   * @format float
+   */
+  coefficient: number | null;
+  /** @min 0 */
+  sample_count: number;
+  note?: string | null;
+}
+
 export interface RoomMessage {
   /**
    * Database message ID
@@ -1510,6 +1739,64 @@ export class Api<
         any
       >({
         path: `/metrics_graph_data`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+  };
+  lbtDiagnostics = {
+    /**
+     * @description Returns aggregated Listen Before Talk (LBT) diagnostics for transmission-path packets, aligned to RF health buckets for correlation analysis. Notes: - LBT total attempts are derived as `lbt_attempts + 1` from stored packet metadata. - Buckets are bounded and aggregated server-side for efficient dashboard refresh.
+     *
+     * @tags Charts
+     * @name LbtDiagnosticsList
+     * @summary Get LBT diagnostics aligned with RF metrics
+     * @request GET:/lbt_diagnostics
+     */
+    lbtDiagnosticsList: (
+      query?: {
+        /**
+         * Fallback range in hours when explicit timestamps are not provided.
+         * @min 1
+         * @max 168
+         * @default 24
+         */
+        hours?: number;
+        /**
+         * Inclusive start timestamp (Unix epoch seconds).
+         * @format float
+         */
+        start_timestamp?: number;
+        /**
+         * Inclusive end timestamp (Unix epoch seconds).
+         * @format float
+         */
+        end_timestamp?: number;
+        /**
+         * Bucket width in seconds. If omitted, server auto-selects based on range.
+         * @min 60
+         * @max 3600
+         */
+        bucket_seconds?: number;
+        /**
+         * Attempt threshold used to classify severe contention events.
+         * @min 2
+         * @max 16
+         * @default 4
+         */
+        severe_attempt_threshold?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: LbtDiagnosticsResponse;
+        },
+        any
+      >({
+        path: `/lbt_diagnostics`,
         method: "GET",
         query: query,
         format: "json",
