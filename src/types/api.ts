@@ -382,6 +382,9 @@ export interface AdvertRequest {
 export interface CADCalibrationStart {
   samples?: number;
   delay?: number;
+  known_signal_present?: boolean;
+  cad_symbol_num?: 1 | 2 | 4 | 8 | 16;
+  cad_timeout_ms?: number;
 }
 
 export interface CADSettings {
@@ -413,6 +416,14 @@ export interface CADCalibrationMessage {
     min_val: number;
     detection_rate: number;
     recommended: boolean;
+    attempts?: number;
+    detections?: number;
+    non_detections?: number;
+    timeouts?: number;
+    errors?: number;
+    recommendation_reason?: string;
+    known_signal_present?: boolean;
+    qualification?: string;
   };
 }
 
