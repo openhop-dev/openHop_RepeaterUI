@@ -12,6 +12,8 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "api:generate": "swagger-typescript-api generate --path ../openhop-repeater/repeater/web/openapi.yaml --output ./src/generated --name openapi.ts",
+    "api:check": "npm run api:generate && git diff --exit-code -- src/generated/openapi.ts",
     "lint": "eslint . --fix",
     "format": "prettier --write src/"
   },
@@ -59,6 +61,7 @@
     "npm-run-all2": "^8.0.4",
     "postcss": "^8.5.8",
     "prettier": "3.8.1",
+    "swagger-typescript-api": "^13.11.1",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
     "vite": "^8.0.5",

@@ -3,6 +3,8 @@ import { ref, onMounted, computed } from 'vue';
 import apiClient, { API_SERVER_URL } from '@/utils/api';
 import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
 import Spinner from '@/components/ui/Spinner.vue';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
+import CopyLabel from '@/components/ui/CopyLabel.vue';
 
 defineOptions({ name: 'APITokens' });
 
@@ -112,11 +114,10 @@ const closeTokenModal = () => {
   createdToken.value = null;
 };
 
-const copyToken = () => {
-  if (createdToken.value) {
-    navigator.clipboard.writeText(createdToken.value);
-    // Could add a toast notification here
-  }
+const { copy: copyToken, copied: tokenCopied } = useCopyToClipboard();
+
+const handleCopyToken = () => {
+  if (createdToken.value) copyToken(createdToken.value);
 };
 
 const formatTimestamp = (timestamp: number | null) => {
@@ -142,7 +143,7 @@ onMounted(() => {
     <!-- Header -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <div>
-        <h2 class="text-lg sm:text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h2 class="text-lg sm:text-xl font-semibold text-content-primary">
           API Tokens
         </h2>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm mt-1">
@@ -166,10 +167,10 @@ onMounted(() => {
     </div>
 
     <!-- Info Box -->
-    <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 sm:p-4">
+    <div class="bg-primary/opacity-light border border-primary/opacity-medium rounded-lg p-3 sm:p-4">
       <div class="flex gap-2 sm:gap-3">
         <svg
-          class="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"
+          class="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -181,10 +182,10 @@ onMounted(() => {
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <div class="text-xs sm:text-sm text-blue-700 dark:text-blue-200">
+        <div class="text-xs sm:text-sm text-content-secondary dark:text-content-muted">
           <p>
             <strong>API tokens</strong> are used for machine-to-machine authentication. Include the
-            token in the <code class="bg-blue-500/20 px-1 rounded">X-API-Key</code> header when
+            token in the <code class="bg-background-mute dark:bg-white/opacity-subtle px-1 rounded font-mono">X-API-Key</code> header when
             making API requests.
           </p>
           <p class="mt-2">Tokens are only shown once at creation. Store them securely.</p>
@@ -193,8 +194,8 @@ onMounted(() => {
     </div>
 
     <!-- Error Message -->
-    <div v-if="error" class="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-      <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+    <div v-if="error" class="bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-4">
+      <div class="flex items-center gap-2 text-accent-red">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
@@ -220,7 +221,7 @@ onMounted(() => {
       <div
         v-for="token in tokens"
         :key="token.id"
-        class="bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg p-3 sm:p-4 hover:bg-stroke-subtle dark:hover:bg-white/10 transition-colors"
+        class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg p-3 sm:p-4 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light transition-colors"
       >
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div class="flex-1">
@@ -240,7 +241,7 @@ onMounted(() => {
               </svg>
               <div class="min-w-0 flex-1">
                 <h3
-                  class="text-content-primary dark:text-content-primary font-medium text-sm sm:text-base break-all"
+                  class="text-content-primary font-medium text-sm sm:text-base break-all"
                 >
                   {{ token.name }}
                 </h3>
@@ -256,7 +257,7 @@ onMounted(() => {
           <button
             @click="openRevokeConfirm(token.id, token.name)"
             :disabled="isLoading"
-            class="w-full sm:w-auto px-3 py-1.5 bg-red-100 dark:bg-red-500/20 hover:bg-red-500/30 text-red-600 dark:text-red-400 rounded-lg border border-red-500/50 transition-colors disabled:opacity-50 text-sm"
+            class="w-full sm:w-auto px-3 py-1.5 bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red rounded-lg border border-accent-red/opacity-heavy transition-colors disabled:opacity-50 text-sm"
           >
             Revoke
           </button>
@@ -267,7 +268,7 @@ onMounted(() => {
     <!-- Empty State -->
     <div v-else class="text-center py-12">
       <svg
-        class="w-16 h-16 text-content-muted dark:text-content-muted/40 mx-auto mb-4"
+        class="w-16 h-16 text-content-muted/opacity-heavy mx-auto mb-4"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -279,7 +280,7 @@ onMounted(() => {
           d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
         />
       </svg>
-      <h3 class="text-content-primary dark:text-content-primary font-medium mb-2">No API Tokens</h3>
+      <h3 class="text-content-primary font-medium mb-2">No API Tokens</h3>
       <p class="text-content-secondary dark:text-content-muted text-sm mb-4">
         Create a token to enable API access
       </p>
@@ -294,13 +295,13 @@ onMounted(() => {
     <!-- Create Token Modal -->
     <div
       v-if="showCreateModal"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeCreateModal"
     >
       <div
-        class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-6 max-w-md w-full shadow-2xl"
+        class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] p-6 max-w-md w-full shadow-2xl"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-4">
+        <h3 class="text-xl font-semibold text-content-primary mb-4">
           Create API Token
         </h3>
 
@@ -314,10 +315,10 @@ onMounted(() => {
               v-model="newTokenName"
               type="text"
               placeholder="e.g., Production Server, CI/CD Pipeline"
-              class="cfg-input placeholder-gray-400 dark:placeholder-white/40"
+              class="cfg-input placeholder-content-muted dark:placeholder-content-muted"
               @keydown.enter="createToken"
             />
-            <p class="text-xs text-content-muted dark:text-content-muted mt-1">
+            <p class="text-xs text-content-muted mt-1">
               Give your token a descriptive name to identify its purpose
             </p>
           </div>
@@ -326,7 +327,7 @@ onMounted(() => {
             <button
               @click="closeCreateModal"
               :disabled="isLoading"
-              class="px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/10 transition-colors disabled:opacity-50"
+              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors disabled:opacity-50"
             >
               Cancel
             </button>
@@ -345,21 +346,21 @@ onMounted(() => {
     <!-- Show Token Modal -->
     <div
       v-if="showToken && createdToken"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      class="modal-backdrop"
       @click.self="closeTokenModal"
     >
       <div
-        class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/20 rounded-[15px] p-6 max-w-lg w-full shadow-2xl"
+        class="bg-surface dark:bg-surface-elevated border border-stroke-subtle dark:border-stroke/opacity-medium rounded-[15px] p-6 max-w-lg w-full shadow-2xl"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary mb-4">
+        <h3 class="text-xl font-semibold text-content-primary mb-4">
           Token Created Successfully
         </h3>
 
         <div class="space-y-4">
-          <div class="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+          <div class="bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg p-4">
             <div class="flex gap-3">
               <svg
-                class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+                class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -371,7 +372,7 @@ onMounted(() => {
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <div class="text-sm text-yellow-200">
+              <div class="text-sm text-secondary">
                 <strong>Save this token now!</strong> For security reasons, it will not be shown
                 again.
               </div>
@@ -387,31 +388,26 @@ onMounted(() => {
               <input
                 :value="createdToken"
                 readonly
-                class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary font-mono text-sm"
+                class="modal-input-readonly flex-1 text-sm"
               />
               <button
-                @click="copyToken"
-                class="btn-primary flex items-center gap-2"
-                title="Copy to clipboard"
+                @click="handleCopyToken"
+                :class="['flex items-center gap-2 transition-colors', tokenCopied ? 'btn-success' : 'btn-primary']"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
+                <svg v-if="!tokenCopied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Copy
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <CopyLabel :copied="tokenCopied" />
               </button>
             </div>
           </div>
 
-          <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <p class="text-sm text-blue-200 mb-2"><strong>Usage Example:</strong></p>
-            <code
-              class="block bg-blue-500/20 px-3 py-2 rounded text-xs text-blue-100 font-mono overflow-x-auto"
-            >
+          <div class="cfg-card p-4">
+            <p class="text-sm text-content-secondary dark:text-content-muted mb-2"><strong>Usage Example:</strong></p>
+            <code class="code-block">
               curl -H "X-API-Key: {{ createdToken }}" {{ exampleUrl }}
             </code>
           </div>

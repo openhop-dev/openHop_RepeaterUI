@@ -21,11 +21,16 @@ const MIN_SNR_BY_SF: Record<number, number> = {
 // Default values for fallback
 const DEFAULT_NOISE_FLOOR = -116.0; // Typical quiet RF environment
 const DEFAULT_SF = 8;
-const GOOD_SNR_MARGIN = 5.0; // dB above minimum for "good" signal
+
+// Signal bar scale: 20 dB range above minSNR, 4 dB per bar (bars 1–5)
+// Bar 5 (full strength) kicks in at minSNR + 16 dB; anything above minSNR + 20 is comfortably full
+const SNR_STEP = 4.0;
+const SNR_STEPS = 5;
 
 export interface SignalQuality {
   bars: number; // 0-5 signal bars
-  color: string; // Tailwind color class
+  color: string; // text-* Tailwind class — for text/icon colouring
+  bgColor: string; // bg-* Tailwind class — for filled bar/chip colouring
   snr: number; // Calculated SNR
   quality: 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'None'; // Text label
 }
@@ -48,45 +53,28 @@ function getMinSNR(spreadingFactor: number): number {
  * Map SNR to signal quality with color and bars
  */
 function mapSNRToQuality(snr: number, minSNR: number): SignalQuality {
-  const yellowThreshold = minSNR + GOOD_SNR_MARGIN; // 5 dB above minimum
-
-  // Red: SNR <= minSNR (unreliable link)
-  if (snr <= minSNR) {
-    const bars = snr <= minSNR - 5 ? 0 : 1;
+  // Below minimum — not reliably decodable
+  if (snr < minSNR) {
     return {
-      bars,
-      color: 'text-red-600 dark:text-red-400',
+      bars: 0,
+      color: 'text-accent-red',
+      bgColor: 'bg-accent-red',
       snr,
-      quality: bars === 0 ? 'None' : 'Poor',
+      quality: 'None',
     };
   }
 
-  // Yellow: minSNR < SNR < (minSNR + 5 dB) (marginal link)
-  if (snr < yellowThreshold) {
-    // Linear interpolation between red and yellow zones
-    const progress = (snr - minSNR) / GOOD_SNR_MARGIN;
-    const bars = progress < 0.5 ? 2 : 3;
-    return {
-      bars,
-      color:
-        bars === 2
-          ? 'text-orange-600 dark:text-orange-400'
-          : 'text-yellow-600 dark:text-yellow-400',
-      snr,
-      quality: 'Fair',
-    };
-  }
+  // 5 equal 4 dB steps above minSNR. bar = floor((snr - minSNR) / 4) + 1, capped at 5.
+  const bars = Math.min(SNR_STEPS, Math.floor((snr - minSNR) / SNR_STEP) + 1) as 1 | 2 | 3 | 4 | 5;
 
-  // Green: SNR >= (minSNR + 5 dB) (reliable link)
-  // Scale bars 4-5 based on how much above good threshold
-  const excessSNR = snr - yellowThreshold;
-  const bars = excessSNR >= 10 ? 5 : 4;
-  return {
-    bars,
-    color: bars === 5 ? 'text-green-600 dark:text-green-400' : 'text-green-600 dark:text-green-300',
-    snr,
-    quality: bars === 5 ? 'Excellent' : 'Good',
+  const BAR_STYLES: Record<1|2|3|4|5, { color: string; bgColor: string; quality: SignalQuality['quality'] }> = {
+    1: { color: 'text-accent-red',         bgColor: 'bg-accent-red',         quality: 'Poor'      },
+    2: { color: 'text-accent-orange',      bgColor: 'bg-accent-orange',      quality: 'Poor'      },
+    3: { color: 'text-accent-amber',       bgColor: 'bg-accent-amber',       quality: 'Fair'      },
+    4: { color: 'text-accent-green-light', bgColor: 'bg-accent-green-light', quality: 'Good'      },
+    5: { color: 'text-accent-green',       bgColor: 'bg-accent-green',       quality: 'Excellent' },
   };
+  return { bars, snr, ...BAR_STYLES[bars] };
 }
 
 /**
@@ -117,7 +105,8 @@ export function useSignalQuality() {
     if (!rssi || rssi > 0 || rssi < -120) {
       return {
         bars: 0,
-        color: 'text-gray-400 dark:text-gray-500',
+        color: 'text-content-muted',
+        bgColor: 'bg-content-muted',
         snr: -999,
         quality: 'None',
       };
@@ -133,8 +122,27 @@ export function useSignalQuality() {
     return mapSNRToQuality(clampedSNR, minSNR.value);
   };
 
+  /**
+   * Calculate signal quality directly from a pre-calculated SNR value
+   * Use this when the packet already contains an SNR field.
+   */
+  const getSignalQualityFromSNR = (snr: number | null): SignalQuality => {
+    if (snr === null || !Number.isFinite(snr)) {
+      return {
+        bars: 0,
+        color: 'text-content-muted',
+        bgColor: 'bg-content-muted',
+        snr: -999,
+        quality: 'None',
+      };
+    }
+    const clamped = Math.max(-30, Math.min(20, snr));
+    return mapSNRToQuality(clamped, minSNR.value);
+  };
+
   return {
     getSignalQuality,
+    getSignalQualityFromSNR,
     noiseFloor,
     spreadingFactor,
     minSNR,
@@ -152,7 +160,7 @@ export function getRSSIStrength(rssi: number | null): { bars: number; color: str
   const minSNR = getMinSNR(sf);
 
   if (!rssi || rssi > 0 || rssi < -120) {
-    return { bars: 0, color: 'text-gray-400' };
+    return { bars: 0, color: 'text-content-muted' };
   }
 
   const snr = calculateSNR(rssi, noiseFloor);

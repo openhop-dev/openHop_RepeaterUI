@@ -109,14 +109,22 @@ const chartStatus = reactive<Record<string, string>>({
   routePie: 'Connecting...',
 });
 
+const cssVar = (name: string, fallback: string): string => {
+  if (typeof window === 'undefined') return fallback;
+  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
 // Helper function to get theme-aware chrome colors (grid lines, ticks, labels)
 const getThemeColors = () => {
-  const isDark = document.documentElement.classList.contains('dark');
   return {
-    gridColor:   isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-    tickColor:   isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)',
-    legendColor: isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
-    titleColor:  isDark ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)',
+    gridColor: cssVar('--color-border-subtle', 'lightgray'),
+    tickColor: cssVar('--color-text-secondary', 'gray'),
+    legendColor: cssVar('--color-text-primary', 'white'),
+    titleColor: cssVar('--color-text-primary', 'white'),
+    tooltipBg: cssVar('--color-surface-elevated', 'black'),
+    tooltipTitle: cssVar('--color-heading', 'white'),
+    tooltipBody: cssVar('--color-text-primary', 'white'),
+    tooltipBorder: cssVar('--color-border-subtle', 'gray'),
   };
 };
 
@@ -130,19 +138,32 @@ const PACKET_RATE_GUARD = 20; // pkts/s — hard cap applied before bucketing/sp
 // Chart palette — fixed vibrant colours, same in both light and dark mode.
 // Matches the pattern used in SystemStats.vue and StatsCards.vue.
 const CHART_COLORS = {
-  tx:             '#F59E0B',              // amber — TX/hr series, CRC errors sparkline
-  rx:             '#C084FC',              // violet — RX/hr series
-  noiseFloor:     '#F59E0B',              // amber — noise floor axis ticks
-  noiseFloorFill: 'rgba(245, 158, 11, 0.8)', // amber at 80% — scatter dot fill
-  noiseFloorGrid: 'rgba(245, 158, 11, 0.2)', // amber at 20% — y-axis grid tint
-  totalRx:        '#AAE8E8',              // teal   — Total RX sparkline
-  totalTx:        '#FFC246',              // bright amber — Total TX sparkline
-  crcErrors:      '#F59E0B',              // amber — CRC errors sparkline
+  tx: cssVar('--color-accent-red', 'tomato'),
+  rx: cssVar('--color-secondary', 'violet'),
+  noiseFloor: cssVar('--color-primary', 'deepskyblue'),
+  noiseFloorFill: cssVar('--color-primary', 'deepskyblue'),
+  noiseFloorGrid: cssVar('--color-border-hover', 'gray'),
+  totalRx: cssVar('--color-accent-cyan', 'cyan'),
+  totalTx: cssVar('--color-accent-green', 'limegreen'),
+  crcErrors: cssVar('--color-accent-red', 'tomato'),
   packetTypes: [
-    '#60A5FA', '#34D399', '#FBBF24', '#A78BFA', '#F87171',
-    '#06B6D4', '#84CC16', '#F472B6', '#10B981',
+    cssVar('--openhop-blue-light', 'lightskyblue'),
+    cssVar('--color-accent-green', 'limegreen'),
+    cssVar('--color-primary-bg', 'khaki'),
+    cssVar('--openhop-purple-light', 'violet'),
+    cssVar('--color-accent-red', 'tomato'),
+    cssVar('--color-accent-cyan', 'cyan'),
+    cssVar('--color-accent-green-bg', 'lightgreen'),
+    cssVar('--color-accent-purple', 'orchid'),
+    cssVar('--color-accent-green', 'limegreen'),
   ],
-  routes: ['#3B82F6', '#10B981', '#F59E0B', '#A78BFA', '#F87171'],
+  routes: [
+    cssVar('--color-primary', 'deepskyblue'),
+    cssVar('--color-accent-green', 'limegreen'),
+    cssVar('--color-accent-cyan', 'cyan'),
+    cssVar('--color-secondary', 'violet'),
+    cssVar('--color-accent-red', 'tomato'),
+  ],
 } as const;
 
 // Time period selection
@@ -672,10 +693,10 @@ const createOrUpdatePacketRateChart = () => {
           },
           tooltip: {
             enabled: true,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            titleColor: 'rgba(255, 255, 255, 0.9)',
-            bodyColor: 'rgba(255, 255, 255, 0.8)',
-            borderColor: 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: getThemeColors().tooltipBg,
+            titleColor: getThemeColors().tooltipTitle,
+            bodyColor: getThemeColors().tooltipBody,
+            borderColor: getThemeColors().tooltipBorder,
             borderWidth: 1,
             padding: 12,
             displayColors: true,
@@ -836,10 +857,10 @@ const createOrUpdateSignalMetricsChart = () => {
         },
         tooltip: {
           enabled: true,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          titleColor: 'rgba(255, 255, 255, 0.9)',
-          bodyColor: 'rgba(255, 255, 255, 0.8)',
-          borderColor: 'rgba(255, 255, 255, 0.2)',
+          backgroundColor: getThemeColors().tooltipBg,
+          titleColor: getThemeColors().tooltipTitle,
+          bodyColor: getThemeColors().tooltipBody,
+          borderColor: getThemeColors().tooltipBorder,
           borderWidth: 1,
           padding: 12,
           displayColors: true,
@@ -932,7 +953,7 @@ onBeforeUnmount(() => {
   <div class="p-3 sm:p-6 space-y-4 sm:space-y-6">
     <!-- Header with Time Range Dropdown -->
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-      <h2 class="text-xl sm:text-2xl font-bold text-content-primary dark:text-content-primary">
+      <h2 class="text-xl sm:text-2xl font-bold text-content-primary">
         Statistics
       </h2>
 
@@ -944,7 +965,7 @@ onBeforeUnmount(() => {
         <select
           v-model="selectedHours"
           @change="onTimeRangeChange"
-          class="bg-white dark:bg-white/10 border border-stroke-subtle dark:border-stroke/20 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 text-content-primary dark:text-content-primary text-xs sm:text-sm focus:outline-hidden focus:border-primary dark:focus:border-accent-purple/50 transition-colors"
+          class="modal-select w-auto"
         >
           <option
             v-for="option in timeOptions"
@@ -1001,7 +1022,7 @@ onBeforeUnmount(() => {
     <!-- Performance Metrics Section -->
     <div class="glass-card rounded-[15px] p-3 sm:p-6">
       <h3
-        class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+        class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
       >
         Performance Metrics
       </h3>
@@ -1040,7 +1061,7 @@ onBeforeUnmount(() => {
       <!-- Noise Floor Over Time -->
       <div class="glass-card rounded-[15px] p-3 sm:p-6 flex flex-col">
         <h3
-          class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+          class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
         >
           Noise Floor Over Time
         </h3>
@@ -1058,7 +1079,7 @@ onBeforeUnmount(() => {
       <!-- Route Distribution -->
       <div class="glass-card rounded-[15px] p-3 sm:p-6 flex flex-col">
         <h3
-          class="text-content-primary dark:text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
+          class="text-content-primary text-lg sm:text-xl font-semibold mb-3 sm:mb-4"
         >
           Route Distribution
         </h3>
@@ -1076,11 +1097,11 @@ onBeforeUnmount(() => {
               class="flex items-center gap-3"
             >
               <div
-                class="w-28 sm:w-32 text-sm text-content-primary dark:text-content-primary truncate"
+                class="w-28 sm:w-32 text-sm text-content-primary truncate"
               >
                 {{ route }}
               </div>
-              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/10 rounded overflow-hidden">
+              <div class="flex-1 h-12 bg-background-mute dark:bg-stroke/opacity-subtle rounded overflow-hidden">
                 <div
                   class="h-full rounded transition-all duration-300"
                   :style="{

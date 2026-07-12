@@ -6,7 +6,7 @@ import { useNeighborStore } from './neighbors';
 import ApiService from '@/utils/api';
 import type { RecentPacket } from '@/types/api';
 
-type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors';
+type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors' | 'radioConfig';
 export type StepStatus = 'pending' | 'loading' | 'done' | 'error';
 
 const TTL: Record<DataKey, number> = {
@@ -17,6 +17,7 @@ const TTL: Record<DataKey, number> = {
   sparklines: 300_000,
   advertTier: 60_000,
   neighbors: 10 * 60_000,
+  radioConfig: Number.MAX_SAFE_INTEGER, // stable until explicitly invalidated by config UI
 };
 
 export const useDataService = defineStore('dataService', () => {
@@ -42,6 +43,7 @@ export const useDataService = defineStore('dataService', () => {
     sparklines: 'pending',
     advertTier: 'pending',
     neighbors: 'pending',
+    radioConfig: 'pending',
   });
 
   const _lastFetch = new Map<DataKey, number>();
@@ -96,13 +98,21 @@ export const useDataService = defineStore('dataService', () => {
 
     switch (key) {
       case 'stats':
-        promise = systemStore.fetchStats().then(() => { _lastFetch.set('stats', Date.now()); });
+        promise = systemStore.fetchStats().then(() => {
+          _lastFetch.set('stats', Date.now());
+          _lastFetch.set('radioConfig', Date.now());
+        });
+        break;
+      case 'radioConfig':
+        promise = ensure('stats').then(() => {
+          _lastFetch.set('radioConfig', Date.now());
+        });
         break;
       case 'packetStats':
         promise = packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); });
         break;
       case 'noiseFloor':
-        promise = packetStore.fetchNoiseFloorHistory({ hours: 24, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); });
+        promise = packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); });
         break;
       case 'recentPackets':
         promise = packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); });
@@ -135,6 +145,21 @@ export const useDataService = defineStore('dataService', () => {
 
   // Runs all HTTP fetches sequentially by phase, then resolves.
   // WebSocket connection is opened by useConnectionLifecycle AFTER this resolves.
+  async function _pool(tasks: Array<() => Promise<void>>, concurrency: number): Promise<void> {
+    const queue = [...tasks];
+    let active = 0;
+    return new Promise((resolve) => {
+      function next() {
+        if (queue.length === 0 && active === 0) { resolve(); return; }
+        while (active < concurrency && queue.length > 0) {
+          active++;
+          queue.shift()!().finally(() => { active--; next(); });
+        }
+      }
+      next();
+    });
+  }
+
   async function bootstrap(): Promise<void> {
     if (_bootstrapped) return;
     _bootstrapped = true;
@@ -148,6 +173,7 @@ export const useDataService = defineStore('dataService', () => {
         onFirstByte: () => { statsSubStatus.value = 'reading'; },
       }));
       _lastFetch.set('stats', Date.now());
+      _lastFetch.set('radioConfig', Date.now());
       loadProgress.stats = 'done';
     } catch {
       loadProgress.stats = 'error';
@@ -156,19 +182,16 @@ export const useDataService = defineStore('dataService', () => {
       statsSubStatus.value = null;
     }
 
-    // Phase 2: Secondary — packet data in parallel
-    await Promise.allSettled([
-      _runStep('packetStats', () => packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); })),
-      _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 24, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
-      _runStep('recentPackets', () => packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); })),
-    ]);
-
-    // Phase 3: Background — all in parallel (neighbors is slowest)
-    await Promise.allSettled([
-      _runStep('sparklines', () => packetStore.initializeSparklineHistory().then(() => { _lastFetch.set('sparklines', Date.now()); })),
-      _runStep('advertTier', () => _fetchAdvertTier()),
-      _runStep('neighbors', () => neighborStore.fetchAll(neighborStore.currentHours).then(() => {})),
-    ]);
+    // Phases 2+3: pool with concurrency 3 — next task fires as soon as a slot opens
+    const secondaryTasks: Array<() => Promise<void>> = [
+      () => _runStep('packetStats', () => packetStore.fetchPacketStats({ hours: 24 }).then(() => { _lastFetch.set('packetStats', Date.now()); })),
+      () => _runStep('noiseFloor', () => packetStore.fetchNoiseFloorHistory({ hours: 1, limit: 500 }).then(() => { _lastFetch.set('noiseFloor', Date.now()); })),
+      () => _runStep('recentPackets', () => packetStore.fetchRecentPackets({ limit: 100 }).then(() => { _lastFetch.set('recentPackets', Date.now()); })),
+      () => _runStep('sparklines', () => packetStore.initializeSparklineHistory().then(() => { _lastFetch.set('sparklines', Date.now()); })),
+      () => _runStep('advertTier', () => _fetchAdvertTier()),
+      () => _runStep('neighbors', () => neighborStore.fetchAll(neighborStore.currentHours).then(() => {})),
+    ];
+    await _pool(secondaryTasks, 3);
 
     isBootstrapping.value = false;
     _startPolling();
@@ -220,6 +243,10 @@ export const useDataService = defineStore('dataService', () => {
     ]);
   }
 
+  function invalidate(key: DataKey): void {
+    _lastFetch.delete(key);
+  }
+
   function stopPolling(): void {
     for (const h of _pollHandles) clearInterval(h);
     _pollHandles = [];
@@ -249,6 +276,7 @@ export const useDataService = defineStore('dataService', () => {
     loadProgress,
     bootstrap,
     ensure,
+    invalidate,
     noteDisconnect,
     onReconnect,
     stopPolling,

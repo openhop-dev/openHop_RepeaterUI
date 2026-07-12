@@ -1,15 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Michroma:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @import './base.css';
 
 @import 'tailwindcss';
 
 @config '../../tailwind.config.js';
+/* ── Mobile shell baseline ─────────────────────────────────────────────────── */
+
+:root {
+  --app-safe-area-top: 0px;
+  --app-safe-area-right: 0px;
+  --app-safe-area-bottom: 0px;
+  --app-safe-area-left: 0px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+html.is-mobile-app {
+  --app-safe-area-top: env(safe-area-inset-top, 0px);
+  --app-safe-area-right: env(safe-area-inset-right, 0px);
+  --app-safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --app-safe-area-left: env(safe-area-inset-left, 0px);
+}
 
 @layer utilities {
   .glass-card {
     @apply rounded-[10px] backdrop-blur-[50px];
-    background: var(--color-glass-bg);
-    border: 1px solid var(--color-glass-border);
-    box-shadow: var(--color-glass-shadow);
+    background: color-mix(in srgb, var(--color-surface) 75%, transparent);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-background) 25%, transparent);
+  }
+
+  .dark .glass-card {
+    background: var(--color-surface-elevated);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--color-background) 45%, transparent);
   }
 
   .glass-card-green {
@@ -27,7 +69,7 @@
   }
 
   .bg-mode-segment-forward {
-    background-color: color-mix(in srgb, var(--color-accent-green) 35%, transparent);
+    background-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
   }
   .bg-mode-segment-no-tx {
     background-color: color-mix(in srgb, var(--color-accent-red) 35%, transparent);
@@ -38,20 +80,35 @@
   }
 
   .cfg-section {
-    @apply bg-transparent dark:bg-white/5 rounded-lg p-8 border border-stroke-subtle dark:border-stroke/10;
+    @apply bg-transparent dark:bg-white/opacity-subtle rounded-lg p-8 border border-stroke-subtle dark:border-stroke/opacity-light;
   }
 
   /* Padding-free variant — use when the caller controls padding/overflow */
   .cfg-card {
-    @apply bg-transparent dark:bg-white/5 rounded-lg border border-stroke-subtle dark:border-stroke/10;
+    @apply bg-transparent dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light;
   }
 
   .cfg-btn-primary {
-    @apply px-4 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary dark:text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .cfg-btn-secondary {
-    @apply px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── Logo styling for light/dark mode ────────────────────────────────── */
+  .logo-image {
+    filter: brightness(0.7) contrast(1.3) saturate(1.2);
+    transition: filter 0.3s ease;
+  }
+
+  .dark .logo-image {
+    filter: brightness(1.1) contrast(1.05) saturate(1);
+  }
+
+  /* ── TopBar icon buttons ────────────────────────────────────────────────── */
+  .topbar-icon-btn {
+    @apply w-[35px] h-[35px] rounded bg-background-mute dark:bg-surface-elevated flex items-center justify-center hover:bg-stroke-subtle dark:hover:bg-stroke/opacity-medium transition-colors;
   }
 
   /* ── General-purpose buttons ────────────────────────────────────────────── */
@@ -60,26 +117,26 @@
 
   .btn-primary {
     @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
-           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary
+           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
     @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
-           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red
+           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-success {
     @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors
-           bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green
+           bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
     @apply px-4 py-2 rounded-lg text-sm transition-colors
-           bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10
-           border border-stroke-subtle dark:border-stroke/20
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
@@ -88,47 +145,73 @@
 
   .btn-primary-xs {
     @apply px-3 py-1 rounded text-xs transition-colors
-           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary
+           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger-xs {
     @apply px-3 py-1 rounded text-xs transition-colors
-           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red
+           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-success-xs {
     @apply px-3 py-1 rounded text-xs transition-colors
-           bg-accent-green/20 hover:bg-accent-green/30 border border-accent-green/50 text-accent-green
+           bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary-xs {
+    @apply px-3 py-1.5 rounded-lg text-xs transition-colors
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           border border-stroke-subtle dark:border-stroke/opacity-medium
+           text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* ── Config form inputs ─────────────────────────────────────────────────── */
 
   .cfg-input {
-    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
   }
 
   .cfg-select {
-    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+    @apply w-full px-3 py-1.5 bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary dark:text-content-primary text-sm focus:outline-none focus:border-primary transition-colors;
+  }
+
+  .dark .cfg-select,
+  .dark .modal-select {
+    color-scheme: dark;
+  }
+
+  .dark .cfg-select option,
+  .dark .modal-select option {
+    background-color: var(--color-surface-elevated);
+    color: var(--color-text-primary);
   }
 
   /* ── Modal utilities ────────────────────────────────────────────────────── */
 
   /* Standard modal backdrop (confirmations, edit dialogs) — z-[300] per layering scale */
   .modal-backdrop {
-    @apply fixed inset-0 bg-black/50 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/opacity-heavy backdrop-blur-sm z-[300] flex items-center justify-center p-4;
   }
 
-  /* Heavy backdrop for irreversible / destructive operations */
+  /* Heavy backdrop for irreversible / destructive operations — slightly stronger blur to signal importance */
   .modal-backdrop-heavy {
-    @apply fixed inset-0 bg-black/80 backdrop-blur-lg z-[300] flex items-center justify-center p-4;
+    @apply fixed inset-0 bg-black/opacity-heavy backdrop-blur-md z-[300] flex items-center justify-center p-4;
   }
 
   /* Inner card — combine with max-w-md / max-w-lg / max-w-2xl in the template */
   .modal-card {
-    @apply bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full border border-stroke-subtle dark:border-white/10;
+    @apply bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] p-6 w-full border border-stroke-subtle dark:border-white/opacity-light;
+  }
+
+  /* Glass-surface modal shell — for notification/result modals. combine with max-w-* and overflow-hidden in the template */
+  .modal-card-glass {
+    @apply backdrop-blur-xl rounded-[20px] shadow-2xl w-full border border-white/opacity-medium;
+    background: var(--color-glass-bg);
+    box-shadow: var(--color-glass-shadow);
   }
 
   /* ── Modal form elements ────────────────────────────────────────────────── */
@@ -150,19 +233,44 @@
 
   /* Text / number / password / mono inputs */
   .modal-input {
-    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
-           border border-stroke-subtle dark:border-stroke/10
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
+           border border-stroke-subtle dark:border-stroke/opacity-light
            text-content-primary dark:text-content-primary
-           placeholder-content-muted dark:placeholder-content-muted/50
+           placeholder-content-muted dark:placeholder-content-muted/opacity-heavy
            focus:outline-none focus:border-primary transition-colors;
   }
 
   /* <select> elements (no placeholder token needed) */
   .modal-select {
-    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/5
-           border border-stroke-subtle dark:border-stroke/10
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
+           border border-stroke-subtle dark:border-stroke/opacity-light
            text-content-primary dark:text-content-primary
            focus:outline-none focus:border-primary transition-colors;
+  }
+
+  /* Copy-button label swap transition — pair with <Transition name="label-swap" mode="out-in"> */
+  .label-swap-enter-active,
+  .label-swap-leave-active {
+    transition: opacity 150ms ease;
+  }
+  .label-swap-enter-from,
+  .label-swap-leave-to {
+    opacity: 0;
+  }
+
+  /* Block-level monospace code/command display (curl examples, config snippets) */
+  .code-block {
+    @apply block bg-background-mute dark:bg-white/opacity-subtle px-3 py-2 rounded
+           text-xs text-content-primary dark:text-content-primary
+           font-mono overflow-x-auto;
+  }
+
+  /* Read-only value display fields (tokens, coordinates, derived keys) */
+  .modal-input-readonly {
+    @apply w-full px-3 py-2 text-sm rounded-md bg-background-mute dark:bg-white/opacity-subtle
+           border border-stroke-subtle dark:border-stroke/opacity-light
+           text-content-primary dark:text-content-primary
+           font-mono cursor-default focus:outline-none focus:ring-0 focus:border-stroke-subtle dark:focus:border-stroke/opacity-light;
   }
 
   /* ── Modal action row + buttons ─────────────────────────────────────────── */
@@ -175,20 +283,61 @@
   /* Cancel / secondary muted action (safe to reuse for "Save Only" in 3-button rows) */
   .modal-btn-cancel {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors
-           bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10
-           border border-stroke-subtle dark:border-stroke/20
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary;
   }
 
   /* Primary positive action */
   .modal-btn-primary {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
-           bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary;
+           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary;
   }
 
   /* Destructive action (delete, remove) */
   .modal-btn-danger {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
-           bg-accent-red/20 hover:bg-accent-red/30 border border-accent-red/50 text-accent-red;
+           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red;
   }
+
+  /* ── Config page danger button ──────────────────────────────────────────── */
+  /* Matches cfg-btn-primary sizing (py-2) but in the red/danger colour scheme */
+  .cfg-btn-danger {
+    @apply px-4 py-2 bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red rounded-lg
+           border border-accent-red/opacity-heavy transition-colors text-sm
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ── Alert / notice boxes ───────────────────────────────────────────────── */
+  /* Coloured notice boxes — bg fill + border + text in one class */
+  .alert-info    { @apply bg-accent-cyan/opacity-light border border-accent-cyan/opacity-medium rounded-lg p-3 text-accent-cyan; }
+  .alert-success { @apply bg-accent-green/opacity-light border border-accent-green/opacity-medium rounded-lg p-3 text-accent-green; }
+  .alert-warning { @apply bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg p-3 text-accent-amber; }
+  .alert-error   { @apply bg-accent-red/opacity-light border border-accent-red/opacity-medium rounded-lg p-3 text-accent-red; }
+
+  /* ── Status badge pills ──────────────────────────────────────────────────── */
+  /* Small pill badges for handler/broker status, enabled state etc. */
+  .status-badge       { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium; }
+  .status-badge-green { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-green/opacity-light text-accent-green; }
+  .status-badge-amber { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-amber/opacity-light text-accent-amber; }
+  .status-badge-red   { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-red/opacity-light text-accent-red; }
+  .status-badge-muted { @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-background-mute text-content-muted; }
+
+  /* ── Status indicator dots ──────────────────────────────────────────────── */
+  /* Inline status dots — use alongside w-1.5 h-1.5 rounded-full */
+  .status-dot-green     { background-color: var(--color-accent-green); }
+  .status-dot-amber     { background-color: var(--color-accent-amber); }
+  .status-dot-red       { background-color: var(--color-accent-red); }
+  .status-dot-cyan      { background-color: var(--color-accent-cyan); }
+  .status-dot-secondary { background-color: var(--color-secondary); }
+  .status-dot-muted     { background-color: var(--color-border); }
+
+  /* ── Forced-dark surface text ───────────────────────────────────────────── */
+  /* Use on elements sitting on an explicitly dark background (near-black       */
+  /* overlays, terminal panes) where semantic content tokens don't apply.       */
+  .text-on-dark        { color: rgba(255, 255, 255, 0.87); }
+  .text-on-dark-secondary { color: rgba(255, 255, 255, 0.60); }
+  .text-on-dark-muted  { color: rgba(255, 255, 255, 0.40); }
+  .text-on-dark-subtle { color: rgba(255, 255, 255, 0.30); }
+
 }

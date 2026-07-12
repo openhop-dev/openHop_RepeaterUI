@@ -35,7 +35,10 @@ export class GetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36maf\x1b[0m                  Airtime factor');
       this.writeLine(term, '  \x1b[36mmode\x1b[0m                Repeater mode');
       this.writeLine(term, '  \x1b[36mrepeat\x1b[0m              Repeat on/off');
+      this.writeLine(term, '  \x1b[36mowner.info\x1b[0m          Owner info text');
       this.writeLine(term, '  \x1b[36mflood.max\x1b[0m           Max flood hops');
+      this.writeLine(term, '  \x1b[36mpath.hash.mode\x1b[0m      Path hash mode (0-2)');
+      this.writeLine(term, '  \x1b[36mloop.detect\x1b[0m         Loop detection mode');
       this.writeLine(term, '  \x1b[36madvert.interval\x1b[0m     Advert interval');
       this.writeLine(term, '  \x1b[36mduty\x1b[0m                Duty cycle enabled');
       this.writeLine(term, '  \x1b[36mduty.max\x1b[0m            Max airtime %');
@@ -57,6 +60,7 @@ export class GetCommand extends BaseCommand {
       const config = (data.config || {}) as Record<string, unknown>;
       const radio = (config.radio || {}) as Record<string, unknown>;
       const repeater = (config.repeater || {}) as Record<string, unknown>;
+      const mesh = (config.mesh || {}) as Record<string, unknown>;
       const delays = (config.delays || {}) as Record<string, unknown>;
       const dutyCycle = (config.duty_cycle || {}) as Record<string, unknown>;
 
@@ -153,11 +157,20 @@ export class GetCommand extends BaseCommand {
             result = '\x1b[90mnot set (default: on)\x1b[0m';
           }
           break;
+        case 'owner.info':
+          result = repeater.owner_info != null ? String(repeater.owner_info) : '';
+          break;
         case 'flood.max':
           result =
             repeater.max_flood_hops != null
               ? String(repeater.max_flood_hops)
               : '\x1b[90mnot set (default: 3)\x1b[0m';
+          break;
+        case 'path.hash.mode':
+          result = mesh.path_hash_mode != null ? String(mesh.path_hash_mode) : '0';
+          break;
+        case 'loop.detect':
+          result = mesh.loop_detect != null ? String(mesh.loop_detect) : 'off';
           break;
         case 'flood.advert.interval':
           result =
@@ -195,13 +208,13 @@ export class GetCommand extends BaseCommand {
           break;
         case 'prv.key':
           this.writeWarning(term, 'Private key not exposed via API for security');
-          this.writeInfo(term, 'Check /etc/pymc_repeater/config.yaml');
+          this.writeInfo(term, 'Check /etc/openhop_repeater/config.yaml');
           writePrompt();
           return;
         case 'guest.password':
         case 'allow.read.only':
           this.writeWarning(term, 'Security settings not exposed via API');
-          this.writeInfo(term, 'Check /etc/pymc_repeater/config.yaml');
+          this.writeInfo(term, 'Check /etc/openhop_repeater/config.yaml');
           writePrompt();
           return;
 
@@ -212,7 +225,10 @@ export class GetCommand extends BaseCommand {
           this.writeInfo(term, '  Identity:  name, role, lat, lon');
           this.writeInfo(term, '  Radio:     freq, tx, bw, sf, cr, radio');
           this.writeInfo(term, '  Timing:    txdelay, direct.txdelay, rxdelay, af');
-          this.writeInfo(term, '  Repeater:  mode, repeat, flood.max, advert.interval');
+          this.writeInfo(
+            term,
+            '  Repeater:  mode, repeat, owner.info, flood.max, path.hash.mode, loop.detect, advert.interval',
+          );
           this.writeInfo(term, '  Duty:      duty, duty.max');
           this.writeInfo(term, '  Security:  public.key');
           writePrompt();

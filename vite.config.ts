@@ -34,8 +34,9 @@ export default defineConfig(async ({ command, mode }) => {
       },
     },
     build: {
-      outDir: '../pyMC_Repeater/repeater/web/html',
+      outDir: '../openhop_repeater/repeater/web/html',
       emptyOutDir: true,
+      chunkSizeWarningLimit: 5000,
     },
   }
 })

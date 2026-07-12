@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useSystemStore } from '@/stores/system';
-import { authClient } from '@/utils/api';
+import ApiService from '@/utils/api';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
@@ -71,14 +71,14 @@ const saveChanges = async () => {
   successMessage.value = '';
 
   try {
-    const response = await authClient.post('/api/update_duty_cycle_config', {
+    const response = await ApiService.post('/update_duty_cycle_config', {
       max_airtime_percent: maxAirtimeInput.value,
       enforcement_enabled: enforcementInput.value,
     });
 
-    const data = response.data;
-    if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
+    const data = response.data as { message?: string; persisted?: boolean; error?: string } | undefined;
+    if (data?.message || data?.persisted) {
+      successMessage.value = data?.message || 'Settings saved successfully';
       isEditing.value = false;
 
       // Refresh stats to show updated values
@@ -89,7 +89,7 @@ const saveChanges = async () => {
         successMessage.value = '';
       }, 3000);
     } else {
-      errorMessage.value = 'Failed to save settings';
+      errorMessage.value = data?.error || 'Failed to save settings';
     }
   } catch (error: any) {
     console.error('Failed to save duty cycle settings:', error);
@@ -114,7 +114,7 @@ const saveChanges = async () => {
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Duty Cycle</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Duty Cycle</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure duty cycle limits for channel activity</p>
       </div>
       <div class="flex items-center gap-2 flex-shrink-0">
@@ -147,13 +147,13 @@ const saveChanges = async () => {
     <!-- Success/Error Messages -->
     <div
       v-if="successMessage"
-      class="bg-green-100 dark:bg-green-500/20 border border-green-500 dark:border-green-500/50 rounded-lg p-3 text-green-700 dark:text-green-400 text-sm"
+      class="bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium border border-accent-green dark:border-accent-green/opacity-heavy rounded-lg p-3 text-accent-green text-sm"
     >
       {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="bg-red-100 dark:bg-red-500/20 border border-red-500 dark:border-red-500/50 rounded-lg p-3 text-red-700 dark:text-red-400 text-sm"
+      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
@@ -161,14 +161,14 @@ const saveChanges = async () => {
     <!-- Duty Cycle Settings -->
     <div class="cfg-section"><div class="space-y-3">
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Max Airtime %</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ maxAirtimePercent }}
         </div>
@@ -189,7 +189,7 @@ const saveChanges = async () => {
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ enforcement }}
         </div>

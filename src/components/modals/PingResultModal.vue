@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import Spinner from '@/components/ui/Spinner.vue';
+import SignalBars from '@/components/ui/SignalBars.vue';
 
 interface PingResult {
   target_id: string;
@@ -61,7 +62,7 @@ const calculateToA = computed(() => {
 });
 
 const getRTTStatus = computed(() => {
-  if (!props.result) return { color: 'text-gray-400', label: 'Unknown' };
+  if (!props.result) return { color: 'text-content-muted', label: 'Unknown' };
 
   const rtt = props.result.rtt_ms;
   const toaMs = calculateToA.value;
@@ -75,21 +76,23 @@ const getRTTStatus = computed(() => {
 
   // Very lenient thresholds for LoRa mesh networks with potential congestion
   if (rtt < expectedRTT * 2.5)
-    return { color: 'text-green-600 dark:text-green-400', label: 'Excellent' };
+    return { color: 'text-accent-green', label: 'Fast' };
   if (rtt < expectedRTT * 4)
-    return { color: 'text-yellow-600 dark:text-yellow-400', label: 'Good' };
+    return { color: 'text-accent-amber', label: 'Normal' };
   if (rtt < expectedRTT * 7)
-    return { color: 'text-orange-600 dark:text-orange-400', label: 'Fair' };
-  return { color: 'text-red-600 dark:text-red-400', label: 'Poor' };
+    return { color: 'text-accent-orange', label: 'Slow' };
+  return { color: 'text-accent-red', label: 'Very Slow' };
 });
 
+
 const getSignalStrength = computed(() => {
-  if (!props.result) return { bars: 0, color: 'text-gray-400' };
+  if (!props.result) return { bars: 0, color: 'text-content-muted', quality: 'None' as const };
 
   const quality = getSignalQuality(props.result.rssi);
   return {
     bars: quality.bars,
     color: quality.color,
+    quality: quality.quality,
   };
 });
 
@@ -179,22 +182,22 @@ const close = () => {
     <Transition name="modal">
       <div
         v-if="show"
-        class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[300] p-4"
+        class="modal-backdrop"
         @click.self="close"
       >
         <div
-          class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/20 rounded-[20px] shadow-2xl w-full max-w-md overflow-hidden"
+          class="modal-card-glass max-w-md overflow-hidden"
           @click.stop
         >
           <!-- Header -->
           <div
-            class="bg-gradient-to-r from-primary/20 to-accent-cyan/20 border-b border-stroke-subtle dark:border-stroke/10 px-6 py-4"
+            class="bg-gradient-to-r from-primary/20 to-accent-cyan/20 border-b border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4"
           >
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="p-2 bg-cyan-400/20 dark:bg-primary/20 rounded-lg">
+                <div class="p-2 bg-accent-cyan/opacity-medium dark:bg-primary/opacity-medium rounded-lg">
                   <svg
-                    class="w-5 h-5 text-cyan-500 dark:text-primary"
+                    class="w-5 h-5 text-accent-cyan dark:text-primary"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -208,7 +211,7 @@ const close = () => {
                   </svg>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-content-primary dark:text-content-primary">
+                  <h2 class="text-xl font-bold text-content-primary">
                     Ping Result
                   </h2>
                   <p v-if="nodeName" class="text-sm text-content-secondary dark:text-content-muted">
@@ -218,7 +221,7 @@ const close = () => {
               </div>
               <button
                 @click="close"
-                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/10 rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
+                class="p-2 hover:bg-stroke-subtle dark:hover:bg-white/opacity-light rounded-lg transition-colors text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary"
               >
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -238,7 +241,7 @@ const close = () => {
             <div v-if="loading" class="text-center py-8">
               <Spinner size="lg" class="mx-auto mb-4" />
               <p class="text-content-secondary dark:text-content-muted">Sending ping...</p>
-              <p class="text-content-muted dark:text-content-muted text-sm mt-1">
+              <p class="text-content-muted text-sm mt-1">
                 Waiting for response...
               </p>
             </div>
@@ -246,7 +249,7 @@ const close = () => {
             <!-- Error State -->
             <div v-else-if="error" class="text-center py-8">
               <div
-                class="p-3 bg-accent-red/10 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
+                class="p-3 bg-accent-red/opacity-light rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center"
               >
                 <svg
                   class="w-8 h-8 text-accent-red"
@@ -270,12 +273,10 @@ const close = () => {
             <div v-else-if="result" class="space-y-4">
               <!-- RTT Card -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
-                <div class="flex items-center justify-between mb-2">
-                  <span class="text-content-secondary dark:text-content-muted text-sm"
-                    >Round-Trip Time</span
-                  >
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="text-content-secondary dark:text-content-muted text-sm">Round-Trip Time</span>
                   <span
                     :class="[
                       'text-xs font-medium px-2 py-1 rounded-full',
@@ -287,7 +288,7 @@ const close = () => {
                   </span>
                 </div>
                 <div class="flex items-baseline gap-2">
-                  <span class="text-3xl font-bold text-content-primary dark:text-content-primary">{{
+                  <span class="text-3xl font-bold text-content-primary">{{
                     result.rtt_ms.toFixed(2)
                   }}</span>
                   <span class="text-content-secondary dark:text-content-muted">ms</span>
@@ -295,46 +296,39 @@ const close = () => {
               </div>
 
               <!-- Signal Metrics -->
-              <div class="grid grid-cols-2 gap-3">
+              <div class="grid grid-cols-3 gap-3">
                 <!-- RSSI -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class="text-content-secondary dark:text-content-muted text-sm">RSSI</span>
-                    <div class="flex gap-0.5">
-                      <div
-                        v-for="i in 5"
-                        :key="i"
-                        :class="[
-                          'w-1 h-3 rounded-sm',
-                          i <= getSignalStrength.bars
-                            ? getSignalStrength.color
-                            : 'bg-stroke-subtle dark:bg-stroke/10',
-                        ]"
-                      ></div>
-                    </div>
-                  </div>
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">RSSI</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.rssi }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary">{{ result.rssi }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dBm</span>
                   </div>
                 </div>
 
                 <!-- SNR -->
                 <div
-                  class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                  class="p-4"
                 >
                   <div class="text-content-secondary dark:text-content-muted text-sm mb-2">SNR</div>
                   <div class="flex items-baseline gap-1">
-                    <span
-                      class="text-xl font-bold text-content-primary dark:text-content-primary"
-                      >{{ result.snr_db }}</span
-                    >
+                    <span class="text-xl font-bold text-content-primary">{{ result.snr_db }}</span>
                     <span class="text-content-secondary dark:text-content-muted text-xs">dB</span>
+                  </div>
+                </div>
+
+                <!-- Signal Strength -->
+                <div
+                  class="p-4"
+                >
+                  <div class="text-content-secondary dark:text-content-muted text-sm mb-2">Signal</div>
+                  <div class="flex items-center gap-2">
+                    <SignalBars :bars="getSignalStrength.bars" :color="getSignalStrength.color" />
+                    <span class="text-sm font-medium" :class="getSignalStrength.color">
+                      {{ getSignalStrength.quality }}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -342,10 +336,10 @@ const close = () => {
               <!-- Multi-byte hash mode firmware warning -->
               <div
                 v-if="isMultiByteMode"
-                class="flex items-start gap-3 bg-amber-500/10 border border-amber-500/30 rounded-[12px] p-3"
+                class="flex items-start gap-3 bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-[12px] p-3"
               >
                 <svg
-                  class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"
+                  class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -358,7 +352,7 @@ const close = () => {
                   />
                 </svg>
                 <div class="text-xs leading-relaxed">
-                  <p class="font-semibold text-amber-600 dark:text-amber-400 mb-0.5">
+                  <p class="font-semibold text-accent-amber mb-0.5">
                     {{ hashModeLabel }} path hashes active
                   </p>
                   <p class="text-content-secondary dark:text-content-muted">
@@ -371,7 +365,7 @@ const close = () => {
 
               <!-- Path -->
               <div
-                class="bg-background-mute dark:bg-background/50 border border-stroke-subtle dark:border-stroke/10 rounded-[15px] p-4"
+                class="p-4"
               >
                 <div class="text-content-secondary dark:text-content-muted text-sm mb-3">
                   Network Path
@@ -385,9 +379,9 @@ const close = () => {
                     >
                       <div
                         :class="[
-                          'bg-cyan-400/20 dark:bg-primary/20 text-cyan-600 dark:text-primary border border-cyan-400/40 dark:border-primary/30 px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
+                          'bg-accent-cyan/opacity-medium dark:bg-primary/opacity-medium text-accent-cyan dark:text-primary border border-accent-cyan/opacity-heavy dark:border-primary/opacity-medium px-3 py-1.5 rounded-lg text-sm font-mono transition-all duration-300',
                           isAnimating && Math.floor(getPacketPosition) === index
-                            ? 'ring-2 ring-cyan-400/50 dark:ring-primary/50 scale-105'
+                            ? 'ring-2 ring-cyan-400/50 dark:ring-primary/opacity-heavy scale-105'
                             : '',
                         ]"
                       >
@@ -421,7 +415,7 @@ const close = () => {
                             class="absolute left-1/2 -translate-x-1/2 animate-pulse"
                           >
                             <svg
-                              class="w-3 h-3 text-cyan-500 dark:text-primary drop-shadow-[0_0_6px_rgba(6,182,212,0.8)] dark:drop-shadow-[0_0_6px_rgba(59,130,246,0.8)]"
+                              class="w-3 h-3 text-accent-cyan dark:text-primary drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-accent-cyan)_80%,transparent)] dark:drop-shadow-[0_0_6px_color-mix(in_srgb,var(--color-primary)_80%,transparent)]"
                               fill="currentColor"
                               viewBox="0 0 24 24"
                             >
@@ -434,10 +428,10 @@ const close = () => {
                   </div>
                 </div>
                 <div
-                  class="text-content-muted dark:text-content-muted text-xs mt-2 flex items-center justify-between"
+                  class="text-content-muted text-xs mt-2 flex items-center justify-between"
                 >
                   <span>{{ result.path.length }} hop{{ result.path.length !== 1 ? 's' : '' }}</span>
-                  <span v-if="isAnimating" class="text-cyan-500 dark:text-primary animate-pulse"
+                  <span v-if="isAnimating" class="text-accent-cyan dark:text-primary animate-pulse"
                     >● Tracing route...</span
                   >
                 </div>
@@ -445,7 +439,7 @@ const close = () => {
 
               <!-- Metadata -->
               <div
-                class="flex items-center justify-between text-xs text-content-muted dark:text-content-muted pt-2"
+                class="flex items-center justify-between text-xs text-content-muted pt-2"
               >
                 <span>Target: {{ result.target_id }}</span>
                 <span>Tag: #{{ result.tag }}</span>
@@ -454,13 +448,10 @@ const close = () => {
           </div>
 
           <!-- Footer -->
-          <div class="border-t border-stroke-subtle dark:border-stroke/10 px-6 py-4">
-            <button
-              @click="close"
-              class="w-full py-2.5 bg-gradient-to-r from-cyan-400 to-cyan-500 text-white hover:from-cyan-500 hover:to-cyan-600 dark:bg-primary/20 dark:text-primary dark:border dark:border-primary/30 dark:hover:bg-primary/30 dark:from-transparent dark:to-transparent rounded-lg font-medium transition-all shadow-[0_2px_12px_rgba(6,182,212,0.3)] dark:shadow-none"
-            >
-              Close
-            </button>
+          <div class="border-t border-stroke-subtle dark:border-stroke/opacity-light px-6 py-4">
+            <div class="modal-actions">
+              <button type="button" class="modal-btn-primary" @click="close">Close</button>
+            </div>
           </div>
         </div>
       </div>

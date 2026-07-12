@@ -1,6 +1,6 @@
-# pyMC Repeater UI
+# openHop Repeater UI
 
-Web dashboard for [pyMC_Repeater](https://github.com/pymc-dev/pyMC_Repeater) — monitor and manage your pyMc repeater entirely from the browser.
+Web dashboard for [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) — monitor and manage your openHop repeater entirely from the browser.
 
 Built with **Vue 3**, **TypeScript**, and **TailwindCSS**. This repository holds the standalone UI source; it builds directly into the repeater project and is served by its embedded web server. Keeping the frontend separate keeps the repeater codebase lean and makes UI contributions easier.
 
@@ -28,7 +28,7 @@ Pull requests are welcome — please target the **dev** branch.
 ## Prerequisites
 
 - **Node.js** 20 or later
-- A running [pyMC_Repeater](https://github.com/pymc-dev/pyMC_Repeater) backend
+- A running [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) backend
 
 ## Quick Start
 
@@ -46,7 +46,7 @@ The Vite dev server proxies `/api` and `/auth` requests to the URL set in `VITE_
 npm run build
 ```
 
-The compiled output is written to `../pyMC_Repeater/repeater/web/html` and served directly by the repeater.
+The compiled output is written to `../openhop-repeater/repeater/web/html` and served directly by the repeater.
 
 ## Scripts
 

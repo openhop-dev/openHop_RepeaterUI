@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
 import { useTheme } from '@/composables/useTheme';
@@ -24,6 +24,29 @@ watch(
 );
 
 const showLayout = computed(() => appRuntime.isAuthenticated && route.path !== '/login' && route.path !== '/setup');
+
+let mobileQuery: MediaQueryList | null = null;
+
+const setMobileShellClass = (isMobile: boolean) => {
+  document.documentElement.classList.toggle('is-mobile-app', isMobile);
+  document.body.classList.toggle('is-mobile-app', isMobile);
+};
+
+const handleMobileQueryChange = (event: MediaQueryListEvent) => {
+  setMobileShellClass(event.matches);
+};
+
+onMounted(() => {
+  mobileQuery = window.matchMedia('(max-width: 1023px)');
+  setMobileShellClass(mobileQuery.matches);
+  mobileQuery.addEventListener('change', handleMobileQueryChange);
+});
+
+onUnmounted(() => {
+  mobileQuery?.removeEventListener('change', handleMobileQueryChange);
+  mobileQuery = null;
+  setMobileShellClass(false);
+});
 </script>
 
 <template>
@@ -46,22 +69,22 @@ body {
     color 0.3s ease;
 }
 
-/* Light mode styles */
+/* Use CSS variables from base.css */
 body {
-  background-color: #f9fafb;
-  color: #1f2937;
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
-/* Dark mode styles */
+/* Dark mode uses same variables */
 .dark body {
-  background-color: #09090b;
-  color: white;
+  background-color: var(--color-background);
+  color: var(--color-text);
 }
 
 /* Scrollbar styles for dark mode */
 .dark html {
   scrollbar-width: thin;
-  scrollbar-color: #374151 #1f2937;
+  scrollbar-color: var(--color-border-hover) var(--color-background-mute);
 }
 
 .dark html::-webkit-scrollbar {
@@ -69,22 +92,22 @@ body {
 }
 
 .dark html::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: var(--color-background-mute);
 }
 
 .dark html::-webkit-scrollbar-thumb {
-  background-color: #374151;
+  background-color: var(--color-border-hover);
   border-radius: 4px;
 }
 
 .dark html::-webkit-scrollbar-thumb:hover {
-  background-color: #4b5563;
+  background-color: var(--color-text-muted);
 }
 
 /* Scrollbar styles for light mode */
 html {
   scrollbar-width: thin;
-  scrollbar-color: #d1d5db #f3f4f6;
+  scrollbar-color: var(--color-border) var(--color-background-soft);
 }
 
 html::-webkit-scrollbar {
@@ -92,16 +115,16 @@ html::-webkit-scrollbar {
 }
 
 html::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--color-background-soft);
 }
 
 html::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+  background-color: var(--color-border);
   border-radius: 4px;
 }
 
 html::-webkit-scrollbar-thumb:hover {
-  background-color: #9ca3af;
+  background-color: var(--color-border-hover);
 }
 
 /* Hide scrollbar for tab navigation while still allowing scroll */

@@ -143,6 +143,10 @@ export const useWebSocketStore = defineStore('websocket', () => {
     clearReconnectTimer();
 
     if (!canOpenConnection()) {
+      if (getToken() && isTokenExpired()) {
+        void appRuntime.handleAuthFailure('expired');
+        return;
+      }
       connectionState.value = 'closed';
       return;
     }

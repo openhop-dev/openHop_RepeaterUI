@@ -36,20 +36,24 @@ export class NeighborsCommand extends BaseCommand {
         }
       }
 
+      const filteredAdverts = allAdverts.filter(
+        (adv: any) => Boolean(adv?.is_repeater) && Boolean(adv?.zero_hop),
+      );
+
       stopLoading();
 
-      if (allAdverts.length === 0) {
-        this.writeInfo(term, 'No neighbors found');
+      if (filteredAdverts.length === 0) {
+        this.writeInfo(term, 'No zero hop repeaters discovered yet');
       } else {
         this.writeSuccess(
           term,
-          `Found \x1b[1m${allAdverts.length}\x1b[0m neighbor${allAdverts.length === 1 ? '' : 's'}`,
+          `Found \x1b[1m${filteredAdverts.length}\x1b[0m zero-hop repeater${filteredAdverts.length === 1 ? '' : 's'}`,
         );
         term.writeln('');
 
         if (this.isMobile()) {
           // Mobile: List format (show up to 10)
-          allAdverts.slice(0, 10).forEach((adv: any, idx: number) => {
+          filteredAdverts.slice(0, 10).forEach((adv: any, idx: number) => {
             term.writeln(`\x1b[1;36m[${idx + 1}] ${adv.node_name || 'Unknown'}\x1b[0m`);
             term.writeln(`  \x1b[90mPubKey:\x1b[0m ${adv.pubkey?.substring(0, 8) || '----'}`);
             term.writeln(`  \x1b[90mType:\x1b[0m ${adv.contact_type || '-'}`);
@@ -69,7 +73,7 @@ export class NeighborsCommand extends BaseCommand {
             term.writeln(
               `  \x1b[90mDirect:\x1b[0m ${adv.zero_hop ? '\x1b[32myes\x1b[0m' : '\x1b[31mno\x1b[0m'}`,
             );
-            if (idx < Math.min(allAdverts.length, 10) - 1) term.writeln('');
+            if (idx < Math.min(filteredAdverts.length, 10) - 1) term.writeln('');
           });
         } else {
           // Desktop: Table format
@@ -83,7 +87,7 @@ export class NeighborsCommand extends BaseCommand {
             `\x1b[36m├────┼──────────────────────┼────────┼──────────────┼──────────────────────┼──────────┼──────┼────────┼────────┤\x1b[0m`,
           );
 
-          allAdverts.slice(0, 10).forEach((adv: any, idx: number) => {
+          filteredAdverts.slice(0, 10).forEach((adv: any, idx: number) => {
             const num = (idx + 1).toString().padEnd(2);
             const name = (adv.node_name || 'Unknown').padEnd(20);
             const pubkey = (adv.pubkey?.substring(0, 4) || '----').padEnd(6);
@@ -114,9 +118,9 @@ export class NeighborsCommand extends BaseCommand {
           );
         }
 
-        if (allAdverts.length > 10) {
+        if (filteredAdverts.length > 10) {
           term.writeln('');
-          term.writeln(`\x1b[90m... and ${allAdverts.length - 10} more neighbors\x1b[0m`);
+          term.writeln(`\x1b[90m... and ${filteredAdverts.length - 10} more zero-hop repeaters\x1b[0m`);
         }
       }
     } catch (error) {

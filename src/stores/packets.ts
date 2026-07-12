@@ -190,16 +190,16 @@ export const usePacketStore = defineStore('packets', () => {
     }
   }
 
-  // Computed sparkline data for noise floor
-  const noiseFloorSparklineData = computed(() => {
-    if (!noiseFloorHistory.value || !Array.isArray(noiseFloorHistory.value)) {
-      return [];
-    }
-    return noiseFloorHistory.value
-      .filter((point) => point.noise_floor_dbm !== 0)
-      .slice(-50)
-      .map((point) => point.noise_floor_dbm);
-  });
+
+  // Append a live WS reading into noiseFloorHistory so the sparkline updates immediately.
+  function appendNoiseFloorReading(dbm: number) {
+    if (!dbm) return;
+    const now = Math.floor(Date.now() / 1000);
+    // Avoid duplicating if an HTTP poll just added the same second's reading.
+    const last = noiseFloorHistory.value[noiseFloorHistory.value.length - 1];
+    if (last && Math.abs(last.timestamp - now) < 2 && last.noise_floor_dbm === dbm) return;
+    noiseFloorHistory.value = [...noiseFloorHistory.value, { timestamp: now, noise_floor_dbm: dbm }];
+  }
 
   async function fetchPacketStats(params: PacketStatsParams = { hours: 24 }) {
     try {
@@ -302,6 +302,29 @@ export const usePacketStore = defineStore('packets', () => {
     }
   }
 
+  async function getPacketById(packetId: number) {
+    try {
+      isLoading.value = true;
+      error.value = null;
+
+      const response = await ApiService.get<RecentPacket>('/packet_by_id', {
+        packet_id: packetId,
+      });
+
+      if (response.success && response.data) {
+        return response.data;
+      } else {
+        throw new Error(response.error || 'Packet not found');
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('Error fetching packet by id:', err);
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   // Sparkline data computed from API metrics
   const sparklineData = computed(() => {
     if (!metricsGraphData.value?.series) {
@@ -309,6 +332,7 @@ export const usePacketStore = defineStore('packets', () => {
         totalPackets: [],
         transmittedPackets: [],
         droppedPackets: [],
+        policyEvents: [],
         crcErrors: crcErrorHistory.value.map((h) => h.count),
         currentRates: interpolatedRates.value,
       };
@@ -316,6 +340,7 @@ export const usePacketStore = defineStore('packets', () => {
 
     const rxSeries = metricsGraphData.value.series.find((s) => s.type === 'rx_count');
     const txSeries = metricsGraphData.value.series.find((s) => s.type === 'tx_count');
+    const policySeries = metricsGraphData.value.series.find((s) => s.type === 'policy_events');
 
     const rxData = rxSeries?.data || [];
     const txData = txSeries?.data || [];
@@ -333,6 +358,7 @@ export const usePacketStore = defineStore('packets', () => {
       totalPackets: rxData.map((d) => d[1]),
       transmittedPackets: txData.map((d) => d[1]),
       droppedPackets: droppedData,
+      policyEvents: (policySeries?.data || []).map((d) => d[1]),
       crcErrors: crcErrorHistory.value.map((h) => h.count),
       currentRates: interpolatedRates.value,
     };
@@ -395,10 +421,14 @@ export const usePacketStore = defineStore('packets', () => {
       ]);
 
       if (countRes?.success && countRes.data) {
-        crcErrorCount.value = (countRes.data as any).crc_error_count ?? 0;
+        const countData = countRes.data as { crc_error_count?: number };
+        crcErrorCount.value = countData.crc_error_count ?? 0;
       }
       if (historyRes?.success && historyRes.data) {
-        crcErrorHistory.value = (historyRes.data as any).history ?? [];
+        const historyData = historyRes.data as {
+          history?: Array<{ timestamp: number; count: number }>;
+        };
+        crcErrorHistory.value = historyData.history ?? [];
       }
     } catch (err) {
       console.error('Failed to fetch CRC error data:', err);
@@ -414,7 +444,7 @@ export const usePacketStore = defineStore('packets', () => {
         ApiService.get('/metrics_graph_data', {
           hours: 24,
           resolution: 'average',
-          metrics: 'rx_count,tx_count',
+          metrics: 'rx_count,tx_count,policy_events',
         }),
         fetchCrcErrors(24),
       ]);
@@ -462,15 +492,19 @@ export const usePacketStore = defineStore('packets', () => {
   }
 
   function addRealtimePacket(packet: RecentPacket) {
-    recentPackets.value.unshift(packet);
+    const packetIdentity = packet.id ?? packet.packet_hash;
+    recentPackets.value = [
+      packet,
+      ...recentPackets.value.filter((existing) => (existing.id ?? existing.packet_hash) !== packetIdentity),
+    ];
     if (recentPackets.value.length > 1000) {
       recentPackets.value = recentPackets.value.slice(0, 1000);
     }
   }
 
   function mergeRecentPackets(incoming: RecentPacket[]): void {
-    const existing = new Set(recentPackets.value.map((p) => p.packet_hash));
-    const novel = incoming.filter((p) => !existing.has(p.packet_hash));
+    const existing = new Set(recentPackets.value.map((p) => p.id ?? p.packet_hash));
+    const novel = incoming.filter((p) => !existing.has(p.id ?? p.packet_hash));
     if (novel.length === 0) return;
     const merged = [...novel, ...recentPackets.value];
     merged.sort((a, b) => b.timestamp - a.timestamp);
@@ -542,7 +576,6 @@ export const usePacketStore = defineStore('packets', () => {
     recentPacketsByType,
     sparklineData,
     legacySparklineData,
-    noiseFloorSparklineData,
     crcErrorCount,
     crcErrorHistory,
     metricsGraphData,
@@ -555,8 +588,10 @@ export const usePacketStore = defineStore('packets', () => {
     fetchRecentPackets,
     fetchFilteredPackets,
     getPacketByHash,
+    getPacketById,
     fetchNoiseFloorHistory,
     fetchNoiseFloorStats,
+    appendNoiseFloorReading,
     startAutoRefresh,
     initializeSparklineHistory,
     interpolateRates,

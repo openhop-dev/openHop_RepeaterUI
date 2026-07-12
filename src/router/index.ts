@@ -36,6 +36,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/rf-health-correlation',
+      name: 'rf-health-correlation',
+      component: () => import('@/views/RfHealthCorrelation.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/gps',
       name: 'gps-diagnostics',
       component: () => import('@/views/GPSDiagnostics.vue'),

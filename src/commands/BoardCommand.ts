@@ -7,7 +7,7 @@ export class BoardCommand extends BaseCommand {
 
   execute({ term, writePrompt }: CommandContext): void {
     const stats = useSystemStore().stats;
-    const boardInfo = (stats as any)?.board_info || 'pyMC_Repeater (Linux/RPi)';
+    const boardInfo = (stats as any)?.board_info || 'openHop Repeater (Linux/RPi)';
     this.writeSuccess(term, boardInfo);
     writePrompt();
   }

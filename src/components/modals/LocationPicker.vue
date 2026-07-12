@@ -13,9 +13,11 @@ const emit = defineEmits<{
   select: [{ latitude: number; longitude: number }];
 }>();
 
+const roundCoord = (v: number) => Math.round(v * 1e6) / 1e6;
+
 const mapContainer = ref<HTMLDivElement | null>(null);
-const selectedLat = ref(props.latitude || 0);
-const selectedLng = ref(props.longitude || 0);
+const selectedLat = ref(roundCoord(props.latitude || 0));
+const selectedLng = ref(roundCoord(props.longitude || 0));
 let map: any = null;
 let marker: any = null;
 
@@ -82,8 +84,8 @@ const initMap = async () => {
 
     // Click to set location
     map.on('click', (e: any) => {
-      selectedLat.value = e.latlng.lat;
-      selectedLng.value = e.latlng.lng;
+      selectedLat.value = roundCoord(e.latlng.lat);
+      selectedLng.value = roundCoord(e.latlng.lng);
 
       if (marker) {
         marker.setLatLng(e.latlng);
@@ -125,15 +127,15 @@ watch(
 watch(
   () => [props.latitude, props.longitude],
   ([lat, lng]) => {
-    selectedLat.value = lat;
-    selectedLng.value = lng;
+    selectedLat.value = roundCoord(lat);
+    selectedLng.value = roundCoord(lng);
   },
 );
 
 const handleSelect = () => {
   emit('select', {
-    latitude: Math.round(selectedLat.value * 1e6) / 1e6,
-    longitude: Math.round(selectedLng.value * 1e6) / 1e6,
+    latitude: roundCoord(selectedLat.value),
+    longitude: roundCoord(selectedLng.value),
   });
   emit('close');
 };
@@ -147,8 +149,8 @@ const getCurrentLocation = () => {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        selectedLat.value = position.coords.latitude;
-        selectedLng.value = position.coords.longitude;
+        selectedLat.value = roundCoord(position.coords.latitude);
+        selectedLng.value = roundCoord(position.coords.longitude);
 
         if (map) {
           map.setView([selectedLat.value, selectedLng.value], 13);
@@ -181,17 +183,17 @@ onUnmounted(() => {
   <Teleport to="body">
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50 backdrop-blur-lg"
+    class="modal-backdrop z-[400]!"
     @click.self="handleClose"
   >
     <div
-      class="glass-card border border-stroke-subtle dark:border-white/20 rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
+      class="glass-card border border-stroke-subtle dark:border-white/opacity-medium rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/10"
+        class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/opacity-light"
       >
-        <h3 class="text-xl font-semibold text-content-primary dark:text-content-primary">
+        <h3 class="text-xl font-semibold text-content-primary">
           Select Location
         </h3>
         <button
@@ -215,7 +217,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Coordinates Display & Actions -->
-      <div class="p-6 border-t border-stroke-subtle dark:border-stroke/10 space-y-4">
+      <div class="p-6 border-t border-stroke-subtle dark:border-stroke/opacity-light space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label
@@ -226,7 +228,7 @@ onUnmounted(() => {
               v-model.number="selectedLat"
               type="number"
               step="0.000001"
-              class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary focus:outline-none focus:border-primary"
+              class="modal-input-readonly"
               readonly
             />
           </div>
@@ -239,7 +241,7 @@ onUnmounted(() => {
               v-model.number="selectedLng"
               type="number"
               step="0.000001"
-              class="w-full px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary focus:outline-none focus:border-primary"
+              class="modal-input-readonly"
               readonly
             />
           </div>
@@ -248,7 +250,7 @@ onUnmounted(() => {
         <div class="flex gap-3">
           <button
             @click="getCurrentLocation"
-            class="flex-1 px-4 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm flex items-center justify-center gap-2"
+            class="modal-btn-cancel flex items-center justify-center gap-2"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -268,19 +270,19 @@ onUnmounted(() => {
           </button>
           <button
             @click="handleClose"
-            class="px-6 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/20 transition-colors text-sm"
+            class="px-6 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm"
           >
             Cancel
           </button>
           <button
             @click="handleSelect"
-            class="px-6 py-2 bg-primary/20 hover:bg-primary/30 text-content-primary dark:text-content-primary rounded-lg border border-primary/50 transition-colors text-sm"
+            class="px-6 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-sm"
           >
             Select Location
           </button>
         </div>
 
-        <p class="text-content-muted dark:text-content-muted text-xs text-center">
+        <p class="text-content-muted text-xs text-center">
           Click on the map to select a location
         </p>
       </div>

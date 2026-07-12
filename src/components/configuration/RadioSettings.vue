@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
+import { useDataService } from '@/stores/dataService';
 import { useSetupStore } from '@/stores/setup';
 import apiClient from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
@@ -11,6 +12,7 @@ import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
 const router = useRouter();
 const systemStore = useSystemStore();
+const dataService = useDataService();
 const setupStore = useSetupStore();
 
 const radioConfig = computed(() => systemStore.stats?.config?.radio || {});
@@ -181,6 +183,7 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
       isEditing.value = false;
       txPowerNoticeConfirmed.value = false;
       await systemStore.fetchStats();
+      dataService.invalidate('radioConfig');
       if (!silent) showRestartModal.value = true;
       return true;
     } else if (data.error) {
@@ -260,7 +263,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">Radio Settings</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Radio Settings</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure LoRa radio parameters and frequency presets</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -298,8 +301,8 @@ defineExpose({ requestLeave, isEditing });
     </div>
 
     <!-- Error Message -->
-    <div v-if="error" class="bg-red-100 dark:bg-red-500/20 border border-red-500/50 rounded-lg p-3">
-      <p class="text-red-600 dark:text-red-400 text-sm">{{ error }}</p>
+    <div v-if="error" class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy rounded-lg p-3">
+      <p class="text-accent-red text-sm">{{ error }}</p>
     </div>
 
     <!-- Radio Settings -->
@@ -307,16 +310,16 @@ defineExpose({ requestLeave, isEditing });
       <Transition name="fade">
         <div
           v-if="isEditing && showPrefillPicker"
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          class="modal-backdrop"
           @click.self="showPrefillPicker = false"
         >
-          <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/10 bg-white dark:bg-surface-elevated shadow-[0_20px_80px_rgba(0,0,0,0.35)] overflow-hidden">
-            <div class="flex items-start justify-between gap-3 p-5 border-b border-stroke-subtle dark:border-white/10">
+          <div class="w-full max-w-3xl rounded-3xl border border-stroke-subtle dark:border-white/opacity-light bg-white dark:bg-surface-elevated shadow-[0_20px_80px_color-mix(in_srgb,var(--color-shadow-strong)_35%,transparent)] overflow-hidden">
+            <div class="flex items-start justify-between gap-3 p-5 border-b border-stroke-subtle dark:border-white/opacity-light">
               <div>
-                <div class="text-content-primary dark:text-content-primary font-semibold text-base">
+                <div class="text-content-primary font-semibold text-base">
                   Prefill from preset
                 </div>
-                <div class="text-content-muted dark:text-content-muted text-xs mt-1">
+                <div class="text-content-muted text-xs mt-1">
                   Pick a preset to load its radio values into the form.
                 </div>
               </div>
@@ -339,18 +342,18 @@ defineExpose({ requestLeave, isEditing });
                   :class="[
                     'w-full text-left rounded-[18px] border px-4 py-3 transition-all duration-200 flex items-center justify-between gap-4',
                     selectedPrefillPreset === preset.title
-                      ? 'border-primary/60 bg-primary/10 shadow-sm shadow-primary/10'
-                      : 'border-stroke-subtle dark:border-white/10 bg-white/60 dark:bg-white/5 hover:border-primary/30 hover:bg-stroke-subtle/60 dark:hover:bg-white/10',
+                      ? 'border-primary/opacity-heavy bg-primary/opacity-light shadow-sm shadow-primary/10'
+                      : 'border-stroke-subtle dark:border-white/opacity-light bg-white/60 dark:bg-white/opacity-subtle hover:border-primary/opacity-medium dark:hover:border-primary/opacity-medium hover:bg-stroke-subtle/60 dark:hover:bg-white/opacity-light',
                   ]"
                 >
                   <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2">
-                      <div class="text-content-primary dark:text-content-primary font-semibold text-sm truncate">
+                      <div class="text-content-primary font-semibold text-sm truncate">
                         {{ preset.title }}
                       </div>
                       <span
                         v-if="selectedPrefillPreset === preset.title"
-                        class="inline-flex items-center rounded-full bg-primary/15 text-primary text-[10px] font-semibold px-2 py-0.5"
+                        class="inline-flex items-center rounded-full bg-primary/opacity-light text-primary text-[10px] font-semibold px-2 py-0.5"
                       >
                         Selected
                       </span>
@@ -361,16 +364,16 @@ defineExpose({ requestLeave, isEditing });
                   </div>
 
                   <div class="flex flex-wrap justify-end gap-2 shrink-0 text-[11px] font-mono">
-                    <span class="rounded-full bg-background-mute dark:bg-black/20 px-2 py-1 text-content-secondary dark:text-content-muted">
+                    <span class="rounded-full bg-background-mute dark:bg-black/opacity-medium px-2 py-1 text-content-secondary dark:text-content-muted">
                       Freq {{ formatPresetFrequency(preset) }}
                     </span>
-                    <span class="rounded-full bg-background-mute dark:bg-black/20 px-2 py-1 text-content-secondary dark:text-content-muted">
+                    <span class="rounded-full bg-background-mute dark:bg-black/opacity-medium px-2 py-1 text-content-secondary dark:text-content-muted">
                       SF {{ formatPresetSpreadingFactor(preset) }}
                     </span>
-                    <span class="rounded-full bg-background-mute dark:bg-black/20 px-2 py-1 text-content-secondary dark:text-content-muted">
+                    <span class="rounded-full bg-background-mute dark:bg-black/opacity-medium px-2 py-1 text-content-secondary dark:text-content-muted">
                       BW {{ formatPresetBandwidth(preset) }}
                     </span>
-                    <span class="rounded-full bg-background-mute dark:bg-black/20 px-2 py-1 text-content-secondary dark:text-content-muted">
+                    <span class="rounded-full bg-background-mute dark:bg-black/opacity-medium px-2 py-1 text-content-secondary dark:text-content-muted">
                       CR {{ formatPresetCodingRate(preset) }}
                     </span>
                   </div>
@@ -383,14 +386,14 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Frequency -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Frequency</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedFrequency }}
         </div>
@@ -403,20 +406,20 @@ defineExpose({ requestLeave, isEditing });
             max="1000"
             class="cfg-input w-32"
           />
-          <span class="text-content-muted dark:text-content-muted text-sm">MHz</span>
+          <span class="text-content-muted text-sm">MHz</span>
         </div>
       </div>
 
       <!-- Spreading Factor -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Spreading Factor</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedSpreadingFactor }}
         </div>
@@ -434,14 +437,14 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- Bandwidth -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Bandwidth</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedBandwidth }}
         </div>
@@ -459,14 +462,14 @@ defineExpose({ requestLeave, isEditing });
 
       <!-- TX Power -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >TX Power</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedTxPower }}
         </div>
@@ -478,20 +481,20 @@ defineExpose({ requestLeave, isEditing });
             max="22"
             class="cfg-input w-20"
           />
-          <span class="text-content-muted dark:text-content-muted text-sm">dBm</span>
+          <span class="text-content-muted text-sm">dBm</span>
         </div>
       </div>
 
       <!-- Coding Rate -->
       <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Coding Rate</span
         >
         <div
           v-if="!isEditing"
-          class="text-content-primary dark:text-content-primary font-mono text-sm"
+          class="text-content-primary font-mono text-sm"
         >
           {{ formattedCodingRate }}
         </div>
@@ -513,7 +516,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Preamble Length</span
         >
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">{{
+        <span class="text-content-primary font-mono text-sm">{{
           formattedPreambleLength
         }}</span>
       </div>
@@ -524,7 +527,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Section header -->
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h3 class="text-base sm:text-lg font-semibold text-content-primary dark:text-content-primary mb-1 sm:mb-2">CAD Calibration</h3>
+          <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">CAD Calibration</h3>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Channel Activity Detection: Run Calibration to update</p>
           <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm mt-1">These settings tune the receivers ability to detect channel status prior to transmission</p>
         </div>
@@ -536,9 +539,9 @@ defineExpose({ requestLeave, isEditing });
       <div class="pt-2" />
 
       <!-- Peak Threshold -->
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/10 gap-1">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Peak Threshold</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <span class="text-content-primary font-mono text-sm">
           {{ cadConfig.peak_threshold ?? 'Not calibrated' }}
         </span>
       </div>
@@ -546,7 +549,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Min Threshold -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Min Threshold</span>
-        <span class="text-content-primary dark:text-content-primary font-mono text-sm">
+        <span class="text-content-primary font-mono text-sm">
           {{ cadConfig.min_threshold ?? 'Not calibrated' }}
         </span>
       </div>

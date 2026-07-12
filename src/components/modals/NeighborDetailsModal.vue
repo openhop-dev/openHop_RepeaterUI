@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
+import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
+import CopyLabel from '@/components/ui/CopyLabel.vue';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
+import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 defineOptions({ name: 'NeighborDetailsModal' });
 
 const { getSignalQuality } = useSignalQuality();
-const copyButtonText = ref('Copy');
+const { copy: _copyCoords, copied: coordsCopied } = useCopyToClipboard();
 
 interface Neighbor {
   id: number;
@@ -63,37 +66,20 @@ const formatContactType = (contactType: string) => {
 
 const getContactTypeColor = (contactType: string) => {
   const colors: Record<string, string> = {
-    Unknown: 'text-gray-600 dark:text-gray-400',
-    'Chat Node': 'text-blue-600 dark:text-blue-400',
-    Repeater: 'text-emerald-600 dark:text-emerald-400',
-    'Room Server': 'text-purple-600 dark:text-purple-400',
-    'Hybrid Node': 'text-amber-600 dark:text-amber-400',
+    Unknown: 'text-content-muted',
+    'Chat Node': 'text-primary',
+    Repeater: 'text-accent-green',
+    'Room Server': 'text-secondary',
+    'Hybrid Node': 'text-accent-amber',
   };
-  return colors[contactType] || 'text-gray-600 dark:text-gray-400';
+  return colors[contactType] || 'text-content-muted';
 };
 
-const copyCoordinates = async () => {
+const copyCoordinates = () => {
   if (!props.neighbor?.latitude || !props.neighbor?.longitude) return;
-
   const lat = props.neighbor.latitude.toFixed(6);
   const lon = props.neighbor.longitude.toFixed(6);
-  const coordString = `${lat}, ${lon}`;
-
-  try {
-    await navigator.clipboard.writeText(coordString);
-    copyButtonText.value = 'Copied!';
-
-    setTimeout(() => {
-      copyButtonText.value = 'Copy';
-    }, 2000);
-  } catch (error) {
-    console.error('Failed to copy coordinates:', error);
-    copyButtonText.value = 'Failed';
-
-    setTimeout(() => {
-      copyButtonText.value = 'Copy';
-    }, 2000);
-  }
+  _copyCoords(`${lat}, ${lon}`);
 };
 
 // Calculate distance if both base and neighbor coordinates exist
@@ -164,7 +150,7 @@ const initMap = () => {
   // Add neighbor marker
   const neighborIcon = L.divIcon({
     className: 'custom-marker',
-    html: `<div class="w-8 h-8 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">${props.neighbor.node_name?.charAt(0) || '?'}</div>`,
+    html: `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--color-primary);border:2px solid white;box-shadow:0 4px 6px -1px rgb(0 0 0/0.1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.75rem">${props.neighbor.node_name?.charAt(0) || '?'}</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -185,9 +171,13 @@ const initMap = () => {
     Math.abs(props.baseLongitude) <= 180;
 
   if (hasValidBase) {
+    const routeColor =
+      window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
+      'deepskyblue';
+
     const baseIcon = L.divIcon({
       className: 'custom-marker',
-      html: '<div class="w-8 h-8 rounded-full bg-green-500 border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
+      html: '<div class="w-8 h-8 rounded-full bg-accent-green/opacity-light border-2 border-white shadow-lg flex items-center justify-center text-white font-bold text-xs">B</div>',
       iconSize: [32, 32],
       iconAnchor: [16, 16],
     });
@@ -203,7 +193,7 @@ const initMap = () => {
         [props.neighbor.latitude!, props.neighbor.longitude!],
       ],
       {
-        color: '#3b82f6',
+        color: routeColor,
         weight: 2,
         opacity: 0.6,
         dashArray: '5, 10',
@@ -263,10 +253,6 @@ const signalQuality = computed(() => {
   return getSignalQuality(props.neighbor.rssi);
 });
 
-// Signal bar height lookup — i is 1-based (v-for="i in 5")
-// Heights: 6, 8, 10, 12, 14 px  →  h-1.5 h-2 h-2.5 h-3 h-3.5
-// Safelist: h-1.5 h-2 h-2.5 h-3 h-3.5
-const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 </script>
 
 <template>
@@ -274,24 +260,21 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
     <Transition name="modal" appear>
       <div
         v-if="isOpen && neighbor"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+        class="modal-backdrop overflow-hidden"
         @click="handleBackdropClick"
         @keydown="handleKeyDown"
         tabindex="0"
       >
-        <!-- Backdrop with blur -->
-        <div class="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
-
         <!-- Modal Content -->
         <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col" @click.stop>
           <!-- Glass Card Container -->
           <div
-            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/20 flex flex-col h-full overflow-hidden"
+            class="bg-white dark:bg-surface-elevated backdrop-blur-xl rounded-[20px] shadow-2xl border border-stroke-subtle dark:border-white/opacity-light flex flex-col h-full overflow-hidden"
           >
             <!-- Header -->
             <div class="flex items-center justify-between p-8 pb-4 flex-shrink-0">
               <div class="flex-1 min-w-0">
-                <h2 class="text-2xl font-bold text-content-primary dark:text-content-primary mb-1">
+                <h2 class="text-2xl font-bold text-content-primary mb-1">
                   {{ neighbor.node_name || 'Unknown Node' }}
                 </h2>
                 <p
@@ -304,7 +287,7 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                 <!-- Close Button -->
                 <button
                   @click="emit('close')"
-                  class="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200 text-gray-700 dark:text-white hover:text-gray-900 dark:hover:text-white"
+                  class="w-8 h-8 flex items-center justify-center rounded-full bg-background-mute dark:bg-white/opacity-light hover:bg-stroke-subtle dark:hover:bg-white/opacity-medium transition-colors duration-200 text-content-secondary dark:text-content-primary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -323,14 +306,14 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
               <!-- Basic Information -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Basic Information
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Contact Type
                     </div>
@@ -339,20 +322,20 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Route Type
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatRouteType(neighbor.route_type) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Zero Hop
                     </div>
@@ -360,21 +343,21 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                       class="font-medium"
                       :class="
                         neighbor.zero_hop
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-gray-600 dark:text-gray-400'
+                          ? 'text-accent-green'
+                          : 'text-content-muted'
                       "
                     >
                       {{ neighbor.zero_hop ? 'Yes' : 'No' }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Advert Count
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ neighbor.advert_count.toLocaleString() }}
                     </div>
                   </div>
@@ -384,58 +367,44 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
               <!-- Signal Quality -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Signal Quality
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       RSSI
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatRSSI(neighbor.rssi) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       SNR
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-medium">
+                    <div class="text-content-primary font-medium">
                       {{ formatSNR(neighbor.snr) }}
                     </div>
                   </div>
 
                   <div
                     v-if="signalQuality"
-                    class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]"
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
                   >
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
-                      <div class="flex items-end gap-0.5">
-                        <template v-for="i in 5" :key="i">
-                          <div
-                            :class="[
-                              'w-1 transition-colors',
-                              BAR_HEIGHTS_SM[i - 1],
-                              i <= signalQuality.bars
-                                ? signalQuality.color
-                                : 'text-gray-600 dark:text-gray-700',
-                            ]"
-                          >
-                            <div class="w-full h-full bg-current rounded-sm"></div>
-                          </div>
-                        </template>
-                      </div>
+                      <SignalBars :bars="signalQuality.bars" :color="signalQuality.color" />
                       <span class="text-sm font-medium" :class="signalQuality.color">
                         {{ signalQuality.quality }}
                       </span>
@@ -447,29 +416,29 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
               <!-- Timestamps -->
               <div class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Timeline
                 </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       First Seen
                     </div>
-                    <div class="text-content-primary dark:text-content-primary text-sm">
+                    <div class="text-content-primary text-sm">
                       {{ formatTimestamp(neighbor.first_seen) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Last Seen
                     </div>
-                    <div class="text-content-primary dark:text-content-primary text-sm">
+                    <div class="text-content-primary text-sm">
                       {{ formatTimestamp(neighbor.last_seen) }}
                     </div>
                   </div>
@@ -479,50 +448,50 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
               <!-- Location Information - only show if coordinates exist -->
               <div v-if="hasCoordinates" class="mb-6">
                 <h3
-                  class="text-lg font-semibold text-content-primary dark:text-content-primary mb-4"
+                  class="text-lg font-semibold text-content-primary mb-4"
                 >
                   Location
                 </h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Latitude
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-mono text-sm">
+                    <div class="text-content-primary font-mono text-sm">
                       {{ neighbor.latitude?.toFixed(6) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       Longitude
                     </div>
-                    <div class="text-content-primary dark:text-content-primary font-mono text-sm">
+                    <div class="text-content-primary font-mono text-sm">
                       {{ neighbor.longitude?.toFixed(6) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/20 p-4 rounded-[12px]">
+                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
                     <div
-                      class="text-content-muted dark:text-content-muted text-xs uppercase tracking-wide mb-1"
+                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
                     >
                       {{ distance !== null ? 'Distance' : 'Coordinates' }}
                     </div>
                     <div
                       v-if="distance !== null"
-                      class="text-content-primary dark:text-content-primary font-medium"
+                      class="text-content-primary font-medium"
                     >
                       {{ `${distance.toFixed(2)} km` }}
                     </div>
                     <button
                       v-else
                       @click="copyCoordinates"
-                      class="w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
+                      class="w-full px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5 bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"
                     >
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -532,7 +501,7 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                           d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                         />
                       </svg>
-                      {{ copyButtonText }}
+                      <CopyLabel :copied="coordsCopied" />
                     </button>
                   </div>
                 </div>
@@ -540,16 +509,16 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
                 <!-- Map -->
                 <div
                   ref="mapContainer"
-                  class="w-full h-96 rounded-[12px] overflow-hidden border border-stroke-subtle dark:border-white/10"
+                  class="w-full h-96 rounded-[12px] overflow-hidden border border-stroke-subtle dark:border-white/opacity-light"
                 ></div>
               </div>
             </div>
 
             <!-- Footer -->
-            <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/10 flex-shrink-0">
+            <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/opacity-light flex-shrink-0">
               <button
                 @click="emit('close')"
-                class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary"
+                class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"
               >
                 Close
               </button>
@@ -572,20 +541,20 @@ const BAR_HEIGHTS_SM = ['h-1.5', 'h-2', 'h-2.5', 'h-3', 'h-3.5'] as const;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: color-mix(in srgb, var(--color-background) 25%, transparent);
   border-radius: 4px;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--color-surface) 25%, transparent);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: color-mix(in srgb, var(--color-surface) 35%, transparent);
 }
 
 /* Modal transitions */

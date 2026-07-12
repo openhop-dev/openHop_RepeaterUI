@@ -13,6 +13,7 @@ export interface PacketStats {
 }
 
 export interface RecentPacket {
+  id?: number;
   timestamp: number;
   packet_hash: string;
   type: number;
@@ -183,6 +184,7 @@ export interface SystemStats {
     mesh?: {
       path_hash_mode?: number; // 0 = 1-byte, 1 = 2-byte, 2 = 3-byte
       unscoped_flood_allow?: boolean;
+      default_region?: string | null;
     };
     sensors?: {
       enabled?: boolean;
@@ -380,6 +382,9 @@ export interface AdvertRequest {
 export interface CADCalibrationStart {
   samples?: number;
   delay?: number;
+  known_signal_present?: boolean;
+  cad_symbol_num?: 1 | 2 | 4 | 8 | 16;
+  cad_timeout_ms?: number;
 }
 
 export interface CADSettings {
@@ -411,6 +416,14 @@ export interface CADCalibrationMessage {
     min_val: number;
     detection_rate: number;
     recommended: boolean;
+    attempts?: number;
+    detections?: number;
+    non_detections?: number;
+    timeouts?: number;
+    errors?: number;
+    recommendation_reason?: string;
+    known_signal_present?: boolean;
+    qualification?: string;
   };
 }
 
@@ -439,4 +452,49 @@ export interface RRDDataParams extends Record<string, unknown> {
   start_time?: number;
   end_time?: number;
   resolution?: 'average' | 'max' | 'min';
+}
+
+export type PolicyGroupKind = 'channel_hashes' | 'pubkeys';
+
+export interface PolicyGroupEntry {
+  id: string;
+  friendly_name: string;
+  value: string;
+}
+
+export interface PolicyGroup {
+  id: string;
+  friendly_name: string;
+  description?: string;
+  entries: PolicyGroupEntry[];
+}
+
+export interface PolicyGroups {
+  channel_hashes: PolicyGroup[];
+  pubkeys: PolicyGroup[];
+}
+
+export interface PolicyEngineConfig {
+  enabled: boolean;
+  default_action: string;
+  rules: Array<Record<string, unknown>>;
+  objects: Record<string, unknown>;
+}
+
+export interface PolicyDocumentData {
+  policy_file?: string;
+  exists?: boolean;
+  policy_engine: PolicyEngineConfig;
+  groups: PolicyGroups;
+}
+
+export interface PolicyValidationResult {
+  valid: boolean;
+  normalized?: Record<string, unknown>;
+  effective?: {
+    enabled?: boolean;
+    default_action?: string;
+    rule_count?: number;
+  };
+  error?: string;
 }

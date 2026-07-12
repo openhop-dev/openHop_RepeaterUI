@@ -8,9 +8,9 @@ const websocketStore = useWebSocketStore();
 const { snackbar } = storeToRefs(websocketStore);
 
 const variantClass = {
-  info: 'border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300',
-  success: 'border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-300',
-  error: 'border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300',
+  info: 'border-accent-cyan/opacity-medium bg-accent-cyan/opacity-light text-accent-cyan',
+  success: 'border-accent-green/opacity-medium bg-accent-green/opacity-light text-accent-green',
+  error: 'border-accent-red/opacity-medium bg-accent-red/opacity-light text-accent-red',
 };
 </script>
 

@@ -15,55 +15,36 @@ import { useTheme } from '@/composables/useTheme';
 // Theme configuration
 const { theme: currentTheme } = useTheme();
 
-const darkTheme: ITheme = {
-  background: '#1A1E1F',
-  foreground: '#e0e0e0',
-  cursor: '#00d9ff',
-  cursorAccent: '#000000',
-  selectionBackground: '#00d9ff40',
-  selectionForeground: '#ffffff',
-  black: '#000000',
-  red: '#ff6b6b',
-  green: '#51cf66',
-  yellow: '#ffd93d',
-  blue: '#00d9ff',
-  magenta: '#e599f7',
-  cyan: '#00d9ff',
-  white: '#e0e0e0',
-  brightBlack: '#6c757d',
-  brightRed: '#ff8787',
-  brightGreen: '#69db7c',
-  brightYellow: '#ffe066',
-  brightBlue: '#74c0fc',
-  brightMagenta: '#f3a6ff',
-  brightCyan: '#3bc9db',
-  brightWhite: '#ffffff',
+const readCssToken = (token: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  return value || fallback;
 };
 
-const lightTheme: ITheme = {
-  background: '#F3F4F6',
-  foreground: '#1f2937',
-  cursor: '#0D7377',
-  cursorAccent: '#ffffff',
-  selectionBackground: '#0D737740',
-  selectionForeground: '#000000',
-  black: '#1f2937',
-  red: '#dc2626',
-  green: '#15803d',
-  yellow: '#a16207',
-  blue: '#0D7377',
-  magenta: '#7c3aed',
-  cyan: '#0e7490',
-  white: '#f3f4f6',
-  brightBlack: '#6b7280',
-  brightRed: '#ef4444',
-  brightGreen: '#22c55e',
-  brightYellow: '#eab308',
-  brightBlue: '#0891b2',
-  brightMagenta: '#a855f7',
-  brightCyan: '#06b6d4',
-  brightWhite: '#ffffff',
-};
+const getTerminalTheme = (): ITheme => ({
+  background: readCssToken('--color-surface', 'black'),
+  foreground: readCssToken('--color-text-secondary', 'gainsboro'),
+  cursor: readCssToken('--color-accent-cyan', 'deepskyblue'),
+  cursorAccent: readCssToken('--color-surface', 'black'),
+  selectionBackground: readCssToken('--color-badge-cyan-bg', 'lightblue'),
+  selectionForeground: readCssToken('--color-heading', 'white'),
+  black: readCssToken('--color-background', 'black'),
+  red: readCssToken('--color-accent-red', 'tomato'),
+  green: readCssToken('--color-accent-green', 'limegreen'),
+  yellow: readCssToken('--color-primary', 'goldenrod'),
+  blue: readCssToken('--color-primary', 'dodgerblue'),
+  magenta: readCssToken('--color-secondary', 'orchid'),
+  cyan: readCssToken('--color-accent-cyan', 'deepskyblue'),
+  white: readCssToken('--color-text-primary', 'white'),
+  brightBlack: readCssToken('--color-text-muted', 'gray'),
+  brightRed: readCssToken('--color-accent-red', 'red'),
+  brightGreen: readCssToken('--color-accent-green', 'green'),
+  brightYellow: readCssToken('--openhop-blue-light', 'khaki'),
+  brightBlue: readCssToken('--openhop-blue-light', 'lightskyblue'),
+  brightMagenta: readCssToken('--openhop-purple-light', 'violet'),
+  brightCyan: readCssToken('--color-accent-cyan', 'cyan'),
+  brightWhite: readCssToken('--color-heading', 'white'),
+});
 
 defineOptions({ name: 'TerminalView' });
 
@@ -114,7 +95,10 @@ const PARAM_SUGGESTIONS: Record<string, string[]> = {
     'af',
     'mode',
     'repeat',
+    'owner.info',
     'flood.max',
+    'path.hash.mode',
+    'loop.detect',
     'advert.interval',
     'duty',
     'duty.max',
@@ -130,15 +114,20 @@ const PARAM_SUGGESTIONS: Record<string, string[]> = {
     'direct.txdelay',
     'rxdelay',
     'name',
+    'owner.info',
     'lat',
     'lon',
     'mode',
     'duty',
+    'path.hash.mode',
+    'loop.detect',
     'flood.max',
     'advert.interval',
     'flood.advert.interval',
   ],
   ping: [], // Will be populated dynamically
+  'neighbor.remove': ['--all'],
+  region: ['default'],
 };
 
 // Value suggestions for parameters
@@ -146,6 +135,11 @@ const PARAM_VALUE_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   set: {
     mode: ['forward', 'monitor'],
     duty: ['on', 'off'],
+    'path.hash.mode': ['0', '1', '2'],
+    'loop.detect': ['off', 'minimal', 'moderate', 'strict'],
+  },
+  region: {
+    default: ['<null>'],
   },
 };
 
@@ -168,7 +162,10 @@ const PARAM_DESCRIPTIONS: Record<string, Record<string, string>> = {
     af: 'Airtime factor',
     mode: 'Repeater mode',
     repeat: 'Repeat on/off',
+    'owner.info': 'Owner info text',
     'flood.max': 'Max flood hops',
+    'path.hash.mode': 'Path hash mode (0-2)',
+    'loop.detect': 'Loop detection mode',
     'advert.interval': 'Advert interval',
     duty: 'Duty cycle enabled',
     'duty.max': 'Max airtime %',
@@ -184,16 +181,25 @@ const PARAM_DESCRIPTIONS: Record<string, Record<string, string>> = {
     'direct.txdelay': 'Direct TX delay (0.0-5.0)',
     rxdelay: 'RX delay base (>= 0)',
     name: 'Node name',
+    'owner.info': 'Owner info text',
     lat: 'Latitude (-90 to 90)',
     lon: 'Longitude (-180 to 180)',
     mode: 'Repeater mode (forward/monitor/no_tx)',
     duty: 'Duty cycle (on/off)',
+    'path.hash.mode': 'Path hash mode (0-2)',
+    'loop.detect': 'Loop detection mode',
     'flood.max': 'Max flood hops (0-64)',
     'advert.interval': 'Advert interval (0 or 1-10080 mins)',
     'flood.advert.interval': 'Flood advert (0 or 3-48 hrs)',
   },
   ping: {
     // Descriptions will be shown for static suggestions if any added
+  },
+  'neighbor.remove': {
+    '--all': 'Remove all neighbors',
+  },
+  region: {
+    default: 'Get or set default region scope',
   },
 };
 
@@ -223,7 +229,7 @@ onMounted(() => {
     fastScrollSensitivity: 5,
     allowProposedApi: true,
     screenReaderMode: isMobileDevice.value, // Enable for mobile keyboard support
-    theme: currentTheme.value === 'dark' ? darkTheme : lightTheme,
+    theme: getTerminalTheme(),
     scrollback: isMobileDevice.value ? 500 : 10000,
     tabStopWidth: 4,
     macOptionIsMeta: true,
@@ -298,13 +304,13 @@ onMounted(() => {
   const reset = '\x1b[0m';
 
   term.writeln('');
-  term.writeln(`${logoColor}    ██████  ██    ██ ███    ███  ██████${reset}`);
-  term.writeln(`${logoColor}    ██   ██  ██  ██  ████  ████ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██████    ████   ██ ████ ██ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██         ██    ██  ██  ██ ██    ${reset}`);
-  term.writeln(`${logoColor}    ██         ██    ██      ██  ██████${reset}`);
+  term.writeln(`${logoColor}    ██████  ██████  ███████ ███    ██ ██   ██  ██████  ██████ ${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██   ██ ██      ████   ██ ██   ██ ██    ██ ██   ██${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██████  █████   ██ ██  ██ ███████ ██    ██ ██████ ${reset}`);
+  term.writeln(`${logoColor}   ██    ██ ██      ██      ██  ██ ██ ██   ██ ██    ██ ██     ${reset}`);
+  term.writeln(`${logoColor}    ██████  ██      ███████ ██   ████ ██   ██  ██████  ██     ${reset}`);
   term.writeln('');
-  term.writeln(`${titleColor}    Repeater Terminal${reset}`);
+  term.writeln(`${titleColor}    openHop Repeater Terminal${reset}`);
   term.writeln('');
   term.writeln(`${hintColor}    Type ${cmdColor}help${hintColor} for available commands${reset}`);
   term.writeln('');
@@ -755,7 +761,10 @@ const exitFullWindow = () => {
 // Watch for theme changes and update terminal
 watch(currentTheme, (newTheme) => {
   if (term) {
-    term.options.theme = newTheme === 'dark' ? darkTheme : lightTheme;
+    requestAnimationFrame(() => {
+      if (!term) return;
+      term.options.theme = getTerminalTheme();
+    });
   }
 });
 
@@ -825,12 +834,12 @@ const handleMobileBackspace = () => {
   <div class="space-y-4 md:space-y-6">
     <!-- Header -->
     <div
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-3 md:p-4"
+      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-3 md:p-4"
     >
       <div class="flex items-center justify-between">
         <div>
           <h1
-            class="text-content-primary dark:text-content-primary text-lg md:text-xl font-semibold"
+            class="text-content-primary text-lg md:text-xl font-semibold"
           >
             Terminal
           </h1>
@@ -843,7 +852,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="isMobileDevice"
             @click="toggleFullWindow"
-            class="flex items-center gap-2 px-3 py-2 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullWindow ? 'Exit fullscreen' : 'Enter fullscreen'"
           >
             <svg
@@ -875,7 +884,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="!isMobileDevice"
             @click="toggleFullWindow"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullWindow ? 'Exit full window' : 'Full window'"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -893,7 +902,7 @@ const handleMobileBackspace = () => {
           <button
             v-if="!isMobileDevice"
             @click="toggleFullScreen"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/20 hover:bg-accent-purple/30 text-accent-purple border border-accent-purple/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-accent-purple/opacity-medium hover:bg-accent-purple/opacity-medium text-accent-purple border border-accent-purple/opacity-heavy rounded-lg transition-colors"
             :title="isFullScreen ? 'Exit fullscreen' : 'Fullscreen'"
           >
             <svg
@@ -922,7 +931,7 @@ const handleMobileBackspace = () => {
           </button>
           <button
             @click="showSearch = !showSearch"
-            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/50 rounded-lg transition-colors"
+            class="flex items-center gap-2 px-3 py-2 md:px-4 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-primary border border-primary/opacity-heavy rounded-lg transition-colors"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -947,7 +956,7 @@ const handleMobileBackspace = () => {
     <!-- Search Bar -->
     <div
       v-if="showSearch"
-      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] p-4"
+      class="glass-card backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] p-4"
     >
       <div class="flex items-center gap-3">
         <input
@@ -956,25 +965,25 @@ const handleMobileBackspace = () => {
           @keydown.esc="closeSearch"
           type="text"
           placeholder="Search terminal output..."
-          class="flex-1 px-4 py-2 bg-white dark:bg-white/5 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary placeholder-gray-500 dark:placeholder-white/40 outline-none focus:border-primary/50 transition-colors"
+          class="modal-input flex-1 px-4"
         />
         <button
           @click="searchPrev"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
           title="Previous (Shift+Enter)"
         >
           ↑
         </button>
         <button
           @click="performSearch"
-          class="px-3 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/50 rounded-lg text-primary transition-colors"
+          class="px-3 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy rounded-lg text-primary transition-colors"
           title="Next (Enter)"
         >
           ↓
         </button>
         <button
           @click="closeSearch"
-          class="px-3 py-2 bg-background-mute dark:bg-white/5 hover:bg-stroke-subtle dark:hover:bg-white/10 border border-stroke-subtle dark:border-stroke/10 rounded-lg text-content-primary dark:text-content-primary transition-colors"
+          class="px-3 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg text-content-primary transition-colors"
         >
           ✕
         </button>
@@ -984,14 +993,14 @@ const handleMobileBackspace = () => {
     <!-- Terminal Window -->
     <div
       ref="terminalContainerRef"
-      class="bg-surface dark:bg-surface-elevated/80 backdrop-blur-xl border border-stroke-subtle dark:border-white/10 rounded-[15px] overflow-hidden relative"
+      class="bg-surface dark:bg-surface-elevated/80 backdrop-blur-xl border border-stroke-subtle dark:border-white/opacity-light rounded-[15px] overflow-hidden relative"
       :class="{ 'fullscreen-terminal': isFullScreen, 'full-window-terminal': isFullWindow }"
     >
       <!-- Exit full window button -->
       <button
         v-if="isFullWindow && !isFullScreen"
         @click="exitFullWindow"
-        class="absolute top-4 right-4 z-50 p-2 bg-black/80 backdrop-blur-sm hover:bg-black/90 text-white border border-white/20 rounded-lg transition-colors"
+        class="absolute top-4 right-4 z-50 p-2 bg-black/80 backdrop-blur-sm hover:bg-black/80 text-white border border-white/opacity-medium rounded-lg transition-colors"
         title="Exit full window (ESC)"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1030,7 +1039,7 @@ const handleMobileBackspace = () => {
       <!-- Loading indicator -->
       <div
         v-if="isLoading"
-        class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/30 flex items-center gap-2"
+        class="absolute top-4 right-4 bg-black/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/opacity-medium flex items-center gap-2"
       >
         <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
         <span class="text-primary text-sm font-medium">Processing...</span>
@@ -1094,12 +1103,12 @@ const handleMobileBackspace = () => {
 }
 
 :deep(.xterm-selection) {
-  background-color: rgba(0, 217, 255, 0.3) !important;
+  background-color: color-mix(in srgb, var(--color-accent-cyan) 30%, transparent) !important;
 }
 
 kbd {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--color-background) 35%, transparent);
 }
 
 /* Hidden input for mobile keyboard */
