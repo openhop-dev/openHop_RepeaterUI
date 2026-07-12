@@ -8,6 +8,21 @@
       </div>
     </div>
 
+    <!-- Frontend Switch Popup -->
+    <div
+      v-if="showSwitchingPopup"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    >
+      <div class="glass-card w-full max-w-md rounded-[15px] p-6 space-y-3 border border-accent-cyan/opacity-medium">
+        <h4 class="text-base font-semibold text-content-primary">
+          Changing web interface
+        </h4>
+        <p class="text-sm text-content-secondary dark:text-content-muted">
+          The web interface is switching now and this page will refresh automatically.
+        </p>
+      </div>
+    </div>
+
     <!-- Site Identification -->
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
@@ -250,50 +265,6 @@
           </div>
         </div>
 
-        <!-- Restart Notice -->
-        <div v-if="needsRestart" class="p-4 bg-accent-amber/opacity-light border border-accent-amber/opacity-medium rounded-lg">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex items-start space-x-3 flex-1">
-              <svg
-                class="w-5 h-5 text-accent-amber flex-shrink-0 mt-0.5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <div class="flex-1">
-                <h4 class="text-sm font-medium text-accent-amber">
-                  Service restart required
-                </h4>
-                <p class="text-xs text-accent-amber mt-1">
-                  Web frontend changes will take effect after restarting the openHop repeater service.
-                </p>
-              </div>
-            </div>
-            <button
-              @click="restartService"
-              :disabled="restarting"
-              class="px-4 py-2 bg-accent-amber/opacity-medium hover:bg-accent-amber/opacity-medium disabled:opacity-50 text-accent-amber font-medium rounded-lg border border-accent-amber/opacity-heavy transition-colors disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-            >
-              <Spinner v-if="restarting" size="sm" color="current" />
-              <svg v-else class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                />
-              </svg>
-              {{ restarting ? 'Restarting...' : 'Restart Now' }}
-            </button>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -343,7 +314,6 @@
 import { ref, reactive, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import ApiService from '@/utils/api';
-import Spinner from '@/components/ui/Spinner.vue';
 import { useSystemStore } from '@/stores/system';
 
 defineOptions({ name: 'WebSettings' });
@@ -359,10 +329,9 @@ const { stats } = storeToRefs(useSystemStore());
 const saving = ref(false);
 const saveMessage = ref('');
 const saveSuccess = ref(false);
-const needsRestart = ref(false);
-const restarting = ref(false);
 const pymcConsoleExists = ref(false);
 const checkingConsole = ref(true);
+const showSwitchingPopup = ref(false);
 
 const localConfig = reactive<WebConfig>({
   cors_enabled: false,
@@ -423,8 +392,19 @@ async function saveSettings() {
     const response = await ApiService.post('/update_web_config', updates);
 
     if (response.success) {
-      showMessage('Settings saved successfully', true);
-      needsRestart.value = true;
+      const payload = (response.data || {}) as {
+        restart_required?: boolean;
+        frontend_switched?: boolean;
+        live_applied?: boolean;
+      };
+      showMessage(response.message || 'Settings saved successfully', true);
+      if (payload.frontend_switched || payload.live_applied) {
+        showSwitchingPopup.value = true;
+        showMessage('Changing interface and refreshing page…', true);
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      }
     } else {
       showMessage(response.error || 'Failed to save settings', false);
     }
@@ -462,42 +442,6 @@ function showMessage(message: string, success: boolean) {
   setTimeout(() => {
     saveMessage.value = '';
   }, 5000);
-}
-async function restartService() {
-  restarting.value = true;
-  saveMessage.value = '';
-
-  try {
-    const response = await ApiService.post('/restart_service', {});
-
-    if (response.success) {
-      showMessage('Service restart initiated. Page will reload...', true);
-      needsRestart.value = false;
-
-      // Wait a moment then reload the page
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } else {
-      showMessage(response.error || 'Failed to restart service', false);
-    }
-  } catch (error: any) {
-    // Network errors during restart are expected as the service goes down
-    if (error.code === 'ERR_NETWORK' || error.message?.includes('Network error')) {
-      showMessage('Service restarting... Page will reload', true);
-      needsRestart.value = false;
-
-      // Wait for service to come back and reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-    } else {
-      console.error('Failed to restart service:', error);
-      showMessage(error.message || 'Failed to restart service', false);
-    }
-  } finally {
-    restarting.value = false;
-  }
 }
 
 onMounted(() => {

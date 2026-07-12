@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onUnmounted, computed } from 'vue';
+import { ref, onUnmounted, onMounted, computed } from 'vue';
 import { ApiService, API_SERVER_URL } from '@/utils/api';
 import { useSystemStore } from '@/stores/system';
 import { getToken } from '@/utils/auth';
@@ -50,6 +50,9 @@ interface CalibrationUpdate {
     known_signal_present?: boolean;
     signal_activity_observed?: boolean;
     known_signal_effective?: boolean;
+    quiet_mode_invalid?: boolean;
+    quiet_mode_invalid_reason?: string;
+    aggregate_detection_rate?: number;
     qualification?: string;
     total_tests?: number;
   };
@@ -93,6 +96,8 @@ const totalDetections = ref(0);
 const totalNonDetections = ref(0);
 const totalTimeouts = ref(0);
 const totalErrors = ref(0);
+const quietModeInvalid = ref(false);
+const quietModeInvalidReason = ref('');
 const knownSignalPresent = ref(false);
 const recommendationMessage = ref('');
 const showActivityPrompt = ref(false);
@@ -100,6 +105,9 @@ const activityPromptContext = ref<'prestart' | 'no-detection' | 'limited-data' |
 const showNoDetectionGuidance = ref(false);
 const showProcessLogExpanded = ref(false);
 const showManualCadModal = ref(false);
+const showCadInfoModal = ref(false);
+const showCadInfoDetails = ref(false);
+const dontShowCadInfoAgain = ref(false);
 const manualCheckRunning = ref(false);
 const manualCheckBusy = ref(false);
 const manualDetPeak = ref(22);
@@ -126,14 +134,31 @@ let elapsedTimer: ReturnType<typeof setInterval> | null = null;
 const progressPercent = computed(() =>
   progressTotal.value > 0 ? Math.min(100, (progressCurrent.value / progressTotal.value) * 100) : 0,
 );
+const KNOWN_SIGNAL_REQUIRED_DETECTION_RATE = 85;
 
 const rankedCandidates = computed(() =>
   Object.values(calibrationData.value)
     .sort((a, b) => {
+      if (activeKnownSignalMode.value) {
+        const aTier = getCandidateQualificationTier(a);
+        const bTier = getCandidateQualificationTier(b);
+        if (bTier !== aTier) return bTier - aTier;
+        const aAggressiveness = getCandidateAggressivenessPenalty(a);
+        const bAggressiveness = getCandidateAggressivenessPenalty(b);
+        if (aAggressiveness !== bAggressiveness) return aAggressiveness - bAggressiveness;
+        if (b.det_min !== a.det_min) return b.det_min - a.det_min;
+        if (b.det_peak !== a.det_peak) return b.det_peak - a.det_peak;
+        if (b.detection_rate !== a.detection_rate) return b.detection_rate - a.detection_rate;
+        const aInstability = a.timeouts + a.errors;
+        const bInstability = b.timeouts + b.errors;
+        if (aInstability !== bInstability) return aInstability - bInstability;
+        return (b.attempts || b.samples || 0) - (a.attempts || a.samples || 0);
+      }
       if (b.detection_rate !== a.detection_rate) return b.detection_rate - a.detection_rate;
       const aPenalty = a.timeouts + a.errors;
       const bPenalty = b.timeouts + b.errors;
-      return aPenalty - bPenalty;
+      if (aPenalty !== bPenalty) return aPenalty - bPenalty;
+      return b.det_peak - a.det_peak;
     })
     .slice(0, 8),
 );
@@ -171,6 +196,46 @@ const guidanceCardBody = computed(() =>
 );
 
 const topCandidate = computed(() => rankedCandidates.value[0] ?? null);
+const summaryCandidate = computed(
+  () => bestCalibrationResult.value || backendRecommendedResult.value || topCandidate.value,
+);
+const activeKnownSignalMode = computed(
+  () => Boolean(rangeInfo.value?.known_signal_present ?? knownSignalPresent.value),
+);
+
+function getDefaultCadThresholdsForSf(sf: number) {
+  const defaults: Record<number, { peak: number; min: number }> = {
+    7: { peak: 22, min: 10 },
+    8: { peak: 22, min: 10 },
+    9: { peak: 24, min: 10 },
+    10: { peak: 25, min: 10 },
+    11: { peak: 26, min: 10 },
+    12: { peak: 30, min: 10 },
+  };
+  return defaults[sf] ?? defaults[8];
+}
+
+function isCandidatePenalized(candidate?: CalibrationResult | null) {
+  if (!candidate || !activeKnownSignalMode.value) return false;
+  const sf = Number(rangeInfo.value?.spreading_factor ?? 8);
+  const defaults = getDefaultCadThresholdsForSf(sf);
+  return candidate.det_peak < defaults.peak || candidate.det_min < defaults.min;
+}
+
+function getCandidateAggressivenessPenalty(candidate: CalibrationResult) {
+  const sf = Number(rangeInfo.value?.spreading_factor ?? 8);
+  const defaults = getDefaultCadThresholdsForSf(sf);
+  return Math.max(0, defaults.peak - candidate.det_peak) + (2 * Math.max(0, defaults.min - candidate.det_min));
+}
+
+function getCandidateQualificationTier(candidate: CalibrationResult) {
+  const instability = (candidate.timeouts || 0) + (candidate.errors || 0);
+  const isStable = instability === 0;
+  const meetsDetectionFloor = (candidate.detection_rate || 0) >= KNOWN_SIGNAL_REQUIRED_DETECTION_RATE;
+  if (isStable && meetsDetectionFloor) return 2;
+  if (isStable) return 1;
+  return 0;
+}
 
 const diagnosticsSummary = computed(() => {
   const mode = (rangeInfo.value?.known_signal_present ?? knownSignalPresent.value)
@@ -184,9 +249,9 @@ const diagnosticsSummary = computed(() => {
     ? `${(rangeInfo.value.frequency / 1000000).toFixed(3)}MHz`
     : 'n/a';
   const best =
-    topCandidate.value
-      ? `best P${topCandidate.value.det_peak}/M${topCandidate.value.det_min} ${topCandidate.value.detection_rate.toFixed(1)}%`
-      : 'best n/a';
+    summaryCandidate.value
+      ? `recommended P${summaryCandidate.value.det_peak}/M${summaryCandidate.value.det_min} ${summaryCandidate.value.detection_rate.toFixed(1)}%`
+      : 'recommended n/a';
   return `mode ${mode} • SF${sf} • BW ${bw} • Freq ${freq} • attempts ${totalAttempts.value} • det ${totalDetections.value} • timeout ${totalTimeouts.value} • err ${totalErrors.value} • ${best}`;
 });
 
@@ -264,6 +329,32 @@ const activityPromptConfirmLabel = computed(() =>
     ? 'Signal active — Start validation rerun'
     : 'Activity started — Begin calibration',
 );
+
+const CAD_INFO_COOKIE_NAME = 'cad_calibration_info_dismissed';
+
+function getCookie(name: string): string | null {
+  const key = `${name}=`;
+  const cookies = document.cookie ? document.cookie.split(';') : [];
+  for (const cookiePart of cookies) {
+    const cookie = cookiePart.trim();
+    if (cookie.startsWith(key)) {
+      return decodeURIComponent(cookie.substring(key.length));
+    }
+  }
+  return null;
+}
+
+function setCookie(name: string, value: string, maxAgeSeconds: number) {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAgeSeconds}; SameSite=Lax`;
+}
+
+function closeCadInfoModal() {
+  if (dontShowCadInfoAgain.value) {
+    setCookie(CAD_INFO_COOKIE_NAME, '1', 60 * 60 * 24 * 365);
+  }
+  showCadInfoModal.value = false;
+  showCadInfoDetails.value = false;
+}
 
 function pushLog(level: LogEvent['level'], text: string) {
   processLog.value.unshift({ level, text, ts: Date.now() });
@@ -408,6 +499,8 @@ async function startCalibrationInternal(forceStart = false) {
       totalNonDetections.value = 0;
       totalTimeouts.value = 0;
       totalErrors.value = 0;
+      quietModeInvalid.value = false;
+      quietModeInvalidReason.value = '';
       recommendationMessage.value = '';
       processLog.value = [];
 
@@ -577,14 +670,19 @@ function handleCalibrationUpdate(data: CalibrationUpdate) {
         backendRecommendedResult.value = data.results.best;
       }
       recommendationMessage.value = data.results?.recommendation_reason || '';
+      quietModeInvalid.value = Boolean(data.results?.quiet_mode_invalid);
+      quietModeInvalidReason.value = data.results?.quiet_mode_invalid_reason || '';
+      if (quietModeInvalid.value && quietModeInvalidReason.value) {
+        pushLog('info', quietModeInvalidReason.value);
+      }
 
       systemStore.setCadCalibrationRunning(false);
       calculateAndShowResults();
       updateStats();
-      if (topCandidate.value) {
+      if (summaryCandidate.value) {
         pushLog(
           'info',
-          `Summary attempts ${totalAttempts.value} det ${totalDetections.value} non ${totalNonDetections.value} to ${totalTimeouts.value} err ${totalErrors.value} best P${topCandidate.value.det_peak}/M${topCandidate.value.det_min} ${topCandidate.value.detection_rate.toFixed(1)}%`,
+          `Summary attempts ${totalAttempts.value} det ${totalDetections.value} non ${totalNonDetections.value} to ${totalTimeouts.value} err ${totalErrors.value} recommended P${summaryCandidate.value.det_peak}/M${summaryCandidate.value.det_min} ${summaryCandidate.value.detection_rate.toFixed(1)}%`,
         );
       } else {
         pushLog(
@@ -707,6 +805,11 @@ async function saveSettings() {
     pushLog('error', statusMessage.value);
     return;
   }
+  if (quietModeInvalid.value) {
+    statusMessage.value = `Error: ${quietModeInvalidReason.value || 'Quiet baseline run is invalid due to channel activity. Re-run quiet mode in an idle channel before saving.'}`;
+    pushLog('error', statusMessage.value);
+    return;
+  }
 
   try {
     const result = await ApiService.post('/save_cad_settings', {
@@ -736,6 +839,11 @@ onUnmounted(() => {
   }
   systemStore.setCadCalibrationRunning(false);
 });
+
+onMounted(() => {
+  showCadInfoModal.value = getCookie(CAD_INFO_COOKIE_NAME) !== '1';
+  showCadInfoDetails.value = false;
+});
 </script>
 
 <template>
@@ -745,7 +853,7 @@ onUnmounted(() => {
         CAD Calibration Tool
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-2">
-        Detection-first calibration workflow with real-time process feedback
+        Default-anchored calibration with real-time process feedback
       </p>
     </div>
 
@@ -802,7 +910,7 @@ onUnmounted(() => {
       <div class="text-xs text-content-muted">
         Current mode:
         <strong>{{ knownSignalPresent ? 'Known-signal validation' : 'Quiet baseline' }}</strong>.
-        Known-signal mode will prompt you to generate channel traffic before start.
+        Known-signal mode tests Semtech defaults first, then escalates only if required.
       </div>
 
       <div class="flex gap-4">
@@ -918,7 +1026,14 @@ onUnmounted(() => {
         <div v-if="showBestResult && bestCalibrationResult" class="text-sm text-content-primary">
           Peak <strong>{{ bestCalibrationResult.det_peak }}</strong>,
           Min <strong>{{ bestCalibrationResult.det_min }}</strong>,
-          Detection rate <strong>{{ bestCalibrationResult.detection_rate.toFixed(1) }}%</strong>
+          Detection rate <strong>{{ bestCalibrationResult.detection_rate.toFixed(1) }}%</strong>,
+          Samples <strong>{{ bestCalibrationResult.attempts || bestCalibrationResult.samples }}</strong>
+          <span
+            v-if="isCandidatePenalized(bestCalibrationResult)"
+            class="ml-2 inline-flex items-center rounded-full border border-orange-400/40 bg-orange-400/10 px-2 py-0.5 text-xs text-orange-400"
+          >
+            Penalized: over-sensitive
+          </span>
         </div>
         <div v-else class="text-sm text-content-muted">
           No recommendation yet. Run calibration to generate candidates.
@@ -932,6 +1047,7 @@ onUnmounted(() => {
         <button
           v-if="showBestResult && bestCalibrationResult"
           @click="saveSettings"
+          :disabled="quietModeInvalid"
           class="btn-primary flex items-center gap-2"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -939,6 +1055,12 @@ onUnmounted(() => {
           </svg>
           Save Settings
         </button>
+        <div
+          v-if="quietModeInvalid"
+          class="text-xs text-accent-red"
+        >
+          {{ quietModeInvalidReason || 'Quiet baseline run is invalid due to observed channel activity. Re-run quiet mode in an idle channel before saving.' }}
+        </div>
       </div>
 
       <div class="glass-card rounded-[15px] p-4 space-y-3 overflow-auto">
@@ -953,9 +1075,11 @@ onUnmounted(() => {
                 <th class="text-left py-2">Peak</th>
                 <th class="text-left py-2">Min</th>
                 <th class="text-left py-2">Rate</th>
+                <th class="text-left py-2">Samples</th>
                 <th class="text-left py-2">Detections</th>
                 <th class="text-left py-2">Timeouts</th>
                 <th class="text-left py-2">Errors</th>
+                <th class="text-left py-2">Flags</th>
               </tr>
             </thead>
             <tbody>
@@ -967,9 +1091,18 @@ onUnmounted(() => {
                 <td class="py-2">{{ candidate.det_peak }}</td>
                 <td class="py-2">{{ candidate.det_min }}</td>
                 <td class="py-2">{{ candidate.detection_rate.toFixed(1) }}%</td>
+                <td class="py-2">{{ candidate.attempts || candidate.samples }}</td>
                 <td class="py-2">{{ candidate.detections }}/{{ candidate.attempts }}</td>
                 <td class="py-2">{{ candidate.timeouts }}</td>
                 <td class="py-2">{{ candidate.errors }}</td>
+                <td class="py-2">
+                  <span
+                    v-if="isCandidatePenalized(candidate)"
+                    class="inline-flex items-center rounded-full border border-orange-400/40 bg-orange-400/10 px-2 py-0.5 text-xs text-orange-400"
+                  >
+                    Over-sensitive penalty
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -1183,6 +1316,73 @@ onUnmounted(() => {
         <div class="text-xs text-content-muted">
           Aim for higher and stable detection quality with low timeouts/errors before saving thresholds.
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-if="showCadInfoModal"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+  >
+    <div class="glass-card w-full max-w-2xl rounded-[15px] p-6 space-y-4">
+      <h3 class="text-lg font-semibold text-content-primary">CAD Calibration overview (Experimental)</h3>
+      <p class="text-sm text-content-secondary dark:text-content-muted">
+        This tool is <strong>experimental</strong>. It helps tune CAD thresholds and symbol settings using live channel observations, but results can vary with traffic and RF conditions.
+      </p>
+      <div class="grid md:grid-cols-2 gap-3 text-sm">
+        <div class="rounded-lg border border-stroke-subtle/30 bg-background-mute/opacity-light p-3 space-y-1">
+          <div class="font-medium text-content-primary">Quiet baseline mode</div>
+          <p class="text-content-secondary dark:text-content-muted">
+            Use when no intentional signal is present. Goal: minimize false CAD detections and instability (timeouts/errors).
+          </p>
+        </div>
+        <div class="rounded-lg border border-stroke-subtle/30 bg-background-mute/opacity-light p-3 space-y-1">
+          <div class="font-medium text-content-primary">Known-signal validation mode</div>
+          <p class="text-content-secondary dark:text-content-muted">
+            Use while generating compatible traffic on the same freq/SF/BW/CR. Goal: confirm reliable CAD detections with stable behavior.
+          </p>
+        </div>
+      </div>
+      <div class="text-sm text-content-secondary dark:text-content-muted">
+        Recommended flow: run Quiet baseline first, then run Known-signal validation (default-first escalation) before saving settings.
+      </div>
+      <div class="flex justify-start">
+        <button
+          class="px-4 py-2 rounded-lg border border-stroke-subtle/30 text-content-secondary hover:bg-background-mute/opacity-light"
+          @click="showCadInfoDetails = !showCadInfoDetails"
+        >
+          {{ showCadInfoDetails ? 'Hide detailed explanation' : 'Expand: how it works' }}
+        </button>
+      </div>
+      <div
+        v-if="showCadInfoDetails"
+        class="rounded-lg border border-stroke-subtle/30 bg-background-mute/opacity-light p-4 space-y-2 text-sm text-content-secondary dark:text-content-muted"
+      >
+        <p>
+          Known-signal calibration starts at Semtech defaults and checks if they already meet a strict stability/performance target.
+        </p>
+        <p>
+          If defaults fail, the tool performs bounded one-step escalation (slightly more sensitive each step) and stops at the first stable candidate that qualifies.
+        </p>
+        <p>
+          Quiet baseline still focuses on minimizing false detections and instability. Manual CAD check lets you tune values live before saving.
+        </p>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-content-secondary dark:text-content-muted">
+        <input
+          v-model="dontShowCadInfoAgain"
+          type="checkbox"
+          class="rounded border-stroke-subtle"
+        />
+        Don’t show again
+      </label>
+      <div class="flex justify-end">
+        <button
+          class="btn-primary"
+          @click="closeCadInfoModal"
+        >
+          Continue
+        </button>
       </div>
     </div>
   </div>
