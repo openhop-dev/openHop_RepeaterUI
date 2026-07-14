@@ -67,6 +67,7 @@ type PacketStatsPayload = {
   received?: number;
   transmitted?: number;
   dropped?: number;
+  drop_reasons?: Array<{ reason?: string; count?: number }> | Record<string, number>;
 };
 type LbtBucket = LbtDiagnosticsPayload['buckets'][number];
 type LbtPacketTypeSummary = LbtDiagnosticsPayload['packet_types'][number];
@@ -113,6 +114,8 @@ const timeOptions = [
 const selectedHours = ref<number>(24);
 const chartCanvasRef = ref<HTMLCanvasElement | null>(null);
 const chartInstance = ref<ChartJS | null>(null);
+const dropReasonsCanvasRef = ref<HTMLCanvasElement | null>(null);
+const dropReasonsChartInstance = ref<ChartJS | null>(null);
 const lbtCanvasRef = ref<HTMLCanvasElement | null>(null);
 const lbtChartInstance = ref<ChartJS | null>(null);
 const heatmapContainerRef = ref<HTMLDivElement | null>(null);
@@ -343,6 +346,46 @@ const extractPacketCountPoints = (raw: unknown): TimeValuePoint[] => {
     .sort((a, b) => a.t - b.t);
 };
 
+const normalizeDropReasons = (
+  raw: PacketStatsPayload['drop_reasons'],
+): Array<{ reason: string; count: number }> => {
+  if (!raw) return [];
+  const canonicalizeDropReason = (reason: unknown): string => {
+    const label = String(reason ?? 'Unknown').trim() || 'Unknown';
+    const lower = label.toLowerCase();
+    if (lower.startsWith('max flood hops limit reached')) {
+      return 'Max flood hops limit reached';
+    }
+    return label;
+  };
+
+  const isExcludedDropReason = (reason: string): boolean => {
+    const normalized = reason.trim().toLowerCase().replace(/\s+/g, '_');
+    return normalized === 'trace_received';
+  };
+
+  const aggregated = new Map<string, number>();
+  const addEntry = (reason: unknown, count: unknown) => {
+    const normalizedReason = canonicalizeDropReason(reason);
+    if (isExcludedDropReason(normalizedReason)) return;
+    const normalizedCount = Math.max(0, toNumber(count) ?? 0);
+    if (normalizedCount <= 0) return;
+    aggregated.set(normalizedReason, (aggregated.get(normalizedReason) ?? 0) + normalizedCount);
+  };
+
+  if (Array.isArray(raw)) {
+    raw.forEach((entry) => addEntry(entry?.reason, entry?.count));
+  } else {
+    const record = asRecord(raw);
+    if (!record) return [];
+    Object.entries(record).forEach(([reason, count]) => addEntry(reason, count));
+  }
+
+  return Array.from(aggregated.entries())
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+};
+
 const aggregateToBuckets = (
   points: TimeValuePoint[],
   bucketMs: number,
@@ -510,6 +553,11 @@ const droppedPackets = computed(() => {
   const received = toNumber(packetStats.value.received) ?? 0;
   const transmitted = toNumber(packetStats.value.transmitted) ?? 0;
   return Math.max(0, received - transmitted);
+});
+
+const dropReasonCounts = computed(() => {
+  const reasons = normalizeDropReasons(packetStats.value.drop_reasons);
+  return reasons.slice(0, 10);
 });
 
 const dropRate = computed(() => {
@@ -1205,6 +1253,7 @@ const fetchAllData = async () => {
       received: toNumber(statsData.received) ?? undefined,
       transmitted: toNumber(statsData.transmitted) ?? undefined,
       dropped: toNumber(statsData.dropped) ?? undefined,
+      drop_reasons: (statsData.drop_reasons as PacketStatsPayload['drop_reasons']) ?? undefined,
     };
 
     noisePoints.value = extractNoisePoints(noiseRes.data);
@@ -1228,6 +1277,7 @@ const fetchAllData = async () => {
 
     await nextTick();
     createOrUpdateChart();
+    createOrUpdateDropReasonsChart();
     createOrUpdateLbtChart();
     hasLoadedOnce.value = true;
   } catch (error) {
@@ -1248,6 +1298,12 @@ const destroyLbtChart = () => {
   if (!lbtChartInstance.value) return;
   toRaw(lbtChartInstance.value).destroy();
   lbtChartInstance.value = null;
+};
+
+const destroyDropReasonsChart = () => {
+  if (!dropReasonsChartInstance.value) return;
+  toRaw(dropReasonsChartInstance.value).destroy();
+  dropReasonsChartInstance.value = null;
 };
 
 const createOrUpdateChart = () => {
@@ -1415,6 +1471,92 @@ const createOrUpdateChart = () => {
 
   const instance = new ChartJS(ctx, chartConfig as never);
   chartInstance.value = markRaw(instance);
+};
+
+const createOrUpdateDropReasonsChart = () => {
+  if (!dropReasonsCanvasRef.value || dropReasonCounts.value.length === 0) {
+    destroyDropReasonsChart();
+    return;
+  }
+
+  const ctx = dropReasonsCanvasRef.value.getContext('2d');
+  if (!ctx) return;
+
+  const labels = dropReasonCounts.value.map((entry) => entry.reason);
+  const values = dropReasonCounts.value.map((entry) => entry.count);
+  const maxCount = Math.max(1, ...values);
+
+  const config = {
+    type: 'bar' as const,
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Dropped packets',
+          data: values,
+          backgroundColor: resolveCssColor(CHART_COLORS.crc),
+          borderColor: resolveCssColor(CHART_COLORS.crc),
+          borderWidth: 1,
+          borderRadius: 6,
+          maxBarThickness: 18,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y' as const,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          backgroundColor: resolveCssColor(CHART_COLORS.tooltipBg),
+          titleColor: resolveCssColor(CHART_COLORS.tooltipText),
+          bodyColor: resolveCssColor(CHART_COLORS.tooltipText),
+          borderColor: resolveCssColor(CHART_COLORS.tooltipBorder),
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          beginAtZero: true,
+          suggestedMax: Math.ceil(maxCount * 1.15),
+          grid: {
+            color: resolveCssColor(CHART_COLORS.grid),
+          },
+          ticks: {
+            color: resolveCssColor(CHART_COLORS.ticks),
+          },
+          title: {
+            display: true,
+            text: 'Dropped packets',
+            color: resolveCssColor(CHART_COLORS.ticks),
+          },
+        },
+        y: {
+          grid: {
+            display: false,
+          },
+          ticks: {
+            color: resolveCssColor(CHART_COLORS.ticks),
+            autoSkip: false,
+          },
+        },
+      },
+    },
+  };
+
+  if (dropReasonsChartInstance.value) {
+    const chart = toRaw(dropReasonsChartInstance.value);
+    chart.data = config.data as never;
+    chart.options = config.options as never;
+    chart.update();
+    return;
+  }
+
+  const instance = new ChartJS(ctx, config as never);
+  dropReasonsChartInstance.value = markRaw(instance);
 };
 
 const createOrUpdateLbtChart = () => {
@@ -1701,6 +1843,7 @@ const handleResize = () => {
   window.setTimeout(() => {
     heatmapContainerWidth.value = heatmapContainerRef.value?.clientWidth ?? heatmapContainerWidth.value;
     toRaw(chartInstance.value)?.resize();
+    toRaw(dropReasonsChartInstance.value)?.resize();
     toRaw(lbtChartInstance.value)?.resize();
   }, 80);
 };
@@ -1718,6 +1861,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize);
   destroyChart();
+  destroyDropReasonsChart();
   destroyLbtChart();
 });
 </script>
@@ -1791,6 +1935,30 @@ onBeforeUnmount(() => {
         @retry="() => polling.runNow()"
       >
         <canvas ref="chartCanvasRef" class="w-full h-full"></canvas>
+      </ChartCard>
+    </div>
+
+    <div class="glass-card rounded-[15px] p-3 sm:p-5">
+      <h3 class="text-content-primary text-lg sm:text-xl font-semibold mb-1">Drop reasons</h3>
+      <p class="text-xs sm:text-sm text-content-secondary mb-3">
+        Top causes for dropped packets in the selected window.
+      </p>
+      <div
+        v-if="dropReasonCounts.length === 0"
+        class="text-sm text-content-secondary border border-stroke-subtle rounded-lg p-4"
+      >
+        No drop reasons were recorded in this time range.
+      </div>
+      <ChartCard
+        v-else
+        class="h-[15rem] sm:h-[19rem]"
+        :is-loading="chartLoading"
+        :is-updating="isRefreshing"
+        :error="null"
+        status="Building drop-reason breakdown..."
+        @retry="() => polling.runNow()"
+      >
+        <canvas ref="dropReasonsCanvasRef" class="w-full h-full"></canvas>
       </ChartCard>
     </div>
 
