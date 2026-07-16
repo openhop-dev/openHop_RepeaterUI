@@ -98,11 +98,15 @@ export interface NeighborLinkLive {
   active: boolean;
   last_rssi: number;
   last_snr: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   last_score: number;
   ewma_rssi: number;
   ewma_snr: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   ewma_score: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   best_score: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   worst_score: number;
 }
 
@@ -116,6 +120,7 @@ export interface NeighborLinkHistoryPoint {
   timestamp: number;
   rssi: number | null;
   snr: number | null;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   score: number | null;
   is_duplicate: boolean;
   packet_hash: string;

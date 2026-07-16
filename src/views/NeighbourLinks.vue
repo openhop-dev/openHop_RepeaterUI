@@ -50,8 +50,10 @@ const historyRows = ref<NeighborLinkHistoryPoint[]>([]);
 
 const search = ref('');
 const statusFilter = ref<StatusFilter>('all');
+const pathSizeFilter = ref<string>('all');
 const selectedHours = ref<number>(24);
 const selectedLinkKey = ref<string | null>(null);
+const showRxScoreInfoModal = ref(false);
 
 const sortKey = ref<SortKey>('last_seen');
 const sortDir = ref<SortDir>('desc');
@@ -96,6 +98,10 @@ const formatPercent = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`;
 };
 
+const RX_SCORE_TOOLTIP = 'RX score is a normalised value from 0 to 1 calculated by Core from received SNR, spreading factor and complete received frame length.\n\nA higher value generally means greater reception margin and/or a shorter frame. It should not be interpreted as a pure signal-strength measurement.';
+const DUPLICATE_TOOLTIP = 'The proportion of physical observations recorded as duplicates.\n\nDuplicate receptions can be normal in flood networks and do not automatically indicate a poor link or overlapping transmission.';
+const EWMA_RX_SCORE_TOOLTIP = 'The exponentially weighted moving average of the shared Core RX score for observations from this upstream peer.';
+
 const ratioForLink = (link: NeighborLinkLive): number => {
   if (!link.sample_count || link.sample_count <= 0) return 0;
   return link.duplicate_sample_count / link.sample_count;
@@ -112,6 +118,7 @@ const sortedFilteredLinks = computed(() => {
   const filtered = links.value.filter((link) => {
     if (statusFilter.value === 'active' && !link.active) return false;
     if (statusFilter.value === 'inactive' && link.active) return false;
+    if (pathSizeFilter.value !== 'all' && link.path_hash_size !== Number(pathSizeFilter.value)) return false;
 
     if (normalizedSearch.length > 0) {
       const haystack = `${link.peer_hash} ${link.path_hash_size}`.toLowerCase();
@@ -130,6 +137,12 @@ const sortedFilteredLinks = computed(() => {
     if (av > bv) return 1 * direction;
     return a.peer_hash.localeCompare(b.peer_hash) * direction;
   });
+});
+
+const availablePathSizes = computed(() => {
+  const sizes = new Set<number>();
+  links.value.forEach((link) => sizes.add(link.path_hash_size));
+  return [...sizes].sort((a, b) => a - b);
 });
 
 const kpis = computed(() => {
@@ -164,7 +177,8 @@ const selectedHistorySummary = computed(() => {
   if (validScores.length < 8) {
     return {
       status: 'Insufficient data',
-      details: 'Need at least 8 score samples to classify stability.',
+      details: 'At least 8 RX-score observations are required to describe variability.',
+      disclaimer: 'RX-score variability is observational and does not by itself identify congestion, fading or routing quality.',
       duplicateRatio,
       scoreStdDev: null as number | null,
     };
@@ -174,20 +188,21 @@ const selectedHistorySummary = computed(() => {
   const variance = validScores.reduce((acc, value) => acc + (value - mean) ** 2, 0) / validScores.length;
   const stdDev = Math.sqrt(variance);
 
-  let status = 'Stable';
-  let details = 'Low score variance and controlled duplicate ratio.';
+  let status = 'Low variation';
+  let details = 'RX scores have remained relatively consistent in the selected period.';
 
-  if (duplicateRatio >= 0.45 || stdDev >= 0.18) {
-    status = 'Unstable';
-    details = 'High duplicate ratio or large score variance indicates a noisy link.';
-  } else if (duplicateRatio >= 0.28 || stdDev >= 0.1) {
-    status = 'Fluctuating';
-    details = 'Moderate drift observed; monitor this link for congestion or fading.';
+  if (stdDev >= 0.18) {
+    status = 'High variation';
+    details = 'RX scores vary substantially. Review the RSSI, SNR and packet history before drawing conclusions about this neighbour.';
+  } else if (stdDev >= 0.1) {
+    status = 'Moderate variation';
+    details = 'RX scores show moderate variation. This may reflect changing signal conditions, frame lengths or traffic mix.';
   }
 
   return {
     status,
     details,
+    disclaimer: 'RX-score variability is observational and does not by itself identify congestion, fading or routing quality.',
     duplicateRatio,
     scoreStdDev: stdDev,
   };
@@ -365,14 +380,41 @@ function buildHistoryDatasets(
   label: string,
   color: string,
 ): ChartDataset<'line' | 'scatter', { x: number; y: number }[]>[] {
-  const uniquePoints: { x: number; y: number }[] = [];
-  const duplicatePoints: { x: number; y: number }[] = [];
+  const uniquePoints: ({
+    x: number;
+    y: number;
+    rssi: number | null;
+    snr: number | null;
+    is_duplicate: boolean;
+    packet_type: number;
+    route_type: number;
+    path_hop_count: number | null;
+  })[] = [];
+  const duplicatePoints: ({
+    x: number;
+    y: number;
+    rssi: number | null;
+    snr: number | null;
+    is_duplicate: boolean;
+    packet_type: number;
+    route_type: number;
+    path_hop_count: number | null;
+  })[] = [];
 
   historyRows.value.forEach((row) => {
     const value = row[metricKey];
     if (value === null || !Number.isFinite(value)) return;
 
-    const point = { x: row.timestamp * 1000, y: value };
+    const point = {
+      x: row.timestamp * 1000,
+      y: value,
+      rssi: row.rssi,
+      snr: row.snr,
+      is_duplicate: row.is_duplicate,
+      packet_type: row.packet_type,
+      route_type: row.route_type,
+      path_hop_count: row.path_hop_count,
+    };
     if (row.is_duplicate) {
       duplicatePoints.push(point);
     } else {
@@ -446,6 +488,15 @@ function createOrUpdateHistoryChart(
           },
         },
         y: {
+          min: metricKey === 'score' ? 0 : undefined,
+          max: metricKey === 'score' ? 1 : undefined,
+          title: metricKey === 'score'
+            ? {
+              display: true,
+              text: 'RX score',
+              color: cssVar('--color-text-primary', '#0f172a'),
+            }
+            : undefined,
           ticks: {
             color: cssVar('--color-text-secondary', '#64748b'),
           },
@@ -455,6 +506,37 @@ function createOrUpdateHistoryChart(
         },
       },
       plugins: {
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              if (metricKey !== 'score') {
+                return `${label}: ${formatMetric(ctx.parsed.y, 2)}`;
+              }
+
+              const raw = ctx.raw as {
+                x: number;
+                y: number;
+                rssi: number | null;
+                snr: number | null;
+                is_duplicate: boolean;
+                packet_type: number;
+                route_type: number;
+                path_hop_count: number | null;
+              };
+
+              return [
+                `Timestamp: ${new Date(raw.x).toLocaleString()}`,
+                `RX score: ${formatMetric(raw.y, 3)}`,
+                `RSSI: ${formatMetric(raw.rssi, 1)}`,
+                `SNR: ${formatMetric(raw.snr, 1)}`,
+                `Duplicate: ${raw.is_duplicate ? 'yes' : 'no'}`,
+                `Packet type: ${raw.packet_type}`,
+                `Route type: ${raw.route_type}`,
+                `Path hop count: ${raw.path_hop_count ?? '--'}`,
+              ];
+            },
+          },
+        },
         legend: {
           labels: {
             color: cssVar('--color-text-primary', '#0f172a'),
@@ -475,7 +557,11 @@ function createOrUpdateScatterChart() {
     x: Number.isFinite(link.ewma_score) ? link.ewma_score : 0,
     y: ratioForLink(link) * 100,
     peer_hash: link.peer_hash,
+    path_hash_size: link.path_hash_size,
+    last_rssi: link.last_rssi,
+    last_snr: link.last_snr,
     sample_count: link.sample_count,
+    duplicate_sample_count: link.duplicate_sample_count,
     active: link.active,
   }));
 
@@ -526,7 +612,7 @@ function createOrUpdateScatterChart() {
         x: {
           title: {
             display: true,
-            text: 'EWMA Score',
+            text: 'EWMA RX Score',
             color: cssVar('--color-text-primary', '#0f172a'),
           },
           ticks: {
@@ -539,7 +625,7 @@ function createOrUpdateScatterChart() {
         y: {
           title: {
             display: true,
-            text: 'Duplicate Ratio (%)',
+            text: 'Duplicate Observation Ratio (%)',
             color: cssVar('--color-text-primary', '#0f172a'),
           },
           ticks: {
@@ -554,8 +640,28 @@ function createOrUpdateScatterChart() {
         tooltip: {
           callbacks: {
             label: (ctx) => {
-              const raw = ctx.raw as { x: number; y: number; peer_hash: string; sample_count: number };
-              return `${raw.peer_hash} • score ${raw.x.toFixed(2)} • dup ${raw.y.toFixed(1)}% • n=${raw.sample_count}`;
+              const raw = ctx.raw as {
+                x: number;
+                y: number;
+                peer_hash: string;
+                path_hash_size: number;
+                last_rssi: number;
+                last_snr: number;
+                sample_count: number;
+                duplicate_sample_count: number;
+                active: boolean;
+              };
+              return [
+                `Peer: ${raw.peer_hash}`,
+                `Path hash size: ${raw.path_hash_size}`,
+                `EWMA RX score: ${raw.x.toFixed(2)}`,
+                `Latest RSSI: ${formatMetric(raw.last_rssi, 1)}`,
+                `Latest SNR: ${formatMetric(raw.last_snr, 1)}`,
+                `Samples: ${raw.sample_count}`,
+                `Duplicate observations: ${raw.duplicate_sample_count}`,
+                `Duplicate observation ratio: ${raw.y.toFixed(1)}%`,
+                `${raw.active ? 'Active' : 'Inactive'}`,
+              ];
             },
           },
         },
@@ -603,7 +709,7 @@ watch(
       scoreChart,
       scoreCanvasRef.value,
       'score',
-      'Score',
+      'RX score',
       cssVar('--color-accent-green', '#10b981'),
     );
   },
@@ -643,11 +749,19 @@ onBeforeUnmount(() => {
       <div>
         <h2 class="text-xl sm:text-2xl font-bold text-content-primary">Neighbour Link Analytics</h2>
         <p class="text-sm text-content-secondary mt-1">
-          Observation-only telemetry for upstream peers. Live snapshot refreshes every 5 seconds.
+          Observation-only metrics for directly observed upstream flood repeaters.
         </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          class="modal-btn-cancel !py-2 !px-3 !text-sm"
+          data-testid="rx-score-info-button"
+          @click="showRxScoreInfoModal = true"
+        >
+          RX score details
+        </button>
         <label for="history-hours" class="text-sm text-content-secondary">History Window</label>
         <select
           id="history-hours"
@@ -678,16 +792,25 @@ onBeforeUnmount(() => {
         <div class="text-2xl font-semibold text-content-primary mt-1" data-testid="kpi-active-links">{{ kpis.active }}</div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
-        <div class="text-xs uppercase tracking-wide text-content-secondary">Avg EWMA Score</div>
+        <div class="text-xs uppercase tracking-wide text-content-secondary flex items-center gap-1">
+          Avg EWMA RX Score
+          <span
+            class="text-content-muted cursor-help"
+            :title="RX_SCORE_TOOLTIP"
+            aria-label="RX score information"
+          >
+            ⓘ
+          </span>
+        </div>
         <div class="text-2xl font-semibold text-content-primary mt-1" data-testid="kpi-avg-score">{{ formatMetric(kpis.avgScore) }}</div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-xs uppercase tracking-wide text-content-secondary flex items-center gap-1">
-          Duplicate Ratio
+          Duplicate Observation Ratio
           <span
             class="text-content-muted cursor-help"
-            title="duplicate_sample_count divided by sample_count across all links"
-            aria-label="Duplicate ratio formula"
+            :title="DUPLICATE_TOOLTIP"
+            aria-label="Duplicate observation ratio information"
           >
             ⓘ
           </span>
@@ -704,8 +827,11 @@ onBeforeUnmount(() => {
       @retry="fetchLinks"
     >
       <div class="glass-card rounded-[15px] p-4 h-[320px]">
-        <div class="text-sm font-semibold text-content-primary mb-3">Neighbour Link Overview</div>
+        <div class="text-sm font-semibold text-content-primary mb-3">RX Score and Duplicate Observations</div>
         <canvas ref="scatterCanvasRef" aria-label="Neighbour links scatter plot" role="img" />
+        <p class="text-xs text-content-secondary mt-2">
+          This chart shows association only. Duplicate observations do not imply that a neighbour is unreliable or causing collisions.
+        </p>
       </div>
     </ChartCard>
 
@@ -718,6 +844,19 @@ onBeforeUnmount(() => {
             <option value="all" class="bg-surface text-content-primary">All</option>
             <option value="active" class="bg-surface text-content-primary">Active</option>
             <option value="inactive" class="bg-surface text-content-primary">Inactive</option>
+          </select>
+
+          <label for="path-size-filter" class="sr-only">Filter by path hash size</label>
+          <select id="path-size-filter" v-model="pathSizeFilter" class="modal-select w-auto" data-testid="path-size-filter">
+            <option value="all" class="bg-surface text-content-primary">All Path Sizes</option>
+            <option
+              v-for="size in availablePathSizes"
+              :key="`path-size-${size}`"
+              :value="String(size)"
+              class="bg-surface text-content-primary"
+            >
+              {{ size }} byte{{ size === 1 ? '' : 's' }}
+            </option>
           </select>
 
           <label for="search-links" class="sr-only">Search links</label>
@@ -739,10 +878,20 @@ onBeforeUnmount(() => {
               <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('peer_hash')">Peer</button></th>
               <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('path_hash_size')">Path Size</button></th>
               <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('sample_count')">Samples</button></th>
-              <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('duplicate_ratio')">Dup Ratio</button></th>
+              <th class="py-2 pr-3">
+                <button class="text-content-secondary hover:text-content-primary flex items-center gap-1" @click="setSort('duplicate_ratio')">
+                  Dup Ratio
+                  <span class="text-content-muted cursor-help" :title="DUPLICATE_TOOLTIP" aria-label="Duplicate observation ratio information">ⓘ</span>
+                </button>
+              </th>
               <th class="py-2 pr-3">RSSI</th>
               <th class="py-2 pr-3">SNR</th>
-              <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('ewma_score')">EWMA Score</button></th>
+              <th class="py-2 pr-3">
+                <button class="text-content-secondary hover:text-content-primary flex items-center gap-1" @click="setSort('ewma_score')">
+                  EWMA RX Score
+                  <span class="text-content-muted cursor-help" :title="EWMA_RX_SCORE_TOOLTIP" aria-label="EWMA RX score information">ⓘ</span>
+                </button>
+              </th>
               <th class="py-2 pr-3"><button class="text-content-secondary hover:text-content-primary" @click="setSort('last_seen')">Last Seen</button></th>
               <th class="py-2 pr-0">Status</th>
             </tr>
@@ -795,23 +944,31 @@ onBeforeUnmount(() => {
           <div class="text-content-primary">{{ formatTime(selectedLink.first_seen) }}</div>
           <div class="text-content-secondary">Last Seen</div>
           <div class="text-content-primary">{{ formatTime(selectedLink.last_seen) }}</div>
-          <div class="text-content-secondary">Best / Worst Score</div>
+          <div class="text-content-secondary flex items-center gap-1">
+            Latest RX Score
+            <span class="text-content-muted cursor-help" :title="RX_SCORE_TOOLTIP" aria-label="RX score information">ⓘ</span>
+          </div>
+          <div class="text-content-primary" data-testid="selected-latest-rx-score">{{ formatMetric(selectedLink.last_score) }}</div>
+          <div class="text-content-secondary">EWMA RX Score</div>
+          <div class="text-content-primary" data-testid="selected-ewma-rx-score">{{ formatMetric(selectedLink.ewma_score) }}</div>
+          <div class="text-content-secondary">Best / Worst RX Score</div>
           <div class="text-content-primary">{{ formatMetric(selectedLink.best_score) }} / {{ formatMetric(selectedLink.worst_score) }}</div>
         </div>
       </div>
 
       <div class="glass-card rounded-[15px] p-4" data-testid="stability-panel">
-        <h3 class="text-base font-semibold text-content-primary">Link Stability</h3>
+        <h3 class="text-base font-semibold text-content-primary">RX Observation Variability</h3>
         <div class="mt-2 text-xl font-semibold text-content-primary" data-testid="stability-status">
           {{ selectedHistorySummary.status }}
         </div>
         <p class="text-sm text-content-secondary mt-1">{{ selectedHistorySummary.details }}</p>
         <div class="mt-3 text-sm text-content-secondary">
-          Duplicate ratio: <span class="text-content-primary">{{ formatPercent(selectedHistorySummary.duplicateRatio) }}</span>
+          Duplicate observation ratio: <span class="text-content-primary">{{ formatPercent(selectedHistorySummary.duplicateRatio) }}</span>
         </div>
         <div class="text-sm text-content-secondary">
-          Score std dev: <span class="text-content-primary">{{ selectedHistorySummary.scoreStdDev === null ? '--' : selectedHistorySummary.scoreStdDev.toFixed(3) }}</span>
+          RX score standard deviation: <span class="text-content-primary" data-testid="rx-score-stddev">{{ selectedHistorySummary.scoreStdDev === null ? '--' : selectedHistorySummary.scoreStdDev.toFixed(3) }}</span>
         </div>
+        <p class="text-xs text-content-secondary mt-2">{{ selectedHistorySummary.disclaimer }}</p>
       </div>
     </div>
 
@@ -824,7 +981,7 @@ onBeforeUnmount(() => {
         @retry="fetchHistory"
       >
         <div class="glass-card rounded-[15px] p-4 h-[280px]">
-          <h3 class="text-sm font-semibold text-content-primary mb-2">RSSI History</h3>
+          <h3 class="text-sm font-semibold text-content-primary mb-2">RSSI (dBm)</h3>
           <canvas ref="rssiCanvasRef" role="img" aria-label="RSSI history chart" />
         </div>
       </ChartCard>
@@ -837,7 +994,7 @@ onBeforeUnmount(() => {
         @retry="fetchHistory"
       >
         <div class="glass-card rounded-[15px] p-4 h-[280px]">
-          <h3 class="text-sm font-semibold text-content-primary mb-2">SNR History</h3>
+          <h3 class="text-sm font-semibold text-content-primary mb-2">SNR (dB)</h3>
           <canvas ref="snrCanvasRef" role="img" aria-label="SNR history chart" />
         </div>
       </ChartCard>
@@ -850,7 +1007,7 @@ onBeforeUnmount(() => {
         @retry="fetchHistory"
       >
         <div class="glass-card rounded-[15px] p-4 h-[280px]">
-          <h3 class="text-sm font-semibold text-content-primary mb-2">Score History</h3>
+          <h3 class="text-sm font-semibold text-content-primary mb-2">RX Score History</h3>
           <canvas ref="scoreCanvasRef" role="img" aria-label="Score history chart" />
         </div>
       </ChartCard>
@@ -859,5 +1016,46 @@ onBeforeUnmount(() => {
     <div v-if="!linksLoading && links.length === 0" class="glass-card rounded-[15px] p-6 text-center" data-testid="page-empty">
       <p class="text-content-secondary">No neighbour links have been observed yet.</p>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="showRxScoreInfoModal"
+        class="modal-backdrop"
+        @click.self="showRxScoreInfoModal = false"
+        data-testid="rx-score-info-modal"
+      >
+        <div class="modal-card max-w-2xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-content-primary">Neighbour Link Analytics</h3>
+            <button
+              type="button"
+              class="text-content-secondary hover:text-content-primary transition-colors"
+              aria-label="Close RX score details"
+              @click="showRxScoreInfoModal = false"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="space-y-3 text-sm text-content-secondary leading-relaxed">
+            <p>
+              Observation-only metrics for directly observed upstream flood repeaters.
+            </p>
+            <p>
+              RX score is calculated by the shared Core reception metric using SNR, spreading factor and complete received frame length. The same score is used as an input to Core's flood RX timing system.
+            </p>
+            <p>
+              This report currently shows the shared RX score, RSSI, SNR and duplicate observations. Calculated RX hold durations are not exposed by the current API and are not estimated in the browser.
+            </p>
+          </div>
+
+          <div class="modal-actions mt-5">
+            <button type="button" class="modal-btn-primary" @click="showRxScoreInfoModal = false">Close</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
