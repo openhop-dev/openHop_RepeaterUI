@@ -59,6 +59,7 @@ export const navigationItems: NavItemConfig[] = [
     children: [
       { id: 'statistics', label: 'Statistics', icon: BarChart2,  route: '/statistics' },
       { id: 'rf-health-correlation', label: 'RF Health Correlation', icon: BarChart2, route: '/rf-health-correlation' },
+      { id: 'neighbor-links', label: 'Neighbour Links', icon: Cable, route: '/neighbor-links' },
       { id: 'logs',       label: 'Logs',       icon: ScrollText, route: '/logs' },
     ],
   },
