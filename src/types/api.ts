@@ -86,6 +86,58 @@ export interface GraphData {
   series: ChartSeries[];
 }
 
+// Neighbour link analytics types
+export interface NeighborLinkLive {
+  peer_hash: string;
+  path_hash_size: number;
+  sample_count: number;
+  duplicate_sample_count: number;
+  first_seen: number;
+  last_seen: number;
+  age_seconds: number;
+  active: boolean;
+  last_rssi: number;
+  last_snr: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
+  last_score: number;
+  ewma_rssi: number;
+  ewma_snr: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
+  ewma_score: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
+  best_score: number;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
+  worst_score: number;
+}
+
+export interface NeighborLinksPayload {
+  links: NeighborLinkLive[];
+  active_within_seconds: number;
+  count: number;
+}
+
+export interface NeighborLinkHistoryPoint {
+  timestamp: number;
+  rssi: number | null;
+  snr: number | null;
+  /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
+  score: number | null;
+  is_duplicate: boolean;
+  packet_hash: string;
+  packet_type: number;
+  route_type: number;
+  path_hop_count: number | null;
+}
+
+export interface NeighborLinkHistoryPayload {
+  peer_hash: string;
+  path_hash_size: number;
+  hours: number;
+  limit: number;
+  rows: NeighborLinkHistoryPoint[];
+  count: number;
+}
+
 // Noise floor related types
 export interface NoiseFloorHistory {
   timestamp: number;

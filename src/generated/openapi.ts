@@ -24,6 +24,66 @@ export interface ErrorResponse {
   error?: string;
 }
 
+export interface NeighborLinkSnapshot {
+  peer_hash?: string;
+  /**
+   * @min 1
+   * @max 3
+   */
+  path_hash_size?: number;
+  sample_count?: number;
+  duplicate_sample_count?: number;
+  first_seen?: number;
+  last_seen?: number;
+  age_seconds?: number;
+  active?: boolean;
+  last_rssi?: number;
+  last_snr?: number;
+  last_score?: number;
+  ewma_rssi?: number;
+  ewma_snr?: number;
+  ewma_score?: number;
+  best_score?: number;
+  worst_score?: number;
+}
+
+export interface NeighborLinksData {
+  links?: NeighborLinkSnapshot[];
+  active_within_seconds?: number;
+  count?: number;
+}
+
+export interface NeighborLinksResponse {
+  success?: boolean;
+  data?: NeighborLinksData;
+}
+
+export interface NeighborLinkHistoryRow {
+  timestamp?: number;
+  rssi?: number | null;
+  snr?: number | null;
+  score?: number | null;
+  is_duplicate?: boolean;
+  packet_hash?: string;
+  packet_type?: number;
+  route_type?: number;
+  path_hop_count?: number | null;
+}
+
+export interface NeighborLinkHistoryData {
+  peer_hash?: string;
+  path_hash_size?: number;
+  hours?: number;
+  limit?: number;
+  rows?: NeighborLinkHistoryRow[];
+  count?: number;
+}
+
+export interface NeighborLinkHistoryResponse {
+  success?: boolean;
+  data?: NeighborLinkHistoryData;
+}
+
 export interface LbtDiagnosticsResponse {
   /** Selected range start timestamp (Unix epoch seconds) */
   start_time: number;
@@ -1614,6 +1674,85 @@ export class Api<
         ...params,
       }),
   };
+  neighborLinks = {
+    /**
+     * @description Returns observation-only neighbour link metrics by upstream peer hash.
+     *
+     * @tags Packets
+     * @name NeighborLinksList
+     * @summary Get observed neighbour link snapshots
+     * @request GET:/neighbor_links
+     */
+    neighborLinksList: (
+      query?: {
+        /**
+         * Mark links as active when last-seen age is within this threshold.
+         * @min 1
+         * @default 90
+         */
+        active_within_seconds?: number;
+        /**
+         * Maximum number of link snapshots to return.
+         * @min 1
+         * @max 5000
+         * @default 500
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<NeighborLinksResponse, any>({
+        path: `/neighbor_links`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+  };
+  neighborLinkHistory = {
+    /**
+     * @description Returns historical packet observations for a single upstream peer hash.
+     *
+     * @tags Packets
+     * @name NeighborLinkHistoryList
+     * @summary Get neighbour link packet history
+     * @request GET:/neighbor_link_history
+     */
+    neighborLinkHistoryList: (
+      query: {
+        /** Upstream peer hash to query. */
+        peer_hash: string;
+        /**
+         * Path hash size in bytes for the peer hash.
+         * @min 1
+         * @max 3
+         */
+        path_hash_size: number;
+        /**
+         * Time window in hours.
+         * @min 1
+         * @max 168
+         * @default 24
+         */
+        hours?: number;
+        /**
+         * Maximum rows to return.
+         * @min 1
+         * @max 5000
+         * @default 1000
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<NeighborLinkHistoryResponse, any>({
+        path: `/neighbor_link_history`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+  };
   rrdData = {
     /**
      * @description Retrieve Round-Robin Database metrics for graphing. **Note:** This endpoint extracts parameters from the request internally. Parameters are handled automatically by the backend.
@@ -1959,6 +2098,86 @@ export class Api<
         ...params,
       }),
   };
+  cadManualCheck = {
+    /**
+     * @description Execute one or more immediate CAD checks and return aggregated detection metrics.
+     *
+     * @tags CAD Calibration
+     * @name CadManualCheckCreate
+     * @summary Run manual CAD check
+     * @request POST:/cad_manual_check
+     */
+    cadManualCheckCreate: (
+      data?: {
+        /**
+         * Number of CAD checks to perform.
+         * @min 1
+         * @max 32
+         * @default 1
+         */
+        samples?: number;
+        /**
+         * Temporary CAD peak threshold.
+         * @min 0
+         * @max 255
+         */
+        det_peak?: number;
+        /**
+         * Temporary CAD minimum threshold.
+         * @min 0
+         * @max 255
+         */
+        det_min?: number;
+        /**
+         * CAD symbol count used by the radio.
+         * @default 2
+         */
+        cad_symbol_num?: 1 | 2 | 4 | 8 | 16;
+        /**
+         * Timeout per CAD check in milliseconds.
+         * @min 50
+         * @max 5000
+         * @default 500
+         */
+        cad_timeout_ms?: number;
+        /**
+         * Apply det_peak and det_min to live radio thresholds before checks.
+         * @default false
+         */
+        apply_live?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            det_peak?: number;
+            det_min?: number;
+            cad_symbol_num?: number;
+            cad_timeout_ms?: number;
+            apply_live?: boolean;
+            samples?: number;
+            attempts?: number;
+            detections?: number;
+            non_detections?: number;
+            timeouts?: number;
+            errors?: number;
+            cad_done_count?: number;
+            detection_rate?: number;
+            detected?: boolean;
+          };
+        },
+        any
+      >({
+        path: `/cad_manual_check`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
   saveCadSettings = {
     /**
      * @description Save calibrated CAD peak and min values to configuration
@@ -1985,6 +2204,11 @@ export class Api<
          * @example 64
          */
         min_val: number;
+        /**
+         * CAD symbol count to persist for runtime CAD detections.
+         * @default 2
+         */
+        cad_symbol_num?: 1 | 2 | 4 | 8 | 16;
       },
       params: RequestParams = {},
     ) =>

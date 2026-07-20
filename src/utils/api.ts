@@ -11,6 +11,8 @@ import {
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import type {
   GPSDiagnostics,
+  NeighborLinkHistoryPayload,
+  NeighborLinksPayload,
   PolicyDocumentData,
   PolicyEngineConfig,
   PolicyGroup,
@@ -101,6 +103,15 @@ export type LbtDiagnosticsApiResponse = EndpointApiResponse<
   (typeof generatedApiClient)['lbtDiagnostics']['lbtDiagnosticsList']
 >;
 export type LbtDiagnosticsPayload = NonNullable<LbtDiagnosticsApiResponse['data']>;
+
+type NeighborLinksResponse = ApiResponse<NeighborLinksPayload>;
+type NeighborLinkHistoryResponse = ApiResponse<NeighborLinkHistoryPayload>;
+type NeighborLinksApiResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['neighborLinks']['neighborLinksList']
+>;
+type NeighborLinkHistoryApiResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['neighborLinkHistory']['neighborLinkHistoryList']
+>;
 
 const toAxiosHeaders = (headers?: HeadersInit): Record<string, string> | undefined => {
   if (!headers) {
@@ -469,6 +480,40 @@ export class ApiService {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.lbtDiagnostics.lbtDiagnosticsList(query, params);
       return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getNeighborLinks(params?: {
+    active_within_seconds?: number;
+    limit?: number;
+  }): Promise<NeighborLinksResponse> {
+    try {
+      const requestParams = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.neighborLinks.neighborLinksList(params, requestParams);
+      return response.data as NeighborLinksApiResponse as NeighborLinksResponse;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async getNeighborLinkHistory(
+    params: {
+      peer_hash: string;
+      path_hash_size: number;
+      hours?: number;
+      limit?: number;
+    },
+    config?: AxiosRequestConfig,
+  ): Promise<NeighborLinkHistoryResponse> {
+    try {
+      const requestParams = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.neighborLinkHistory.neighborLinkHistoryList(params, {
+        ...requestParams,
+        signal: config?.signal as AbortSignal | undefined,
+      });
+      return response.data as NeighborLinkHistoryApiResponse as NeighborLinkHistoryResponse;
     } catch (error: unknown) {
       throw this.handleError(error);
     }
