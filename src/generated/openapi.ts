@@ -10,6 +10,48 @@
  * ---------------------------------------------------------------
  */
 
+export interface AirtimeBucket {
+  /** Unix start of the bucket, floored to bucket_seconds. */
+  timestamp?: number;
+  /** Receive time-on-air in this bucket, in milliseconds. */
+  rx_ms?: number;
+  /** Transmit time-on-air in this bucket, in milliseconds. */
+  tx_ms?: number;
+  rx_count?: number;
+  tx_count?: number;
+}
+
+/** Air settings this radio's time-on-air was computed with. A null field means the setting could not be read; airtime is reported as zero rather than estimated from a default that was never on the air. */
+export interface AirtimeRadioProfile {
+  frequency_hz?: number | null;
+  bandwidth_hz?: number | null;
+  spreading_factor?: number | null;
+  /** Coding-rate denominator (5 = 4/5 ... 8 = 4/8). */
+  coding_rate?: number | null;
+  preamble_length?: number | null;
+}
+
+export interface PluginStatus {
+  /** @example "openhop.nomad" */
+  id?: string;
+  name?: string;
+  version?: string;
+  enabled?: boolean;
+  state?:
+    | "DISABLED"
+    | "STOPPED"
+    | "STARTING"
+    | "RUNNING"
+    | "STOPPING"
+    | "FAILED";
+  pid?: number | null;
+  has_runtime?: boolean;
+  has_ui?: boolean;
+  ui_entry?: string | null;
+  data_dir?: string;
+  description?: string;
+}
+
 export interface SuccessResponse {
   /** @example true */
   success?: boolean;
@@ -35,6 +77,71 @@ export interface NeighborScopeRecord {
   queried_at: number;
 }
 
+export interface PacketStatsRadio {
+  radio_id?: string;
+  /** Packets this radio received, duplicates included. */
+  received?: number;
+  duplicates?: number;
+  /** Receptions on this radio that the node did not forward. */
+  dropped?: number;
+  /** Physical transmissions on this radio. */
+  transmissions?: number;
+  avg_rssi?: number | null;
+  avg_snr?: number | null;
+}
+
+/** Packet count per route type name. */
+export type RouteTotals = Record<string, number>;
+
+export interface RadioPacketRateBucket {
+  /** Bucket start (Unix timestamp). */
+  timestamp?: number;
+  rx_count?: number;
+  tx_count?: number;
+}
+
+export interface NoiseFloorSample {
+  timestamp?: number;
+  noise_floor_dbm?: number;
+  /** The radio this sample was read from. Present only on a node with two or more radios; null there for a sample stored before per-radio sampling or read from a radio that is no longer configured. */
+  radio_id?: string | null;
+}
+
+export interface CrcErrorSample {
+  timestamp?: number;
+  /** Errors counted since the previous sample of this radio. */
+  count?: number;
+  /** The radio whose counter these errors came from. Present only on a node with two or more radios. */
+  radio_id?: string | null;
+}
+
+export interface RadioPacketRateSeries {
+  radio_id?: string;
+  rx_total?: number;
+  tx_total?: number;
+  /** Non-empty buckets, oldest first. */
+  buckets?: RadioPacketRateBucket[];
+}
+
+/** One neighbour as heard by one radio. */
+export interface NeighborLinkRadioStats {
+  radio_id?: string;
+  sample_count?: number;
+  duplicate_sample_count?: number;
+  first_seen?: number;
+  last_seen?: number;
+  age_seconds?: number;
+  active?: boolean;
+  last_rssi?: number;
+  last_snr?: number;
+  last_score?: number;
+  ewma_rssi?: number;
+  ewma_snr?: number;
+  ewma_score?: number;
+  best_score?: number;
+  worst_score?: number;
+}
+
 export interface NeighborLinkSnapshot {
   peer_hash?: string;
   /**
@@ -56,11 +163,14 @@ export interface NeighborLinkSnapshot {
   ewma_score?: number;
   best_score?: number;
   worst_score?: number;
+  /** Stats per receiving radio, configured radios first. Present only on a node with two or more radios. */
+  radios?: NeighborLinkRadioStats[];
 }
 
 export interface NeighborLinksData {
   links?: NeighborLinkSnapshot[];
   active_within_seconds?: number;
+  limit?: number;
   count?: number;
 }
 
@@ -79,6 +189,8 @@ export interface NeighborLinkHistoryRow {
   packet_type?: number;
   route_type?: number;
   path_hop_count?: number | null;
+  /** Radio that heard it; absent when not recorded. */
+  rx_radio_id?: string;
 }
 
 export interface NeighborLinkHistoryData {
@@ -86,8 +198,36 @@ export interface NeighborLinkHistoryData {
   path_hash_size?: number;
   hours?: number;
   limit?: number;
+  /** Observations, oldest first; absent when `bucket_seconds` was requested. */
   rows?: NeighborLinkHistoryRow[];
+  /** Bucket width in seconds; only when requested */
+  bucket_seconds?: number;
+  /** The radio filter; only when requested */
+  radio_id?: string;
+  /** Buckets are split per radio; only when requested */
+  by_radio?: boolean;
+  /** One summary per non-empty bucket, oldest first; only when `bucket_seconds` was requested. */
+  buckets?: NeighborLinkHistoryBucket[];
   count?: number;
+}
+
+export interface NeighborLinkHistoryBucket {
+  /** Bucket start (Unix timestamp) */
+  timestamp?: number;
+  /** The bucket's last observation */
+  last_ts?: number;
+  /** Observations in the bucket */
+  n?: number;
+  /** Observations flagged as duplicates */
+  dup?: number;
+  /** Mean score */
+  score?: number | null;
+  /** Mean RSSI */
+  rssi?: number | null;
+  /** Mean SNR */
+  snr?: number | null;
+  /** Receiving radio; only with by_radio */
+  radio_id?: string | null;
 }
 
 export interface NeighborLinkHistoryResponse {
@@ -120,6 +260,16 @@ export interface LbtDiagnosticsResponse {
   packet_type_buckets: LbtPacketTypeBucket[];
   correlations: LbtCorrelationSet;
   limitations: string[];
+  /** Present only on a node with two or more radios. One entry per configured radio, counting physical transmissions from the packet_egress table, so a packet fanned out across a bridge is counted on each radio it left by and a send that failed on one radio is counted there. The combined summary and buckets above are unchanged and still count each packet once. Per-radio entries carry no rf block (the RRD series behind it is node-wide) and no packet-type breakdown. */
+  radios?: LbtRadioSeries[];
+  /** Physical sends whose radio is no longer configured. Present alongside radios; counted here rather than blamed on another radio's contention. */
+  unattributed_transmissions?: number;
+}
+
+export interface LbtRadioSeries {
+  radio_id: string;
+  summary: LbtSummary;
+  buckets: LbtBucket[];
 }
 
 export interface LbtPacketTypeSummary {
@@ -501,13 +651,15 @@ export interface ACLClient {
    */
   address: string;
   /**
-   * Client permission level:
-   * - admin: Full access
-   * - guest: Limited access
+   * Client ACL role (low two bits of the permissions byte, matching
+   * MeshCore ClientACL.h):
+   * - admin: Full access, including settings and CLI
+   * - read_write: May send and receive messages (room server guests)
    * - read_only: Read-only access
+   * - guest: Base telemetry only (repeater guests, read-only logins)
    * @example "admin"
    */
-  permissions: "admin" | "guest" | "read_only";
+  permissions: "admin" | "read_write" | "read_only" | "guest";
   /**
    * Unix timestamp of last activity
    * @example 1766065148
@@ -1177,10 +1329,21 @@ export class Api<
      * @summary Send repeater advertisement
      * @request POST:/send_advert
      */
-    sendAdvertCreate: (params: RequestParams = {}) =>
+    sendAdvertCreate: (
+      data?: {
+        /**
+         * Advert send mode label for UI/workflow selection.
+         * @default "flood"
+         */
+        mode?: "flood" | "direct";
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<SuccessResponse, void>({
         path: `/send_advert`,
         method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -1412,11 +1575,28 @@ export class Api<
           success?: boolean;
           data?: {
             total_packets?: number;
-            received?: number;
-            transmitted?: number;
-            dropped?: number;
-            by_type?: object;
-            by_route?: object;
+            /** Packets this node transmitted, counted once per packet however many radios sent it. */
+            transmitted_packets?: number | null;
+            dropped_packets?: number | null;
+            avg_rssi?: number;
+            avg_snr?: number;
+            avg_score?: number;
+            avg_payload_length?: number;
+            avg_tx_delay?: number;
+            packet_types?: {
+              type?: number;
+              count?: number;
+            }[];
+            drop_reasons?: {
+              reason?: string;
+              count?: number;
+            }[];
+            /** One entry per radio, in configured order. Present only on a node with two or more radios. */
+            radios?: PacketStatsRadio[];
+            /** Receptions whose radio could not be identified. Multi-radio nodes only. */
+            unattributed_rx_count?: number;
+            /** Transmissions whose radio could not be identified. Multi-radio nodes only. */
+            unattributed_tx_count?: number;
           };
         },
         any
@@ -1488,7 +1668,7 @@ export class Api<
   };
   updateRadioConfig = {
     /**
-     * @description Update LoRa radio parameters
+     * @description Update LoRa radio parameters. In multi-radio mode, pass radio_id to target a radios[] entry; air settings are written to that entry and mirrored to top-level radio when it is the default radio.
      *
      * @tags System
      * @name UpdateRadioConfigCreate
@@ -1496,7 +1676,25 @@ export class Api<
      * @request POST:/update_radio_config
      * @secure
      */
-    updateRadioConfigCreate: (data: object, params: RequestParams = {}) =>
+    updateRadioConfigCreate: (
+      data: {
+        /** Optional multi-radio id from config.radios[].id */
+        radio_id?: string;
+        frequency?: number;
+        bandwidth?: number;
+        spreading_factor?: number;
+        coding_rate?: number;
+        tx_power?: number;
+        preamble_length?: number;
+        /** Repeater flood advert interval in hours (0 = off, 3-168) */
+        flood_advert_interval_hours?: number;
+        /** Legacy local advert interval in minutes (0 = off, 1-10080) */
+        advert_interval_minutes?: number;
+        /** Additional repeater advert interval in hours (0 = off, 1-168) */
+        direct_advert_interval_hours?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<SuccessResponse, any>({
         path: `/update_radio_config`,
         method: "POST",
@@ -1634,7 +1832,35 @@ export class Api<
       },
       params: RequestParams = {},
     ) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            hours?: number;
+            period?: string;
+            data_source?: string;
+            /** Packet count per route type name. */
+            route_totals?: RouteTotals;
+            total_packets?: number;
+            /** Route mix of each radio's receptions, in configured order. Present only on a node with two or more radios. */
+            radios?: {
+              radio_id?: string;
+              /** Packet count per route type name. */
+              route_totals?: RouteTotals;
+              total_packets?: number;
+            }[];
+            /** Packets this node sent itself, which no radio received. Multi-radio nodes only. */
+            originated?: {
+              /** Packet count per route type name. */
+              route_totals?: RouteTotals;
+              total_packets?: number;
+            };
+            /** Receptions whose radio could not be identified. Multi-radio nodes only. */
+            unattributed_count?: number;
+          };
+        },
+        any
+      >({
         path: `/route_stats`,
         method: "GET",
         query: query,
@@ -1747,12 +1973,21 @@ export class Api<
          */
         hours?: number;
         /**
-         * Maximum rows to return.
+         * Maximum rows (or buckets) to return.
          * @min 1
          * @max 5000
          * @default 1000
          */
         limit?: number;
+        /**
+         * Bucket width in seconds; the answer carries `buckets` instead of `rows`.
+         * @min 60
+         */
+        bucket_seconds?: number;
+        /** Only observations heard by this radio. */
+        radio_id?: string;
+        /** With `bucket_seconds`, split each bucket per receiving radio; every bucket then carries `radio_id`. */
+        by_radio?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -1897,7 +2132,7 @@ export class Api<
   };
   lbtDiagnostics = {
     /**
-     * @description Returns aggregated Listen Before Talk (LBT) diagnostics for transmission-path packets, aligned to RF health buckets for correlation analysis. Notes: - LBT total attempts are derived as `lbt_attempts + 1` from stored packet metadata. - Buckets are bounded and aggregated server-side for efficient dashboard refresh.
+     * @description Returns aggregated Listen Before Talk (LBT) diagnostics for transmission-path packets, aligned to RF health buckets for correlation analysis. Notes: - LBT total attempts are derived as `lbt_attempts + 1` from stored packet metadata. - Buckets are bounded and aggregated server-side for efficient dashboard refresh. - On a node with two or more radios the response also carries `radios`, the same summary and bucket shape per radio, counting physical transmissions.
      *
      * @tags Charts
      * @name LbtDiagnosticsList
@@ -1955,7 +2190,7 @@ export class Api<
   };
   noiseFloorHistory = {
     /**
-     * @description Retrieve historical noise floor measurements
+     * @description Historical noise floor measurements, oldest first. On a node with two or more radios every sample names the radio it was read from, and radio_id pages that radio's samples on their own; offset paging over the combined series is stable only while nothing is filtered out. Samples stored before per-radio sampling, and every sample on a single-radio node, carry no radio id.
      *
      * @tags Noise Floor
      * @name NoiseFloorHistoryList
@@ -1971,13 +2206,34 @@ export class Api<
          * @default 24
          */
         hours?: number;
+        /**
+         * Maximum samples to return. Defaults to 300 per hour, at least 2000.
+         * @min 1
+         * @max 1000000
+         */
+        limit?: number;
+        /**
+         * @min 0
+         * @default 0
+         */
+        offset?: number;
+        /** Return only samples read from this radio. */
+        radio_id?: string;
       },
       params: RequestParams = {},
     ) =>
       this.request<
         {
           success?: boolean;
-          data?: object[];
+          data?: {
+            history?: NoiseFloorSample[];
+            hours?: number;
+            count?: number;
+            limit?: number;
+            offset?: number;
+            /** Echoed back only when the request named a radio. */
+            radio_id?: string;
+          };
         },
         any
       >({
@@ -1990,7 +2246,7 @@ export class Api<
   };
   noiseFloorStats = {
     /**
-     * @description Statistical analysis of noise floor measurements
+     * @description Statistical analysis of noise floor measurements. Without radio_id on a node with two or more radios this averages two receivers on two bands, which describes neither; name a radio there.
      *
      * @tags Noise Floor
      * @name NoiseFloorStatsList
@@ -2004,6 +2260,8 @@ export class Api<
          * @default 24
          */
         hours?: number;
+        /** Summarise only samples read from this radio. */
+        radio_id?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -2011,10 +2269,16 @@ export class Api<
         {
           success?: boolean;
           data?: {
-            min?: number;
-            max?: number;
-            avg?: number;
-            current?: number;
+            stats?: {
+              measurement_count?: number;
+              avg_noise_floor?: number;
+              min_noise_floor?: number;
+              max_noise_floor?: number;
+              hours?: number;
+            };
+            hours?: number;
+            /** Echoed back only when the request named a radio. */
+            radio_id?: string;
           };
         },
         any
@@ -3021,6 +3285,20 @@ export class Api<
            */
           node_name?: string;
           /**
+           * Room-server flood advert interval in hours (0 = off)
+           * @min 0
+           * @max 168
+           * @example 6
+           */
+          flood_advert_interval_hours?: number;
+          /**
+           * Room-server additional advert interval in hours (0 = off)
+           * @min 0
+           * @max 168
+           * @example 2
+           */
+          direct_advert_interval_hours?: number;
+          /**
            * TCP listener port (companion only)
            * @min 1
            * @max 65535
@@ -3140,7 +3418,7 @@ export class Api<
         new_name?: string;
         /** New identity key (optional) */
         identity_key?: string;
-        /** Updated settings */
+        /** Updated settings (room server settings may include flood_advert_interval_hours and direct_advert_interval_hours) */
         settings?: object;
       },
       params: RequestParams = {},
@@ -3815,6 +4093,23 @@ export class Api<
         ...params,
       }),
   };
+  webFrontends = {
+    /**
+     * @description Returns built-in Repeater UI, openHop Console (if installed), and enabled application UI plugins that can be selected via web.web_path.
+     *
+     * @tags System
+     * @name WebFrontendsList
+     * @summary List selectable primary web frontends
+     * @request GET:/web_frontends
+     */
+    webFrontendsList: (params: RequestParams = {}) =>
+      this.request<object, any>({
+        path: `/web_frontends`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
   checkPymcConsole = {
     /**
      * No description
@@ -4079,6 +4374,52 @@ export class Api<
         ...params,
       }),
   };
+  radioPacketRates = {
+    /**
+     * @description Receptions and transmissions per radio per time bucket. A relayed packet is a reception on its ingress radio and a transmission on every radio that sent it, so a relay fanned out across a bridge counts once on each radio.
+     *
+     * @tags Charts
+     * @name RadioPacketRatesList
+     * @summary Get per-radio packet counts over time
+     * @request GET:/radio_packet_rates
+     */
+    radioPacketRatesList: (
+      query?: {
+        /**
+         * @min 1
+         * @max 168
+         * @default 24
+         */
+        hours?: number;
+        /**
+         * Bucket width. Defaults to 300 for windows up to 6 hours, else 3600.
+         * @min 60
+         * @max 86400
+         */
+        bucket_seconds?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            hours?: number;
+            bucket_seconds?: number;
+            radios?: RadioPacketRateSeries[];
+            unattributed_rx_count?: number;
+            unattributed_tx_count?: number;
+          };
+        },
+        any
+      >({
+        path: `/radio_packet_rates`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+  };
   airtimeChartData = {
     /**
      * No description
@@ -4094,18 +4435,58 @@ export class Api<
         end_timestamp?: number;
         /** @default 60 */
         bucket_seconds?: number;
-        /** @default 9 */
+        /**
+         * Fallback spreading factor. Ignored whenever the server can read its own radio profiles, which are authoritative and are never applied across two Fabric radios.
+         * @default 9
+         */
         sf?: number;
-        /** @default 62500 */
+        /**
+         * Fallback bandwidth in Hz. See `sf`.
+         * @default 62500
+         */
         bw_hz?: number;
-        /** @default 5 */
+        /**
+         * Fallback coding-rate denominator (5-8). See `sf`.
+         * @default 5
+         */
         cr?: number;
-        /** @default 17 */
+        /**
+         * Fallback preamble length in symbols. See `sf`.
+         * @default 17
+         */
         preamble?: number;
       },
       params: RequestParams = {},
     ) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            /** Width of each bucket in seconds. */
+            bucket_seconds?: number;
+            /** Combined series across every radio, retained for UI builds that predate `radios`. */
+            buckets?: AirtimeBucket[];
+            /** Reception events across every radio in the window. */
+            rx_total?: number;
+            /** Transmission events across every radio in the window. */
+            tx_total?: number;
+            /** One series per active radio, in configured order. A relayed packet appears as RX on its ingress radio and TX on every radio that successfully transmitted it. */
+            radios?: {
+              radio_id?: string;
+              /** Air settings this radio's time-on-air was computed with. A null field means the setting could not be read; airtime is reported as zero rather than estimated from a default that was never on the air. */
+              profile?: AirtimeRadioProfile;
+              buckets?: AirtimeBucket[];
+              rx_total?: number;
+              tx_total?: number;
+            }[];
+            /** Receptions on a multi-radio node whose radio could not be identified (history predating radio attribution, or a radio no longer configured). Never guessed onto another radio. */
+            unattributed_rx_count?: number;
+            /** Transmissions with no identifiable radio. See above. */
+            unattributed_tx_count?: number;
+          };
+        },
+        any
+      >({
         path: `/airtime_chart_data`,
         method: "GET",
         query: query,
@@ -4156,7 +4537,7 @@ export class Api<
   };
   crcErrorCount = {
     /**
-     * No description
+     * @description Total CRC errors in the window. radio_id narrows it to one radio's counter; errors recorded before per-radio sampling carry no radio id and are counted only by the unfiltered call.
      *
      * @tags System
      * @name CrcErrorCountList
@@ -4167,10 +4548,23 @@ export class Api<
       query?: {
         /** @default 24 */
         hours?: number;
+        /** Count only errors from this radio's counter. */
+        radio_id?: string;
       },
       params: RequestParams = {},
     ) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            crc_error_count?: number;
+            hours?: number;
+            /** Echoed back only when the request named a radio. */
+            radio_id?: string;
+          };
+        },
+        any
+      >({
         path: `/crc_error_count`,
         method: "GET",
         query: query,
@@ -4180,7 +4574,7 @@ export class Api<
   };
   crcErrorHistory = {
     /**
-     * No description
+     * @description CRC error batches in the window, oldest first. On a node with two or more radios every batch names the radio whose counter it came from.
      *
      * @tags System
      * @name CrcErrorHistoryList
@@ -4192,10 +4586,24 @@ export class Api<
         /** @default 24 */
         hours?: number;
         limit?: number;
+        /** Return only errors from this radio's counter. */
+        radio_id?: string;
       },
       params: RequestParams = {},
     ) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            history?: CrcErrorSample[];
+            hours?: number;
+            count?: number;
+            /** Echoed back only when the request named a radio. */
+            radio_id?: string;
+          };
+        },
+        any
+      >({
         path: `/crc_error_history`,
         method: "GET",
         query: query,
@@ -4982,6 +5390,605 @@ export class Api<
         secure: true,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+  };
+  plugins = {
+    /**
+     * @description List plugins installed by the local plugin manager. Returns 503 when the plugin manager process is not running.
+     *
+     * @tags Plugins
+     * @name PluginsList
+     * @summary List installed plugins
+     * @request GET:/plugins
+     * @secure
+     */
+    pluginsList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          plugins?: PluginStatus[];
+        },
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Fetch the curated openHop plugin catalogue and annotate entries with install state and the currently approved catalogue version. Failures contacting the R2 catalogue do not affect installed plugins.
+     *
+     * @tags Plugins
+     * @name CatalogueList
+     * @summary List curated plugin catalogue
+     * @request GET:/plugins/catalogue
+     */
+    catalogueList: (
+      query?: {
+        /** Force refresh of the catalogue cache */
+        refresh?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/catalogue`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * @description Download the exact GitHub Release wheel approved by the R2 catalogue version and SHA-256, verify its manifest, install it, and enable the plugin.
+     *
+     * @tags Plugins
+     * @name CatalogueInstallCreate
+     * @summary Install a plugin from the catalogue
+     * @request POST:/plugins/catalogue_install
+     */
+    catalogueInstallCreate: (
+      data: {
+        id: string;
+        /** Optional assertion of the currently approved version */
+        version?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/catalogue_install`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name UpdatesList
+     * @summary Check plugin update availability
+     * @request GET:/plugins/updates
+     */
+    updatesList: (
+      query: {
+        id: string;
+        refresh?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/updates`,
+        method: "GET",
+        query: query,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name UpdateCreate
+     * @summary Update an installed plugin to the approved catalogue version
+     * @request POST:/plugins/update
+     */
+    updateCreate: (
+      data: {
+        id: string;
+        version?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/update`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Server-sent events for a plugin's last catalogue install or update, as /update/progress streams the repeater's own updater. JSON events: `connected`, `line`, `status` (idle, running, complete, error), `keepalive`, and one `done` that ends the stream. Idle streams end after a minute. Uploaded wheels are not reported.
+     *
+     * @tags Plugins
+     * @name ProgressList
+     * @summary Stream an install or update's progress
+     * @request GET:/plugins/progress
+     * @secure
+     */
+    progressList: (
+      query: {
+        id: string;
+        /**
+         * Resume from this line index
+         * @default 0
+         */
+        since?: number;
+        /**
+         * Ignore a log already finished when the stream opens; wait for the next operation.
+         * @default false
+         */
+        fresh?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        string,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/progress`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * @description Read the opaque plugin-owned data/config.json object.
+     *
+     * @tags Plugins
+     * @name SettingsList
+     * @summary Get plugin config.json
+     * @request GET:/plugins/settings
+     * @secure
+     */
+    settingsList: (
+      query: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/settings`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * @description Replace plugin-owned data/config.json with a JSON object. Optional restart applies to enabled service plugins.
+     *
+     * @tags Plugins
+     * @name SettingsCreate
+     * @summary Set plugin config.json
+     * @request POST:/plugins/settings
+     * @secure
+     */
+    settingsCreate: (
+      data: {
+        id: string;
+        config: Record<string, any>;
+        /** @default false */
+        restart?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/settings`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * @description Read the plugin-owned data/runtime.json object.
+     *
+     * @tags Plugins
+     * @name RuntimeList
+     * @summary Get plugin runtime.json
+     * @request GET:/plugins/runtime
+     * @secure
+     */
+    runtimeList: (
+      query: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/runtime`,
+        method: "GET",
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * @description Install a Python wheel containing openhop-plugin.json into an isolated virtualenv. Accepts multipart field `wheel` or JSON `wheel_path`.
+     *
+     * @tags Plugins
+     * @name InstallCreate
+     * @summary Install a local plugin wheel
+     * @request POST:/plugins/install
+     * @secure
+     */
+    installCreate: (
+      data: {
+        /** @format binary */
+        wheel?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/install`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.FormData,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name EnableCreate
+     * @summary Enable a plugin
+     * @request POST:/plugins/enable
+     * @secure
+     */
+    enableCreate: (
+      data: {
+        /** @example "openhop.nomad" */
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/enable`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name DisableCreate
+     * @summary Disable a plugin
+     * @request POST:/plugins/disable
+     * @secure
+     */
+    disableCreate: (
+      data: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/disable`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name StartCreate
+     * @summary Start a plugin process
+     * @request POST:/plugins/start
+     * @secure
+     */
+    startCreate: (
+      data: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/start`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name StopCreate
+     * @summary Stop a plugin process
+     * @request POST:/plugins/stop
+     * @secure
+     */
+    stopCreate: (
+      data: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/stop`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name RestartCreate
+     * @summary Restart a plugin process
+     * @request POST:/plugins/restart
+     * @secure
+     */
+    restartCreate: (
+      data: {
+        id: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/restart`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name LogsList
+     * @summary Tail plugin logs
+     * @request GET:/plugins/logs
+     * @secure
+     */
+    logsList: (
+      query: {
+        id: string;
+        /** @default 200 */
+        tail?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          id?: string;
+          lines?: string[];
+        },
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/logs`,
+        method: "GET",
+        query: query,
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Stops the plugin and removes release code. Keeps data/ unless delete_data is true.
+     *
+     * @tags Plugins
+     * @name UninstallCreate
+     * @summary Uninstall a plugin
+     * @request POST:/plugins/uninstall
+     * @secure
+     */
+    uninstallCreate: (
+      data: {
+        id: string;
+        /** @default false */
+        delete_data?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/uninstall`,
+        method: "POST",
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name PluginsDetail
+     * @summary Get plugin status
+     * @request GET:/plugins/{id}
+     * @secure
+     */
+    pluginsDetail: (id: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        } & PluginStatus,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/${id}`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Plugins
+     * @name PluginsDelete
+     * @summary Uninstall plugin by id
+     * @request DELETE:/plugins/{id}
+     * @secure
+     */
+    pluginsDelete: (
+      id: string,
+      query?: {
+        /** @default false */
+        delete_data?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        void,
+        void | {
+          success: false;
+          error: string;
+          outcome: "unknown";
+        }
+      >({
+        path: `/plugins/${id}`,
+        method: "DELETE",
+        query: query,
+        secure: true,
         ...params,
       }),
   };

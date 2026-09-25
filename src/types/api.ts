@@ -110,6 +110,27 @@ export interface NeighborLinkLive {
   best_score: number;
   /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   worst_score: number;
+  /** Per receiving radio; present only on a node with two or more radios. */
+  radios?: NeighborLinkRadioStats[];
+}
+
+/** One neighbour as heard by one radio of a multi-radio node. */
+export interface NeighborLinkRadioStats {
+  radio_id: string;
+  sample_count: number;
+  duplicate_sample_count: number;
+  first_seen: number;
+  last_seen: number;
+  age_seconds: number;
+  active: boolean;
+  last_rssi: number;
+  last_snr: number;
+  last_score: number;
+  ewma_rssi: number;
+  ewma_snr: number;
+  ewma_score: number;
+  best_score: number;
+  worst_score: number;
 }
 
 export interface NeighborLinksPayload {
@@ -129,6 +150,8 @@ export interface NeighborLinkHistoryPoint {
   packet_type: number;
   route_type: number;
   path_hop_count: number | null;
+  /** Radio that heard it; absent when not recorded. */
+  rx_radio_id?: string;
 }
 
 export interface NeighborLinkHistoryPayload {
@@ -144,6 +167,8 @@ export interface NeighborLinkHistoryPayload {
 export interface NoiseFloorHistory {
   timestamp: number;
   noise_floor_dbm: number;
+  /** Present only on a node with two or more radios; null means unattributed. */
+  radio_id?: string | null;
 }
 
 export interface NoiseFloorStats {
@@ -181,6 +206,8 @@ export interface SystemStats {
   modem_disconnected?: string[];
   last_packet_time?: number;
   noise_floor_dbm?: number;
+  /** The other radios' latest samples; present only on a node with two or more. */
+  noise_floor_radios?: Array<{ radio_id: string; noise_floor_dbm: number }>;
   utilization_percent?: number;
   /** Carried by the WS vitals broadcast; over HTTP the mode lives in config. */
   mode?: 'forward' | 'monitor' | 'no_tx';

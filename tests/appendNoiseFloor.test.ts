@@ -41,6 +41,23 @@ describe('appendNoiseFloorReading', () => {
     expect(store.noiseFloorHistory).toHaveLength(2)
   })
 
+  it('does not duplicate a radio reading that another radio was appended after', async () => {
+    const store = await getStore()
+    store.appendNoiseFloorReading(-118, 'local')
+    store.appendNoiseFloorReading(-101, 'link')
+    // A history poll lands and re-offers local's reading. Checking only the
+    // final row would compare it against link's and append a duplicate.
+    store.appendNoiseFloorReading(-118, 'local')
+    expect(store.noiseFloorHistory).toHaveLength(2)
+  })
+
+  it('keeps each radio on its own series', async () => {
+    const store = await getStore()
+    store.appendNoiseFloorReading(-118, 'local')
+    store.appendNoiseFloorReading(-118, 'link')
+    expect(store.noiseFloorHistory.map((p) => p.radio_id)).toEqual(['local', 'link'])
+  })
+
   it('sets a unix timestamp in seconds', async () => {
     const before = Math.floor(Date.now() / 1000)
     const store = await getStore()

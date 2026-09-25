@@ -37,7 +37,10 @@ const {
   activeHardware,
   defaultRadioId,
   txMode,
+  repeatOnIngress,
+  originTx,
   fabric,
+  radioStack,
   radios,
   selectRadio,
   ensureSelection,
@@ -156,6 +159,8 @@ const ch341Address = ref<number | null>(null);
 const ch341Serial = ref('');
 const fabricDefaultRadio = ref('');
 const fabricTxMode = ref<'default' | 'sticky' | 'bridge'>('default');
+const fabricRepeatOnIngress = ref(false);
+const fabricOriginTx = ref<'default' | 'all'>('default');
 const newRadioId = ref('');
 const multiRadioBusy = ref(false);
 
@@ -187,6 +192,62 @@ const workingRadioOptions = computed(() => {
     };
   });
 });
+
+/**
+ * Fan-out gating, mirroring _validate_fabric_fanout in repeater/config.py.
+ *
+ * Both options are only defined for an exactly-two-radio Fabric: repeat_on_ingress
+ * extends the deterministic A<->B bridge, and origin_tx: all sends once per radio.
+ * The daemon refuses to start on a combination it cannot honour, so the form
+ * blocks it here rather than letting a save take the node down at next restart.
+ */
+const fanoutRadioCount = computed(() => workingRadios.value.length);
+
+const repeatOnIngressBlockedReason = computed(() => {
+  if (fabricTxMode.value !== 'bridge') return 'Requires fabric TX mode “bridge”.';
+  if (fanoutRadioCount.value !== 2) {
+    return `Requires exactly two radios (this node has ${fanoutRadioCount.value}).`;
+  }
+  return '';
+});
+
+const originTxAllBlockedReason = computed(() =>
+  fanoutRadioCount.value === 2
+    ? ''
+    : `“All radios” requires exactly two radios (this node has ${fanoutRadioCount.value}).`,
+);
+
+const canRepeatOnIngress = computed(() => repeatOnIngressBlockedReason.value === '');
+const canOriginTxAll = computed(() => originTxAllBlockedReason.value === '');
+
+/**
+ * Saved fan-out that the running stack is not using yet.
+ *
+ * Both options are read once, when build_radio_stack assembles the radios, so a
+ * save is inert until restart. /stats.radio_stack reports what the daemon
+ * actually built, which is a firmer answer than "you just saved something".
+ * Older daemons omit the keys; say nothing rather than guess.
+ */
+const fanoutPendingRestart = computed(() => {
+  if (hasUnsavedMultiRadioDraft.value || isEditing.value) return false;
+  const live = radioStack.value || {};
+  if (live.repeat_on_ingress === undefined && live.origin_tx === undefined) return false;
+  return (
+    live.repeat_on_ingress !== repeatOnIngress.value ||
+    String(live.origin_tx ?? 'default') !== originTx.value
+  );
+});
+
+/** Drop any fan-out selection the current mode and radio count cannot carry. */
+function clampFanoutToLegal() {
+  if (!canRepeatOnIngress.value) fabricRepeatOnIngress.value = false;
+  if (!canOriginTxAll.value) fabricOriginTx.value = 'default';
+}
+
+// Leaving bridge mode (or dropping to one radio) strips the meaning from
+// repeat_on_ingress, so clear it instead of leaving a checked box that would be
+// rejected on save.
+watch([fabricTxMode, fanoutRadioCount], clampFanoutToLegal);
 
 const workingSelectedId = computed(() => {
   if (!showMultiRadioChrome.value) return '';
@@ -499,6 +560,14 @@ function loadFabricForm() {
   fabricDefaultRadio.value = defaultRadioId.value || '';
   const mode = String(txMode.value || 'default');
   fabricTxMode.value = mode === 'sticky' || mode === 'bridge' ? mode : 'default';
+  fabricRepeatOnIngress.value = repeatOnIngress.value;
+  fabricOriginTx.value = originTx.value;
+  // Clamp here, not only in the legality watcher. A config written before the
+  // fan-out rules were enforced can be illegal on arrival -- two radios,
+  // tx_mode: default, repeat_on_ingress: true -- and neither watch source
+  // changes during that hydration, so the watcher never runs. Without this the
+  // form would show a checked *and* disabled box, then silently save it off.
+  clampFanoutToLegal();
 }
 
 function sectionsFromEntry(entry: Record<string, unknown> | null) {
@@ -887,16 +956,39 @@ function nextUniqueRadioId(preferred = 'link'): string {
   return `${preferred}${i}`;
 }
 
+/**
+ * The stored fabric section minus local_tx_mode.
+ *
+ * local_tx_mode is origin_tx's former name, and the backend rejects a config
+ * that sets both to different modes. Carrying a stale one forward beside a
+ * fresh origin_tx is exactly that config, so it is dropped on the way out.
+ */
+function carriedFabric(): Record<string, unknown> {
+  const carried: Record<string, unknown> = { ...(fabric.value || {}) };
+  delete carried.local_tx_mode;
+  return carried;
+}
+
 function buildFabricPayload(nextRadios: Array<Record<string, unknown>>, mode?: string) {
   const ids = nextRadios.map((r) => String(r.id || '')).filter(Boolean);
   const preferred =
     fabricDefaultRadio.value && ids.includes(fabricDefaultRadio.value)
       ? fabricDefaultRadio.value
       : ids[0] || 'radio0';
+  // Named nextTxMode, not txMode: that name is the composable's saved-state
+  // computed in this file's scope.
+  const nextTxMode = (mode || fabricTxMode.value || 'default') as 'default' | 'sticky' | 'bridge';
+  const twoRadios = ids.length === 2;
+
   return {
-    ...(fabric.value || {}),
+    ...carriedFabric(),
     default_radio: preferred,
-    tx_mode: (mode || fabricTxMode.value || 'default') as 'default' | 'sticky' | 'bridge',
+    tx_mode: nextTxMode,
+    // Re-derive from the payload's own radio list rather than the form's
+    // gating: a save that adds or removes a radio changes what is legal in the
+    // same request that writes it.
+    repeat_on_ingress: fabricRepeatOnIngress.value && nextTxMode === 'bridge' && twoRadios,
+    origin_tx: fabricOriginTx.value === 'all' && twoRadios ? 'all' : 'default',
   };
 }
 
@@ -1373,7 +1465,13 @@ async function saveChanges(): Promise<boolean> {
   try {
     // Staged disable multi-radio (draftRadios === []).
     if (draftRadios.value && draftRadios.value.length === 0) {
-      const ok = await persistImportBody({ radios: null });
+      // Clearing radios leaves the fan-out options describing a fabric that no
+      // longer exists, and the backend rejects a one-radio node that still asks
+      // to repeat on ingress. Drop them with the radios they belonged to.
+      const ok = await persistImportBody({
+        radios: null,
+        fabric: { ...carriedFabric(), repeat_on_ingress: false, origin_tx: 'default' },
+      });
       return ok;
     }
 
@@ -1636,6 +1734,9 @@ watch(
             </template>
             <template v-else-if="isMultiRadio">
               Managing {{ radios.length }} radios[] entries. Hardware fields below apply to the selected radio.
+              <span v-if="fanoutPendingRestart" class="block mt-1 text-accent-amber">
+                Saved fan-out settings are not live yet — restart to apply them.
+              </span>
             </template>
             <template v-else>
               Single-radio mode. Enable multi-radio to draft a second radio, configure its pins, then save once.
@@ -1772,6 +1873,55 @@ watch(
               <option value="bridge">bridge — TX on the other radio</option>
             </select>
             <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ txMode }}</span>
+          </label>
+        </div>
+
+        <!-- Fan-out: only meaningful on an exactly-two-radio bridge -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+            RF relay fan-out
+            <template v-if="isEditing || isDraftingMultiRadio">
+              <label
+                class="flex items-center gap-2 mt-1"
+                :class="canRepeatOnIngress ? 'text-content-primary' : 'text-content-muted'"
+              >
+                <input
+                  v-model="fabricRepeatOnIngress"
+                  type="checkbox"
+                  :disabled="!canRepeatOnIngress"
+                />
+                Repeat on ingress
+              </label>
+              <p class="text-[11px] mt-1">
+                <span v-if="!canRepeatOnIngress" class="text-content-muted">
+                  {{ repeatOnIngressBlockedReason }}
+                </span>
+                <span v-else class="text-content-muted">
+                  RX local → TX link + local, RX link → TX local + link. The bridge radio
+                  is always attempted first.
+                </span>
+              </p>
+            </template>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">
+              {{ repeatOnIngress ? 'on' : 'off' }}
+            </span>
+          </div>
+          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+            Originated traffic TX
+            <template v-if="isEditing || isDraftingMultiRadio">
+              <select v-model="fabricOriginTx" class="cfg-select mt-1">
+                <option value="default">default — follow default radio / TX mode</option>
+                <option value="all" :disabled="!canOriginTxAll">all — send on every radio</option>
+              </select>
+              <p class="text-[11px] text-content-muted mt-1">
+                <span v-if="!canOriginTxAll">{{ originTxAllBlockedReason }}</span>
+                <span v-else>
+                  Applies to packets this node originates — adverts, room servers, companion
+                  and protocol replies — which have no ingress radio to route by.
+                </span>
+              </p>
+            </template>
+            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ originTx }}</span>
           </label>
         </div>
 

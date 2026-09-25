@@ -71,6 +71,19 @@ export const useSystemStore = defineStore('system', () => {
   const version = computed(() => stats.value?.version ?? 'Unknown');
   const coreVersion = computed(() => stats.value?.core_version ?? 'Unknown');
   const noiseFloorDbm = computed(() => stats.value?.noise_floor_dbm ?? null);
+  // Radio id -> latest sample. Empty on a single-radio node, where the scalar
+  // above is the whole story.
+  const noiseFloorByRadio = computed<Record<string, number>>(() => {
+    const rows = stats.value?.noise_floor_radios;
+    if (!Array.isArray(rows)) return {};
+    const out: Record<string, number> = {};
+    for (const row of rows) {
+      if (row && typeof row.radio_id === 'string' && typeof row.noise_floor_dbm === 'number') {
+        out[row.radio_id] = row.noise_floor_dbm;
+      }
+    }
+    return out;
+  });
   const dutyCyclePercentage = computed(() =>
     dutyCycleMax.value > 0
       ? Math.min((dutyCycleUtilization.value / dutyCycleMax.value) * 100, 100)
@@ -384,6 +397,7 @@ export const useSystemStore = defineStore('system', () => {
     version,
     coreVersion,
     noiseFloorDbm,
+    noiseFloorByRadio,
     dutyCyclePercentage,
     statusBadge,
     modeButtonState,

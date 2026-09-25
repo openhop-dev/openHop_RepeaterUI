@@ -1,651 +1,265 @@
 <script lang="ts">
+import type { RadioPanelData } from '@/composables/useAirtimeSeries';
+
 // Module-level cache — survives page navigation, outlives component instances.
-// Keyed on fetch time so stale data is never shown after the TTL expires.
+// Keyed on the radio profiles and window it was computed for, not just fetch
+// time, so retuning a radio invalidates it before the data TTL expires.
 let _airtimeCache: {
-  data: Array<{ timestamp: number; rxUtil: number; txUtil: number }>;
-  yAxisMax: number;
+  panels: RadioPanelData[];
+  localStats: { totalReceived: number; totalTransmitted: number; firstPacketTime: number };
+  signature: string;
+  windowKey: string;
+  unattributedRx: number;
+  unattributedTx: number;
   fetchedAt: number;
 } | null = null;
 const AIRTIME_CACHE_TTL_MS = 120_000; // 2 minutes — matches 60-second bucket resolution
+
+/** Test seam: drop the module cache between cases. */
+export function __resetAirtimeCache() {
+  _airtimeCache = null;
+}
 </script>
 
 <script setup lang="ts">
 /**
  * AirtimeUtilizationChart.vue
  *
- * Displays RX/TX airtime utilization as a percentage over 24 hours.
- * Uses proper LoRa airtime calculation (Semtech formula) for accurate
- * channel utilization metrics.
+ * RX/TX airtime utilization over 24 hours, as a percentage of wall time.
  *
- * Ported from openHop console recharts implementation.
- *
- * @see https://www.semtech.com/design-support/lora-calculator
+ * The repeater attributes each stored packet to the radio that carried it and
+ * computes time-on-air with that radio's own LoRa profile, so a two-radio
+ * Fabric bridge gets one panel per radio rather than one line that describes
+ * neither. This component owns fetching and shaping; RadioAirtimePanel draws.
+ * Every panel shares one bucket grid, one EMA half-life and one Y-axis maximum
+ * so the two sides can be compared by eye.
  */
 import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from 'vue';
 import { streamingGet } from '@/utils/streamingFetch';
 import { usePacketStore } from '@/stores/packets';
+import { useRadioProfiles } from '@/composables/useRadioProfiles';
 import { useSystemStore } from '@/stores/system';
-import ChartCard from '@/components/ui/ChartCard.vue';
+import RadioAirtimePanel from '@/components/charts/RadioAirtimePanel.vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
+import {
+  formatFrequency,
+  formatModulation,
+  formatModulationDetail,
+  profileSignature,
+  toRadioPanels,
+  type AirtimeChartPayload,
+  type SeriesGrid,
+} from '@/composables/useAirtimeSeries';
 
 defineOptions({ name: 'AirtimeUtilizationChart' });
 
-const cssVar = (name: string, fallback: string): string => {
-  if (typeof window === 'undefined') return fallback;
-  return window.getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-};
-
-// Chart palette — fixed vibrant colours, same in both light and dark mode.
-const CHART_COLORS = {
-  rx: cssVar('--color-secondary', 'violet'),
-  tx: cssVar('--color-accent-red', 'tomato'),
-} as const;
-
-// Theme-aware chrome colours (grid lines, axis labels).
-const getChartChrome = () => {
-  return {
-    gridLine: cssVar('--color-border-subtle', 'lightgray'),
-    axisLabel: cssVar('--color-text-muted', 'gray'),
-  };
-};
-
-// ============================================================================
-// Stores
-// ============================================================================
+const WINDOW_HOURS = 24;
+const BUCKET_SECONDS = 60; // 1,440 server-side buckets vs 50,000 raw rows
 
 const packetStore = usePacketStore();
 const systemStore = useSystemStore();
+const { profiles: configProfiles } = useRadioProfiles();
 
-// ============================================================================
-// Types
-// ============================================================================
-
-interface UtilSample {
-  timestamp: number; // Unix timestamp (seconds)
-  rxUtil: number; // RX utilization percentage for this bucket
-  txUtil: number; // TX utilization percentage for this bucket
-}
-
-interface Packet {
-  timestamp: number;
-  length?: number;
-  payload_length?: number;
-  transmitted: boolean | number;
-  packet_origin?: string;
-  // Pre-calculated airtime from backend (when available)
-  airtime_ms?: number;
-}
-
-interface RadioConfig {
-  sf: number; // Spreading factor (7-12)
-  bwHz: number; // Bandwidth in Hz
-  cr: number; // Coding rate (5-8)
-  preamble: number; // Preamble length
-}
-
-// ============================================================================
-// State
-// ============================================================================
-
-const chartRef = ref<HTMLCanvasElement | null>(null);
-const chartData = ref<UtilSample[]>([]);
-const isLoading = ref(false);
+const panels = ref<RadioPanelData[]>([]);
 const isInitialFetch = ref(true);
 const isRefreshing = ref(false);
 const isFetching = ref(false);
 const chartError = ref<string | null>(null);
 const chartStatus = ref('Connecting...');
+const unattributedRx = ref(0);
+const unattributedTx = ref(0);
 
-/** Dynamic Y-axis maximum (computed from data with headroom) */
-const yAxisMax = ref(30);
+/** Totals from the fetched window, used when the stores are empty (dev mode). */
+const localStats = ref({ totalReceived: 0, totalTransmitted: 0, firstPacketTime: 0 });
 
-/** Local stats computed from fetched packets (for standalone/dev mode) */
-const localStats = ref({
-  totalReceived: 0,
-  totalTransmitted: 0,
-  dropped: 0,
-  firstPacketTime: 0,
-});
+const isMultiPanel = computed(() => panels.value.length > 1);
 
-/** Radio configuration for airtime calculation */
-const radioConfig = ref<RadioConfig>({
-  sf: 9,
-  bwHz: 62500,
-  cr: 5,
-  preamble: 17,
-});
+const windowKey = computed(() => `${WINDOW_HOURS}h/${BUCKET_SECONDS}s`);
 
-/** Tracks whether the previous successful fetch used fallback radio defaults. */
-const lastFetchRadioSignature = ref<string | null>(null);
+/** False until /stats gives us something to compare a cached signature against. */
+const hasKnownProfiles = computed(() =>
+  configProfiles.value.some((entry) => entry.profile?.spreading_factor != null),
+);
 
-const radioSignature = computed(() => {
-  const radio = systemStore.stats?.config?.radio as Record<string, number> | undefined;
-  if (!radio) return null;
-
-  const sf = radio.spreading_factor;
-  const bwHz = radio.bandwidth;
-  const cr = radio.coding_rate;
-  const preamble = radio.preamble_length;
-
-  if ([sf, bwHz, cr, preamble].some((v) => typeof v !== 'number')) return null;
-  return `${sf}:${bwHz}:${cr}:${preamble}`;
-});
-
-// ============================================================================
-// LoRa Airtime Calculation
-// ============================================================================
-
-/**
- * Calculate LoRa packet airtime using the Semtech formula.
- * This is used as a fallback when airtime_ms is not pre-calculated by backend.
- *
- * Key formulas:
- * - Symbol time: T_sym = 2^SF / BW
- * - Preamble time: T_preamble = (n_preamble + 4.25) * T_sym
- * - Payload symbols: 8 + ceil((8*PL - 4*SF + 28 + 16*CRC - 20*H) / (4*(SF-2*DE))) * CR
- * - Total time: T_packet = T_preamble + n_payload * T_sym
- *
- * @param payloadBytes - Payload length in bytes
- * @returns Airtime in milliseconds
- */
-const calculateAirtimeMs = (payloadBytes: number): number => {
-  const { sf, bwHz, cr, preamble } = radioConfig.value;
-  const crc = 1; // CRC enabled
-  const h = 0; // Explicit header mode
-  const de = sf >= 11 && bwHz <= 125000 ? 1 : 0; // Low data rate optimize
-
-  const bwKhz = bwHz / 1000;
-  const tSym = Math.pow(2, sf) / bwKhz; // Symbol time in ms
-  const tPreamble = (preamble + 4.25) * tSym;
-
-  const numerator = Math.max(8 * payloadBytes - 4 * sf + 28 + 16 * crc - 20 * h, 0);
-  const denominator = 4 * (sf - 2 * de);
-  const nPayload = 8 + Math.ceil(numerator / denominator) * cr;
-  const tPayload = nPayload * tSym;
-
-  return tPreamble + tPayload;
-};
-
-/**
- * Get airtime for a packet, using pre-calculated backend value when available.
- *
- * Strategy:
- * 1. If packet has airtime_ms from backend, use it (most accurate, zero CPU cost)
- * 2. Otherwise, calculate client-side using Semtech formula (fallback for legacy packets)
- *
- * @param pkt - Packet with optional airtime_ms and length fields
- * @returns Airtime in milliseconds
- */
-const getPacketAirtime = (pkt: Packet): number => {
-  // Prefer pre-calculated backend value (zero CPU cost, always accurate)
-  if (pkt.airtime_ms !== undefined && pkt.airtime_ms > 0) {
-    return pkt.airtime_ms;
-  }
-
-  // Fallback: calculate client-side for legacy packets
-  const len = pkt.length ?? pkt.payload_length ?? 32;
-  return calculateAirtimeMs(len);
-};
-
-// ============================================================================
-// EMA Smoothing
-// ============================================================================
-
-/**
- * Apply Exponential Moving Average (EMA) smoothing to utilization samples.
- *
- * EMA provides smooth trend lines while still responding to changes.
- * Formula: EMA_t = α * value_t + (1 - α) * EMA_(t-1)
- *
- * @param samples - Raw utilization samples
- * @param halfLifeSamples - Number of samples for value to decay by half
- * @returns Smoothed samples
- */
-const applyEmaSmoothing = (samples: UtilSample[], halfLifeSamples = 60): UtilSample[] => {
-  if (samples.length === 0) return [];
-
-  const alpha = 1 - Math.pow(0.5, 1 / halfLifeSamples);
-
-  // Initialize EMA with average of first N samples to avoid cold-start bias
-  const initWindow = Math.min(samples.length, Math.max(10, Math.floor(halfLifeSamples / 3)));
-  let rxEma = 0;
-  let txEma = 0;
-  for (let i = 0; i < initWindow; i++) {
-    rxEma += samples[i].rxUtil;
-    txEma += samples[i].txUtil;
-  }
-  rxEma /= initWindow;
-  txEma /= initWindow;
-
-  return samples.map((s) => {
-    rxEma = alpha * s.rxUtil + (1 - alpha) * rxEma;
-    txEma = alpha * s.txUtil + (1 - alpha) * txEma;
-    return { ...s, rxUtil: rxEma, txUtil: txEma };
-  });
-};
-
-// ============================================================================
-// Computed Properties
-// ============================================================================
-
-/**
- * Uptime-aware rate calculations.
- * Adapts labels and confidence based on system uptime.
- * Falls back to local stats when stores are empty (dev/standalone mode).
- */
-const uptimeBasedRates = computed(() => {
-  // Prefer store stats, fallback to local stats from fetched packets
-  const storeRx = packetStore.packetStats?.total_packets || 0;
-  const storeTx = packetStore.packetStats?.transmitted_packets || 0;
-  const storeUptime = systemStore.stats?.uptime_seconds || 0;
-
-  const totalRx = storeRx || localStats.value.totalReceived;
-  const totalTx = storeTx || localStats.value.totalTransmitted;
-
-  // Estimate uptime from packet data range if store uptime unavailable
-  const estimatedUptime =
-    localStats.value.firstPacketTime > 0
-      ? Math.floor(Date.now() / 1000) - localStats.value.firstPacketTime
-      : 0;
-  const uptimeSeconds = storeUptime || estimatedUptime;
-
-  const uptimeHours = Math.max(uptimeSeconds / 3600, 0.1);
-  const showMinuteRates = uptimeHours < 1;
-
-  if (showMinuteRates) {
-    const uptimeMinutes = Math.max(uptimeSeconds / 60, 1);
-    return {
-      rxRate: {
-        value: Math.round((totalRx / uptimeMinutes) * 100) / 100,
-        label: uptimeHours < 0.5 ? 'RX/min (early)' : 'RX/min',
-      },
-      txRate: {
-        value: Math.round((totalTx / uptimeMinutes) * 100) / 100,
-        label: uptimeHours < 0.5 ? 'TX/min (early)' : 'TX/min',
-      },
-      confidence: 'low' as const,
-    };
-  }
-
-  const rxPerHour = Math.round((totalRx / uptimeHours) * 100) / 100;
-  const txPerHour = Math.round((totalTx / uptimeHours) * 100) / 100;
-
-  let label: string;
-  let confidence: 'low' | 'medium' | 'high';
-
-  if (uptimeHours < 6) {
-    label = `RX/hr (${Math.round(uptimeHours)}h)`;
-    confidence = 'medium';
-  } else if (uptimeHours < 24) {
-    label = `RX/hr (${Math.round(uptimeHours)}h)`;
-    confidence = 'high';
-  } else {
-    label = 'RX/hr';
-    confidence = 'high';
-  }
-
-  return {
-    rxRate: { value: rxPerHour, label },
-    txRate: { value: txPerHour, label: label.replace('RX', 'TX') },
-    confidence,
-  };
-});
-
-// ============================================================================
-// Data Fetching
-// ============================================================================
-
-/**
- * Fetch packets and compute bucketed airtime utilization.
- *
- * Process:
- * 1. Fetch radio config for accurate airtime calculation
- * 2. Fetch all packets for the time range
- * 3. Bucket packets into 10-second intervals
- * 4. Calculate airtime per bucket using Semtech formula
- * 5. Convert to utilization percentage
- * 6. Apply EMA smoothing for trend visualization
- * 7. Downsample for efficient rendering
- */
 const fetchChartData = async () => {
-  if (isFetching.value) return;
-
-  isFetching.value = true;
-  isLoading.value = true;
   chartStatus.value = 'Connecting...';
   chartError.value = null;
   if (!isInitialFetch.value) isRefreshing.value = true;
 
   try {
-    const hours = 24;
-    const bucketSeconds = 60; // server-side aggregation into 60-second buckets (1,440 max vs 50,000 raw)
-    const bucketMs = bucketSeconds * 1000;
-
     const endTime = Math.floor(Date.now() / 1000);
-    const startTime = endTime - hours * 3600;
+    // Align the window to the server's bucket grid (buckets are floored to a
+    // multiple of bucket_seconds). Off-grid, every bucket lands in the slot
+    // before its own and the first partial bucket indexes out of the array.
+    const startTime = Math.floor((endTime - WINDOW_HOURS * 3600) / BUCKET_SECONDS) * BUCKET_SECONDS;
+    const grid: SeriesGrid = {
+      startTime,
+      bucketSeconds: BUCKET_SECONDS,
+      bucketCount: (WINDOW_HOURS * 3600) / BUCKET_SECONDS + 1,
+    };
 
-    // Read radio config from system store (populated during bootstrap — avoids an extra /stats round-trip)
-    const radio = systemStore.stats?.config?.radio as Record<string, number> | undefined;
-    const hasRadioConfig = Boolean(
-      radio &&
-        typeof radio.spreading_factor === 'number' &&
-        typeof radio.bandwidth === 'number' &&
-        typeof radio.coding_rate === 'number' &&
-        typeof radio.preamble_length === 'number',
+    // Sent only so a backend that predates per-radio profiles still has a
+    // modulation to work from. A newer backend ignores these.
+    const fallbackProfile = configProfiles.value[0]?.profile ?? null;
+
+    const chartRes = await streamingGet<AirtimeChartPayload>(
+      '/airtime_chart_data',
+      {
+        start_timestamp: startTime,
+        end_timestamp: endTime,
+        bucket_seconds: BUCKET_SECONDS,
+        sf: fallbackProfile?.spreading_factor ?? 9,
+        bw_hz: fallbackProfile?.bandwidth_hz ?? 62500,
+        cr: fallbackProfile?.coding_rate ?? 5,
+        preamble: fallbackProfile?.preamble_length ?? 17,
+      },
+      {
+        onPhaseChange: (phase) => {
+          chartStatus.value = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
+        },
+      },
     );
 
-    if (hasRadioConfig && radio) {
-      radioConfig.value = {
-        sf: radio.spreading_factor ?? 9,
-        bwHz: radio.bandwidth ?? 62500,
-        cr: radio.coding_rate ?? 5,
-        preamble: radio.preamble_length ?? 17,
-      };
-    }
-
-    const fetchRadioSignature = hasRadioConfig
-      ? `${radioConfig.value.sf}:${radioConfig.value.bwHz}:${radioConfig.value.cr}:${radioConfig.value.preamble}`
-      : 'fallback';
-
-    // Fetch pre-aggregated buckets from server (rx_ms/tx_ms per bucket_seconds interval)
-    const chartRes = await streamingGet('/airtime_chart_data', {
-      start_timestamp: startTime,
-      end_timestamp: endTime,
-      bucket_seconds: bucketSeconds,
-      sf: radioConfig.value.sf,
-      bw_hz: radioConfig.value.bwHz,
-      cr: radioConfig.value.cr,
-      preamble: radioConfig.value.preamble,
-    }, {
-      onPhaseChange: (phase) => {
-        chartStatus.value = phase === 'receiving' ? 'Receiving data...' : 'Connecting...';
-      },
-    });
     if (!chartRes.success) {
-      chartData.value = [];
-      isLoading.value = false;
-      isInitialFetch.value = false;
-      isRefreshing.value = false;
-      nextTick(() => drawChart());
-      return;
+      throw new Error(chartRes.error || 'Failed to load airtime data');
     }
 
-    const payload = chartRes.data as {
-      buckets: { timestamp: number; rx_ms: number; tx_ms: number; rx_count: number; tx_count: number }[];
-      bucket_seconds: number;
-      rx_total: number;
-      tx_total: number;
-    };
-    const buckets = payload.buckets || [];
+    const payload = chartRes.data as AirtimeChartPayload;
+    const fallback = configProfiles.value[0] ?? { radioId: 'radio0', profile: null };
+    const nextPanels = toRadioPanels(payload, grid, fallback);
 
-    // Update local stats from totals
+    panels.value = nextPanels;
+    unattributedRx.value = payload?.unattributed_rx_count ?? 0;
+    unattributedTx.value = payload?.unattributed_tx_count ?? 0;
     localStats.value = {
-      totalReceived: payload.rx_total || 0,
-      totalTransmitted: payload.tx_total || 0,
-      dropped: packetStore.packetStats?.dropped_packets ?? 0,
-      firstPacketTime: buckets.length > 0 ? buckets[0].timestamp : endTime,
+      totalReceived: payload?.rx_total ?? 0,
+      totalTransmitted: payload?.tx_total ?? 0,
+      firstPacketTime: payload?.buckets?.length ? payload.buckets[0].timestamp : endTime,
     };
 
-    // Convert pre-aggregated buckets directly to utilization samples
-    // Fill a dense array covering the full time range (gaps = 0% utilization)
-    const bucketCount = (hours * 3600) / bucketSeconds;
-    const rxUtil = new Float64Array(bucketCount);
-    const txUtil = new Float64Array(bucketCount);
+    _airtimeCache = {
+      panels: nextPanels,
+      localStats: localStats.value,
+      signature: profileSignature(nextPanels),
+      windowKey: windowKey.value,
+      unattributedRx: unattributedRx.value,
+      unattributedTx: unattributedTx.value,
+      fetchedAt: Date.now(),
+    };
 
-    for (const b of buckets) {
-      const idx = Math.floor((b.timestamp - startTime) / bucketSeconds);
-      if (idx >= 0 && idx < bucketCount) {
-        rxUtil[idx] = (b.rx_ms / bucketMs) * 100;
-        txUtil[idx] = (b.tx_ms / bucketMs) * 100;
-      }
-    }
-
-    const rawSamples: UtilSample[] = [];
-    for (let i = 0; i < bucketCount; i++) {
-      rawSamples.push({
-        timestamp: startTime + i * bucketSeconds,
-        rxUtil: rxUtil[i],
-        txUtil: txUtil[i],
-      });
-    }
-
-    // Apply EMA smoothing (half-life of 10 samples = 10 minutes at 60s buckets)
-    const smoothedSamples = applyEmaSmoothing(rawSamples, 10);
-
-    // Downsample to ~400 points for efficient rendering
-    const step = Math.max(1, Math.floor(smoothedSamples.length / 400));
-    const downsampled: UtilSample[] = [];
-
-    for (let i = 0; i < smoothedSamples.length; i += step) {
-      let sumRx = 0,
-        sumTx = 0,
-        count = 0;
-      const ts = smoothedSamples[i].timestamp;
-
-      for (let j = i; j < Math.min(i + step, smoothedSamples.length); j++) {
-        sumRx += smoothedSamples[j].rxUtil;
-        sumTx += smoothedSamples[j].txUtil;
-        count++;
-      }
-
-      downsampled.push({
-        timestamp: ts,
-        rxUtil: sumRx / count,
-        txUtil: sumTx / count,
-      });
-    }
-
-    chartData.value = downsampled;
-
-    // Calculate dynamic Y-axis max with 5% headroom, rounded to nearest 5%
-    const maxInData = Math.max(...downsampled.flatMap((d) => [d.rxUtil, d.txUtil]));
-    const withHeadroom = maxInData * 1.05;
-    yAxisMax.value = Math.max(5, Math.ceil(withHeadroom / 5) * 5);
-
-    _airtimeCache = { data: downsampled, yAxisMax: yAxisMax.value, fetchedAt: Date.now() };
-    lastFetchRadioSignature.value = fetchRadioSignature;
-    isLoading.value = false;
-    isInitialFetch.value = false;
-    isRefreshing.value = false;
     chartError.value = null;
-    nextTick(() => drawChart());
   } catch (err) {
     console.error('Failed to fetch airtime data:', err);
-    chartData.value = [];
-    isLoading.value = false;
+    panels.value = [];
+    chartError.value = err instanceof Error ? err.message : 'Failed to load chart data';
+  } finally {
     isInitialFetch.value = false;
     isRefreshing.value = false;
-    chartError.value = err instanceof Error ? err.message : 'Failed to load chart data';
-    nextTick(() => drawChart());
-  } finally {
-    isFetching.value = false;
   }
 };
 
-// ============================================================================
-// Chart Rendering
-// ============================================================================
+/** Reuse the cache only while it describes the same radios and window. */
+const cacheIsUsable = (): boolean => {
+  if (!_airtimeCache) return false;
+  if (Date.now() - _airtimeCache.fetchedAt >= AIRTIME_CACHE_TTL_MS) return false;
+  if (_airtimeCache.windowKey !== windowKey.value) return false;
+  // Before /stats lands there is nothing to compare against; fall back to the TTL.
+  if (!hasKnownProfiles.value) return true;
+  return profileSignature(configProfiles.value) === _airtimeCache.signature;
+};
+
+/** Global counters: prefer the live store, fall back to this window's totals. */
+const totalReceived = computed(
+  () => packetStore.packetStats?.total_packets || localStats.value.totalReceived,
+);
+const totalTransmitted = computed(
+  () => packetStore.packetStats?.transmitted_packets || localStats.value.totalTransmitted,
+);
+const droppedPackets = computed(() => packetStore.packetStats?.dropped_packets ?? 0);
 
 /**
- * Draw the airtime utilization chart on canvas.
+ * Uptime-aware rate labels for the single-radio summary. Rates over a partial
+ * first hour are marked, so an operator does not read an early spike as normal.
  */
-const drawChart = () => {
-  if (!chartRef.value) return;
+const uptimeBasedRates = computed(() => {
+  const storeUptime = systemStore.stats?.uptime_seconds || 0;
+  const estimatedUptime =
+    localStats.value.firstPacketTime > 0
+      ? Math.floor(Date.now() / 1000) - localStats.value.firstPacketTime
+      : 0;
+  const uptimeSeconds = storeUptime || estimatedUptime;
+  const uptimeHours = Math.max(uptimeSeconds / 3600, 0.1);
 
-  const canvas = chartRef.value;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const totalRx = totalReceived.value;
+  const totalTx = totalTransmitted.value;
 
-  const container = canvas.parentElement;
-  if (!container) return;
-
-  // Set up canvas dimensions with device pixel ratio for crisp rendering
-  const containerRect = container.getBoundingClientRect();
-  const width = containerRect.width;
-  const height = containerRect.height;
-
-  canvas.width = width * window.devicePixelRatio;
-  canvas.height = height * window.devicePixelRatio;
-  canvas.style.width = width + 'px';
-  canvas.style.height = height + 'px';
-  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-  const padding = 20;
-  const leftMargin = 45; // Space for Y-axis labels
-
-  ctx.clearRect(0, 0, width, height);
-
-  // Loading state
-  if (isLoading.value) {
-    ctx.fillStyle = getChartChrome().axisLabel;
-    ctx.font = '16px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillText('Loading chart data...', width / 2, height / 2);
-    return;
+  if (uptimeHours < 1) {
+    const uptimeMinutes = Math.max(uptimeSeconds / 60, 1);
+    const suffix = uptimeHours < 0.5 ? ' (early)' : '';
+    return {
+      rxRate: {
+        value: Math.round((totalRx / uptimeMinutes) * 100) / 100,
+        label: `RX/min${suffix}`,
+      },
+      txRate: {
+        value: Math.round((totalTx / uptimeMinutes) * 100) / 100,
+        label: `TX/min${suffix}`,
+      },
+      confidence: 'low' as const,
+    };
   }
 
-  // No data state
-  if (chartData.value.length === 0) {
-    ctx.fillStyle = getChartChrome().axisLabel;
-    ctx.font = '16px system-ui';
-    ctx.textAlign = 'center';
-    ctx.fillText('No data available', width / 2, height / 2);
-    return;
-  }
+  const label = uptimeHours < 24 ? `RX/hr (${Math.round(uptimeHours)}h)` : 'RX/hr';
+  return {
+    rxRate: { value: Math.round((totalRx / uptimeHours) * 100) / 100, label },
+    txRate: {
+      value: Math.round((totalTx / uptimeHours) * 100) / 100,
+      label: label.replace('RX', 'TX'),
+    },
+    confidence: (uptimeHours < 6 ? 'medium' : 'high') as 'medium' | 'high',
+  };
+});
 
-  // Chart dimensions
-  const chartWidth = width - leftMargin - padding;
-  const chartHeight = height - padding * 2;
+const perHour = (total: number) => Math.round((total / WINDOW_HOURS) * 100) / 100;
 
-  // Y-axis scaling (0 to dynamic max with headroom)
-  const displayMax = yAxisMax.value;
-  const displayRange = yAxisMax.value;
+const panelHeading = (panel: RadioPanelData) => ({
+  frequency: formatFrequency(panel.profile?.frequency_hz),
+  modulation: formatModulation(panel.profile),
+  modulationDetail: formatModulationDetail(panel.profile),
+});
 
-  // Draw grid lines
-  const chrome = getChartChrome();
-  ctx.strokeStyle = chrome.gridLine;
-  ctx.lineWidth = 1;
-
-  // Horizontal grid lines with Y-axis labels
-  ctx.font = '10px system-ui';
-  ctx.textAlign = 'right';
-  for (let i = 0; i <= 5; i++) {
-    const y = padding + (chartHeight * i) / 5;
-    ctx.beginPath();
-    ctx.moveTo(leftMargin, y);
-    ctx.lineTo(width - padding, y);
-    ctx.stroke();
-
-    // Y-axis label (percentage)
-    const value = displayMax - (i / 5) * displayRange;
-    ctx.fillStyle = chrome.axisLabel;
-    ctx.fillText(`${value.toFixed(0)}%`, leftMargin - 5, y + 3);
-  }
-
-  // Vertical grid lines
-  for (let i = 0; i <= 6; i++) {
-    const x = leftMargin + (chartWidth * i) / 6;
-    ctx.beginPath();
-    ctx.moveTo(x, padding);
-    ctx.lineTo(x, height - padding);
-    ctx.stroke();
-  }
-
-  // Draw RX utilization line
-  if (chartData.value.length > 1) {
-    ctx.strokeStyle = CHART_COLORS.rx;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    chartData.value.forEach((point, index) => {
-      const x = leftMargin + (chartWidth * index) / (chartData.value.length - 1);
-      const y =
-        height - padding - (Math.min(point.rxUtil, yAxisMax.value) / displayRange) * chartHeight;
-
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-
-    ctx.stroke();
-  }
-
-  // Draw TX utilization line
-  if (chartData.value.length > 1) {
-    ctx.strokeStyle = CHART_COLORS.tx;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    chartData.value.forEach((point, index) => {
-      const x = leftMargin + (chartWidth * index) / (chartData.value.length - 1);
-      const y =
-        height - padding - (Math.min(point.txUtil, yAxisMax.value) / displayRange) * chartHeight;
-
-      if (index === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-
-    ctx.stroke();
-  }
+const panelSummary = (panel: RadioPanelData) => {
+  const modulation = formatModulationDetail(panel.profile);
+  const identity = isMultiPanel.value ? `Radio ${panel.radioId}` : 'Radio';
+  return (
+    `${identity}${modulation ? `, ${modulation}` : ''}. ` +
+    `${panel.rxTotal} received, ${panel.txTotal} transmitted in the last ${WINDOW_HOURS} hours. ` +
+    `Peak utilization ${panel.peakUtil.toFixed(1)}%.`
+  );
 };
 
-// Periodic refresh — 2 minutes matches the 60-second bucket resolution of the API.
+// Periodic refresh — 2 minutes matches the 60-second bucket resolution.
 // immediate: false because onMounted handles the first load (cache check + fetch).
 useManagedPolling(fetchChartData, { intervalMs: 120_000, immediate: false });
 
-// ============================================================================
-// Lifecycle
-// ============================================================================
-
 onMounted(() => {
-  if (_airtimeCache && Date.now() - _airtimeCache.fetchedAt < AIRTIME_CACHE_TTL_MS) {
-    chartData.value = _airtimeCache.data;
-    yAxisMax.value = _airtimeCache.yAxisMax;
+  if (cacheIsUsable() && _airtimeCache) {
+    panels.value = _airtimeCache.panels;
+    localStats.value = _airtimeCache.localStats;
+    unattributedRx.value = _airtimeCache.unattributedRx;
+    unattributedTx.value = _airtimeCache.unattributedTx;
     isInitialFetch.value = false;
-  }
-
-  // Always refresh after mount so stale cache or fallback-radio data is corrected.
-  fetchChartData();
-
-  nextTick(() => {
-    drawChart();
-    setTimeout(() => drawChart(), 100);
-  });
-
-  window.addEventListener('resize', drawChart);
-});
-
-watch(radioSignature, (newSignature, oldSignature) => {
-  if (!newSignature) return;
-
-  // If we previously fetched with fallback defaults, immediately refresh once
-  // real radio settings become available.
-  if (lastFetchRadioSignature.value === 'fallback') {
-    fetchChartData();
-    return;
-  }
-
-  // If radio params changed during runtime, re-query to keep utilization accurate.
-  if (oldSignature && newSignature !== oldSignature) {
-    fetchChartData();
+  } else {
+    void fetchChartData();
   }
 });
 
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', drawChart);
-});
+defineExpose({ panels, fetchChartData });
 </script>
 
 <template>
   <div class="glass-card rounded-[10px] p-4 lg:p-6">
-    <h3
-      class="text-content-primary text-lg lg:text-xl font-semibold mb-3 lg:mb-4"
-    >
+    <h3 class="text-content-primary text-lg lg:text-xl font-semibold mb-3 lg:mb-4">
       Airtime Utilization
     </h3>
     <p
@@ -653,95 +267,150 @@ onBeforeUnmount(() => {
     >
       Activity (Last 24 Hours)
     </p>
-    <div class="flex items-center gap-4 lg:gap-6 mb-3 lg:mb-4">
-      <div class="flex items-center gap-2">
-        <div class="w-5 lg:w-7 h-2 rounded bg-accent-purple"></div>
-        <span class="text-content-secondary dark:text-content-primary text-xs lg:text-sm"
-          >Rx Util</span
-        >
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-5 lg:w-7 h-2 rounded bg-accent-red"></div>
-        <span class="text-content-secondary dark:text-content-primary text-xs lg:text-sm"
-          >Tx Util</span
-        >
-      </div>
+
+    <div :class="isMultiPanel ? 'grid grid-cols-1 xl:grid-cols-2 gap-5 xl:gap-8' : ''">
+      <RadioAirtimePanel
+        v-for="panel in panels"
+        :key="panel.radioId"
+        :radio-id="isMultiPanel ? panel.radioId : null"
+        :frequency="panelHeading(panel).frequency"
+        :modulation="panelHeading(panel).modulation"
+        :modulation-detail="panelHeading(panel).modulationDetail"
+        :samples="panel.samples"
+        :y-axis-max="panel.yAxisMax"
+        :is-loading="isInitialFetch"
+        :is-updating="isRefreshing"
+        :error="chartError"
+        :status="chartStatus"
+        :summary="panelSummary(panel)"
+        :empty-message="
+          isMultiPanel
+            ? 'No activity on this radio in the last 24 hours.'
+            : 'No activity in the last 24 hours.'
+        "
+        @retry="fetchChartData"
+      >
+        <template v-if="isMultiPanel" #summary>
+          <div class="mt-3 lg:mt-4 grid grid-cols-2 gap-3 lg:gap-4">
+            <div class="text-center">
+              <div class="text-lg lg:text-2xl font-bold text-content-primary">
+                {{ panel.rxTotal }}
+              </div>
+              <div
+                class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide"
+              >
+                Received
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="text-lg lg:text-2xl font-bold text-content-primary">
+                {{ panel.txTotal }}
+              </div>
+              <div
+                class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide"
+              >
+                Transmitted
+              </div>
+            </div>
+          </div>
+          <div class="mt-2 lg:mt-3 grid grid-cols-2 gap-2 lg:gap-3 text-center">
+            <div>
+              <div class="text-xs lg:text-sm font-semibold text-accent-purple">
+                {{ perHour(panel.rxTotal) }}
+              </div>
+              <div class="text-xs text-content-secondary dark:text-content-muted">RX/hr (24h)</div>
+            </div>
+            <div>
+              <div class="text-xs lg:text-sm font-semibold text-accent-red">
+                {{ perHour(panel.txTotal) }}
+              </div>
+              <div class="text-xs text-content-secondary dark:text-content-muted">TX/hr (24h)</div>
+            </div>
+          </div>
+        </template>
+      </RadioAirtimePanel>
+
+      <!-- First load and whole-request failure: nothing to lay out per radio yet. -->
+      <RadioAirtimePanel
+        v-if="panels.length === 0"
+        :samples="[]"
+        :y-axis-max="1"
+        :is-loading="isInitialFetch"
+        :is-updating="isRefreshing"
+        :error="chartError"
+        :status="chartStatus"
+        summary="Airtime utilization is not available yet."
+        @retry="fetchChartData"
+      />
     </div>
-    <ChartCard
-      class="h-40 lg:h-48"
-      :is-loading="isInitialFetch"
-      :is-updating="isRefreshing"
-      :error="chartError"
-      :status="chartStatus"
-      @retry="fetchChartData"
+
+    <p
+      v-if="isMultiPanel && (unattributedRx > 0 || unattributedTx > 0)"
+      class="mt-3 text-xs text-content-muted"
     >
-      <canvas ref="chartRef" class="absolute inset-0 w-full h-full"></canvas>
-    </ChartCard>
+      {{ unattributedRx }} received and {{ unattributedTx }} transmitted packets in this window
+      predate per-radio attribution, so they are not counted in either graph.
+    </p>
 
-    <!-- Performance Stats -->
-    <div class="mt-3 lg:mt-4 grid grid-cols-2 gap-3 lg:gap-4">
-      <div class="text-center">
-        <div class="text-lg lg:text-2xl font-bold text-content-primary">
-          {{ packetStore.packetStats?.total_packets || localStats.totalReceived }}
+    <!-- Single-radio summary keeps the node-wide counters it has always shown. -->
+    <template v-if="!isMultiPanel">
+      <div class="mt-3 lg:mt-4 grid grid-cols-2 gap-3 lg:gap-4">
+        <div class="text-center">
+          <div class="text-lg lg:text-2xl font-bold text-content-primary">{{ totalReceived }}</div>
+          <div
+            class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide"
+          >
+            Total Received
+          </div>
         </div>
-        <div class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide">
-          Total Received
+        <div class="text-center">
+          <div class="text-lg lg:text-2xl font-bold text-content-primary">
+            {{ totalTransmitted }}
+          </div>
+          <div
+            class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide"
+          >
+            Total Transmitted
+          </div>
         </div>
       </div>
-      <div class="text-center">
-        <div class="text-lg lg:text-2xl font-bold text-content-primary">
-          {{ packetStore.packetStats?.transmitted_packets || localStats.totalTransmitted }}
-        </div>
-        <div class="text-xs text-content-secondary dark:text-content-muted uppercase tracking-wide">
-          Total Transmitted
-        </div>
-      </div>
-    </div>
 
-    <div class="mt-2 lg:mt-3 grid grid-cols-3 gap-2 lg:gap-3 text-center">
-      <div>
-        <div
-          class="text-xs lg:text-sm font-semibold text-accent-purple flex items-center justify-center gap-1"
-        >
-          {{ uptimeBasedRates.rxRate.value }}
-          <span
-            v-if="uptimeBasedRates.confidence === 'low'"
-            class="inline-block w-1.5 h-1.5 rounded-full bg-secondary opacity-70"
-            title="Early data - limited uptime"
-          ></span>
+      <div class="mt-2 lg:mt-3 grid grid-cols-3 gap-2 lg:gap-3 text-center">
+        <div>
+          <div
+            class="text-xs lg:text-sm font-semibold text-accent-purple flex items-center justify-center gap-1"
+          >
+            {{ uptimeBasedRates.rxRate.value }}
+            <span
+              v-if="uptimeBasedRates.confidence === 'low'"
+              class="inline-block w-1.5 h-1.5 rounded-full bg-secondary opacity-70"
+              title="Early data - limited uptime"
+            ></span>
+          </div>
+          <div class="text-xs text-content-secondary dark:text-content-muted">
+            {{ uptimeBasedRates.rxRate.label }}
+          </div>
         </div>
-        <div class="text-xs text-content-secondary dark:text-content-muted">
-          {{ uptimeBasedRates.rxRate.label }}
+        <div>
+          <div
+            class="text-xs lg:text-sm font-semibold text-accent-red flex items-center justify-center gap-1"
+          >
+            {{ uptimeBasedRates.txRate.value }}
+            <span
+              v-if="uptimeBasedRates.confidence === 'low'"
+              class="inline-block w-1.5 h-1.5 rounded-full bg-secondary opacity-70"
+              title="Early data - limited uptime"
+            ></span>
+          </div>
+          <div class="text-xs text-content-secondary dark:text-content-muted">
+            {{ uptimeBasedRates.txRate.label }}
+          </div>
+        </div>
+        <div>
+          <div class="text-xs lg:text-sm font-semibold text-accent-red">{{ droppedPackets }}</div>
+          <div class="text-xs text-content-secondary dark:text-content-muted">Dropped</div>
         </div>
       </div>
-      <div>
-        <div
-          class="text-xs lg:text-sm font-semibold text-accent-red flex items-center justify-center gap-1"
-        >
-          {{ uptimeBasedRates.txRate.value }}
-          <span
-            v-if="uptimeBasedRates.confidence === 'low'"
-            class="inline-block w-1.5 h-1.5 rounded-full bg-secondary opacity-70"
-            title="Early data - limited uptime"
-          ></span>
-        </div>
-        <div class="text-xs text-content-secondary dark:text-content-muted">
-          {{ uptimeBasedRates.txRate.label }}
-        </div>
-      </div>
-      <div>
-        <div class="text-xs lg:text-sm font-semibold text-accent-red">
-          {{ packetStore.packetStats?.dropped_packets || localStats.dropped }}
-        </div>
-        <div class="text-xs text-content-secondary dark:text-content-muted">Dropped</div>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
-
-<style scoped>
-canvas {
-  width: 100%;
-  height: 100%;
-}
-</style>

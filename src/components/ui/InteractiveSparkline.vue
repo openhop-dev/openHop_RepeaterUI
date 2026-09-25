@@ -8,6 +8,14 @@ const props = withDefaults(
     data: { value: number; timestamp: number }[]
     height?: number
     unit?: string
+    /**
+     * Stroke colour, as a CSS colour. Omitted, the sparkline keeps the
+     * `text-secondary` it has always drawn in; supplied, it is used for the
+     * line, the hover dot and the cursor rule. Nothing else about the chart
+     * changes -- this exists so several sparklines can be told apart, not to
+     * restyle one.
+     */
+    color?: string
   }>(),
   { height: 28, unit: '' },
 )
@@ -110,8 +118,9 @@ defineExpose({ hoveredPoint })
   >
     <svg
       :viewBox="`0 0 ${W} ${height}`"
-      class="w-full text-secondary"
-      :style="{ height: `${height}px` }"
+      class="w-full"
+      :class="color ? '' : 'text-secondary'"
+      :style="{ height: `${height}px`, ...(color ? { color } : {}) }"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -137,8 +146,9 @@ defineExpose({ hoveredPoint })
     <!-- Vertical cursor line -->
     <div
       v-if="hoveredPoint"
-      class="absolute top-0 bottom-0 w-px bg-secondary opacity-40 pointer-events-none"
-      :style="{ left: `${cursorPercent}%` }"
+      class="absolute top-0 bottom-0 w-px opacity-40 pointer-events-none"
+      :class="color ? '' : 'bg-secondary'"
+      :style="{ left: `${cursorPercent}%`, ...(color ? { backgroundColor: color } : {}) }"
     />
 
     <!-- Tooltip — teleported to body to escape any overflow/clip context -->

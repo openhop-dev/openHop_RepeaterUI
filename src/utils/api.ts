@@ -506,7 +506,7 @@ export class ApiService {
   static async sendAdvert(): Promise<SendAdvertResponse> {
     try {
       const params = await this.getGeneratedRequestParams();
-      const response = await generatedApiClient.sendAdvert.sendAdvertCreate(params);
+      const response = await generatedApiClient.sendAdvert.sendAdvertCreate(undefined, params);
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);
@@ -566,6 +566,8 @@ export class ApiService {
       path_hash_size: number;
       hours?: number;
       limit?: number;
+      /** Only what this radio heard. */
+      radio_id?: string;
     },
     config?: AxiosRequestConfig,
   ): Promise<NeighborLinkHistoryResponse> {

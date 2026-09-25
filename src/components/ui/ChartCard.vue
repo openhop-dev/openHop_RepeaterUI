@@ -91,7 +91,8 @@ onBeforeUnmount(clearTimers);
       </svg>
       <p class="text-sm font-semibold text-content-primary">Loading Failed</p>
       <p class="text-xs text-content-secondary mt-1 max-w-[12rem] text-center">{{ error }}</p>
-      <button class="btn-secondary mt-3 text-xs px-3 py-1.5" @click="emit('retry')">Retry</button>
+      <!-- min-h-11 keeps the 44px tap target that the compact text size would lose. -->
+      <button class="btn-secondary mt-3 text-xs px-4 min-h-11 inline-flex items-center" @click="emit('retry')">Retry</button>
       <p v-if="countdown > 0" class="mt-2 text-xs text-content-muted">Retrying in {{ countdown }}s</p>
     </div>
   </div>
