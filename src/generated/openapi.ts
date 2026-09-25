@@ -52,6 +52,42 @@ export interface PluginStatus {
   description?: string;
 }
 
+export interface RadioFrontendSettings {
+  /**
+   * Periodic AGC reset in seconds, 4 s resolution (rounded down), 0 = off
+   * @min 0
+   * @max 1020
+   */
+  agc_reset_interval_seconds?: number;
+  /** External FEM RX (LNA) gain */
+  fem_rx_gain?: boolean;
+  /** External FEM TX (PA) high gain */
+  fem_tx_gain?: boolean;
+  /** The radio chip's own boosted RX gain (MeshCore radio.rxgain), separate from the external FEM RX gain */
+  rx_boosted_gain?: boolean;
+}
+
+export interface RadioFrontendStatus {
+  /** Default radio is a KISS modem with front-end controls */
+  available: boolean;
+  supports: {
+    agc_reset_interval_seconds: boolean;
+    fem_rx_gain: boolean;
+    fem_tx_gain: boolean;
+    rx_boosted_gain: boolean;
+  };
+  /** Values the modem reports now */
+  running: RadioFrontendSettings;
+  /** Values the config asks for; an absent key keeps the board default */
+  configured: RadioFrontendSettings;
+}
+
+export type RadioFrontendApplyResult = RadioFrontendStatus & {
+  applied: RadioFrontendSettings;
+  /** Reason per setting that was not applied; "save" for a failed config save */
+  errors: Record<string, string>;
+};
+
 export interface SuccessResponse {
   /** @example true */
   success?: boolean;
@@ -1631,6 +1667,62 @@ export class Api<
         path: `/set_duty_cycle`,
         method: "POST",
         body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+  };
+  radioFrontend = {
+    /**
+     * @description AGC reset interval, external FEM gain and radio chip boosted RX gain of the default radio, read from the modem. Only KISS modems running MeshCore KISS firmware v2 or later report support; the controls a board supports come from the board itself.
+     *
+     * @tags System
+     * @name RadioFrontendList
+     * @summary Get KISS modem RF front-end controls
+     * @request GET:/radio_frontend
+     * @secure
+     */
+    radioFrontendList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success: boolean;
+          data: RadioFrontendStatus;
+        },
+        any
+      >({
+        path: `/radio_frontend`,
+        method: "GET",
+        secure: true,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Applies the given settings to the default radio's modem and persists only the values it confirms. Takes effect immediately; no restart is needed. Omitted fields are left unchanged.
+     *
+     * @tags System
+     * @name RadioFrontendCreate
+     * @summary Set KISS modem RF front-end controls
+     * @request POST:/radio_frontend
+     * @secure
+     */
+    radioFrontendCreate: (
+      data: RadioFrontendSettings,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success: boolean;
+          error?: string;
+          restart_required?: boolean;
+          data?: RadioFrontendApplyResult;
+        },
+        any
+      >({
+        path: `/radio_frontend`,
+        method: "POST",
+        body: data,
+        secure: true,
         type: ContentType.Json,
         format: "json",
         ...params,

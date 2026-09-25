@@ -1,6 +1,11 @@
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import type { RequestParams } from '@/generated/openapi';
+import type {
+  RadioFrontendApplyResult,
+  RadioFrontendSettings,
+  RadioFrontendStatus,
+  RequestParams,
+} from '@/generated/openapi';
 import {
   getToken,
   isTokenExpired,
@@ -1324,6 +1329,34 @@ export class ApiService {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.configExport.configExportList(
         includeSecrets ? { include_secrets: true } : undefined,
+        params,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  // KISS modem RF front end (AGC reset interval, FEM gain) of the default radio.
+  static async getRadioFrontend(): Promise<{ success: boolean; data: RadioFrontendStatus }> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.radioFrontend.radioFrontendList(params);
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  static async setRadioFrontend(settings: RadioFrontendSettings): Promise<{
+    success: boolean;
+    error?: string;
+    data?: RadioFrontendApplyResult;
+  }> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.radioFrontend.radioFrontendCreate(
+        settings,
         params,
       );
       return response.data;

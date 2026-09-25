@@ -7,6 +7,7 @@ import RestartModal from '@/components/modals/RestartModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 import { useMultiRadioConfig } from '@/composables/useMultiRadioConfig';
+import RadioFrontendSettings from '@/components/configuration/RadioFrontendSettings.vue';
 import {
   normalizeModemHardwareOptions,
   normalizeModemTransportConfig,
@@ -663,8 +664,14 @@ const currentRadioTypeLabel = computed(() => {
   return match ? `${match.label} - ${match.detail}` : 'none - Disable radio hardware (no RF I/O)';
 });
 
+// What Save would send if nothing were edited, so a front-end-only change does not
+// resave the hardware or offer a restart.
+const hardwareBaseline = ref('');
+
 function startEditing() {
   selectedRadioType.value = currentRadioType.value;
+  const payload = buildHardwarePayloadFromForm();
+  hardwareBaseline.value = payload ? JSON.stringify(existingSaveBody(payload)) : '';
   isEditing.value = true;
   errorMessage.value = '';
   if (showMultiRadioChrome.value && setupStore.radioPresets.length === 0) {
@@ -1320,7 +1327,16 @@ function applyPayloadToEntry(
   delete updated.modem_tcp;
   if (payload.sx1262) updated.sx1262 = payload.sx1262;
   if (payload.ch341) updated.ch341 = payload.ch341;
-  if (payload.kiss) updated.kiss = payload.kiss;
+  if (payload.kiss) {
+    // The form only edits port/baud; keep the entry's other KISS tuning (CSMA,
+    // AGC/FEM front end) when the radio stays a KISS modem.
+    const previous = entry.kiss;
+    const keep =
+      normalizeRadioType(entry.radio_type) === 'kiss' && previous && typeof previous === 'object'
+        ? (previous as Record<string, unknown>)
+        : {};
+    updated.kiss = { ...keep, ...(payload.kiss as Record<string, unknown>) };
+  }
   if (payload.modem_usb) updated.modem_usb = payload.modem_usb;
   if (payload.modem_tcp) updated.modem_tcp = payload.modem_tcp;
   // Air settings: prefer form payload.radio, else keep existing entry.radio.
@@ -1330,6 +1346,25 @@ function applyPayloadToEntry(
     updated.radio = entry.radio;
   }
   return updated;
+}
+
+/** Save body for an existing single- or multi-radio node (not a multi-radio draft). */
+function existingSaveBody(payload: Record<string, unknown>): Record<string, unknown> {
+  if (isMultiRadio.value && effectiveSelectedId.value) {
+    // Existing multi-radio: update the selected entry only.
+    const nextRadios = radios.value.map((entry) => {
+      if (entry.id !== effectiveSelectedId.value) return { ...entry } as Record<string, unknown>;
+      return applyPayloadToEntry({ ...entry } as Record<string, unknown>, payload);
+    });
+    const importBody: Record<string, unknown> = {
+      radios: nextRadios,
+      fabric: buildFabricPayload(nextRadios),
+    };
+    mirrorDefaultRadioToLegacy(importBody, nextRadios);
+    return importBody;
+  }
+  // Legacy single-radio hardware save.
+  return payload;
 }
 
 async function persistImportBody(importBody: Record<string, unknown>): Promise<boolean> {
@@ -1532,28 +1567,31 @@ async function saveChanges(): Promise<boolean> {
       return await persistImportBody(importBody);
     }
 
-    // Existing multi-radio: update selected entry only.
+    const importBody = existingSaveBody(payload);
     if (isMultiRadio.value && effectiveSelectedId.value) {
-      const nextRadios = radios.value.map((entry) => {
-        if (entry.id !== effectiveSelectedId.value) return { ...entry } as Record<string, unknown>;
-        return applyPayloadToEntry({ ...entry } as Record<string, unknown>, payload);
-      });
-      const conflict = validateMultiRadioHardware(nextRadios);
+      const conflict = validateMultiRadioHardware(importBody.radios as Record<string, unknown>[]);
       if (conflict) {
         errorMessage.value = conflict.message;
         if (conflict.radioId) selectRadio(conflict.radioId);
         return false;
       }
-      const importBody: Record<string, unknown> = {
-        radios: nextRadios,
-        fabric: buildFabricPayload(nextRadios),
-      };
-      mirrorDefaultRadioToLegacy(importBody, nextRadios);
-      return await persistImportBody(importBody);
     }
 
-    // Legacy single-radio hardware save.
-    return await persistImportBody(payload);
+    // RF front end first: it applies live, and a failure keeps the page in edit
+    // mode with the reason shown next to those rows.
+    const frontend = frontendRef.value;
+    if (frontend && frontend.validate()) return false;
+    const frontendChanged = !!frontend?.hasChanges();
+    if (frontendChanged && !(await frontend!.apply())) return false;
+
+    // A front-end-only edit is done: don't resave the hardware or offer a restart.
+    // Without any edit, Save still writes the config as before (it also migrates
+    // legacy section names).
+    if (frontendChanged && JSON.stringify(importBody) === hardwareBaseline.value) {
+      isEditing.value = false;
+      return true;
+    }
+    return await persistImportBody(importBody);
   } finally {
     isSaving.value = false;
   }
@@ -1616,6 +1654,18 @@ const showSerialFields = computed(
   () => selectedRadioType.value === 'kiss' || selectedRadioType.value === 'modem_usb',
 );
 const showTcpFields = computed(() => selectedRadioType.value === 'modem_tcp');
+
+// The RF front end belongs to the running default radio's KISS modem, so show it
+// only under that radio, and not while radios are being added or removed.
+const frontendRef = ref<InstanceType<typeof RadioFrontendSettings> | null>(null);
+const showFrontend = computed(
+  () =>
+    selectedRadioType.value === 'kiss' &&
+    currentRadioType.value === 'kiss' &&
+    !isDraftingMultiRadio.value &&
+    !isStagingDisableMultiRadio.value &&
+    (!isMultiRadio.value || String(effectiveSelectedId.value) === String(defaultRadioId.value)),
+);
 const showSx1262Fields = computed(
   () => selectedRadioType.value === 'sx1262' || selectedRadioType.value === 'sx1262_ch341',
 );
@@ -2248,6 +2298,8 @@ watch(
         </div>
       </template>
 
+      <RadioFrontendSettings v-if="showFrontend" ref="frontendRef" :editing="isEditing" />
+
       <template v-if="showTcpFields">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Host</span>
@@ -2505,7 +2557,8 @@ watch(
       </template>
 
       <div class="py-2 text-xs text-content-muted">
-        Switching hardware saves immediately and requires a service restart to apply.
+        Hardware changes are saved and need a service restart to apply; RF front-end settings
+        apply to the modem straight away.
       </div>
     </div>
   </div>
