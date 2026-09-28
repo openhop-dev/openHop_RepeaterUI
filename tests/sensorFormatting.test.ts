@@ -1,5 +1,56 @@
 import { describe, it, expect } from 'vitest';
-import { flattenHardwareStats, formatUptime, formatLoadAvg } from '@/utils/sensorFormatting';
+import {
+  flattenHardwareStats,
+  formatUptime,
+  formatLoadAvg,
+  formatDescriptorMetric,
+  groupSensorMetrics,
+} from '@/utils/sensorFormatting';
+
+it('formats descriptors by explicit unit only, keeping unavailable and nonfinite values distinct', () => {
+  const descriptor = {
+    id: '/environment/charge_count',
+    source_path: '/environment/charge_count',
+    data_key: 'modem:/environment/charge_count',
+    label: 'Charge count',
+    unit: null,
+    kind: 'number' as const,
+    category: 'measurement' as const,
+    available: true,
+  };
+  expect(formatDescriptorMetric(descriptor, 0)).toBe('0');
+  expect(formatDescriptorMetric(descriptor, 12)).toBe('12');
+  expect(formatDescriptorMetric({ ...descriptor, unit: 'ms' }, 12)).toBe('12 ms');
+  expect(formatDescriptorMetric({ ...descriptor, kind: 'boolean' }, false)).toBe('false');
+  expect(formatDescriptorMetric({ ...descriptor, available: false }, 7)).toBe('n/a');
+  expect(formatDescriptorMetric(descriptor, null)).toBe('n/a');
+  expect(formatDescriptorMetric(descriptor, Infinity)).toBe('n/a');
+  expect(formatDescriptorMetric(descriptor, '12')).toBe('n/a');
+});
+
+it('groups valid descriptors by category, ignores duplicate or absent keys and retains legacy data', () => {
+  const descriptor = {
+    id: '/environment/temperature_c',
+    source_path: '/environment/temperature_c',
+    data_key: 'modem:/environment/temperature_c',
+    label: 'Environmental temperature',
+    unit: '°C',
+    kind: 'number' as const,
+    category: 'measurement' as const,
+    available: true,
+  };
+  const groups = groupSensorMetrics(
+    {
+      temperature_c: 40,
+      'modem:/environment/temperature_c': 23,
+      'modem:/environment/missing': null,
+    },
+    [descriptor, descriptor, { ...descriptor, data_key: 'absent' }],
+  );
+  expect(groups.measurement).toHaveLength(1);
+  expect(groups.measurement[0].value).toBe(23);
+  expect(groups.legacy).toEqual({ temperature_c: 40, 'modem:/environment/missing': null });
+});
 
 // Real payload shape captured from a live hardware_stats reading (16-core PVE host).
 const liveData: Record<string, unknown> = {

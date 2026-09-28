@@ -10,6 +10,43 @@
  * ---------------------------------------------------------------
  */
 
+/** One snapshot's local, bounded measurement metadata; identity is configured sensor name plus source-path id. */
+export interface SensorMetricDescriptor {
+  /** RFC6901 JSON Pointer relative to the modem stats response. */
+  id: string;
+  source_path: string;
+  /** Exact key in the flat data object; generic keys begin with modem:. */
+  data_key: string;
+  label: string;
+  unit: string | null;
+  kind: 'number' | 'boolean';
+  category: 'measurement' | 'diagnostic' | 'configuration' | 'status';
+  available: boolean;
+  reason?: 'null' | 'missing' | 'source_unavailable' | 'invalid' | 'read_failed';
+}
+
+export interface SensorReading {
+  name: string;
+  type: string;
+  ok: boolean;
+  /** @format date-time */
+  timestamp: string;
+  /** Flat plugin-specific values. Discovered modem values may be null when unavailable; historical fields may be omitted. */
+  data: Record<string, any>;
+  error?: string;
+  /** Optional snapshot descriptors; absent for unchanged plug-ins. No sensor history or RF telemetry implied. */
+  metrics?: SensorMetricDescriptor[];
+}
+
+export interface SensorSummary {
+  enabled?: boolean;
+  poll_interval_seconds?: number;
+  configured?: number;
+  loaded?: number;
+  running?: boolean;
+  readings?: SensorReading[];
+}
+
 export interface AirtimeBucket {
   /** Unix start of the bucket, floored to bucket_seconds. */
   timestamp?: number;
@@ -37,13 +74,7 @@ export interface PluginStatus {
   name?: string;
   version?: string;
   enabled?: boolean;
-  state?:
-    | "DISABLED"
-    | "STOPPED"
-    | "STARTING"
-    | "RUNNING"
-    | "STOPPING"
-    | "FAILED";
+  state?: 'DISABLED' | 'STOPPED' | 'STARTING' | 'RUNNING' | 'STOPPING' | 'FAILED';
   pid?: number | null;
   has_runtime?: boolean;
   has_ui?: boolean;
@@ -72,7 +103,7 @@ export interface NeighborScopeRecord {
   /** Epoch seconds of the answer `scopes` came from */
   responded_at?: number | null;
   /** Outcome of the most recent query */
-  status: "responded" | "timeout" | "send_failed";
+  status: 'responded' | 'timeout' | 'send_failed';
   /** Epoch seconds of the most recent query */
   queried_at: number;
 }
@@ -595,7 +626,7 @@ export interface Identity {
    * - room_server: Room server for group chat
    * @example "room_server"
    */
-  type: "repeater" | "room_server";
+  type: 'repeater' | 'room_server';
   /**
    * 1-byte identity hash (used in radio packets)
    * @pattern ^0x[0-9a-fA-F]{2}$
@@ -659,7 +690,7 @@ export interface ACLClient {
    * - guest: Base telemetry only (repeater guests, read-only logins)
    * @example "admin"
    */
-  permissions: "admin" | "read_write" | "read_only" | "guest";
+  permissions: 'admin' | 'read_write' | 'read_only' | 'guest';
   /**
    * Unix timestamp of last activity
    * @example 1766065148
@@ -684,7 +715,7 @@ export interface ACLClient {
    * Type of identity
    * @example "room_server"
    */
-  identity_type?: "repeater" | "room_server";
+  identity_type?: 'repeater' | 'room_server';
   /**
    * Hash of the identity
    * @pattern ^0x[0-9a-fA-F]{2}$
@@ -694,9 +725,9 @@ export interface ACLClient {
 }
 
 export type QueryParamsType = Record<string | number, any>;
-export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
+export type ResponseFormat = keyof Omit<Body, 'body' | 'bodyUsed'>;
 
-export interface FullRequestParams extends Omit<RequestInit, "body"> {
+export interface FullRequestParams extends Omit<RequestInit, 'body'> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -715,22 +746,18 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   cancelToken?: CancelToken;
 }
 
-export type RequestParams = Omit<
-  FullRequestParams,
-  "body" | "method" | "query" | "path"
->;
+export type RequestParams = Omit<FullRequestParams, 'body' | 'method' | 'query' | 'path'>;
 
 export interface ApiConfig<SecurityDataType = unknown> {
   baseUrl?: string;
-  baseApiParams?: Omit<RequestParams, "baseUrl" | "cancelToken" | "signal">;
+  baseApiParams?: Omit<RequestParams, 'baseUrl' | 'cancelToken' | 'signal'>;
   securityWorker?: (
     securityData: SecurityDataType | null,
   ) => Promise<RequestParams | void> | RequestParams | void;
   customFetch?: typeof fetch;
 }
 
-export interface HttpResponse<D extends unknown, E extends unknown = unknown>
-  extends Response {
+export interface HttpResponse<D extends unknown, E extends unknown = unknown> extends Response {
   data: D;
   error: E;
 }
@@ -738,26 +765,25 @@ export interface HttpResponse<D extends unknown, E extends unknown = unknown>
 type CancelToken = Symbol | string | number;
 
 export enum ContentType {
-  Json = "application/json",
-  JsonApi = "application/vnd.api+json",
-  FormData = "multipart/form-data",
-  UrlEncoded = "application/x-www-form-urlencoded",
-  Text = "text/plain",
+  Json = 'application/json',
+  JsonApi = 'application/vnd.api+json',
+  FormData = 'multipart/form-data',
+  UrlEncoded = 'application/x-www-form-urlencoded',
+  Text = 'text/plain',
 }
 
 export class HttpClient<SecurityDataType = unknown> {
-  public baseUrl: string = "/api";
+  public baseUrl: string = '/api';
   private securityData: SecurityDataType | null = null;
-  private securityWorker?: ApiConfig<SecurityDataType>["securityWorker"];
+  private securityWorker?: ApiConfig<SecurityDataType>['securityWorker'];
   private abortControllers = new Map<CancelToken, AbortController>();
-  private customFetch = (...fetchParams: Parameters<typeof fetch>) =>
-    fetch(...fetchParams);
+  private customFetch = (...fetchParams: Parameters<typeof fetch>) => fetch(...fetchParams);
 
   private baseApiParams: RequestParams = {
-    credentials: "same-origin",
+    credentials: 'same-origin',
     headers: {},
-    redirect: "follow",
-    referrerPolicy: "no-referrer",
+    redirect: 'follow',
+    referrerPolicy: 'no-referrer',
   };
 
   constructor(apiConfig: ApiConfig<SecurityDataType> = {}) {
@@ -770,7 +796,7 @@ export class HttpClient<SecurityDataType = unknown> {
 
   protected encodeQueryParam(key: string, value: any) {
     const encodedKey = encodeURIComponent(key);
-    return `${encodedKey}=${encodeURIComponent(typeof value === "number" ? value : `${value}`)}`;
+    return `${encodedKey}=${encodeURIComponent(typeof value === 'number' ? value : `${value}`)}`;
   }
 
   protected addQueryParam(query: QueryParamsType, key: string) {
@@ -779,41 +805,37 @@ export class HttpClient<SecurityDataType = unknown> {
 
   protected addArrayQueryParam(query: QueryParamsType, key: string) {
     const value = query[key];
-    return value.map((v: any) => this.encodeQueryParam(key, v)).join("&");
+    return value.map((v: any) => this.encodeQueryParam(key, v)).join('&');
   }
 
   protected toQueryString(rawQuery?: QueryParamsType): string {
     const query = rawQuery || {};
-    const keys = Object.keys(query).filter(
-      (key) => "undefined" !== typeof query[key],
-    );
+    const keys = Object.keys(query).filter((key) => 'undefined' !== typeof query[key]);
     return keys
       .map((key) =>
         Array.isArray(query[key])
           ? this.addArrayQueryParam(query, key)
           : this.addQueryParam(query, key),
       )
-      .join("&");
+      .join('&');
   }
 
   protected addQueryParams(rawQuery?: QueryParamsType): string {
     const queryString = this.toQueryString(rawQuery);
-    return queryString ? `?${queryString}` : "";
+    return queryString ? `?${queryString}` : '';
   }
 
   private contentFormatters: Record<ContentType, (input: any) => any> = {
     [ContentType.Json]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
+      input !== null && (typeof input === 'object' || typeof input === 'string')
         ? JSON.stringify(input)
         : input,
     [ContentType.JsonApi]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string")
+      input !== null && (typeof input === 'object' || typeof input === 'string')
         ? JSON.stringify(input)
         : input,
     [ContentType.Text]: (input: any) =>
-      input !== null && typeof input !== "string"
-        ? JSON.stringify(input)
-        : input,
+      input !== null && typeof input !== 'string' ? JSON.stringify(input) : input,
     [ContentType.FormData]: (input: any) => {
       if (input instanceof FormData) {
         return input;
@@ -825,7 +847,7 @@ export class HttpClient<SecurityDataType = unknown> {
           key,
           property instanceof Blob
             ? property
-            : typeof property === "object" && property !== null
+            : typeof property === 'object' && property !== null
               ? JSON.stringify(property)
               : `${property}`,
         );
@@ -835,10 +857,7 @@ export class HttpClient<SecurityDataType = unknown> {
     [ContentType.UrlEncoded]: (input: any) => this.toQueryString(input),
   };
 
-  protected mergeRequestParams(
-    params1: RequestParams,
-    params2?: RequestParams,
-  ): RequestParams {
+  protected mergeRequestParams(params1: RequestParams, params2?: RequestParams): RequestParams {
     return {
       ...this.baseApiParams,
       ...params1,
@@ -851,9 +870,7 @@ export class HttpClient<SecurityDataType = unknown> {
     };
   }
 
-  protected createAbortSignal = (
-    cancelToken: CancelToken,
-  ): AbortSignal | undefined => {
+  protected createAbortSignal = (cancelToken: CancelToken): AbortSignal | undefined => {
     if (this.abortControllers.has(cancelToken)) {
       const abortController = this.abortControllers.get(cancelToken);
       if (abortController) {
@@ -888,7 +905,7 @@ export class HttpClient<SecurityDataType = unknown> {
     ...params
   }: FullRequestParams): Promise<HttpResponse<T, E>> => {
     const secureParams =
-      ((typeof secure === "boolean" ? secure : this.baseApiParams.secure) &&
+      ((typeof secure === 'boolean' ? secure : this.baseApiParams.secure) &&
         this.securityWorker &&
         (await this.securityWorker(this.securityData))) ||
       {};
@@ -898,23 +915,15 @@ export class HttpClient<SecurityDataType = unknown> {
     const responseFormat = format || requestParams.format;
 
     return this.customFetch(
-      `${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`,
+      `${baseUrl || this.baseUrl || ''}${path}${queryString ? `?${queryString}` : ''}`,
       {
         ...requestParams,
         headers: {
           ...(requestParams.headers || {}),
-          ...(type && type !== ContentType.FormData
-            ? { "Content-Type": type }
-            : {}),
+          ...(type && type !== ContentType.FormData ? { 'Content-Type': type } : {}),
         },
-        signal:
-          (cancelToken
-            ? this.createAbortSignal(cancelToken)
-            : requestParams.signal) || null,
-        body:
-          typeof body === "undefined" || body === null
-            ? null
-            : payloadFormatter(body),
+        signal: (cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal) || null,
+        body: typeof body === 'undefined' || body === null ? null : payloadFormatter(body),
       },
     ).then(async (response) => {
       const r = response as HttpResponse<T, E>;
@@ -965,9 +974,7 @@ export class HttpClient<SecurityDataType = unknown> {
  * - CAD calibration
  * - Noise floor monitoring
  */
-export class Api<
-  SecurityDataType extends unknown,
-> extends HttpClient<SecurityDataType> {
+export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   auth = {
     /**
      * @description Authenticate with username/password and receive JWT token
@@ -1006,10 +1013,10 @@ export class Api<
         void
       >({
         path: `/auth/login`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1038,11 +1045,11 @@ export class Api<
         any
       >({
         path: `/auth/refresh`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1065,9 +1072,9 @@ export class Api<
         any
       >({
         path: `/auth/verify`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1094,7 +1101,7 @@ export class Api<
     ) =>
       this.request<void, void>({
         path: `/auth/change_password`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -1126,9 +1133,9 @@ export class Api<
         any
       >({
         path: `/auth/tokens`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1163,11 +1170,11 @@ export class Api<
         any
       >({
         path: `/auth/tokens`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1183,7 +1190,7 @@ export class Api<
     tokensDelete: (tokenId: number, params: RequestParams = {}) =>
       this.request<void, void>({
         path: `/auth/tokens/${tokenId}`,
-        method: "DELETE",
+        method: 'DELETE',
         secure: true,
         ...params,
       }),
@@ -1210,12 +1217,15 @@ export class Api<
           version?: string;
           /** @example "0.5.0" */
           core_version?: string;
+          /** Configured USB/TCP radio labels whose live modem link is down; empty when connected or not configured. */
+          modem_disconnected?: string[];
+          sensors?: SensorSummary;
         },
         any
       >({
         path: `/stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -1245,9 +1255,9 @@ export class Api<
             /** Configured repeater latitude/longitude, when set to a non-zero coordinate */
             manual_position?: object | null;
             position_meta?: {
-              source?: "gps" | "manual_config";
+              source?: 'gps' | 'manual_config';
               source_label?: string;
-              policy?: "manual_until_gps_fix" | "gps_only";
+              policy?: 'manual_until_gps_fix' | 'gps_only';
               manual_config_available?: boolean;
               gps_fix_valid?: boolean;
             };
@@ -1258,14 +1268,14 @@ export class Api<
             time_sync?: {
               enabled?: boolean;
               state?:
-                | "disabled"
-                | "waiting_for_fix"
-                | "waiting_for_time"
-                | "ready"
-                | "in_sync"
-                | "synced"
-                | "error"
-                | "ignored";
+                | 'disabled'
+                | 'waiting_for_fix'
+                | 'waiting_for_time'
+                | 'ready'
+                | 'in_sync'
+                | 'synced'
+                | 'error'
+                | 'ignored';
               last_attempt?: string | null;
               last_success?: string | null;
               last_error?: string | null;
@@ -1276,14 +1286,14 @@ export class Api<
             location_update?: {
               enabled?: boolean;
               state?:
-                | "disabled"
-                | "unconfigured"
-                | "waiting_for_fix"
-                | "waiting_for_position"
-                | "ready"
-                | "updated"
-                | "skipped"
-                | "error";
+                | 'disabled'
+                | 'unconfigured'
+                | 'waiting_for_fix'
+                | 'waiting_for_position'
+                | 'ready'
+                | 'updated'
+                | 'skipped'
+                | 'error';
               last_attempt?: string | null;
               last_success?: string | null;
               last_error?: string | null;
@@ -1298,9 +1308,9 @@ export class Api<
         any
       >({
         path: `/gps`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1316,7 +1326,7 @@ export class Api<
     gpsStreamList: (params: RequestParams = {}) =>
       this.request<string, any>({
         path: `/gps_stream`,
-        method: "GET",
+        method: 'GET',
         ...params,
       }),
   };
@@ -1335,16 +1345,16 @@ export class Api<
          * Advert send mode label for UI/workflow selection.
          * @default "flood"
          */
-        mode?: "flood" | "direct";
+        mode?: 'flood' | 'direct';
       },
       params: RequestParams = {},
     ) =>
       this.request<SuccessResponse, void>({
         path: `/send_advert`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1371,8 +1381,8 @@ export class Api<
         any
       >({
         path: `/logs`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -1394,7 +1404,7 @@ export class Api<
     ) =>
       this.request<string, any>({
         path: `/logs_stream`,
-        method: "GET",
+        method: 'GET',
         query: query,
         ...params,
       }),
@@ -1418,8 +1428,8 @@ export class Api<
         any
       >({
         path: `/hardware_stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -1435,8 +1445,8 @@ export class Api<
     hardwareProcessesList: (params: RequestParams = {}) =>
       this.request<object[], any>({
         path: `/hardware_processes`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -1453,9 +1463,9 @@ export class Api<
     restartServiceCreate: (params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/restart_service`,
-        method: "POST",
+        method: 'POST',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1495,9 +1505,9 @@ export class Api<
         any
       >({
         path: `/validate_config`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1513,8 +1523,8 @@ export class Api<
     openapiList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/openapi`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -1535,16 +1545,16 @@ export class Api<
          * - no_tx: Do not repeat; no local TX (receive-only)
          * @example "forward"
          */
-        mode: "forward" | "monitor" | "no_tx";
+        mode: 'forward' | 'monitor' | 'no_tx';
       },
       params: RequestParams = {},
     ) =>
       this.request<SuccessResponse, ErrorResponse>({
         path: `/set_mode`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1602,9 +1612,9 @@ export class Api<
         any
       >({
         path: `/packet_stats`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1629,10 +1639,10 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/set_duty_cycle`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1658,11 +1668,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/update_duty_cycle_config`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1697,11 +1707,158 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/update_radio_config`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
+        ...params,
+      }),
+  };
+  sensorsTypes = {
+    /**
+     * @description Discover installed sensor modules and return registered types with their settings schemas. Compatibility aliases such as pymc_modem remain loadable from existing definitions but are omitted from add-new choices.
+     *
+     * @tags Sensors
+     * @name SensorsTypesList
+     * @summary List available sensor types
+     * @request GET:/sensors_types
+     */
+    sensorsTypesList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            types?: {
+              type?: string;
+              name?: string;
+              description?: string;
+              settings?: {
+                key?: string;
+                type?: 'string' | 'integer' | 'number';
+                label?: string;
+                default?: object;
+                help?: string;
+              }[];
+            }[];
+          };
+        },
+        any
+      >({
+        path: `/sensors_types`,
+        method: 'GET',
+        format: 'json',
+        ...params,
+      }),
+  };
+  sensorsConfig = {
+    /**
+     * @description Returns current sensor definitions. Nonempty settings.password values are masked as *****; stored credentials are never included in this response. Each definition also includes _original_name so the client can preserve its password safely when renaming it while adding another sensor of the same type.
+     *
+     * @tags Sensors
+     * @name SensorsConfigList
+     * @summary Get current sensor configuration
+     * @request GET:/sensors_config
+     */
+    sensorsConfigList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            enabled?: boolean;
+            poll_interval_seconds?: number;
+            auto_install_packages?: boolean;
+            definitions?: {
+              name?: string;
+              /** The stored name used for masked-password round trips; not persisted on update. */
+              _original_name?: string;
+              type?: string;
+              enabled?: boolean;
+              auto_install_packages?: boolean;
+              settings?: object;
+            }[];
+          };
+        },
+        any
+      >({
+        path: `/sensors_config`,
+        method: 'GET',
+        format: 'json',
+        ...params,
+      }),
+  };
+  sensorsConfigUpdate = {
+    /**
+     * @description Update sensor definitions and persist to config.yaml under the provisioning lock. Names must be unique; sensor types may repeat, including existing pymc_modem aliases. Password value ***** preserves an existing secret; an empty string clears it. Pass the _original_name from GET when renaming an existing sensor to preserve its password, even if another sensor of the same type is added. Omit it for new definitions. Always returns restart_required=true.
+     *
+     * @tags Sensors
+     * @name SensorsConfigUpdateCreate
+     * @summary Update sensor configuration
+     * @request POST:/sensors_config_update
+     * @secure
+     */
+    sensorsConfigUpdateCreate: (
+      data: {
+        enabled?: boolean;
+        /** @default 30 */
+        poll_interval_seconds?: number;
+        /** @default false */
+        auto_install_packages?: boolean;
+        definitions?: {
+          name: string;
+          /** Optional origin from GET for an existing definition; not persisted. */
+          _original_name?: string;
+          type: string;
+          enabled?: boolean;
+          auto_install_packages?: boolean;
+          settings?: object;
+        }[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            saved?: boolean;
+            restart_required?: boolean;
+            message?: string;
+          };
+        },
+        any
+      >({
+        path: `/sensors_config_update`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
+  sensorsRead = {
+    /**
+     * @description Triggers an immediate read of all configured sensors and returns results.
+     *
+     * @tags Sensors
+     * @name SensorsReadCreate
+     * @summary Trigger one-shot sensor read
+     * @request POST:/sensors_read
+     */
+    sensorsReadCreate: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            readings?: SensorReading[];
+            summary?: SensorSummary;
+          };
+        },
+        any
+      >({
+        path: `/sensors_read`,
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
   };
@@ -1734,9 +1891,9 @@ export class Api<
         any
       >({
         path: `/recent_packets`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1758,7 +1915,7 @@ export class Api<
     ) =>
       this.request<void, any>({
         path: `/packet_by_hash`,
-        method: "GET",
+        method: 'GET',
         query: query,
         ...params,
       }),
@@ -1781,7 +1938,7 @@ export class Api<
     ) =>
       this.request<void, any>({
         path: `/packet_by_id`,
-        method: "GET",
+        method: 'GET',
         query: query,
         ...params,
       }),
@@ -1807,9 +1964,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/packet_type_stats`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1862,9 +2019,9 @@ export class Api<
         any
       >({
         path: `/route_stats`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1905,9 +2062,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/filtered_packets`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1940,9 +2097,9 @@ export class Api<
     ) =>
       this.request<NeighborLinksResponse, any>({
         path: `/neighbor_links`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -1993,9 +2150,9 @@ export class Api<
     ) =>
       this.request<NeighborLinkHistoryResponse, any>({
         path: `/neighbor_link_history`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2023,8 +2180,8 @@ export class Api<
         any
       >({
         path: `/rrd_data`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -2045,7 +2202,7 @@ export class Api<
          */
         hours?: number;
         /** @default "average" */
-        resolution?: "average" | "max" | "min";
+        resolution?: 'average' | 'max' | 'min';
         /**
          * Comma-separated packet types or 'all'
          * @default "all"
@@ -2073,9 +2230,9 @@ export class Api<
         any
       >({
         path: `/packet_type_graph_data`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2096,7 +2253,7 @@ export class Api<
          */
         hours?: number;
         /** @default "average" */
-        resolution?: "average" | "max" | "min";
+        resolution?: 'average' | 'max' | 'min';
         /**
          * Comma-separated metric names or 'all'
          * @default "all"
@@ -2124,9 +2281,9 @@ export class Api<
         any
       >({
         path: `/metrics_graph_data`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2182,9 +2339,9 @@ export class Api<
         any
       >({
         path: `/lbt_diagnostics`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2238,9 +2395,9 @@ export class Api<
         any
       >({
         path: `/noise_floor_history`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2284,9 +2441,9 @@ export class Api<
         any
       >({
         path: `/noise_floor_stats`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2311,9 +2468,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/noise_floor_chart_data`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2349,10 +2506,10 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/cad_calibration_start`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2368,8 +2525,8 @@ export class Api<
     cadCalibrationStopCreate: (params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/cad_calibration_stop`,
-        method: "POST",
-        format: "json",
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
   };
@@ -2446,10 +2603,10 @@ export class Api<
         any
       >({
         path: `/cad_manual_check`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2489,11 +2646,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/save_cad_settings`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2509,7 +2666,7 @@ export class Api<
     cadCalibrationStreamList: (params: RequestParams = {}) =>
       this.request<string, any>({
         path: `/cad_calibration_stream`,
-        method: "GET",
+        method: 'GET',
         ...params,
       }),
   };
@@ -2541,9 +2698,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/adverts_by_contact_type`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2565,9 +2722,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/advert`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2590,9 +2747,9 @@ export class Api<
         any
       >({
         path: `/transport_keys`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -2614,11 +2771,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/transport_keys`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2641,10 +2798,10 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/transport_key`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -2666,7 +2823,7 @@ export class Api<
         /** Updated key name */
         name?: string;
         /** Updated flood policy */
-        flood_policy?: "allow" | "deny";
+        flood_policy?: 'allow' | 'deny';
         /** Updated transport key hex */
         transport_key?: string;
         /** Updated parent transport key ID */
@@ -2681,12 +2838,12 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/transport_key`,
-        method: "PUT",
+        method: 'PUT',
         query: query,
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -2708,10 +2865,10 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/transport_key`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2728,11 +2885,11 @@ export class Api<
     unscopedFloodPolicyCreate: (data: object, params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/unscoped_flood_policy`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2759,9 +2916,9 @@ export class Api<
         any
       >({
         path: `/default_region`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -2783,11 +2940,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/default_region`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2831,11 +2988,11 @@ export class Api<
         any
       >({
         path: `/ping_neighbor`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2895,10 +3052,10 @@ export class Api<
         any
       >({
         path: `/discover_neighbors_start`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2923,7 +3080,7 @@ export class Api<
     ) =>
       this.request<string, any>({
         path: `/discover_neighbors_stream`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
         ...params,
@@ -2961,11 +3118,11 @@ export class Api<
         any
       >({
         path: `/add_discovered_neighbor`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -2993,9 +3150,9 @@ export class Api<
         any
       >({
         path: `/policy`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -3011,11 +3168,11 @@ export class Api<
     policyCreate: (data: object, params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/policy`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3042,11 +3199,11 @@ export class Api<
         any
       >({
         path: `/policy_validate`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3063,7 +3220,7 @@ export class Api<
     policyGroupsList: (
       query?: {
         /** Optional group kind filter. */
-        kind?: "channel_hashes" | "pubkeys";
+        kind?: 'channel_hashes' | 'pubkeys';
       },
       params: RequestParams = {},
     ) =>
@@ -3075,10 +3232,10 @@ export class Api<
         any
       >({
         path: `/policy_groups`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -3093,7 +3250,7 @@ export class Api<
      */
     policyGroupsCreate: (
       data: {
-        kind: "channel_hashes" | "pubkeys";
+        kind: 'channel_hashes' | 'pubkeys';
         group_id?: string;
         friendly_name?: string;
         description?: string;
@@ -3102,11 +3259,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/policy_groups`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -3121,18 +3278,18 @@ export class Api<
      */
     policyGroupsDelete: (
       data: {
-        kind: "channel_hashes" | "pubkeys";
+        kind: 'channel_hashes' | 'pubkeys';
         group_id: string;
       },
       params: RequestParams = {},
     ) =>
       this.request<SuccessResponse, any>({
         path: `/policy_groups`,
-        method: "DELETE",
+        method: 'DELETE',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3148,7 +3305,7 @@ export class Api<
      */
     policyGroupEntriesList: (
       query: {
-        kind: "channel_hashes" | "pubkeys";
+        kind: 'channel_hashes' | 'pubkeys';
         group_id: string;
       },
       params: RequestParams = {},
@@ -3161,10 +3318,10 @@ export class Api<
         any
       >({
         path: `/policy_group_entries`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -3179,7 +3336,7 @@ export class Api<
      */
     policyGroupEntriesCreate: (
       data: {
-        kind: "channel_hashes" | "pubkeys";
+        kind: 'channel_hashes' | 'pubkeys';
         group_id: string;
         value: string;
         entry_id?: string;
@@ -3189,11 +3346,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/policy_group_entries`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -3208,7 +3365,7 @@ export class Api<
      */
     policyGroupEntriesDelete: (
       data: {
-        kind: "channel_hashes" | "pubkeys";
+        kind: 'channel_hashes' | 'pubkeys';
         group_id: string;
         entry_id?: string;
         value?: string;
@@ -3217,11 +3374,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/policy_group_entries`,
-        method: "DELETE",
+        method: 'DELETE',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3256,7 +3413,7 @@ export class Api<
          * - room_server: Room server for group chat
          * @example "room_server"
          */
-        type: "companion" | "room_server";
+        type: 'companion' | 'room_server';
         /** Type-specific settings */
         settings?: {
           /**
@@ -3329,10 +3486,10 @@ export class Api<
         ErrorResponse
       >({
         path: `/create_identity`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3356,8 +3513,8 @@ export class Api<
         any
       >({
         path: `/identities`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -3385,9 +3542,9 @@ export class Api<
         any
       >({
         path: `/identity`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3404,7 +3561,7 @@ export class Api<
     updateIdentityUpdate: (
       data: {
         /** @default "room_server" */
-        type?: "room_server" | "companion";
+        type?: 'room_server' | 'companion';
         /** Current identity registration name (required for room_server; optional for companion if lookup fields are set) */
         name?: string;
         /**
@@ -3425,11 +3582,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/update_identity`,
-        method: "PUT",
+        method: 'PUT',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3448,7 +3605,7 @@ export class Api<
         /** Identity registration name to delete (required for room_server) */
         name?: string;
         /** Identity kind (default room_server) */
-        type?: "room_server" | "companion";
+        type?: 'room_server' | 'companion';
         /** Companion only: hex identity key (full or unique prefix, min 8 hex chars) when `name` is omitted. */
         lookup_identity_key?: string;
         /** Companion only: public key hex prefix (min 8 hex chars) when `name` is omitted. */
@@ -3458,10 +3615,10 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/delete_identity`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3503,11 +3660,11 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/send_room_server_advert`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3529,7 +3686,7 @@ export class Api<
               /** @example "repeater" */
               name?: string;
               /** @example "repeater" */
-              type?: "repeater" | "room_server";
+              type?: 'repeater' | 'room_server';
               /**
                * @pattern ^0x[0-9a-fA-F]{2}$
                * @example "0x42"
@@ -3555,8 +3712,8 @@ export class Api<
         any
       >({
         path: `/acl_info`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -3599,9 +3756,9 @@ export class Api<
         any
       >({
         path: `/acl_clients`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3638,10 +3795,10 @@ export class Api<
     ) =>
       this.request<SuccessResponse, any>({
         path: `/acl_remove_client`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3666,8 +3823,8 @@ export class Api<
         any
       >({
         path: `/acl_stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -3735,9 +3892,9 @@ export class Api<
         ErrorResponse
       >({
         path: `/room_messages`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3808,10 +3965,10 @@ export class Api<
         ErrorResponse
       >({
         path: `/room_post_message`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3884,9 +4041,9 @@ export class Api<
         ErrorResponse
       >({
         path: `/room_stats`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3927,9 +4084,9 @@ export class Api<
         ErrorResponse
       >({
         path: `/room_clients`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -3952,7 +4109,7 @@ export class Api<
     ) =>
       this.request<void, any>({
         path: `/room_message`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
         ...params,
       }),
@@ -3983,9 +4140,9 @@ export class Api<
         any
       >({
         path: `/room_messages_clear`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4001,8 +4158,8 @@ export class Api<
     needsSetupList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/needs_setup`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4018,8 +4175,8 @@ export class Api<
     siteInfoList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/site_info`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4035,8 +4192,8 @@ export class Api<
     hardwareOptionsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/hardware_options`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4052,8 +4209,8 @@ export class Api<
     radioPresetsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/radio_presets`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4069,8 +4226,8 @@ export class Api<
     serialPortsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/serial_ports`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4086,10 +4243,10 @@ export class Api<
     setupWizardCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/setup_wizard`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4105,8 +4262,8 @@ export class Api<
     webFrontendsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/web_frontends`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4122,8 +4279,8 @@ export class Api<
     checkPymcConsoleList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/check_pymc_console`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4139,8 +4296,8 @@ export class Api<
     mqttStatusList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/mqtt_status`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4156,8 +4313,8 @@ export class Api<
     brokerPresetsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/broker_presets`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4174,9 +4331,9 @@ export class Api<
     publishNeighborsCreate: (params: RequestParams = {}) =>
       this.request<SuccessResponse, void>({
         path: `/publish_neighbors`,
-        method: "POST",
+        method: 'POST',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4205,9 +4362,9 @@ export class Api<
         any
       >({
         path: `/neighbor_scopes`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4234,7 +4391,7 @@ export class Api<
           error?: string;
           data?: {
             pubkey: string;
-            status: "responded" | "timeout" | "send_failed";
+            status: 'responded' | 'timeout' | 'send_failed';
             /** Comma-separated scope names; empty when unscoped */
             scopes: string;
             /** Whether the request actually reached the air */
@@ -4246,11 +4403,11 @@ export class Api<
         void
       >({
         path: `/query_neighbor_scopes`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4267,11 +4424,11 @@ export class Api<
     updateWebConfigCreate: (data: object, params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/update_web_config`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4288,11 +4445,11 @@ export class Api<
     updateMqttConfigCreate: (data: object, params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/update_mqtt_config`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4306,17 +4463,14 @@ export class Api<
      * @request POST:/update_advert_rate_limit_config
      * @secure
      */
-    updateAdvertRateLimitConfigCreate: (
-      data: object,
-      params: RequestParams = {},
-    ) =>
+    updateAdvertRateLimitConfigCreate: (data: object, params: RequestParams = {}) =>
       this.request<SuccessResponse, any>({
         path: `/update_advert_rate_limit_config`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4342,9 +4496,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/bulk_packets`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4368,9 +4522,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/airtime_data`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4414,9 +4568,9 @@ export class Api<
         any
       >({
         path: `/radio_packet_rates`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4488,9 +4642,9 @@ export class Api<
         any
       >({
         path: `/airtime_chart_data`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4512,9 +4666,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/adverts_count_by_contact_type`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4530,8 +4684,8 @@ export class Api<
     advertRateLimitStatsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/advert_rate_limit_stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4566,9 +4720,9 @@ export class Api<
         any
       >({
         path: `/crc_error_count`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4605,9 +4759,9 @@ export class Api<
         any
       >({
         path: `/crc_error_history`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4623,8 +4777,8 @@ export class Api<
     memoryDebugList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/memory_debug`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -4638,16 +4792,16 @@ export class Api<
      */
     memoryDebugCreate: (
       data: {
-        action?: "start" | "stop";
+        action?: 'start' | 'stop';
       },
       params: RequestParams = {},
     ) =>
       this.request<object, any>({
         path: `/memory_debug`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4684,9 +4838,9 @@ export class Api<
         any
       >({
         path: `/config_export`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4702,10 +4856,10 @@ export class Api<
     configImportCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/config_import`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4733,8 +4887,8 @@ export class Api<
         any
       >({
         path: `/identity_export`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4772,10 +4926,10 @@ export class Api<
         any
       >({
         path: `/generate_vanity_key`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4808,8 +4962,8 @@ export class Api<
         any
       >({
         path: `/db_stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -4839,10 +4993,10 @@ export class Api<
         any
       >({
         path: `/db_purge`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -4869,8 +5023,8 @@ export class Api<
         any
       >({
         path: `/db_vacuum`,
-        method: "POST",
-        format: "json",
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
   };
@@ -4886,7 +5040,7 @@ export class Api<
     docsList: (params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/docs`,
-        method: "GET",
+        method: 'GET',
         ...params,
       }),
   };
@@ -4902,8 +5056,8 @@ export class Api<
     authTokensList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/api/auth/tokens`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -4918,10 +5072,10 @@ export class Api<
     authTokensCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/api/auth/tokens`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -4936,8 +5090,8 @@ export class Api<
     authTokensDelete: (tokenId: number, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/api/auth/tokens/${tokenId}`,
-        method: "DELETE",
-        format: "json",
+        method: 'DELETE',
+        format: 'json',
         ...params,
       }),
   };
@@ -4953,8 +5107,8 @@ export class Api<
     companionList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -4969,8 +5123,8 @@ export class Api<
     selfInfoList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/self_info`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -4985,8 +5139,8 @@ export class Api<
     contactsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/contacts`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5006,9 +5160,9 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/companion/contact`,
-        method: "GET",
+        method: 'GET',
         query: query,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5023,10 +5177,10 @@ export class Api<
     importRepeaterContactsCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/import_repeater_contacts`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5041,8 +5195,8 @@ export class Api<
     channelsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/channels`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5057,8 +5211,8 @@ export class Api<
     statsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/stats`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5073,10 +5227,10 @@ export class Api<
     sendTextCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/send_text`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5091,10 +5245,10 @@ export class Api<
     sendChannelMessageCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/send_channel_message`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5109,10 +5263,10 @@ export class Api<
     loginCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/login`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5127,8 +5281,8 @@ export class Api<
     requestStatusCreate: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/request_status`,
-        method: "POST",
-        format: "json",
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
 
@@ -5143,8 +5297,8 @@ export class Api<
     requestTelemetryCreate: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/request_telemetry`,
-        method: "POST",
-        format: "json",
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
 
@@ -5159,10 +5313,10 @@ export class Api<
     sendCommandCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/send_command`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5177,8 +5331,8 @@ export class Api<
     resetPathCreate: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/reset_path`,
-        method: "POST",
-        format: "json",
+        method: 'POST',
+        format: 'json',
         ...params,
       }),
 
@@ -5193,10 +5347,10 @@ export class Api<
     setAdvertNameCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/set_advert_name`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5211,10 +5365,10 @@ export class Api<
     setAdvertLocationCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/companion/set_advert_location`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5229,7 +5383,7 @@ export class Api<
     eventsList: (params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/companion/events`,
-        method: "GET",
+        method: 'GET',
         ...params,
       }),
   };
@@ -5245,8 +5399,8 @@ export class Api<
     statusList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/status`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5261,8 +5415,8 @@ export class Api<
     checkList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/check`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5277,10 +5431,10 @@ export class Api<
     checkCreate: (data?: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/check`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5295,10 +5449,10 @@ export class Api<
     installCreate: (data?: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/install`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5313,7 +5467,7 @@ export class Api<
     progressList: (params: RequestParams = {}) =>
       this.request<void, any>({
         path: `/update/progress`,
-        method: "GET",
+        method: 'GET',
         ...params,
       }),
 
@@ -5328,8 +5482,8 @@ export class Api<
     channelsList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/channels`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
 
@@ -5344,10 +5498,10 @@ export class Api<
     setChannelCreate: (data: object, params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/set_channel`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5362,8 +5516,8 @@ export class Api<
     changelogList: (params: RequestParams = {}) =>
       this.request<object, any>({
         path: `/update/changelog`,
-        method: "GET",
-        format: "json",
+        method: 'GET',
+        format: 'json',
         ...params,
       }),
   };
@@ -5385,11 +5539,11 @@ export class Api<
     ) =>
       this.request<object, any>({
         path: `/cli`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
@@ -5412,13 +5566,13 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5442,11 +5596,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/catalogue`,
-        method: "GET",
+        method: 'GET',
         query: query,
         ...params,
       }),
@@ -5472,11 +5626,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/catalogue_install`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
         ...params,
@@ -5502,11 +5656,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/updates`,
-        method: "GET",
+        method: 'GET',
         query: query,
         ...params,
       }),
@@ -5531,11 +5685,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/update`,
-        method: "POST",
+        method: 'POST',
         body: data,
         type: ContentType.Json,
         ...params,
@@ -5571,11 +5725,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/progress`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
         ...params,
@@ -5601,11 +5755,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/settings`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
         ...params,
@@ -5634,11 +5788,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/settings`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5665,11 +5819,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/runtime`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
         ...params,
@@ -5696,11 +5850,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/install`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.FormData,
@@ -5728,11 +5882,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/enable`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5759,11 +5913,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/disable`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5790,11 +5944,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/start`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5821,11 +5975,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/stop`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5852,11 +6006,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/restart`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5889,14 +6043,14 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/logs`,
-        method: "GET",
+        method: 'GET',
         query: query,
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5922,11 +6076,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/uninstall`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
@@ -5950,13 +6104,13 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/${id}`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -5982,11 +6136,11 @@ export class Api<
         void | {
           success: false;
           error: string;
-          outcome: "unknown";
+          outcome: 'unknown';
         }
       >({
         path: `/plugins/${id}`,
-        method: "DELETE",
+        method: 'DELETE',
         query: query,
         secure: true,
         ...params,

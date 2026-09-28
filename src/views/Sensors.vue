@@ -2,31 +2,18 @@
 import { computed, watch } from 'vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import { useSystemStore } from '@/stores/system';
-import { flattenHardwareStats } from '@/utils/sensorFormatting';
+import {
+  flattenHardwareStats,
+  formatDescriptorMetric,
+  groupSensorMetrics,
+} from '@/utils/sensorFormatting';
+import type { SensorReading, SensorSummary, SensorMetricDescriptor } from '@/types/api';
 
 defineOptions({ name: 'SensorsView' });
 
-interface SensorReading {
-  name?: string;
-  type?: string;
-  ok?: boolean;
-  timestamp?: string | null;
-  error?: string;
-  data?: Record<string, unknown>;
-}
-
-interface SensorsSummary {
-  enabled?: boolean;
-  poll_interval_seconds?: number;
-  configured?: number;
-  loaded?: number;
-  running?: boolean;
-  readings?: SensorReading[];
-}
-
 const systemStore = useSystemStore();
-const sensors = computed<SensorsSummary | null>(() => {
-  const stats = systemStore.stats as { sensors?: SensorsSummary } | null;
+const sensors = computed<SensorSummary | null>(() => {
+  const stats = systemStore.stats as { sensors?: SensorSummary } | null;
   return stats?.sensors ?? null;
 });
 
@@ -43,6 +30,22 @@ const displayData = (reading: SensorReading): Record<string, unknown> | null => 
   }
   return reading.data;
 };
+
+const metricGroups = (reading: SensorReading) =>
+  groupSensorMetrics(displayData(reading) ?? {}, reading.metrics ?? []);
+const metricSections = [
+  { key: 'measurement', label: 'Measurements' },
+  { key: 'diagnostic', label: 'Diagnostics' },
+  { key: 'configuration', label: 'Configuration' },
+  { key: 'status', label: 'Status' },
+] as const;
+const metricLabel = (descriptor: SensorMetricDescriptor): string =>
+  descriptor.label ||
+  descriptor.source_path
+    .split('/')
+    .slice(1)
+    .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~').replace(/_/g, ' '))
+    .join(' / ');
 
 // Group readings by sensor type
 const readingsByType = computed(() => {
@@ -292,6 +295,7 @@ watch(
           <div
             v-for="reading in readingsByType[typeKey]"
             :key="reading.name || `${typeKey}-${reading.timestamp}`"
+            data-testid="sensor-reading"
             class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light p-3"
           >
             <!-- Sensor header -->
@@ -319,25 +323,50 @@ watch(
               {{ reading.error }}
             </div>
 
-            <!-- Metrics grid (same for every sensor type; hardware_stats is
-                 pre-flattened by displayData so no nested JSON is shown) -->
-            <div
-              v-if="displayData(reading) && Object.keys(displayData(reading)!).length > 0"
-              class="grid grid-cols-2 sm:grid-cols-3 gap-2"
-            >
-              <div
-                v-for="(value, key) in displayData(reading)"
-                :key="key"
-                class="rounded-md bg-black/opacity-light dark:bg-white/opacity-subtle p-2"
+            <!-- Snapshot descriptors are optional: old backends and other plug-ins
+                 keep their original flat compatibility grid below. -->
+            <template v-for="section in metricSections" :key="section.key">
+              <section v-if="metricGroups(reading)[section.key].length" class="mt-3">
+                <h4 class="text-xs font-semibold text-content-primary mb-2">{{ section.label }}</h4>
+                <div data-testid="metric-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div
+                    v-for="metric in metricGroups(reading)[section.key]"
+                    :key="metric.descriptor.id"
+                    data-testid="sensor-metric"
+                    class="rounded-md bg-black/opacity-light dark:bg-white/opacity-subtle p-2 min-w-0"
+                  >
+                    <p class="text-[10px] uppercase tracking-wide text-content-muted break-words">
+                      {{ metricLabel(metric.descriptor) }}
+                    </p>
+                    <p class="text-sm font-mono text-content-heading mt-0.5 break-words">
+                      {{ formatDescriptorMetric(metric.descriptor, metric.value) }}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </template>
+            <section v-if="Object.keys(metricGroups(reading).legacy).length" class="mt-3">
+              <h4
+                v-if="reading.metrics?.length"
+                class="text-xs font-semibold text-content-primary mb-2"
               >
-                <p class="text-[10px] uppercase tracking-wide text-content-muted truncate">
-                  {{ key }}
-                </p>
-                <p class="text-sm font-mono text-content-heading mt-0.5">
-                  {{ formatMetric(key, value) }}
-                </p>
+                Legacy values
+              </h4>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div
+                  v-for="(value, key) in metricGroups(reading).legacy"
+                  :key="key"
+                  class="rounded-md bg-black/opacity-light dark:bg-white/opacity-subtle p-2 min-w-0"
+                >
+                  <p class="text-[10px] uppercase tracking-wide text-content-muted break-words">
+                    {{ key }}
+                  </p>
+                  <p class="text-sm font-mono text-content-heading mt-0.5 break-words">
+                    {{ formatMetric(key, value) }}
+                  </p>
+                </div>
               </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
