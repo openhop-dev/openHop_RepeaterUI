@@ -113,6 +113,7 @@ const formatMetric = (key: string, value: unknown): string => {
   const num = typeof value === 'number' ? value : NaN;
   // Backend unit suffixes are authoritative; semantic names below assume base units.
   if (Number.isFinite(num)) {
+    if (key.endsWith('_dbm')) return `${num} dBm`;
     if (key.endsWith('_ma')) return `${num.toFixed(1)}mA`;
     if (key.endsWith('_mv')) return `${num}mV`;
     if (key.endsWith('_mw')) return `${num.toFixed(1)}mW`;

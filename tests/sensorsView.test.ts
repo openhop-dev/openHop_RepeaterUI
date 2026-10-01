@@ -48,6 +48,22 @@ afterEach(() => {
 });
 
 describe('Sensors view metric descriptors', () => {
+  it.each([18, 0, -9])('preserves %s dBm instead of interpreting RF power as watts', (power) => {
+    const wrapper = render([
+      modem('Legacy modem', { tx_power_dbm: power, power_mw: 18, power_w: 2 }, []),
+      modem('Described modem', { tx_power_dbm: power, 'modem:/environment/value': 1 }, [
+        metric('/environment/value', 'measurement', 'Value'),
+      ]),
+    ]);
+    const cards = wrapper.findAll('[data-testid="sensor-reading"]');
+    for (const card of cards) {
+      expect(card.text()).toContain(`${power} dBm`);
+      expect(card.text()).not.toContain(`${power.toFixed(2)}W`);
+    }
+    expect(cards[0].text()).toContain('18.0mW');
+    expect(cards[0].text()).toContain('2.00W');
+  });
+
   it('groups descriptor metrics separately, uses units and labels, and keeps legacy keys visible', () => {
     const wrapper = render([
       modem(
@@ -88,6 +104,34 @@ describe('Sensors view metric descriptors', () => {
     expect(wrapper.text()).toContain('n/a');
     expect(wrapper.text()).toContain('temperature_c');
     expect(wrapper.text()).toContain('45.0°C');
+  });
+
+  it('keeps known metrics unavailable after a successful reading is followed by a failed poll', async () => {
+    const descriptor = metric(
+      '/environment/temperature_c',
+      'measurement',
+      'Environmental temperature',
+      '°C',
+    );
+    const wrapper = render([modem('Alpha', { [descriptor.data_key]: 23.5 }, [descriptor])]);
+    expect(wrapper.text()).toContain('23.5 °C');
+    state.stats = {
+      sensors: {
+        readings: [
+          {
+            ...modem('Alpha', {}, [{ ...descriptor, available: false, reason: 'read_failed' }]),
+            ok: false,
+            error: 'RuntimeError: offline',
+          },
+        ],
+      },
+    };
+    await nextTick();
+    expect(wrapper.findAll('[data-testid="sensor-metric"]')).toHaveLength(1);
+    expect(wrapper.text()).toContain('Environmental temperature');
+    expect(wrapper.text()).toContain('n/a');
+    expect(wrapper.text()).toContain('RuntimeError: offline');
+    expect(wrapper.text()).not.toContain('23.5 °C');
   });
 
   it('reacts to availability transitions and isolates two modem instances', async () => {

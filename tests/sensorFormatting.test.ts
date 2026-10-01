@@ -28,6 +28,22 @@ it('formats descriptors by explicit unit only, keeping unavailable and nonfinite
   expect(formatDescriptorMetric(descriptor, '12')).toBe('n/a');
 });
 
+it('rejects malformed legacy categories without throwing or hiding their data', () => {
+  const descriptor = {
+    id: '/environment/value',
+    source_path: '/environment/value',
+    data_key: 'modem:/environment/value',
+    label: 'Value',
+    unit: null,
+    kind: 'number',
+    category: 'legacy',
+    available: true,
+  } as unknown as Parameters<typeof groupSensorMetrics>[1][number];
+  const groups = groupSensorMetrics({ [descriptor.data_key]: 18 }, [descriptor]);
+  expect(groups.legacy).toEqual({ [descriptor.data_key]: 18 });
+  expect(groups.measurement).toEqual([]);
+});
+
 it('groups valid descriptors by category, ignores duplicate or absent keys and retains legacy data', () => {
   const descriptor = {
     id: '/environment/temperature_c',

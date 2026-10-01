@@ -32,11 +32,15 @@ export function groupSensorMetrics(
   };
   const seen = new Set<string>();
   for (const descriptor of metrics) {
-    if (!descriptor || !Object.prototype.hasOwnProperty.call(groups, descriptor.category)) continue;
+    if (
+      !descriptor ||
+      !['measurement', 'diagnostic', 'configuration', 'status'].includes(descriptor.category)
+    )
+      continue;
     const key = descriptor.data_key;
     if (
       typeof key !== 'string' ||
-      !Object.prototype.hasOwnProperty.call(data, key) ||
+      (!Object.prototype.hasOwnProperty.call(data, key) && descriptor.available !== false) ||
       seen.has(key)
     )
       continue;
