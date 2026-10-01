@@ -699,7 +699,9 @@ function cancelEditing() {
 function parseEnPins(input: string): number[] {
   return input
     .split(',')
-    .map((p) => Number(p.trim()))
+    .map((p) => p.trim())
+    .filter((p) => p !== '')
+    .map((p) => Number(p))
     .filter((n) => Number.isFinite(n));
 }
 
