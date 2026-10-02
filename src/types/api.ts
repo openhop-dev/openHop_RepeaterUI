@@ -110,6 +110,27 @@ export interface NeighborLinkLive {
   best_score: number;
   /** Shared Core flood reception score calculated from SNR, SF and full frame length. */
   worst_score: number;
+  /** Per receiving radio; present only on a node with two or more radios. */
+  radios?: NeighborLinkRadioStats[];
+}
+
+/** One neighbour as heard by one radio of a multi-radio node. */
+export interface NeighborLinkRadioStats {
+  radio_id: string;
+  sample_count: number;
+  duplicate_sample_count: number;
+  first_seen: number;
+  last_seen: number;
+  age_seconds: number;
+  active: boolean;
+  last_rssi: number;
+  last_snr: number;
+  last_score: number;
+  ewma_rssi: number;
+  ewma_snr: number;
+  ewma_score: number;
+  best_score: number;
+  worst_score: number;
 }
 
 export interface NeighborLinksPayload {
@@ -129,6 +150,8 @@ export interface NeighborLinkHistoryPoint {
   packet_type: number;
   route_type: number;
   path_hop_count: number | null;
+  /** Radio that heard it; absent when not recorded. */
+  rx_radio_id?: string;
 }
 
 export interface NeighborLinkHistoryPayload {
@@ -144,6 +167,8 @@ export interface NeighborLinkHistoryPayload {
 export interface NoiseFloorHistory {
   timestamp: number;
   noise_floor_dbm: number;
+  /** Present only on a node with two or more radios; null means unattributed. */
+  radio_id?: string | null;
 }
 
 export interface NoiseFloorStats {
@@ -163,6 +188,37 @@ export interface NoiseFloorChartData {
 }
 
 // System related types
+export interface SensorMetricDescriptor {
+  id: string;
+  source_path: string;
+  data_key: string;
+  label: string;
+  unit: string | null;
+  kind: 'number' | 'boolean';
+  category: 'measurement' | 'diagnostic' | 'configuration' | 'status';
+  available: boolean;
+  reason?: 'null' | 'missing' | 'source_unavailable' | 'invalid' | 'read_failed';
+}
+
+export interface SensorReading {
+  name?: string;
+  type?: string;
+  ok?: boolean;
+  timestamp?: string | null;
+  error?: string;
+  data?: Record<string, unknown>;
+  metrics?: SensorMetricDescriptor[];
+}
+
+export interface SensorSummary {
+  enabled?: boolean;
+  poll_interval_seconds?: number;
+  configured?: number;
+  loaded?: number;
+  running?: boolean;
+  readings?: SensorReading[];
+}
+
 export interface SystemStats {
   version: string;
   core_version: string;
@@ -178,8 +234,11 @@ export interface SystemStats {
   temperature?: number;
   radio_status?: string;
   radio_error?: string;
+  modem_disconnected?: string[];
   last_packet_time?: number;
   noise_floor_dbm?: number;
+  /** The other radios' latest samples; present only on a node with two or more. */
+  noise_floor_radios?: Array<{ radio_id: string; noise_floor_dbm: number }>;
   utilization_percent?: number;
   /** Carried by the WS vitals broadcast; over HTTP the mode lives in config. */
   mode?: 'forward' | 'monitor' | 'no_tx';
@@ -276,7 +335,6 @@ export interface SystemStats {
       cors_enabled?: boolean;
       web_path?: string | null;
       site_name?: string;
-      carto_api_key?: string;
     };
     mqtt_brokers?: {
       iata_code?: string;
@@ -314,25 +372,11 @@ export interface SystemStats {
         tls?: {
           enabled?: boolean;
           insecure?: boolean;
-        }
+        };
       }>;
     };
   };
-  sensors?: {
-    enabled?: boolean;
-    poll_interval_seconds?: number;
-    configured?: number;
-    loaded?: number;
-    running?: boolean;
-    readings?: Array<{
-      name?: string;
-      type?: string;
-      ok?: boolean;
-      timestamp?: string | null;
-      error?: string;
-      data?: Record<string, unknown>;
-    }>;
-  };
+  sensors?: SensorSummary;
   // Include other possible fields that might be returned by stats_getter
   [key: string]: unknown;
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, type Ref, type ComponentPublicInstance } from 'vue';
+import { ref, onMounted, watch, type Ref, type ComponentPublicInstance } from 'vue';
 import { useRoute, onBeforeRouteUpdate } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
@@ -17,12 +17,13 @@ import BackupRestore from '@/components/configuration/BackupRestore.vue';
 import DatabaseManagement from '@/components/configuration/DatabaseManagement.vue';
 import MemoryDebug from '@/components/configuration/MemoryDebug.vue';
 import PolicyEngineSettings from '@/components/configuration/PolicyEngineSettings.vue';
+import SensorManagerSettings from '@/components/configuration/SensorManagerSettings.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 import Spinner from '@/components/ui/Spinner.vue';
 
 defineOptions({ name: 'ConfigurationView' });
 
-type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void) => void; isEditing: Ref<boolean> | boolean };
+type EditableTabRef = ComponentPublicInstance & { requestLeave: (cb: () => void, cancel?: () => void) => void; isEditing: Ref<boolean> | boolean };
 
 const route = useRoute();
 const systemStore = useSystemStore();
@@ -43,6 +44,8 @@ const dutyRef           = ref<EditableTabRef | null>(null);
 const delaysRef         = ref<EditableTabRef | null>(null);
 const transportRef      = ref<EditableTabRef | null>(null);
 const letsMeshRef       = ref<EditableTabRef | null>(null);
+const policyRef         = ref<EditableTabRef | null>(null);
+const sensorRef         = ref<EditableTabRef | null>(null);
 
 const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
   radio:           radioRef,
@@ -53,6 +56,8 @@ const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
   delays:          delaysRef,
   transport:       transportRef,
   observer:        letsMeshRef,
+  policy:          policyRef,
+  sensormanager:   sensorRef,
 };
 
 function isCurrentTabEditing(): boolean {
@@ -62,10 +67,10 @@ function isCurrentTabEditing(): boolean {
   return typeof editing === 'boolean' ? editing : editing.value;
 }
 
-function requestCurrentTabLeave(callback: () => void) {
+function requestCurrentTabLeave(callback: () => void, cancel?: () => void) {
   const ref = editableTabRefs[activeTab.value]?.value;
   if (ref) {
-    ref.requestLeave(callback);
+    ref.requestLeave(callback, cancel);
   } else {
     callback();
   }
@@ -76,7 +81,7 @@ function requestCurrentTabLeave(callback: () => void) {
 const VALID_TABS = new Set([
   'radio', 'radio-hardware', 'repeater', 'duty', 'delays',
   'advert', 'transport', 'api-tokens', 'web', 'observer', 'policy-engine',
-  'backup', 'database', 'memory',
+  'backup', 'database', 'memory', 'sensormanager',
 ]);
 
 function resolveTab(queryTab: string | undefined): string {
@@ -99,7 +104,7 @@ onBeforeRouteUpdate((to, _from, next) => {
     requestCurrentTabLeave(() => {
       activeTab.value = incoming;
       next();
-    });
+    }, () => next(false));
     // Don't call next() — requestCurrentTabLeave will do it after confirmation.
     return;
   }
@@ -197,6 +202,7 @@ onMounted(async () => {
         <BackupRestore          v-if="activeTab === 'backup'"                               key="backup-restore" />
         <DatabaseManagement     v-if="activeTab === 'database'"                             key="database-management" />
         <MemoryDebug            v-if="activeTab === 'memory'"                               key="memory-debug" />
+        <SensorManagerSettings  v-if="activeTab === 'sensormanager'" ref="sensorRef"         key="sensor-manager" />
       </div>
     </div>
   </div>

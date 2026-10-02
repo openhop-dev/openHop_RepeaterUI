@@ -506,7 +506,7 @@ export class ApiService {
   static async sendAdvert(): Promise<SendAdvertResponse> {
     try {
       const params = await this.getGeneratedRequestParams();
-      const response = await generatedApiClient.sendAdvert.sendAdvertCreate(params);
+      const response = await generatedApiClient.sendAdvert.sendAdvertCreate(undefined, params);
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);
@@ -566,6 +566,8 @@ export class ApiService {
       path_hash_size: number;
       hours?: number;
       limit?: number;
+      /** Only what this radio heard. */
+      radio_id?: string;
     },
     config?: AxiosRequestConfig,
   ): Promise<NeighborLinkHistoryResponse> {
@@ -1590,6 +1592,84 @@ export class ApiService {
       params.set('token', token);
     }
     return new EventSource(`${API_BASE_URL}/plugins/progress?${params.toString()}`);
+  }
+
+  // ========================
+  // Sensor Manager
+  // ========================
+
+  static async getSensorTypes(): Promise<
+    ApiResponse<{
+      types: Array<{
+        type: string;
+        name: string;
+        description: string;
+        settings: Array<{
+          key: string;
+          type: string;
+          label: string;
+          default?: unknown;
+          help?: string;
+        }>;
+      }>;
+    }>
+  > {
+    return this.get('/sensors_types');
+  }
+
+  static async getSensorConfig(): Promise<
+    ApiResponse<{
+      enabled: boolean;
+      poll_interval_seconds: number;
+      auto_install_packages: boolean;
+      definitions: Array<{
+        name: string;
+        _original_name?: string;
+        type: string;
+        enabled: boolean;
+        auto_install_packages?: boolean;
+        settings: Record<string, unknown>;
+      }>;
+    }>
+  > {
+    return this.get('/sensors_config');
+  }
+
+  static async updateSensorConfig(data: {
+    enabled: boolean;
+    poll_interval_seconds: number;
+    auto_install_packages: boolean;
+    definitions: Array<{
+      name: string;
+      _original_name?: string;
+      type: string;
+      enabled: boolean;
+      auto_install_packages?: boolean;
+      settings: Record<string, unknown>;
+    }>;
+  }): Promise<
+    ApiResponse<{
+      saved: boolean;
+      restart_required: boolean;
+      message: string;
+    }>
+  > {
+    return this.post('/sensors_config_update', data);
+  }
+
+  static async readSensors(): Promise<
+    ApiResponse<{
+      readings: Array<Record<string, unknown>>;
+      summary: {
+        enabled: boolean;
+        poll_interval_seconds: number;
+        configured: number;
+        loaded: number;
+        running: boolean;
+      };
+    }>
+  > {
+    return this.post('/sensors_read');
   }
 
   /**

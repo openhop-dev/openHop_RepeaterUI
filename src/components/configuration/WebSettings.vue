@@ -3,9 +3,11 @@
     <!-- Page Heading -->
     <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
       <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Web Options</h3>
+        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
+          Web Options
+        </h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Configure site identification, map tiles, CORS policy and web frontend selection
+          Configure site identification, CORS policy and web frontend selection
         </p>
       </div>
     </div>
@@ -15,10 +17,10 @@
       v-if="showSwitchingPopup"
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
     >
-      <div class="glass-card w-full max-w-md rounded-[15px] p-6 space-y-3 border border-accent-cyan/opacity-medium">
-        <h4 class="text-base font-semibold text-content-primary">
-          Changing web interface
-        </h4>
+      <div
+        class="glass-card w-full max-w-md rounded-[15px] p-6 space-y-3 border border-accent-cyan/opacity-medium"
+      >
+        <h4 class="text-base font-semibold text-content-primary">Changing web interface</h4>
         <p class="text-sm text-content-secondary dark:text-content-muted">
           The web interface is switching now and this page will refresh automatically.
         </p>
@@ -29,9 +31,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary mb-1">
-            Site Identification
-          </h3>
+          <h3 class="text-lg font-semibold text-content-primary mb-1">Site Identification</h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
             Customise the browser tab title and login page caption
           </p>
@@ -39,10 +39,7 @@
       </div>
       <div class="space-y-4">
         <div>
-          <label
-            for="site-name"
-            class="block text-sm font-medium text-content-primary mb-2"
-          >
+          <label for="site-name" class="block text-sm font-medium text-content-primary mb-2">
             Site Name
           </label>
           <input
@@ -62,72 +59,11 @@
       </div>
     </div>
 
-    <!-- Map Tiles -->
-    <div class="cfg-section">
-      <div class="flex items-start justify-between mb-4">
-        <div>
-          <h3 class="text-lg font-semibold text-content-primary mb-1">Map Tiles</h3>
-          <p class="text-sm text-content-secondary dark:text-content-muted">
-            Configure CARTO basemaps for the Neighbors map
-          </p>
-        </div>
-      </div>
-      <div class="space-y-3">
-        <label for="carto-api-key" class="block text-sm font-medium text-content-primary">
-          CARTO Basemaps API Key
-        </label>
-        <input
-          id="carto-api-key"
-          v-model="localConfig.carto_api_key"
-          data-testid="carto-api-key"
-          type="password"
-          autocomplete="off"
-          placeholder="Paste your CARTO basemaps key"
-          class="cfg-input"
-          :disabled="saving"
-          @keyup.enter="() => saveSettings()"
-        />
-        <p class="text-xs text-content-secondary dark:text-content-muted">
-          Required by CARTO for light and dark map tiles. The key is sent to CARTO by each browser
-          and is therefore not a private server secret.
-          <a
-            href="https://carto.com/basemaps/apikey/"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-primary hover:underline"
-          >Request a free key</a>.
-        </p>
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            data-testid="save-carto-api-key"
-            class="btn-primary"
-            :disabled="saving"
-            @click="() => saveSettings()"
-          >
-            Save API Key
-          </button>
-          <button
-            v-if="localConfig.carto_api_key"
-            type="button"
-            data-testid="clear-carto-api-key"
-            class="btn-secondary"
-            :disabled="saving"
-            @click="clearCartoApiKey"
-          >
-            Clear API Key
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- CORS Settings -->
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary mb-1">
-            CORS Settings
-          </h3>
+          <h3 class="text-lg font-semibold text-content-primary mb-1">CORS Settings</h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
             Control cross-origin resource sharing for API access
           </p>
@@ -138,9 +74,7 @@
         <!-- CORS Enabled Toggle -->
         <div class="flex items-center justify-between">
           <div>
-            <label class="text-sm font-medium text-content-primary"
-              >Enable CORS</label
-            >
+            <label class="text-sm font-medium text-content-primary">Enable CORS</label>
             <p class="text-xs text-content-secondary dark:text-content-muted mt-1">
               Allow web frontends from different origins to access the API
             </p>
@@ -171,9 +105,7 @@
     <div class="cfg-section">
       <div class="flex items-start justify-between mb-4">
         <div>
-          <h3 class="text-lg font-semibold text-content-primary mb-1">
-            Web Frontend
-          </h3>
+          <h3 class="text-lg font-semibold text-content-primary mb-1">Web Frontend</h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">
             Choose which web interface to use as the primary UI at
             <code class="text-xs">/</code>. Application UI plugins can also be opened under
@@ -275,7 +207,9 @@
               />
             </svg>
             <div class="flex-1">
-              <h4 class="text-sm font-medium text-content-primary">openHop Console Not Installed</h4>
+              <h4 class="text-sm font-medium text-content-primary">
+                openHop Console Not Installed
+              </h4>
               <p class="text-xs text-content-secondary dark:text-content-muted mt-1 mb-3">
                 openHop Console must be installed at
                 <code class="text-accent-cyan">/opt/pymc_console/web/html</code>
@@ -327,12 +261,9 @@
             d="M6 18L18 6M6 6l12 12"
           />
         </svg>
-        <span
-          :class="
-            saveSuccess ? 'text-accent-green' : 'text-accent-red'
-          "
-          >{{ saveMessage }}</span
-        >
+        <span :class="saveSuccess ? 'text-accent-green' : 'text-accent-red'">{{
+          saveMessage
+        }}</span>
       </div>
     </div>
   </div>
@@ -349,7 +280,6 @@ defineOptions({ name: 'WebSettings' });
 interface WebConfig {
   cors_enabled: boolean;
   site_name: string;
-  carto_api_key: string;
 }
 
 interface WebFrontend {
@@ -379,7 +309,6 @@ const selectedFrontendId = ref('builtin');
 const localConfig = reactive<WebConfig>({
   cors_enabled: false,
   site_name: '',
-  carto_api_key: '',
 });
 
 const saveMessageClass = computed(() => {
@@ -393,11 +322,7 @@ const consoleMissing = computed(() => {
   return !console || !console.available;
 });
 
-function pathLabelFor(item: {
-  kind?: string;
-  path?: string | null;
-  plugin_id?: string;
-}): string {
+function pathLabelFor(item: { kind?: string; path?: string | null; plugin_id?: string }): string {
   if (item.kind === 'builtin' || !item.path) return 'Built-in';
   if (item.kind === 'plugin' && item.plugin_id) {
     return `${item.path}  ·  /plugins/${item.plugin_id}/`;
@@ -483,8 +408,6 @@ function loadSettings() {
   const webConfig = stats.value?.config?.web || {};
   localConfig.cors_enabled = webConfig.cors_enabled === true;
   localConfig.site_name = typeof stats.value?.site_name === 'string' ? stats.value.site_name : '';
-  localConfig.carto_api_key =
-    typeof webConfig.carto_api_key === 'string' ? webConfig.carto_api_key : '';
 }
 
 async function saveSettings(options?: { frontendId?: string }) {
@@ -499,14 +422,12 @@ async function saveSettings(options?: { frontendId?: string }) {
       web: {
         cors_enabled: boolean;
         site_name: string;
-        carto_api_key: string;
         web_path?: string | null;
       };
     } = {
       web: {
         cors_enabled: localConfig.cors_enabled,
         site_name: localConfig.site_name.trim(),
-        carto_api_key: localConfig.carto_api_key.trim(),
       },
     };
 
@@ -553,11 +474,6 @@ async function saveSettings(options?: { frontendId?: string }) {
 
 async function toggleCors() {
   localConfig.cors_enabled = !localConfig.cors_enabled;
-  await saveSettings();
-}
-
-async function clearCartoApiKey() {
-  localConfig.carto_api_key = '';
   await saveSettings();
 }
 

@@ -84,7 +84,7 @@ export const useWebSocketStore = defineStore('websocket', () => {
   }
 
   function startReconnectSnackbar() {
-    showSnackbar('Reconnecting...', 'info');
+    showSnackbar('Reconnecting...', 'info', 3000);
   }
 
   function canOpenConnection() {

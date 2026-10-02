@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, onUnmounted } from 'vue';
+import { ref, watch, nextTick, onUnmounted } from 'vue';
 import 'leaflet/dist/leaflet.css';
+import { createMapBaseLayer } from '@/utils/mapTiles';
+import type { Map, Marker, LeafletMouseEvent } from 'leaflet';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -18,21 +20,25 @@ const roundCoord = (v: number) => Math.round(v * 1e6) / 1e6;
 const mapContainer = ref<HTMLDivElement | null>(null);
 const selectedLat = ref(roundCoord(props.latitude || 0));
 const selectedLng = ref(roundCoord(props.longitude || 0));
-let map: any = null;
-let marker: any = null;
+let map: Map | null = null;
+let marker: Marker | null = null;
+let baseLayer: ReturnType<typeof createMapBaseLayer> | null = null;
+let generation = 0;
+let disposed = false;
 
 const initMap = async () => {
   if (!mapContainer.value) return;
 
   // Clean up existing map if any
   cleanupMap();
+  const current = generation;
 
   try {
     // Dynamically import Leaflet
     const L = (await import('leaflet')).default;
 
     // Fix for default marker icon
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -40,6 +46,7 @@ const initMap = async () => {
     });
 
     await nextTick();
+    if (disposed || !props.isOpen || current !== generation || !mapContainer.value) return;
 
     // Initialize map
     const initLat = selectedLat.value || 0;
@@ -48,34 +55,7 @@ const initMap = async () => {
 
     map = L.map(mapContainer.value).setView([initLat, initLng], zoom);
 
-    // Add dark theme tile layers (matching NetworkMap)
-    try {
-      const tileLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',
-        {
-          maxZoom: 19,
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-          errorTileUrl:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        },
-      );
-
-      const labelsLayer = L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',
-        {
-          maxZoom: 19,
-          attribution: '',
-          errorTileUrl:
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-        },
-      );
-
-      tileLayer.addTo(map);
-      labelsLayer.addTo(map);
-    } catch (tileErr) {
-      console.warn('Error loading tiles:', tileErr);
-    }
+    baseLayer = createMapBaseLayer(map);
 
     // Add marker if coordinates exist
     if (initLat !== 0 || initLng !== 0) {
@@ -83,7 +63,8 @@ const initMap = async () => {
     }
 
     // Click to set location
-    map.on('click', (e: any) => {
+    map.on('click', (e: LeafletMouseEvent) => {
+      if (!map) return;
       selectedLat.value = roundCoord(e.latlng.lat);
       selectedLng.value = roundCoord(e.latlng.lng);
 
@@ -104,6 +85,9 @@ const initMap = async () => {
 };
 
 const cleanupMap = () => {
+  ++generation;
+  baseLayer?.dispose();
+  baseLayer = null;
   if (map) {
     map.remove();
     map = null;
@@ -122,6 +106,7 @@ watch(
       cleanupMap();
     }
   },
+  { immediate: true },
 );
 
 watch(
@@ -156,6 +141,7 @@ const getCurrentLocation = () => {
           map.setView([selectedLat.value, selectedLng.value], 13);
 
           const L = (await import('leaflet')).default;
+          if (!map || disposed || !props.isOpen) return;
           if (marker) {
             marker.setLatLng([selectedLat.value, selectedLng.value]);
           } else {
@@ -175,119 +161,114 @@ const getCurrentLocation = () => {
 
 // Cleanup on component unmount
 onUnmounted(() => {
+  disposed = true;
   cleanupMap();
 });
 </script>
 
 <template>
   <Teleport to="body">
-  <div
-    v-if="isOpen"
-    class="modal-backdrop z-[400]!"
-    @click.self="handleClose"
-  >
-    <div
-      class="glass-card border border-stroke-subtle dark:border-white/opacity-medium rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
-    >
-      <!-- Header -->
+    <div v-if="isOpen" class="modal-backdrop z-[400]!" @click.self="handleClose">
       <div
-        class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/opacity-light"
+        class="glass-card border border-stroke-subtle dark:border-white/opacity-medium rounded-[15px] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl"
       >
-        <h3 class="text-xl font-semibold text-content-primary">
-          Select Location
-        </h3>
-        <button
-          @click="handleClose"
-          class="text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors"
+        <!-- Header -->
+        <div
+          class="flex items-center justify-between p-6 border-b border-stroke-subtle dark:border-stroke/opacity-light"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </div>
-
-      <!-- Map Container -->
-      <div class="flex-1 relative min-h-[400px]">
-        <div ref="mapContainer" class="absolute inset-0 rounded-b-[15px] overflow-hidden"></div>
-      </div>
-
-      <!-- Coordinates Display & Actions -->
-      <div class="p-6 border-t border-stroke-subtle dark:border-stroke/opacity-light space-y-4">
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              class="block text-sm font-medium text-content-secondary dark:text-content-muted mb-2"
-              >Latitude</label
-            >
-            <input
-              v-model.number="selectedLat"
-              type="number"
-              step="0.000001"
-              class="modal-input-readonly"
-              readonly
-            />
-          </div>
-          <div>
-            <label
-              class="block text-sm font-medium text-content-secondary dark:text-content-muted mb-2"
-              >Longitude</label
-            >
-            <input
-              v-model.number="selectedLng"
-              type="number"
-              step="0.000001"
-              class="modal-input-readonly"
-              readonly
-            />
-          </div>
-        </div>
-
-        <div class="flex gap-3">
-          <button
-            @click="getCurrentLocation"
-            class="modal-btn-cancel flex items-center justify-center gap-2"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-            Use Current Location
-          </button>
+          <h3 class="text-xl font-semibold text-content-primary">Select Location</h3>
           <button
             @click="handleClose"
-            class="px-6 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm"
+            class="text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors"
           >
-            Cancel
-          </button>
-          <button
-            @click="handleSelect"
-            class="px-6 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-sm"
-          >
-            Select Location
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </button>
         </div>
 
-        <p class="text-content-muted text-xs text-center">
-          Click on the map to select a location
-        </p>
+        <!-- Map Container -->
+        <div class="flex-1 relative min-h-[400px]">
+          <div ref="mapContainer" class="absolute inset-0 rounded-b-[15px] overflow-hidden"></div>
+        </div>
+
+        <!-- Coordinates Display & Actions -->
+        <div class="p-6 border-t border-stroke-subtle dark:border-stroke/opacity-light space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                class="block text-sm font-medium text-content-secondary dark:text-content-muted mb-2"
+                >Latitude</label
+              >
+              <input
+                v-model.number="selectedLat"
+                type="number"
+                step="0.000001"
+                class="modal-input-readonly"
+                readonly
+              />
+            </div>
+            <div>
+              <label
+                class="block text-sm font-medium text-content-secondary dark:text-content-muted mb-2"
+                >Longitude</label
+              >
+              <input
+                v-model.number="selectedLng"
+                type="number"
+                step="0.000001"
+                class="modal-input-readonly"
+                readonly
+              />
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button
+              @click="getCurrentLocation"
+              class="modal-btn-cancel flex items-center justify-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              Use Current Location
+            </button>
+            <button
+              @click="handleClose"
+              class="px-6 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-sm"
+            >
+              Cancel
+            </button>
+            <button
+              @click="handleSelect"
+              class="px-6 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-sm"
+            >
+              Select Location
+            </button>
+          </div>
+
+          <p class="text-content-muted text-xs text-center">
+            Click on the map to select a location
+          </p>
+        </div>
       </div>
     </div>
-  </div>
   </Teleport>
 </template>
 

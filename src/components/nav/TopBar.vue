@@ -16,6 +16,7 @@ import { useManagedPolling } from '@/composables/useManagedPolling';
 import { useAppRuntimeStore } from '@/stores/appRuntime';
 import { useWebSocketStore } from '@/stores/websocket';
 import Spinner from '@/components/ui/Spinner.vue';
+import { getRadioWarning } from '@/utils/radioWarning';
 
 defineOptions({ name: 'TopBar' });
 
@@ -247,18 +248,7 @@ const showNotificationBadge = computed(
   () => notificationCount.value > 0 || updateInfo.value.isChecking || pluginUpdateInfo.value.isChecking,
 );
 
-const radioWarning = computed(() => {
-  const status = String(systemStore.stats?.radio_status ?? '').toLowerCase();
-  if (status !== 'degraded') return null;
-
-  const configuredType = systemStore.stats?.config?.radio_type ?? 'configured radio';
-  const details = systemStore.stats?.radio_error || 'Radio initialization failed';
-
-  return {
-    title: `Radio degraded (${configuredType})`,
-    details,
-  };
-});
+const radioWarning = computed(() => getRadioWarning(systemStore.stats));
 
 // Utility functions
 const getContactTypeColor = (contactType: string) => {
@@ -545,7 +535,7 @@ const toggleMobileSidebar = () => {
                   Install Update
                 </button>
                 <a
-                  href="https://github.com/openhop-dev/openhop-repeater"
+                  href="https://github.com/openhop-dev/openhop_repeater"
                   target="_blank"
                   class="text-xs text-content-muted hover:text-content-secondary underline"
                 >

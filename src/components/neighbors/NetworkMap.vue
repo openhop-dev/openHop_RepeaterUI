@@ -5,7 +5,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Supercluster from 'supercluster';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
-import { getMapTileUrls } from '@/utils/mapTiles';
+import { createMapBaseLayer } from '@/utils/mapTiles';
 
 // Prevent chrome detection errors
 if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).chrome) {
@@ -56,7 +56,6 @@ interface Props {
   baseLongitude?: number | null;
   statsLoading?: boolean;
   showLegend?: boolean;
-  cartoApiKey?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -64,7 +63,6 @@ const props = withDefaults(defineProps<Props>(), {
   baseLongitude: null,
   statsLoading: false,
   showLegend: true,
-  cartoApiKey: null,
 });
 
 const emit = defineEmits<{
@@ -78,6 +76,9 @@ const toggleLegend = () => {
 // Map refs
 const mapContainer = ref<HTMLDivElement>();
 let map: L.Map | null = null;
+let baseLayer: ReturnType<typeof createMapBaseLayer> | null = null;
+let disposed = false;
+let initialization = 0;
 const nodeMarkers = ref<Map<string, L.Marker>>(new Map());
 
 // Clustering refs
@@ -89,8 +90,6 @@ const clusterRadiusRef = ref(60); // Increased cluster radius to cluster less ag
 const maxClusterZoomRef = ref(14); // Increased max zoom level for clustering
 
 // Theme detection
-const isDarkMode = ref(document.documentElement.classList.contains('dark'));
-const hasCartoApiKey = computed(() => Boolean(props.cartoApiKey?.trim()));
 
 const MAP_COLORS = {
   base: 'var(--color-accent-red)',
@@ -109,18 +108,6 @@ const MAP_COLORS = {
   popupHeading: 'var(--color-text-primary)',
 };
 
-// Watch for theme changes
-const themeObserver = new MutationObserver(() => {
-  const newIsDark = document.documentElement.classList.contains('dark');
-  if (newIsDark !== isDarkMode.value) {
-    isDarkMode.value = newIsDark;
-    // Recreate map with new tiles when theme changes
-    if (map) {
-      recreateMap();
-    }
-  }
-});
-
 // Computed properties
 const hasValidCoordinates = computed(
   () =>
@@ -133,7 +120,6 @@ const hasValidCoordinates = computed(
     Math.abs(props.baseLatitude) <= 90 &&
     Math.abs(props.baseLongitude) <= 180,
 );
-
 
 const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const R = 6371; // Earth's radius in kilometers
@@ -151,6 +137,9 @@ const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: numbe
 
 // Map cleanup
 const cleanupMap = () => {
+  ++initialization;
+  baseLayer?.dispose();
+  baseLayer = null;
   if (map) {
     // Remove all connection lines
     connectionLines.value.forEach((line) => {
@@ -166,22 +155,6 @@ const cleanupMap = () => {
   nodeMarkers.value.clear();
   clusterMarkers.value.clear();
   supercluster = null;
-};
-
-// Recreate map (for theme changes)
-const recreateMap = async () => {
-  const currentZoom = map?.getZoom() || 11;
-  const currentCenter =
-    map?.getCenter() ||
-    (hasValidCoordinates.value ? [props.baseLatitude!, props.baseLongitude!] : [0, 0]);
-
-  cleanupMap();
-  await nextTick();
-  await initializeOpenStreetMap();
-
-  if (map) {
-    map.setView(currentCenter as L.LatLngExpression, currentZoom);
-  }
 };
 
 // Convert adverts to GeoJSON features for clustering
@@ -240,6 +213,7 @@ const initializeCluster = (features: ClusterFeature[]) => {
 
 // OpenStreetMap initialization with dark theme and animations
 const initializeOpenStreetMap = async () => {
+  if (disposed) return;
   if (!mapContainer.value || !hasValidCoordinates.value) {
     console.warn('Cannot initialize map: missing container or coordinates');
     return;
@@ -248,7 +222,9 @@ const initializeOpenStreetMap = async () => {
   // Clean up existing map
   cleanupMap();
 
+  const current = initialization;
   await nextTick();
+  if (disposed || current !== initialization || !mapContainer.value) return;
 
   const lat = props.baseLatitude!;
   const lng = props.baseLongitude!;
@@ -258,35 +234,11 @@ const initializeOpenStreetMap = async () => {
     center: [lat, lng],
     zoom: 11,
     zoomControl: true,
-    attributionControl: false,
+    attributionControl: true,
     preferCanvas: false,
   });
 
-  // Theme-aware tile layers with error handling
-  try {
-    const tileUrls = getMapTileUrls(isDarkMode.value, props.cartoApiKey);
-    const tileLayer = L.tileLayer(tileUrls.baseUrl, {
-      maxZoom: 19,
-      attribution: hasCartoApiKey.value
-        ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      errorTileUrl:
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-    });
-    tileLayer.addTo(map);
-
-    if (tileUrls.labelsUrl) {
-      const labelsLayer = L.tileLayer(tileUrls.labelsUrl, {
-        maxZoom: 19,
-        attribution: '',
-        errorTileUrl:
-          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      });
-      labelsLayer.addTo(map);
-    }
-  } catch (tileErr) {
-    console.warn('Error loading tiles:', tileErr);
-  }
+  baseLayer = createMapBaseLayer(map);
 
   try {
     // Create custom icons for different contact types
@@ -478,8 +430,7 @@ const initializeOpenStreetMap = async () => {
           return;
         }
 
-        const color =
-          colorMap[advert.contact_type as keyof typeof colorMap] || colorMap['Unknown'];
+        const color = colorMap[advert.contact_type as keyof typeof colorMap] || colorMap['Unknown'];
 
         createAnimatedConnectionLine(
           {
@@ -563,7 +514,6 @@ const initializeOpenStreetMap = async () => {
           `);
 
           clusterMarkers.value.set(`cluster-${props.cluster_id}`, marker);
-
         } else {
           // This is an individual marker
           const advert = props.advert as Advert;
@@ -591,7 +541,6 @@ const initializeOpenStreetMap = async () => {
           // Store marker for hover effects
           nodeMarkers.value.set(advert.pubkey, marker);
           clusterMarkers.value.set(`node-${advert.pubkey}`, marker);
-
         }
       });
     };
@@ -767,12 +716,6 @@ watch(hasValidCoordinates, (isValid) => {
 
 // Lifecycle
 onMounted(() => {
-  // Start observing theme changes
-  themeObserver.observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['class'],
-  });
-
   if (hasValidCoordinates.value && props.adverts.length > 0) {
     setTimeout(() => {
       initializeOpenStreetMap();
@@ -781,7 +724,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  themeObserver.disconnect();
+  disposed = true;
   cleanupMap();
 });
 </script>
@@ -794,7 +737,10 @@ onUnmounted(() => {
       class="flex items-center justify-center h-96 glass-card backdrop-blur border border-stroke-subtle rounded-xl shadow-sm dark:shadow-none"
     >
       <!-- Stats still in flight — show spinner -->
-      <div v-if="props.statsLoading" class="flex items-center gap-2 text-content-secondary dark:text-content-muted">
+      <div
+        v-if="props.statsLoading"
+        class="flex items-center gap-2 text-content-secondary dark:text-content-muted"
+      >
         <Spinner size="xs" />
         <p class="text-xs sm:text-sm">Fetching base station location…</p>
       </div>
@@ -810,9 +756,7 @@ onUnmounted(() => {
             d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
           />
         </svg>
-        <p class="text-sm text-content-primary">
-          No valid coordinates available
-        </p>
+        <p class="text-sm text-content-primary">No valid coordinates available</p>
         <p class="text-xs text-content-secondary dark:text-content-muted">
           Configure base station location to view map
         </p>
@@ -826,7 +770,6 @@ onUnmounted(() => {
       class="leaflet-map-container h-[50vh] min-h-[320px] sm:h-[55vh] lg:h-[60vh] w-full glass-card backdrop-blur border border-stroke-subtle rounded-xl overflow-hidden shadow-sm dark:shadow-none"
       style="position: relative"
     />
-
 
     <!-- Legend Toggle Button -->
     <button
@@ -887,11 +830,17 @@ onUnmounted(() => {
             <span>Transport Direct</span>
           </div>
           <div class="legend-item">
-            <div class="legend-line legend-line-dashed" style="color: var(--color-accent-cyan)"></div>
+            <div
+              class="legend-line legend-line-dashed"
+              style="color: var(--color-accent-cyan)"
+            ></div>
             <span>Flood</span>
           </div>
           <div class="legend-item">
-            <div class="legend-line legend-line-dashed" style="color: var(--color-accent-red)"></div>
+            <div
+              class="legend-line legend-line-dashed"
+              style="color: var(--color-accent-red)"
+            ></div>
             <span>Transport Flood</span>
           </div>
         </div>
@@ -900,11 +849,6 @@ onUnmounted(() => {
       <div class="legend-footer">
         {{ adverts.length }} node{{ adverts.length !== 1 ? 's' : '' }} visible
       </div>
-    </div>
-
-    <!-- Manual attribution to avoid chrome errors -->
-    <div v-if="hasValidCoordinates" class="map-attribution z-200">
-      © OpenStreetMap contributors<span v-if="hasCartoApiKey"> © CARTO</span>
     </div>
   </div>
 </template>
@@ -1169,12 +1113,5 @@ onUnmounted(() => {
   padding: 4px 8px;
   font-size: 10px;
   backdrop-filter: blur(20px);
-}
-
-/* Hide leaflet attribution on small screens */
-@media (max-width: 640px) {
-  :global(.leaflet-control-attribution) {
-    display: none !important;
-  }
 }
 </style>

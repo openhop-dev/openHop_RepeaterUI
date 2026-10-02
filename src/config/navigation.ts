@@ -101,6 +101,7 @@ export const navigationItems: NavItemConfig[] = [
               { id: 'config-backup',   label: 'Backup',   icon: DatabaseBackup, route: '/configuration', params: { tab: 'backup' },   activeOn: ['/configuration'] },
               { id: 'config-database', label: 'Database', icon: Database,       route: '/configuration', params: { tab: 'database' }, activeOn: ['/configuration'] },
               { id: 'config-memory',   label: 'Memory',   icon: MemoryStick,    route: '/configuration', params: { tab: 'memory' },   activeOn: ['/configuration'] },
+              { id: 'config-sensors',  label: 'Sensor Manager', icon: Gauge, route: '/configuration', params: { tab: 'sensormanager' }, activeOn: ['/configuration'] },
             ],
           },
         ],

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onUnmounted } from 'vue';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
 import CopyLabel from '@/components/ui/CopyLabel.vue';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
+import { createMapBaseLayer } from '@/utils/mapTiles';
 import 'leaflet/dist/leaflet.css';
 
 defineOptions({ name: 'NeighborDetailsModal' });
@@ -51,7 +52,19 @@ const emit = defineEmits<{
 // Map ref
 const mapContainer = ref<HTMLDivElement>();
 let map: L.Map | null = null;
-
+let baseLayer: ReturnType<typeof createMapBaseLayer> | null = null;
+let initTimer: ReturnType<typeof setTimeout> | undefined;
+const cleanupMap = () => {
+  clearTimeout(initTimer);
+  baseLayer?.dispose();
+  baseLayer = null;
+  map?.remove();
+  map = null;
+};
+onUnmounted(() => {
+  cleanupMap();
+  document.body.style.overflow = '';
+});
 
 const formatContactType = (contactType: string) => {
   const types: Record<string, string> = {
@@ -122,30 +135,17 @@ const initMap = () => {
   if (!mapContainer.value || !props.neighbor || !hasCoordinates.value) return;
 
   // Clean up existing map
-  if (map) {
-    map.remove();
-    map = null;
-  }
-
-  const isDark = document.documentElement.classList.contains('dark');
+  cleanupMap();
 
   // Create map
   map = L.map(mapContainer.value, {
     center: [props.neighbor.latitude!, props.neighbor.longitude!],
     zoom: 13,
     zoomControl: true,
-    attributionControl: false,
+    attributionControl: true,
   });
 
-  // Add tile layer
-  const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-  L.tileLayer(tileUrl, {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap © CARTO',
-  }).addTo(map);
+  baseLayer = createMapBaseLayer(map);
 
   // Add neighbor marker
   const neighborIcon = L.divIcon({
@@ -172,8 +172,10 @@ const initMap = () => {
 
   if (hasValidBase) {
     const routeColor =
-      window.getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim() ||
-      'deepskyblue';
+      window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue('--color-primary')
+        .trim() || 'deepskyblue';
 
     const baseIcon = L.divIcon({
       className: 'custom-marker',
@@ -230,18 +232,15 @@ watch(
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       // Init map after a short delay to ensure DOM is ready
-      setTimeout(() => {
-        if (hasCoordinates.value) {
+      initTimer = setTimeout(() => {
+        if (props.isOpen && hasCoordinates.value) {
           initMap();
         }
       }, 100);
     } else {
       document.body.style.overflow = '';
       // Cleanup map
-      if (map) {
-        map.remove();
-        map = null;
-      }
+      cleanupMap();
     }
   },
   { immediate: true },
@@ -252,7 +251,6 @@ const signalQuality = computed(() => {
   if (!props.neighbor) return null;
   return getSignalQuality(props.neighbor.rssi);
 });
-
 </script>
 
 <template>
@@ -305,16 +303,12 @@ const signalQuality = computed(() => {
             <div class="flex-1 overflow-y-auto custom-scrollbar px-8">
               <!-- Basic Information -->
               <div class="mb-6">
-                <h3
-                  class="text-lg font-semibold text-content-primary mb-4"
-                >
-                  Basic Information
-                </h3>
+                <h3 class="text-lg font-semibold text-content-primary mb-4">Basic Information</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Contact Type
                     </div>
                     <div class="font-medium" :class="getContactTypeColor(neighbor.contact_type)">
@@ -322,10 +316,10 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Route Type
                     </div>
                     <div class="text-content-primary font-medium">
@@ -333,28 +327,24 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Zero Hop
                     </div>
                     <div
                       class="font-medium"
-                      :class="
-                        neighbor.zero_hop
-                          ? 'text-accent-green'
-                          : 'text-content-muted'
-                      "
+                      :class="neighbor.zero_hop ? 'text-accent-green' : 'text-content-muted'"
                     >
                       {{ neighbor.zero_hop ? 'Yes' : 'No' }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Advert Count
                     </div>
                     <div class="text-content-primary font-medium">
@@ -366,29 +356,21 @@ const signalQuality = computed(() => {
 
               <!-- Signal Quality -->
               <div class="mb-6">
-                <h3
-                  class="text-lg font-semibold text-content-primary mb-4"
-                >
-                  Signal Quality
-                </h3>
+                <h3 class="text-lg font-semibold text-content-primary mb-4">Signal Quality</h3>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
-                      RSSI
-                    </div>
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">RSSI</div>
                     <div class="text-content-primary font-medium">
                       {{ formatRSSI(neighbor.rssi) }}
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
-                      SNR
-                    </div>
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">SNR</div>
                     <div class="text-content-primary font-medium">
                       {{ formatSNR(neighbor.snr) }}
                     </div>
@@ -398,9 +380,7 @@ const signalQuality = computed(() => {
                     v-if="signalQuality"
                     class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
                   >
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Signal Strength
                     </div>
                     <div class="flex items-center gap-2">
@@ -415,16 +395,12 @@ const signalQuality = computed(() => {
 
               <!-- Timestamps -->
               <div class="mb-6">
-                <h3
-                  class="text-lg font-semibold text-content-primary mb-4"
-                >
-                  Timeline
-                </h3>
+                <h3 class="text-lg font-semibold text-content-primary mb-4">Timeline</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       First Seen
                     </div>
                     <div class="text-content-primary text-sm">
@@ -432,10 +408,10 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Last Seen
                     </div>
                     <div class="text-content-primary text-sm">
@@ -447,17 +423,13 @@ const signalQuality = computed(() => {
 
               <!-- Location Information - only show if coordinates exist -->
               <div v-if="hasCoordinates" class="mb-6">
-                <h3
-                  class="text-lg font-semibold text-content-primary mb-4"
-                >
-                  Location
-                </h3>
+                <h3 class="text-lg font-semibold text-content-primary mb-4">Location</h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Latitude
                     </div>
                     <div class="text-content-primary font-mono text-sm">
@@ -465,10 +437,10 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       Longitude
                     </div>
                     <div class="text-content-primary font-mono text-sm">
@@ -476,16 +448,13 @@ const signalQuality = computed(() => {
                     </div>
                   </div>
 
-                  <div class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]">
-                    <div
-                      class="text-content-muted text-xs uppercase tracking-wide mb-1"
-                    >
+                  <div
+                    class="glass-card bg-background-mute dark:bg-black/opacity-medium p-4 rounded-[12px]"
+                  >
+                    <div class="text-content-muted text-xs uppercase tracking-wide mb-1">
                       {{ distance !== null ? 'Distance' : 'Coordinates' }}
                     </div>
-                    <div
-                      v-if="distance !== null"
-                      class="text-content-primary font-medium"
-                    >
+                    <div v-if="distance !== null" class="text-content-primary font-medium">
                       {{ `${distance.toFixed(2)} km` }}
                     </div>
                     <button
@@ -515,7 +484,9 @@ const signalQuality = computed(() => {
             </div>
 
             <!-- Footer -->
-            <div class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/opacity-light flex-shrink-0">
+            <div
+              class="p-8 pt-4 border-t border-stroke-subtle dark:border-white/opacity-light flex-shrink-0"
+            >
               <button
                 @click="emit('close')"
                 class="w-full px-4 py-2.5 rounded-lg font-medium transition-colors bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary"

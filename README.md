@@ -1,6 +1,6 @@
 # openHop Repeater UI
 
-Web dashboard for [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) — monitor and manage your openHop repeater entirely from the browser.
+Web dashboard for [openHop Repeater](https://github.com/openhop-dev/openhop_repeater) — monitor and manage your openHop repeater entirely from the browser.
 
 Built with **Vue 3**, **TypeScript**, and **TailwindCSS**. This repository holds the standalone UI source; it builds directly into the repeater project and is served by its embedded web server. Keeping the frontend separate keeps the repeater codebase lean and makes UI contributions easier.
 
@@ -25,10 +25,23 @@ Pull requests are welcome — please target the **dev** branch.
 - **Real-time updates** — WebSocket packet feed with automatic reconnection
 - **Authentication** — JWT-based login with token refresh and a guided first-boot setup wizard
 
+## Maps — no account or API key required
+
+All maps (Neighbors, neighbor details, and the location picker) use the same theme-aware basemap:
+
+- **Dark:** [OpenFreeMap Dark](https://tiles.openfreemap.org/styles/dark), rendered by MapLibre GL through the Leaflet bridge.
+- **Light:** [OpenStreetMap standard raster tiles](https://tile.openstreetmap.org/{z}/{x}/{y}.png), rendered directly by Leaflet.
+
+Markers, links, clustering and location selection remain Leaflet interactions. Switching themes preserves the viewport and overlays. If WebGL initialization or vector-map loading fails, the map falls back to OpenStreetMap raster tiles. Closing a map releases its renderer and theme observer.
+
+Maps require browser internet access; they are not offline maps. Attribution remains visible on desktop and mobile. Standard OSM tiles are best-effort and subject to the [tile usage policy](https://operations.osmfoundation.org/policies/tiles/): preserve browser caching and Referer headers, and do not bulk-download or prefetch for offline use. No provider key is requested or sent by this UI; legacy backend configuration is left untouched.
+
+The MapLibre worker is bundled through Vite's `?worker&url` import. Deployment must include the complete generated asset directory, including the hashed worker, not just the main JavaScript chunk.
+
 ## Prerequisites
 
 - **Node.js** 20 or later
-- A running [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) backend
+- A running [openHop Repeater](https://github.com/openhop-dev/openhop_repeater) backend
 
 ## Quick Start
 

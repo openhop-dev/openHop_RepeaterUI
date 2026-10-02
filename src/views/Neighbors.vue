@@ -11,9 +11,15 @@ import Spinner from '@/components/ui/Spinner.vue';
 import PingResultModal from '@/components/modals/PingResultModal.vue';
 import NeighborDetailsModal from '@/components/modals/NeighborDetailsModal.vue';
 import NeighborScopesModal from '@/components/modals/NeighborScopesModal.vue';
+import MeshCoreQrModal from '@/components/modals/MeshCoreQrModal.vue';
 import NetworkMap from '@/components/neighbors/NetworkMap.vue';
 import NeighborTable from '@/components/neighbors/NeighborTable.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
+import {
+  buildMeshCoreAddContactUrl,
+  isValidMeshCorePublicKey,
+  type MeshCoreContactType,
+} from '@/utils/meshcoreQr';
 
 defineOptions({ name: 'NeighborsView' });
 
@@ -37,7 +43,6 @@ const contactTypeColors = {
 const advertsByType = computed(() => neighborStore.advertsByType);
 const loading = computed(() => neighborStore.isLoading);
 const error = ref<string | null>(null);
-const cartoApiKey = computed(() => systemStore.stats?.config?.web?.carto_api_key ?? '');
 
 // Hours dropdown
 const selectedHours = ref(getPreference('neighbors_selectedHours', neighborStore.currentHours));
@@ -142,6 +147,10 @@ const selectedNeighborForDeletion = ref<Advert | null>(null);
 // Neighbor details modal state
 const showDetailsModal = ref(false);
 const selectedNeighborForDetails = ref<Advert | null>(null);
+const showQrModal = ref(false);
+const qrModalTitle = ref('');
+const qrModalSubtitle = ref('');
+const qrModalValue = ref('');
 
 // Region scopes panel. Only offered for repeaters: core answers the anon-regions
 // sub-type from repeater identities and routes it to the login handler for a room
@@ -161,7 +170,7 @@ const selectedScopesPubkey = computed(
 
 const scopeRecordForModal = computed(() =>
   selectedScopesPubkey.value
-    ? neighborStore.scopesByPubkey[selectedScopesPubkey.value] ?? null
+    ? (neighborStore.scopesByPubkey[selectedScopesPubkey.value] ?? null)
     : null,
 );
 
@@ -170,7 +179,7 @@ const scopesQueryLoading = computed(
 );
 
 const scopesQueryError = computed(() =>
-  selectedScopesPubkey.value ? scopesQueryErrors.value[selectedScopesPubkey.value] ?? null : null,
+  selectedScopesPubkey.value ? (scopesQueryErrors.value[selectedScopesPubkey.value] ?? null) : null,
 );
 
 // Convert Advert to Neighbor interface for modal
@@ -510,6 +519,48 @@ const closeDetailsModal = () => {
   selectedNeighborForDetails.value = null;
 };
 
+const meshCoreTypeForNeighbor = (neighbor: Advert): MeshCoreContactType | null => {
+  switch (neighbor.contact_type) {
+    case 'Chat Node':
+      return 1;
+    case 'Repeater':
+      return 2;
+    case 'Room Server':
+      return 3;
+    case 'Hybrid Node':
+      return 4;
+    default:
+      return null;
+  }
+};
+
+const handleShowQr = (neighbor: unknown) => {
+  const advert = neighbor as Advert;
+  if (!isValidMeshCorePublicKey(advert.pubkey)) {
+    return;
+  }
+
+  const type = meshCoreTypeForNeighbor(advert);
+  if (type === null) {
+    return;
+  }
+
+  const contactName = advert.node_name || 'Neighbor';
+  qrModalTitle.value = `Neighbor QR: ${contactName}`;
+  qrModalSubtitle.value =
+    'Scan in MeshCore app to add this neighbor contact.';
+  qrModalValue.value = buildMeshCoreAddContactUrl({
+    name: contactName,
+    publicKey: advert.pubkey,
+    type,
+  });
+  showQrModal.value = true;
+};
+
+const closeQrModal = () => {
+  showQrModal.value = false;
+};
+
 const setScopesQueryError = (pubkey: string, message: string | null) => {
   const next = { ...scopesQueryErrors.value };
   if (message === null) {
@@ -703,7 +754,6 @@ onUnmounted(() => {
         :base-latitude="baseLatitude"
         :base-longitude="baseLongitude"
         :stats-loading="statsLoading"
-        :carto-api-key="cartoApiKey"
         :show-legend="showMapLegend"
         @update:show-legend="showMapLegend = $event"
       />
@@ -716,12 +766,7 @@ onUnmounted(() => {
               @click="startDiscovery"
               class="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-accent-cyan/opacity-light text-accent-cyan border border-accent-cyan/opacity-medium hover:bg-accent-cyan/opacity-medium transition-colors shadow-sm"
             >
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -976,6 +1021,7 @@ onUnmounted(() => {
           @menu-ping="handleMenuPing"
           @menu-delete="handleMenuDelete"
           @show-details="handleShowDetails"
+          @show-qr="handleShowQr"
           @show-scopes="openScopesModal"
           @query-scopes="handleMenuQueryScopes"
         />
@@ -1001,9 +1047,7 @@ onUnmounted(() => {
             />
           </svg>
         </div>
-        <h3 class="text-content-primary text-lg font-medium mb-2">
-          No Neighbors Found
-        </h3>
+        <h3 class="text-content-primary text-lg font-medium mb-2">No Neighbors Found</h3>
         <p class="text-content-secondary dark:text-content-muted">
           No mesh neighbors have been discovered in your area yet.
         </p>
@@ -1101,6 +1145,14 @@ onUnmounted(() => {
       @close="closeScopesModal"
       @query="runScopeQuery"
       @add-scope="addScopeToRepeater"
+    />
+
+    <MeshCoreQrModal
+      :is-open="showQrModal"
+      :title="qrModalTitle"
+      :subtitle="qrModalSubtitle"
+      :value="qrModalValue"
+      @close="closeQrModal"
     />
   </div>
 </template>

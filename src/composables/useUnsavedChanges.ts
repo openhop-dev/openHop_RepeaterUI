@@ -11,21 +11,28 @@ export function useUnsavedChanges(
   const pendingNavFn = ref<(() => void) | null>(null);
   const pendingCancelFn = ref<(() => void) | null>(null);
 
+  function queueLeave(continueNavigation: () => void, cancelNavigation?: () => void) {
+    // Resolve the previous guard before replacing it, or its router.push stays pending.
+    pendingCancelFn.value?.();
+    pendingNavFn.value = continueNavigation;
+    pendingCancelFn.value = cancelNavigation ?? null;
+    showUnsavedModal.value = true;
+  }
+
   onBeforeRouteLeave((_to, _from, next) => {
     if (isEditing.value) {
-      showUnsavedModal.value = true;
-      pendingNavFn.value = () => next();
-      pendingCancelFn.value = () => next(false);
+      queueLeave(
+        () => next(),
+        () => next(false),
+      );
     } else {
       next();
     }
   });
 
-  function requestLeave(callback: () => void) {
+  function requestLeave(callback: () => void, cancel?: () => void) {
     if (isEditing.value) {
-      showUnsavedModal.value = true;
-      pendingNavFn.value = callback;
-      pendingCancelFn.value = null;
+      queueLeave(callback, cancel);
     } else {
       callback();
     }
@@ -35,7 +42,10 @@ export function useUnsavedChanges(
     cancelFn();
     showUnsavedModal.value = false;
     pendingCancelFn.value = null;
-    if (pendingNavFn.value) { pendingNavFn.value(); pendingNavFn.value = null; }
+    if (pendingNavFn.value) {
+      pendingNavFn.value();
+      pendingNavFn.value = null;
+    }
   }
 
   async function handleSave() {
@@ -43,13 +53,19 @@ export function useUnsavedChanges(
     if (ok) {
       showUnsavedModal.value = false;
       pendingCancelFn.value = null;
-      if (pendingNavFn.value) { pendingNavFn.value(); pendingNavFn.value = null; }
+      if (pendingNavFn.value) {
+        pendingNavFn.value();
+        pendingNavFn.value = null;
+      }
     }
   }
 
   function handleCancel() {
     showUnsavedModal.value = false;
-    if (pendingCancelFn.value) { pendingCancelFn.value(); pendingCancelFn.value = null; }
+    if (pendingCancelFn.value) {
+      pendingCancelFn.value();
+      pendingCancelFn.value = null;
+    }
     pendingNavFn.value = null;
   }
 

@@ -20,11 +20,17 @@ export interface RadioListEntry {
   [key: string]: unknown
 }
 
+export type FabricOriginTx = 'default' | 'all'
+
 export interface FabricConfig {
   default_radio?: string
   default_radio_id?: string
   tx_mode?: string
   use_fabric?: boolean
+  repeat_on_ingress?: boolean
+  origin_tx?: string
+  /** origin_tx's former name; still read so pre-rename configs display right. */
+  local_tx_mode?: string
 }
 
 function asRecord(value: unknown): Record<string, any> {
@@ -168,6 +174,14 @@ export function useMultiRadioConfig() {
     return 'default'
   })
 
+  const repeatOnIngress = computed(() => fabric.value.repeat_on_ingress === true)
+
+  const originTx = computed<FabricOriginTx>(() => {
+    // origin_tx wins over local_tx_mode, matching the backend's key order.
+    const raw = fabric.value.origin_tx ?? fabric.value.local_tx_mode
+    return String(raw ?? 'default').trim().toLowerCase() === 'all' ? 'all' : 'default'
+  })
+
   return {
     rootConfig,
     radios,
@@ -182,6 +196,8 @@ export function useMultiRadioConfig() {
     activeHardware,
     radioOptions,
     txMode,
+    repeatOnIngress,
+    originTx,
     selectRadio,
     ensureSelection,
   }

@@ -64,48 +64,22 @@ describe('Web settings CARTO API key', () => {
         web: {
           cors_enabled: false,
           web_path: null,
-          carto_api_key: 'configured-key',
+          ...{ carto_api_key: 'configured-key' },
         },
       },
     };
   });
 
-  it('loads the configured key and saves an updated key to the web config', async () => {
+  it('omits the retired key control and leaves persisted configuration untouched on save', async () => {
     const wrapper = mount(WebSettings);
     await flushPromises();
-
-    const input = wrapper.get('[data-testid="carto-api-key"]');
-    expect(input.attributes('type')).toBe('password');
-    expect((input.element as HTMLInputElement).value).toBe('configured-key');
-
-    await input.setValue('replacement-key');
-    await wrapper.get('[data-testid="save-carto-api-key"]').trigger('click');
+    expect(wrapper.find('[data-testid="carto-api-key"]').exists()).toBe(false);
+    await wrapper.get('#site-name').setValue('New site');
+    await wrapper.get('#site-name').trigger('change');
     await flushPromises();
-
     expect(apiPost).toHaveBeenLastCalledWith('/update_web_config', {
-      web: {
-        cors_enabled: false,
-        site_name: '',
-        carto_api_key: 'replacement-key',
-        web_path: null,
-      },
+      web: { cors_enabled: false, site_name: 'New site', web_path: null },
     });
-  });
-
-  it('can clear the configured key', async () => {
-    const wrapper = mount(WebSettings);
-    await flushPromises();
-
-    await wrapper.get('[data-testid="clear-carto-api-key"]').trigger('click');
-    await flushPromises();
-
-    expect(apiPost).toHaveBeenLastCalledWith('/update_web_config', {
-      web: {
-        cors_enabled: false,
-        site_name: '',
-        carto_api_key: '',
-        web_path: null,
-      },
-    });
+    wrapper.unmount();
   });
 });

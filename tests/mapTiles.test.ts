@@ -1,28 +1,88 @@
-import { describe, expect, it } from 'vitest';
-import { getMapTileUrls } from '@/utils/mapTiles';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import L from 'leaflet';
+import * as tiles from '@/utils/mapTiles';
 
-describe('map tile URLs', () => {
-  it('adds an encoded API key to both dark tile layers', () => {
-    expect(getMapTileUrls(true, 'key with/+symbols')).toEqual({
-      baseUrl:
-        'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png?key=key%20with%2F%2Bsymbols',
-      labelsUrl:
-        'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png?key=key%20with%2F%2Bsymbols',
-    });
+const vector = vi.hoisted(() => ({ create: vi.fn(), setWorkerUrl: vi.fn() }));
+vi.mock('maplibre-gl', () => ({ setWorkerUrl: vector.setWorkerUrl }));
+vi.mock('@maplibre/maplibre-gl-leaflet', () => ({ maplibreGL: vector.create }));
+
+afterEach(() => {
+  document.documentElement.classList.remove('dark');
+  vi.restoreAllMocks();
+});
+
+describe('keyless basemap lifecycle', () => {
+  it('registers a bundled worker URL instead of a missing relative worker', () => {
+    expect(vector.setWorkerUrl).toHaveBeenCalledWith(expect.stringContaining('maplibre-gl-worker'));
   });
-
-  it('uses light tile layers when light mode is active', () => {
-    expect(getMapTileUrls(false, 'carto-key')).toEqual({
-      baseUrl: 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png?key=carto-key',
-      labelsUrl:
-        'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png?key=carto-key',
-    });
+  it('exports the shared lifecycle', () => {
+    expect(tiles).toHaveProperty('createMapBaseLayer');
   });
-
-  it('falls back to light OpenStreetMap tiles without a CARTO key', () => {
-    expect(getMapTileUrls(true, '   ')).toEqual({
-      baseUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      labelsUrl: null,
+  it('uses OSM in light mode, swaps only the base on theme changes, and disposes', async () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const map = L.map(host).setView([51, -1], 9);
+    const marker = L.marker([51, -1]).addTo(map);
+    const layer = L.layerGroup();
+    const gl = { on: vi.fn(), off: vi.fn() };
+    vector.create.mockReturnValue(Object.assign(layer, { getMaplibreMap: () => gl }));
+    const raster = vi.spyOn(L, 'tileLayer');
+    const controller = tiles.createMapBaseLayer(map);
+    expect(raster).toHaveBeenCalledWith(
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      expect.objectContaining({ maxZoom: 19 }),
+    );
+    document.documentElement.classList.add('dark');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(vector.create).toHaveBeenCalledWith(
+      expect.objectContaining({ style: 'https://tiles.openfreemap.org/styles/dark' }),
+    );
+    expect(map.hasLayer(marker)).toBe(true);
+    expect(map.getZoom()).toBe(9);
+    expect(map.getCenter()).toEqual(L.latLng(51, -1));
+    expect(
+      host.querySelector('.leaflet-control-attribution a[href="https://openfreemap.org/"]'),
+    ).not.toBeNull();
+    controller.dispose();
+    expect(map.hasLayer(layer)).toBe(false);
+    map.remove();
+    host.remove();
+  });
+  it('falls back after vector creation failure', () => {
+    document.documentElement.classList.add('dark');
+    vector.create.mockImplementation(() => {
+      throw new Error('WebGL unavailable');
     });
+    const host = document.createElement('div');
+    const map = L.map(host).setView([1, 2], 3);
+    const raster = vi.spyOn(L, 'tileLayer');
+    const controller = tiles.createMapBaseLayer(map);
+    expect(raster).toHaveBeenCalled();
+    controller.dispose();
+    map.remove();
+  });
+  it('falls back on style errors and ignores stale errors after disposal', () => {
+    document.documentElement.classList.add('dark');
+    let error!: () => void;
+    const layer = L.layerGroup();
+    const gl = {
+      on: vi.fn((event: string, fn: () => void) => {
+        if (event === 'error') error = fn;
+      }),
+      off: vi.fn(),
+    };
+    vector.create.mockReturnValue(Object.assign(layer, { getMaplibreMap: () => gl }));
+    const host = document.createElement('div');
+    const map = L.map(host).setView([1, 2], 3);
+    const raster = vi.spyOn(L, 'tileLayer');
+    const controller = tiles.createMapBaseLayer(map);
+    error();
+    expect(map.hasLayer(layer)).toBe(false);
+    expect(raster).toHaveBeenCalledTimes(1);
+    controller.dispose();
+    error();
+    expect(raster).toHaveBeenCalledTimes(1);
+    expect(gl.off).toHaveBeenCalled();
+    map.remove();
   });
 });

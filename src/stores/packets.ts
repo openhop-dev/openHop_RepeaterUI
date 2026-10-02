@@ -191,14 +191,31 @@ export const usePacketStore = defineStore('packets', () => {
   }
 
 
-  // Append a live WS reading into noiseFloorHistory so the sparkline updates immediately.
-  function appendNoiseFloorReading(dbm: number) {
+  // Append a live reading into noiseFloorHistory so the sparkline updates immediately.
+  // Callers on a multi-radio node pass the id of the radio the sample was read
+  // from: an unattributed row would otherwise read as a series of its own next
+  // to the radios that have names.
+  function appendNoiseFloorReading(dbm: number, radioId: string | null = null) {
     if (!dbm) return;
     const now = Math.floor(Date.now() / 1000);
     // Avoid duplicating if an HTTP poll just added the same second's reading.
-    const last = noiseFloorHistory.value[noiseFloorHistory.value.length - 1];
+    // Scan back to this radio's own last row: on a bridge the radios interleave,
+    // so the final row is as likely to be the other one's.
+    let last: NoiseFloorHistory | undefined;
+    for (let i = noiseFloorHistory.value.length - 1; i >= 0; i--) {
+      const row = noiseFloorHistory.value[i];
+      if ((row.radio_id ?? null) === radioId) {
+        last = row;
+        break;
+      }
+      // Rows are in time order, so nothing older can be within the window.
+      if (now - row.timestamp >= 2) break;
+    }
     if (last && Math.abs(last.timestamp - now) < 2 && last.noise_floor_dbm === dbm) return;
-    noiseFloorHistory.value = [...noiseFloorHistory.value, { timestamp: now, noise_floor_dbm: dbm }];
+    noiseFloorHistory.value = [
+      ...noiseFloorHistory.value,
+      { timestamp: now, noise_floor_dbm: dbm, radio_id: radioId },
+    ];
   }
 
   async function fetchPacketStats(params: PacketStatsParams = { hours: 24 }) {

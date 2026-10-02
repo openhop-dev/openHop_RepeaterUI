@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ApiService from '@/utils/api';
+import { useMultiRadioConfig } from '@/composables/useMultiRadioConfig';
 import StatsCards from '@/components/ui/StatsCards.vue';
 import PacketTypesChart from '@/components/charts/PacketTypesChart.vue';
 import AirtimeUtilizationChart from '@/components/charts/AirtimeUtilizationChart.vue';
@@ -10,6 +11,11 @@ import PacketTable from '@/components/tables/PacketTable.vue';
 defineOptions({ name: 'DashboardView' });
 
 const router = useRouter();
+const { radios: configuredRadios } = useMultiRadioConfig();
+
+// A Fabric bridge draws one airtime graph per radio, which needs the full row;
+// Packet Types then takes its own row underneath.
+const isFabricBridge = computed(() => configuredRadios.value.length > 1);
 const pluginManagerUnavailable = ref(false);
 const pluginManagerIssue = ref<string | null>(null);
 const checkingPluginManager = ref(false);
@@ -59,9 +65,11 @@ onMounted(() => {
             service is restarted and enabled.
           </p>
           <p class="mt-2 text-content-secondary dark:text-content-muted">
-            Fix it by running the native upgrade helper from the host source checkout that
-            installed this repeater:
-            <code class="mx-1 rounded bg-black/10 px-1.5 py-0.5 text-content-primary dark:bg-white/10">
+            Fix it by running the native upgrade helper from the host source checkout that installed
+            this repeater:
+            <code
+              class="mx-1 rounded bg-black/10 px-1.5 py-0.5 text-content-primary dark:bg-white/10"
+            >
               {{ pluginManagerFixCommand }}
             </code>
             That upgrade step installs the missing service unit before enabling it.
@@ -71,7 +79,9 @@ onMounted(() => {
             rerun the upgrade. If it already exists and is only slightly out of date, update it
             first instead. For example:
           </p>
-          <pre class="mt-2 rounded bg-black/10 px-3 py-2 text-xs leading-5 text-content-primary dark:bg-white/10 whitespace-pre-wrap overflow-x-auto">
+          <pre
+            class="mt-2 rounded bg-black/10 px-3 py-2 text-xs leading-5 text-content-primary dark:bg-white/10 whitespace-pre-wrap overflow-x-auto"
+          >
 cd openhop_repeater/
 git pull
 git switch dev
@@ -99,7 +109,11 @@ sudo ./manage.sh upgrade
     <StatsCards />
 
     <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
+    <div v-if="isFabricBridge" class="mb-2 flex flex-col gap-4">
+      <AirtimeUtilizationChart />
+      <PacketTypesChart />
+    </div>
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
       <AirtimeUtilizationChart />
       <PacketTypesChart />
     </div>

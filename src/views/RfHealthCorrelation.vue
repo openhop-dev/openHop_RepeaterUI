@@ -18,10 +18,12 @@ import {
 } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import ChartCard from '@/components/ui/ChartCard.vue';
+import RadioScopeSelector from '@/components/ui/RadioScopeSelector.vue';
 import IncidentDetailsModal from '@/components/modals/IncidentDetailsModal.vue';
 import { useManagedPolling } from '@/composables/useManagedPolling';
 import ApiService, { type LbtDiagnosticsApiResponse, type LbtDiagnosticsPayload } from '@/utils/api';
 import { streamingGet } from '@/utils/streamingFetch';
+import { ALL_RADIOS, useRadioScope } from '@/composables/useRadioProfiles';
 
 ChartJS.register(
   CategoryScale,
@@ -40,6 +42,20 @@ ChartJS.register(
 );
 
 defineOptions({ name: 'RfHealthCorrelationView' });
+
+// Every series on this page is one radio's. Correlating one receiver's noise
+// floor with another's CRC errors or contention relates two unrelated channels,
+// so a bridge picks a radio here rather than combining them.
+const {
+  profiles: radioProfiles,
+  isMultiRadio,
+  scope: radioScope,
+} = useRadioScope({ requireRadio: true });
+
+/** `radio_id` for the sampled series, empty on a single-radio node whose samples carry none. */
+const radioParam = computed(() =>
+  isMultiRadio.value && radioScope.value !== ALL_RADIOS ? { radio_id: radioScope.value } : {},
+);
 
 type TimeValuePoint = { t: number; v: number };
 type CorrelationRow = {
@@ -667,8 +683,44 @@ const qualitySummary = computed(() => {
   };
 });
 
-const lbtSummary = computed(() => lbtDiagnostics.value?.summary ?? null);
-const lbtBuckets = computed<LbtBucket[]>(() => lbtDiagnostics.value?.buckets ?? []);
+/**
+ * Whether the server split LBT per radio for this answer.
+ *
+ * It does so only on a node with two or more radios, where the combined figures
+ * count one packet once however many radios sent it -- so a bridge's contention
+ * on the narrow band is invisible in them.
+ */
+const lbtIsPerRadio = computed(
+  () => Array.isArray(lbtDiagnostics.value?.radios) && radioScope.value !== ALL_RADIOS,
+);
+
+/**
+ * The selected radio's LBT figures, or null when the server reports none for it.
+ *
+ * Null is not a reason to fall back to the combined answer: those figures are
+ * every radio's, and showing them under this radio's name is exactly the
+ * mislabelling this page exists to stop. A radio the server does not name (one
+ * just renamed, or a /stats snapshot ahead of this one) shows nothing instead.
+ */
+const lbtRadioSeries = computed(() => {
+  if (!lbtIsPerRadio.value) return null;
+  const radios = lbtDiagnostics.value?.radios;
+  return radios?.find((entry) => entry?.radio_id === radioScope.value) ?? null;
+});
+
+const lbtSummary = computed(() =>
+  lbtIsPerRadio.value ? (lbtRadioSeries.value?.summary ?? null) : (lbtDiagnostics.value?.summary ?? null),
+);
+const lbtBuckets = computed<LbtBucket[]>(() =>
+  lbtIsPerRadio.value
+    ? ((lbtRadioSeries.value?.buckets as LbtBucket[]) ?? [])
+    : (lbtDiagnostics.value?.buckets ?? []),
+);
+
+/** True when the server split per radio but reported nothing for the selected one. */
+const lbtRadioMissing = computed(() => lbtIsPerRadio.value && lbtRadioSeries.value === null);
+// Packet type lives on the packet row, not on an egress row, so the server does
+// not split these per radio; they stay every radio's however the page is scoped.
 const lbtPacketTypes = computed<LbtPacketTypeSummary[]>(() => lbtDiagnostics.value?.packet_types ?? []);
 const lbtPacketTypeBuckets = computed<LbtPacketTypeBucket[]>(
   () => lbtDiagnostics.value?.packet_type_buckets ?? [],
@@ -1265,7 +1317,19 @@ const heatmapDetailLines = computed(() => {
     .slice(1);
 });
 
+// Each load bumps this. A response from an older one is dropped instead of
+// replacing what is now selected: the radio list arrives after the first load,
+// which moves the scope off All radios while that load is still in flight.
+let loadGeneration = 0;
+
+/** The radio the last completed load actually asked for. */
+let loadedRadio: string | null = null;
+
+/** Set on unmount, so an awaited reload does not run for a view that is gone. */
+let unmounted = false;
+
 const fetchAllData = async () => {
+  const generation = ++loadGeneration;
   if (hasLoadedOnce.value) {
     isRefreshing.value = true;
   } else {
@@ -1276,6 +1340,11 @@ const fetchAllData = async () => {
   lbtError.value = null;
 
   try {
+    // Captured once: pages of one window must all come from the same radio, or a
+    // scope change between pages stitches two radios into one series.
+    const radioOfLoad = radioScope.value;
+    const radio = radioParam.value;
+
     const fetchNoiseHistoryWindow = async () => {
       const mergedHistory: unknown[] = [];
       let offset = 0;
@@ -1285,6 +1354,9 @@ const fetchAllData = async () => {
           hours: selectedHours.value,
           limit: NOISE_HISTORY_PAGE_LIMIT,
           offset,
+          // Paging one radio's samples: offsets over the merged series shift
+          // every time the other radio samples between pages.
+          ...radio,
         }, {
           idleTimeoutMs: 30_000,
           onPhaseChange: (phase) => {
@@ -1317,7 +1389,7 @@ const fetchAllData = async () => {
     const [statsRes, noiseHistory, crcRes, metricsRes, lbtRes] = await Promise.all([
       streamingGet('/packet_stats', { hours: selectedHours.value }),
       fetchNoiseHistoryWindow(),
-      streamingGet('/crc_error_history', { hours: selectedHours.value }),
+      streamingGet('/crc_error_history', { hours: selectedHours.value, ...radio }),
       streamingGet('/metrics_graph_data', {
         hours: selectedHours.value,
         resolution: 'average',
@@ -1325,6 +1397,8 @@ const fetchAllData = async () => {
       }),
       lbtPromise,
     ]);
+
+    if (generation !== loadGeneration) return;
 
     const statsPayload = asRecord(statsRes.data) ?? {};
     const statsData = asRecord(statsPayload.data) ?? statsPayload;
@@ -1360,11 +1434,16 @@ const fetchAllData = async () => {
     createOrUpdateDropReasonsChart();
     createOrUpdateLbtChart();
     hasLoadedOnce.value = true;
+    loadedRadio = radioOfLoad;
   } catch (error) {
+    if (generation !== loadGeneration) return;
     chartError.value = error instanceof Error ? error.message : 'Failed to load RF health correlation data.';
   } finally {
-    chartLoading.value = false;
-    isRefreshing.value = false;
+    // A superseded load must not clear the spinner the newer one put up.
+    if (generation === loadGeneration) {
+      chartLoading.value = false;
+      isRefreshing.value = false;
+    }
   }
 };
 
@@ -1779,30 +1858,37 @@ const createOrUpdateLbtChart = () => {
     data: {
       datasets: [
         ...attemptDatasets,
-        {
-          type: 'line' as const,
-          label: 'Traffic volume',
-          yAxisID: 'yTraffic',
-          data: trafficSeries,
-          borderColor: resolveCssColor(CHART_COLORS.traffic),
-          backgroundColor: resolveCssColor(CHART_COLORS.traffic),
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 3,
-          tension: 0.2,
-        },
-        {
-          type: 'line' as const,
-          label: 'Avg SNR (dB)',
-          yAxisID: 'ySnr',
-          data: snrSeries,
-          borderColor: resolveCssColor(CHART_COLORS.snr),
-          backgroundColor: resolveCssColor(CHART_COLORS.snr),
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 3,
-          tension: 0.2,
-        },
+        // Traffic volume and SNR come from the node-wide RRD series. Drawn beside
+        // one radio's bars they would read as that radio's own traffic and SNR,
+        // so per radio they are left off rather than quietly mislabelled.
+        ...(lbtIsPerRadio.value
+          ? []
+          : [
+              {
+                type: 'line' as const,
+                label: 'Traffic volume',
+                yAxisID: 'yTraffic',
+                data: trafficSeries,
+                borderColor: resolveCssColor(CHART_COLORS.traffic),
+                backgroundColor: resolveCssColor(CHART_COLORS.traffic),
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                tension: 0.2,
+              },
+              {
+                type: 'line' as const,
+                label: 'Avg SNR (dB)',
+                yAxisID: 'ySnr',
+                data: snrSeries,
+                borderColor: resolveCssColor(CHART_COLORS.snr),
+                backgroundColor: resolveCssColor(CHART_COLORS.snr),
+                borderWidth: 2,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                tension: 0.2,
+              },
+            ]),
       ],
     },
     options: {
@@ -1838,9 +1924,13 @@ const createOrUpdateLbtChart = () => {
                 `Avg attempts: ${formatNullable(bucket.avg_attempts)}`,
                 `3+ attempts: ${formatPct(bucket.attempts_3_plus_pct)}`,
                 `Max attempts: ${bucket.max_attempts}`,
-                `Packet loss: ${formatPct(bucket.rf?.packet_loss_rate_pct)}`,
-                `Avg RSSI: ${formatNullable(bucket.rf?.avg_rssi, 1)}`,
-                `Avg SNR: ${formatNullable(bucket.rf?.avg_snr, 1)}`,
+                ...(bucket.rf
+                  ? [
+                      `Packet loss: ${formatPct(bucket.rf?.packet_loss_rate_pct)}`,
+                      `Avg RSSI: ${formatNullable(bucket.rf?.avg_rssi, 1)}`,
+                      `Avg SNR: ${formatNullable(bucket.rf?.avg_snr, 1)}`,
+                    ]
+                  : []),
               ];
             },
           },
@@ -1885,6 +1975,9 @@ const createOrUpdateLbtChart = () => {
           },
         },
         yTraffic: {
+          // Its dataset is left off a per-radio chart, and an axis with no series
+          // is just two columns of numbers about nothing.
+          display: !lbtIsPerRadio.value,
           type: 'linear' as const,
           position: 'right' as const,
           beginAtZero: true,
@@ -1902,6 +1995,7 @@ const createOrUpdateLbtChart = () => {
           },
         },
         ySnr: {
+          display: !lbtIsPerRadio.value,
           type: 'linear' as const,
           position: 'right' as const,
           offset: true,
@@ -1952,12 +2046,28 @@ const polling = useManagedPolling(fetchAllData, {
   immediate: true,
 });
 
+// Every sampled series here is requested per radio, so a radio change is a new
+// fetch. The radio list also arrives after the first load, moving the scope off
+// All radios while that load is in flight. runNow joins a running load rather
+// than starting a second one, which matters: this page opens five requests plus
+// paging, and two overlapping loads exhaust the browser's connections to the
+// host and stall everything else on the page. So join the running load, then
+// fetch again only if it turned out to be for the wrong radio.
+watch(radioScope, async () => {
+  chartLoading.value = true;
+  await polling.runNow();
+  // The await can resume after the view is gone; polling.stop() only stops the
+  // interval, so without this the follow-up load runs for nobody.
+  if (!unmounted && loadedRadio !== radioScope.value) await polling.runNow();
+});
+
 onMounted(() => {
   heatmapContainerWidth.value = heatmapContainerRef.value?.clientWidth ?? 0;
   window.addEventListener('resize', handleResize);
 });
 
 onBeforeUnmount(() => {
+  unmounted = true;
   window.removeEventListener('resize', handleResize);
   destroyChart();
   destroyDropReasonsChart();
@@ -1973,6 +2083,16 @@ onBeforeUnmount(() => {
         <p class="text-xs sm:text-sm text-content-secondary mt-1">
           Live correlation of noise floor, CRC errors, and packet activity so you can spot traffic-related peaks.
         </p>
+        <p
+          v-if="isMultiRadio"
+          class="text-xs text-content-muted mt-1"
+          data-testid="multi-radio-note"
+        >
+          This node has {{ radioProfiles.length }} radios, each on its own channel. The noise
+          floor, CRC errors and LBT figures here are {{ radioScope }}'s alone. Packet counts,
+          RSSI and SNR are recorded node-wide, so the panels that use them say so rather than
+          reading as this radio's.
+        </p>
       </div>
    
    <!-- Incident Details Modal -->
@@ -1981,9 +2101,12 @@ onBeforeUnmount(() => {
      @close="selectedIncident = null"
    />
 
-      <div class="flex items-center gap-2 sm:gap-3">
-        <label class="text-content-secondary text-xs sm:text-sm">Window:</label>
-        <select v-model="selectedHours" class="modal-select w-auto" @change="onTimeRangeChange">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <RadioScopeSelector v-model="radioScope" :radios="radioProfiles" :allow-all="false" />
+        <!-- Its own group so a narrow pane never wraps the label away from the control. -->
+        <div class="flex items-center gap-2">
+          <label class="text-content-secondary text-xs sm:text-sm">Window:</label>
+          <select v-model="selectedHours" class="modal-select w-auto" @change="onTimeRangeChange">
           <option
             v-for="option in timeOptions"
             :key="option.value"
@@ -1992,7 +2115,8 @@ onBeforeUnmount(() => {
           >
             {{ option.label }}
           </option>
-        </select>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -2003,14 +2127,18 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="glass-card rounded-[15px] p-4">
-        <div class="text-content-secondary text-xs uppercase tracking-wide">Current noise floor</div>
+        <div class="text-content-secondary text-xs uppercase tracking-wide">
+          Current noise floor<span v-if="isMultiRadio" class="normal-case"> · {{ radioScope }}</span>
+        </div>
         <div class="mt-2 text-2xl font-semibold text-content-primary">
           {{ currentNoiseFloor === null ? 'N/A' : `${currentNoiseFloor.toFixed(1)} dBm` }}
         </div>
       </div>
 
       <div class="glass-card rounded-[15px] p-4">
-        <div class="text-content-secondary text-xs uppercase tracking-wide">CRC errors</div>
+        <div class="text-content-secondary text-xs uppercase tracking-wide">
+          CRC errors<span v-if="isMultiRadio" class="normal-case"> · {{ radioScope }}</span>
+        </div>
         <div class="mt-2 text-2xl font-semibold text-content-primary">
           {{ Math.round(totalCrcErrors).toLocaleString() }}
         </div>
@@ -2088,9 +2216,23 @@ onBeforeUnmount(() => {
     <div class="glass-card rounded-[15px] p-4 sm:p-6 space-y-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h3 class="text-content-primary text-lg sm:text-xl font-semibold">LBT diagnostics</h3>
+          <h3 class="text-content-primary text-lg sm:text-xl font-semibold">
+            LBT diagnostics<span v-if="lbtIsPerRadio" class="font-normal"> · {{ radioScope }}</span>
+          </h3>
           <p class="text-xs sm:text-sm text-content-secondary mt-1">
-            Attempt distribution and retry behaviour aligned with traffic and RF quality.
+            {{
+              lbtIsPerRadio
+                ? `Attempt distribution and retry behaviour for every transmission ${radioScope} sent.`
+                : 'Attempt distribution and retry behaviour aligned with traffic and RF quality.'
+            }}
+          </p>
+          <p
+            v-if="lbtRadioMissing"
+            class="text-xs text-content-muted mt-1"
+            data-testid="lbt-radio-missing"
+          >
+            The node reports no transmissions for {{ radioScope }} in this window. The combined
+            figures are not shown here: they are every radio's, and this panel is about one.
           </p>
         </div>
         <div class="flex flex-col items-end gap-2">
@@ -2145,7 +2287,10 @@ onBeforeUnmount(() => {
         </div>
         <div class="border border-stroke-subtle rounded-lg p-3">
           <div class="text-content-secondary text-xs uppercase tracking-wide">Max attempts</div>
-          <div class="mt-1 text-xl font-semibold text-content-primary">
+          <div
+            class="mt-1 text-xl font-semibold text-content-primary"
+            data-testid="lbt-max-attempts"
+          >
             {{ lbtSummary?.max_attempts ?? 0 }}
           </div>
         </div>
@@ -2167,9 +2312,17 @@ onBeforeUnmount(() => {
       </ChartCard>
 
       <div class="space-y-2">
-        <h4 class="text-content-primary text-sm sm:text-base font-semibold">Retry rate by packet type over time</h4>
+        <h4 class="text-content-primary text-sm sm:text-base font-semibold">
+          Retry rate by packet type over time<span v-if="lbtIsPerRadio" class="font-normal">
+            · all radios</span
+          >
+        </h4>
         <p class="text-xs sm:text-sm text-content-secondary">
           Rows are packet types and columns are compact time windows across the selected range. Color intensity highlights retry pressure; hover for exact values and sample size.
+        </p>
+        <p v-if="lbtIsPerRadio" class="text-xs text-content-muted" data-testid="packet-type-scope">
+          Every radio, not just {{ radioScope }}: a packet's type is recorded once for the packet,
+          not once per radio that sent it.
         </p>
 
         <div
@@ -2303,6 +2456,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
+      <p v-if="lbtIsPerRadio" class="text-xs text-content-muted" data-testid="correlation-scope">
+        The two correlations below pair every radio's retry rate with node-wide SNR and packet
+        loss, so they describe the node rather than {{ radioScope }}.
+      </p>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div class="border border-stroke-subtle rounded-lg p-3">
           <div class="text-content-primary font-medium">Retry rate vs avg SNR</div>
@@ -2323,7 +2480,11 @@ onBeforeUnmount(() => {
 
     <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
       <div class="glass-card rounded-[15px] p-4 sm:p-6">
-        <h3 class="text-content-primary text-lg font-semibold mb-4">Correlation details</h3>
+        <h3 class="text-content-primary text-lg font-semibold mb-1">Correlation details</h3>
+        <p v-if="isMultiRadio" class="text-xs text-content-muted mb-4" data-testid="details-scope">
+          Noise is {{ radioScope }}'s; packet activity is the node's, so the second row pairs one
+          radio's noise with every radio's traffic.
+        </p>
 
         <div class="space-y-3">
           <div
