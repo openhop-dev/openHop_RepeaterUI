@@ -13,9 +13,11 @@ vi.mock('@/utils/api', () => ({
   API_SERVER_URL: '',
 }));
 
+const storeState = vi.hoisted(() => ({ mqttBrokers: {} as Record<string, unknown> }));
+
 vi.mock('@/stores/system', () => ({
   useSystemStore: () => ({
-    stats: { config: { mqtt_brokers: {} } },
+    stats: { config: { mqtt_brokers: storeState.mqttBrokers } },
     fetchStats: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -151,5 +153,75 @@ describe('LetsMeshSettings — response parsing', () => {
 
     expect(ApiService.post).not.toHaveBeenCalled(); // not called until save
     expect(wrapper.exists()).toBe(true);
+  });
+});
+
+// The shapes the repeater stores in config.yaml (`mqtt_brokers.brokers[]`) and
+// expects back from POST /update_mqtt_config: `disallowed_packet_types`, and a
+// `base_topic` that replaces the whole MC2MQTT topic base when it is non-blank.
+const STORED_WAEV_BROKER = {
+  name: 'Waev',
+  enabled: true,
+  host: 'mqtt.waev.app',
+  port: 443,
+  transport: 'websockets',
+  audience: 'mqtt.waev.app',
+  use_jwt_auth: true,
+  format: 'waev',
+  retain_status: true,
+  tls: { enabled: true, insecure: false },
+};
+
+describe('LetsMeshSettings — save payload', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    storeState.mqttBrokers = {};
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  async function saveStoredBroker(broker: Record<string, unknown>) {
+    storeState.mqttBrokers = {
+      iata_code: 'LAX',
+      status_interval: 300,
+      owner: '',
+      email: '',
+      brokers: [broker],
+    };
+    vi.mocked(ApiService.post).mockResolvedValue(MQTT_SAVE_RESPONSE as any);
+
+    const wrapper = mountComponent();
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Edit Settings')!
+      .trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save Settings')!
+      .trigger('click');
+    await flushPromises();
+
+    const [url, body] = vi.mocked(ApiService.post).mock.calls[0];
+    expect(url).toBe('/update_mqtt_config');
+    return (body as { brokers: Record<string, unknown>[] }).brokers[0];
+  }
+
+  it('keeps a stored packet-type filter on save', async () => {
+    const broker = await saveStoredBroker({
+      ...STORED_WAEV_BROKER,
+      disallowed_packet_types: ['ADVERT', 'TRACE'],
+    });
+    expect(broker.disallowed_packet_types).toEqual(['ADVERT', 'TRACE']);
+  });
+
+  it('does not post a base topic for an MC2MQTT broker', async () => {
+    const broker = await saveStoredBroker({ ...STORED_WAEV_BROKER, base_topic: 'meshcore/custom' });
+    expect(broker.base_topic).toBe('');
   });
 });
