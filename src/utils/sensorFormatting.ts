@@ -10,6 +10,55 @@
  * grid can render it without JSON.stringify.
  */
 
+import type { SensorMetricDescriptor } from '@/types/api';
+
+export type MetricCategory = SensorMetricDescriptor['category'];
+export type DisplayMetric = { descriptor: SensorMetricDescriptor; value: unknown };
+export type MetricGroups = Record<MetricCategory, DisplayMetric[]> & {
+  legacy: Record<string, unknown>;
+};
+
+/** Descriptors describe only their exact flat data keys; all other keys remain visible. */
+export function groupSensorMetrics(
+  data: Record<string, unknown>,
+  metrics: SensorMetricDescriptor[],
+): MetricGroups {
+  const groups: MetricGroups = {
+    measurement: [],
+    diagnostic: [],
+    configuration: [],
+    status: [],
+    legacy: { ...data },
+  };
+  const seen = new Set<string>();
+  for (const descriptor of metrics) {
+    if (
+      !descriptor ||
+      !['measurement', 'diagnostic', 'configuration', 'status'].includes(descriptor.category)
+    )
+      continue;
+    const key = descriptor.data_key;
+    if (
+      typeof key !== 'string' ||
+      (!Object.prototype.hasOwnProperty.call(data, key) && descriptor.available !== false) ||
+      seen.has(key)
+    )
+      continue;
+    seen.add(key);
+    groups[descriptor.category].push({ descriptor, value: data[key] });
+    delete groups.legacy[key];
+  }
+  return groups;
+}
+
+/** Never guess units or reinterpret numeric strings when metadata is available. */
+export function formatDescriptorMetric(descriptor: SensorMetricDescriptor, value: unknown): string {
+  if (!descriptor.available || value === null || value === undefined) return 'n/a';
+  if (descriptor.kind === 'boolean') return typeof value === 'boolean' ? String(value) : 'n/a';
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'n/a';
+  return `${value}${descriptor.unit ? ` ${descriptor.unit}` : ''}`;
+}
+
 const compactNumber = new Intl.NumberFormat(undefined, {
   notation: 'compact',
   maximumFractionDigits: 1,
