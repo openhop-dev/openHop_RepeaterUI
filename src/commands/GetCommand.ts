@@ -1,6 +1,7 @@
 import { BaseCommand, type CommandContext } from './BaseCommand';
 import type { Terminal } from '@xterm/xterm';
 import { useSystemStore } from '@/stores/system';
+import { FRONTEND_PARAM_HELP, getFrontendParam, isFrontendParam } from './radioFrontend';
 
 export class GetCommand extends BaseCommand {
   name = 'get';
@@ -11,8 +12,17 @@ export class GetCommand extends BaseCommand {
     return lower === 'get' || lower.startsWith('get ');
   }
 
-  execute({ term, args, writePrompt }: CommandContext): void {
+  execute({ term, args, writePrompt }: CommandContext): Promise<void> | void {
     const param = args[0]?.toLowerCase();
+
+    if (param && isFrontendParam(param)) {
+      // Read from the modem, not the cached config: this is what the radio runs.
+      return getFrontendParam(param).then(({ ok, text }) => {
+        if (ok) this.writeSuccess(term, text);
+        else this.writeError(term, text);
+        writePrompt();
+      });
+    }
 
     if (!param) {
       this.writeError(term, 'Usage: get <parameter>');
@@ -43,6 +53,11 @@ export class GetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36mduty\x1b[0m                Duty cycle enabled');
       this.writeLine(term, '  \x1b[36mduty.max\x1b[0m            Max airtime %');
       this.writeLine(term, '  \x1b[36mpublic.key\x1b[0m          Public key');
+      this.writeLine(term, '');
+      this.writeLine(term, '  \x1b[33mRF front end (KISS modem):\x1b[0m');
+      for (const [name, , help] of FRONTEND_PARAM_HELP) {
+        this.writeLine(term, `  \x1b[36m${name.padEnd(20)}\x1b[0m${help}`);
+      }
       this.writeLine(term, '');
       writePrompt();
       return;
@@ -231,6 +246,10 @@ export class GetCommand extends BaseCommand {
           );
           this.writeInfo(term, '  Duty:      duty, duty.max');
           this.writeInfo(term, '  Security:  public.key');
+          this.writeInfo(
+            term,
+            `  Front end: ${FRONTEND_PARAM_HELP.map(([name]) => name).join(', ')}`,
+          );
           writePrompt();
           return;
       }
