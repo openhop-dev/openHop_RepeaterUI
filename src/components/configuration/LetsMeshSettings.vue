@@ -49,6 +49,8 @@ interface CustomBroker {
   retain_status: boolean;
   neighbors: boolean;
   tls: { enabled?: boolean; insecure?: boolean };
+  // A `{preset: <name>}` entry from config.yaml, which the repeater expands at start.
+  preset?: string;
 }
 
 function cloneBroker(b: CustomBroker): CustomBroker {
@@ -257,6 +259,7 @@ function mkBroker(b: Partial<Omit<CustomBroker, '_id'>> & { disallowed_packet_ty
     retain_status: b.retain_status ?? false, base_topic: b.base_topic ?? '',
     neighbors: b.neighbors ?? false,
     tls: { enabled: b.tls?.enabled ?? false, insecure: b.tls?.insecure ?? false },
+    preset: b.name ? undefined : b.preset,
   };
 }
 
@@ -293,6 +296,7 @@ function buildPayload() {
       interval_hours: neighborsIntervalInput.value,
     },
     brokers: customBrokers.value.map(b => {
+      if (b.preset) return { preset: b.preset };
       const base = {
         name: b.name, enabled: b.enabled, transport: b.transport,
         host: b.host, port: b.port, use_jwt_auth: b.use_jwt_auth,
@@ -860,12 +864,13 @@ onUnmounted(() => {
           <!-- Summary row — always visible, Edit button changes to Done when expanded -->
           <div class="flex items-center gap-3 px-4 py-2.5">
             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
-              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium text-accent-green' : 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium text-accent-red']">
+              <span v-if="!broker.preset" :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', broker.enabled ? 'bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium text-accent-green' : 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium text-accent-red']">
                 <span class="w-1.5 h-1.5 rounded-full" :class="broker.enabled ? 'bg-accent-green/opacity-light' : 'bg-accent-red/opacity-light'"></span>
                 {{ broker.enabled ? 'Enabled' : 'Disabled' }}
               </span>
-              <span class="text-sm font-medium text-content-primary">{{ broker.name || '(unnamed)' }}</span>
-              <span class="text-xs font-mono text-content-secondary dark:text-content-muted">{{ broker.host || '—' }}:{{ broker.port }}</span>
+              <span v-if="broker.preset" class="text-sm font-medium text-content-primary">{{ BROKER_TEMPLATES.find(t => t.id === broker.preset)?.name ?? broker.preset }} (preset)</span>
+              <span v-else class="text-sm font-medium text-content-primary">{{ broker.name || '(unnamed)' }}</span>
+              <span v-if="!broker.preset" class="text-xs font-mono text-content-secondary dark:text-content-muted">{{ broker.host || '—' }}:{{ broker.port }}</span>
               <span
                 v-if="broker.neighbors"
                 title="Publishes the neighbours table to this broker"
@@ -876,6 +881,7 @@ onUnmounted(() => {
             </div>
             <div v-if="isGlobalEditing" class="flex items-center gap-1.5 flex-shrink-0">
               <button
+                v-if="!broker.preset"
                 @click="openBrokerEdit(broker)"
                 class="px-2.5 py-1 text-xs bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded border border-primary/opacity-heavy transition-colors"
               >

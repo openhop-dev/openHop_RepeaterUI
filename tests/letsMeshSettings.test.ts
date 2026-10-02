@@ -220,6 +220,19 @@ describe('LetsMeshSettings — save payload', () => {
     expect(broker.disallowed_packet_types).toEqual(['ADVERT', 'TRACE']);
   });
 
+  // `{preset: <name>}` is the form config.yaml.example recommends; the repeater
+  // expands it at start, so the endpoints follow the installed preset file.
+  it('names a stored preset reference instead of showing a blank broker', async () => {
+    storeState.mqttBrokers = { brokers: [{ preset: 'letsmesh' }] };
+    const wrapper = mountComponent();
+    await flushPromises();
+    expect(wrapper.text()).toContain('LetsMesh (preset)');
+  });
+
+  it('posts a stored preset reference back unchanged', async () => {
+    expect(await saveStoredBroker({ preset: 'letsmesh' })).toEqual({ preset: 'letsmesh' });
+  });
+
   it('does not post a base topic for an MC2MQTT broker', async () => {
     const broker = await saveStoredBroker({ ...STORED_WAEV_BROKER, base_topic: 'meshcore/custom' });
     expect(broker.base_topic).toBe('');
