@@ -245,14 +245,15 @@ watch(() => status.value?.neighbors?.phase, (phase) => {
 
 // ── Sync form from store ──────────────────────────────────────────────────
 let _nextId = 1;
-function mkBroker(b: Partial<Omit<CustomBroker, '_id'>> = {}): CustomBroker {
+// The repeater stores the filter as `disallowed_packet_types`; `disallowedInput` is this form's copy.
+function mkBroker(b: Partial<Omit<CustomBroker, '_id'>> & { disallowed_packet_types?: string[] } = {}): CustomBroker {
   return {
     _id: _nextId++, enabled: b.enabled ?? true, name: b.name ?? '',
     host: b.host ?? '', port: b.port ?? 0, audience: b.audience ?? '',
     format: b.format ?? 'letsmesh', use_jwt_auth: b.use_jwt_auth ?? false,
     username: b.username ?? '', password: b.password ?? '',
     transport: b.transport ?? 'websockets',
-    disallowedInput: Array.isArray(b.disallowedInput) ? [...b.disallowedInput] : [],
+    disallowedInput: Array.isArray(b.disallowed_packet_types) ? [...b.disallowed_packet_types] : [],
     retain_status: b.retain_status ?? false, base_topic: b.base_topic ?? '',
     neighbors: b.neighbors ?? false,
     tls: { enabled: b.tls?.enabled ?? false, insecure: b.tls?.insecure ?? false },
@@ -296,7 +297,10 @@ function buildPayload() {
         name: b.name, enabled: b.enabled, transport: b.transport,
         host: b.host, port: b.port, use_jwt_auth: b.use_jwt_auth,
         format: b.format, disallowed_packet_types: b.disallowedInput,
-        base_topic: b.base_topic, retain_status: b.retain_status,
+        // Offered only for the `mqtt` format; the repeater honours a non-blank value for
+        // every format, in place of meshcore/{IATA}/{KEY}.
+        base_topic: b.format === 'mqtt' ? b.base_topic : '',
+        retain_status: b.retain_status,
         neighbors: b.neighbors,
         tls: { enabled: b.tls?.enabled ?? false, insecure: b.tls?.insecure ?? false },
       };
