@@ -18,6 +18,7 @@ import DatabaseManagement from '@/components/configuration/DatabaseManagement.vu
 import MemoryDebug from '@/components/configuration/MemoryDebug.vue';
 import PolicyEngineSettings from '@/components/configuration/PolicyEngineSettings.vue';
 import SensorManagerSettings from '@/components/configuration/SensorManagerSettings.vue';
+import AppearanceSettings from '@/components/configuration/AppearanceSettings.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
 import Spinner from '@/components/ui/Spinner.vue';
 
@@ -81,7 +82,7 @@ function requestCurrentTabLeave(callback: () => void, cancel?: () => void) {
 const VALID_TABS = new Set([
   'radio', 'radio-hardware', 'repeater', 'duty', 'delays',
   'advert', 'transport', 'api-tokens', 'web', 'observer', 'policy-engine',
-  'backup', 'database', 'memory', 'sensormanager',
+  'backup', 'database', 'memory', 'sensormanager', 'appearance',
 ]);
 
 function resolveTab(queryTab: string | undefined): string {
@@ -203,6 +204,7 @@ onMounted(async () => {
         <DatabaseManagement     v-if="activeTab === 'database'"                             key="database-management" />
         <MemoryDebug            v-if="activeTab === 'memory'"                               key="memory-debug" />
         <SensorManagerSettings  v-if="activeTab === 'sensormanager'" ref="sensorRef"         key="sensor-manager" />
+        <AppearanceSettings     v-if="activeTab === 'appearance'"                           key="appearance" />
       </div>
     </div>
   </div>

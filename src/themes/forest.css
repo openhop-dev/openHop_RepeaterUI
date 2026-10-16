@@ -1,0 +1,39 @@
+/* Forest: muted pine greens with sage accents. Builds on dark. */
+
+html[data-theme='forest'] {
+  --openhop-blue: #a3d9a5;
+  --openhop-purple: #7fbf8a;
+
+  --color-background: #1a2b20;
+  --color-background-soft: #1a2b20;
+  --color-background-mute: #223828;
+  --color-surface: #1a2b20;
+  --color-surface-elevated: #2a4534;
+
+  --color-heading: #f2f9f2;
+  --color-text-primary: #e8f3e8;
+  --color-text-secondary: #c3dcc5;
+  --color-text-muted: #8aa890;
+
+  --color-border: #3f6149;
+  --color-border-subtle: #2e4a37;
+  --color-border-hover: #557d61;
+
+  --color-accent-cyan: #8fd3c7;
+  --color-accent-green: #8fd694;
+  --color-accent-amber: #e3c46b;
+  --color-accent-orange: #d9935b;
+  --color-accent-purple: #b8a6d9;
+  --color-accent-red: #e07a6e;
+
+  --color-primary-bg: #2f5a3a;
+  --color-secondary-bg: #2a4d34;
+
+  --color-badge-cyan-bg: rgba(163, 217, 165, 0.15);
+  --color-badge-cyan-text: #c4ebc6;
+  --color-badge-neutral-bg: #2a4534;
+  --color-badge-neutral-text: #c3dcc5;
+
+  --color-glass-bg: rgba(26, 43, 32, 0.82);
+  --color-glass-border: rgba(163, 217, 165, 0.12);
+}
