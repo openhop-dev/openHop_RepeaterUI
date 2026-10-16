@@ -96,7 +96,7 @@ interface ProcessesResponse {
   total_processes: number;
 }
 
-const { theme } = useTheme();
+const { themeId } = useTheme();
 
 const cssVar = (name: string, fallback: string): string => {
   if (typeof window === 'undefined') return fallback;
@@ -602,7 +602,7 @@ const destroyAllCharts = () => {
 };
 
 // Rebuild charts when theme changes
-watch(theme, () => {
+watch(themeId, () => {
   destroyAllCharts();
   nextTick(() => updateCharts());
 });

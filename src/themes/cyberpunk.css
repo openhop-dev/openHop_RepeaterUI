@@ -1,0 +1,39 @@
+/* Cyberpunk: neon pink and cyan on deep violet. Builds on dark. */
+
+html[data-theme='cyberpunk'] {
+  --openhop-blue: #ff2fb4;
+  --openhop-purple: #00f0ff;
+
+  --color-background: #14091f;
+  --color-background-soft: #180b26;
+  --color-background-mute: #22102f;
+  --color-surface: #180b26;
+  --color-surface-elevated: #2a1238;
+
+  --color-heading: #ffffff;
+  --color-text-primary: #f5e9ff;
+  --color-text-secondary: #d9c2ec;
+  --color-text-muted: #9a7fb3;
+
+  --color-border: #4d2366;
+  --color-border-subtle: #3a1a4d;
+  --color-border-hover: #6b3190;
+
+  --color-accent-cyan: #00f0ff;
+  --color-accent-green: #39ff9e;
+  --color-accent-amber: #ffe600;
+  --color-accent-purple: #c86bff;
+  --color-accent-red: #ff4d6d;
+
+  --color-primary-bg: #4a0f3a;
+  --color-secondary-bg: #063a45;
+
+  --color-badge-cyan-bg: rgba(0, 240, 255, 0.14);
+  --color-badge-cyan-text: #7ff8ff;
+  --color-badge-neutral-bg: #2a1238;
+  --color-badge-neutral-text: #d9c2ec;
+
+  --color-glass-bg: rgba(24, 11, 38, 0.78);
+  --color-glass-border: rgba(255, 47, 180, 0.15);
+  --color-glass-shadow: 0 0 24px rgba(255, 47, 180, 0.08);
+}

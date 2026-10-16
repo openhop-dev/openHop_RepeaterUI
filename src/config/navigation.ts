@@ -4,7 +4,7 @@ import {
   BarChart2, Server, Cpu, Settings, Antenna, Terminal,
   Users2, ScrollText, HelpCircle, Puzzle,
   ShieldCheck, Wrench, Radio, Timer, Percent, Globe, KeyRound, Eye, Scale,
-  DatabaseBackup, Database, MemoryStick, Building2, Bot, Repeat2,
+  DatabaseBackup, Database, MemoryStick, Building2, Bot, Repeat2, Palette,
 } from '@lucide/vue'
 
 export type NavItemConfig = {
@@ -102,6 +102,13 @@ export const navigationItems: NavItemConfig[] = [
               { id: 'config-database', label: 'Database', icon: Database,       route: '/configuration', params: { tab: 'database' }, activeOn: ['/configuration'] },
               { id: 'config-memory',   label: 'Memory',   icon: MemoryStick,    route: '/configuration', params: { tab: 'memory' },   activeOn: ['/configuration'] },
               { id: 'config-sensors',  label: 'Sensor Manager', icon: Gauge, route: '/configuration', params: { tab: 'sensormanager' }, activeOn: ['/configuration'] },
+            ],
+          },
+          {
+            id: 'config-interface', label: 'Interface', icon: Palette,
+            activeOn: ['/configuration'],
+            children: [
+              { id: 'config-appearance', label: 'Appearance', icon: Palette, route: '/configuration', params: { tab: 'appearance' }, activeOn: ['/configuration'] },
             ],
           },
         ],

@@ -1,0 +1,34 @@
+/* Midnight: deep navy with periwinkle accents. Builds on dark. */
+
+html[data-theme='midnight'] {
+  --openhop-blue: #5b7cfa;
+  --openhop-purple: #8b9cff;
+
+  --color-background: #0b1026;
+  --color-background-soft: #0e1430;
+  --color-background-mute: #151d3d;
+  --color-surface: #0e1430;
+  --color-surface-elevated: #1a2445;
+
+  --color-heading: #ffffff;
+  --color-text-primary: #e0e7ff;
+  --color-text-secondary: #b4c0e6;
+  --color-text-muted: #7d8bb8;
+
+  --color-border: #2a3766;
+  --color-border-subtle: #1e2a52;
+  --color-border-hover: #3c4c85;
+
+  --color-accent-cyan: #67d4ff;
+
+  --color-primary-bg: #1f2d6b;
+  --color-secondary-bg: #2a2f73;
+
+  --color-badge-cyan-bg: rgba(91, 124, 250, 0.18);
+  --color-badge-cyan-text: #b4c4ff;
+  --color-badge-neutral-bg: #1a2445;
+  --color-badge-neutral-text: #b4c0e6;
+
+  --color-glass-bg: rgba(14, 20, 48, 0.78);
+  --color-glass-border: rgba(91, 124, 250, 0.12);
+}
