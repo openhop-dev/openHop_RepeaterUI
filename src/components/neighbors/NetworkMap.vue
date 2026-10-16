@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import Supercluster from 'supercluster';
 import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils/formatters';
 import { createMapBaseLayer } from '@/utils/mapTiles';
+import { escapeHtml } from '@/utils/escapeHtml';
 
 // Prevent chrome detection errors
 if (typeof window !== 'undefined' && !(window as unknown as Record<string, unknown>).chrome) {
@@ -395,7 +396,7 @@ const initializeOpenStreetMap = async () => {
       const distance = calculateDistance(baseLat, baseLng, endLat, endLng);
       finalLine.bindPopup(`
         <div class="p-2">
-          <strong style="color: ${nodeColor}">Connection to ${advert.node_name || 'Unknown Node'}</strong><br>
+          <strong style="color: ${nodeColor}">Connection to ${escapeHtml(advert.node_name || 'Unknown Node')}</strong><br>
           <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Distance: ${distance.toFixed(2)} km</span><br>
           <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Route: ${formatRouteType(advert.route_type)}</span><br>
           <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Signal: ${formatRSSI(advert.rssi)} / ${formatSNR(advert.snr)}</span>
@@ -493,12 +494,14 @@ const initializeOpenStreetMap = async () => {
           // Create cluster popup with node information
           const clusterLeaves = supercluster!.getLeaves(props.cluster_id!, Infinity);
           const nodeList = clusterLeaves
-            .map(
-              (leaf) =>
-                `<div style="margin: 2px 0; color: ${colorMap[leaf.properties.advert.contact_type as keyof typeof colorMap] || colorMap['Unknown']};">
-              • ${leaf.properties.advert.node_name || 'Unknown Node'} (${leaf.properties.advert.contact_type})
-            </div>`,
-            )
+            .map((leaf) => {
+              const leafAdvert = leaf.properties.advert;
+              const leafColor =
+                colorMap[leafAdvert.contact_type as keyof typeof colorMap] || colorMap['Unknown'];
+              return `<div style="margin: 2px 0; color: ${leafColor};">
+              • ${escapeHtml(leafAdvert.node_name || 'Unknown Node')} (${escapeHtml(leafAdvert.contact_type)})
+            </div>`;
+            })
             .join('');
 
           marker.bindPopup(`
@@ -528,8 +531,8 @@ const initializeOpenStreetMap = async () => {
 
           const marker = L.marker([markerLat, markerLng], { icon }).addTo(map!).bindPopup(`
               <div class="p-2">
-                <strong style="color: ${color}">${advert.node_name || 'Unknown Node'}</strong><br>
-                <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Type: ${advert.contact_type}</span><br>
+                <strong style="color: ${color}">${escapeHtml(advert.node_name || 'Unknown Node')}</strong><br>
+                <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Type: ${escapeHtml(advert.contact_type)}</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Distance: ${distance.toFixed(2)} km</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Signal: ${formatRSSI(advert.rssi)} / ${formatSNR(advert.snr)}</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Route: ${formatRouteType(advert.route_type)}</span><br>
@@ -564,8 +567,8 @@ const initializeOpenStreetMap = async () => {
           // Add the marker (initially hidden, will show after line animation)
           const marker = L.marker([markerLat, markerLng], { icon }).addTo(map!).bindPopup(`
               <div class="p-2">
-                <strong style="color: ${color}">${advert.node_name || 'Unknown Node'}</strong><br>
-                <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Type: ${advert.contact_type}</span><br>
+                <strong style="color: ${color}">${escapeHtml(advert.node_name || 'Unknown Node')}</strong><br>
+                <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Type: ${escapeHtml(advert.contact_type)}</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Distance: ${calculateDistance(baseLat, baseLng, markerLat, markerLng).toFixed(2)} km</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Signal: ${formatRSSI(advert.rssi)} / ${formatSNR(advert.snr)}</span><br>
                 <span class="text-sm" style="color: ${MAP_COLORS.popupText};">Route: ${formatRouteType(advert.route_type)}</span><br>
