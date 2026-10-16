@@ -691,6 +691,8 @@ export interface ACLClient {
    * @example "admin"
    */
   permissions: 'admin' | 'read_write' | 'read_only' | 'guest';
+  /** Raw permissions byte; the low two bits are the role */
+  permissions_value?: number;
   /**
    * Unix timestamp of last activity
    * @example 1766065148
@@ -722,6 +724,14 @@ export interface ACLClient {
    * @example "0xC5"
    */
   identity_hash?: string;
+  /** The client's advertised name, when known */
+  client_name?: string | null;
+  /** Contact type from the client's advert, when heard */
+  client_type?: string | null;
+  /** Full public key of the identity, unique where the hash is not */
+  identity_pubkey?: string;
+  /** Whether the entry survives a restart */
+  persisted?: boolean;
 }
 
 export type QueryParamsType = Record<string | number, any>;
@@ -3696,6 +3706,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
               max_clients?: number;
               /** @example 5 */
               authenticated_clients?: number;
+              /** Set while the stored ACL cannot be read */
+              store_error?: string | null;
+              /** All entries in the ACL, sessions and provisioned */
+              acl_entries?: number;
+              /** Entries kept across restarts */
+              stored_entries?: number;
               /** @example true */
               has_admin_password?: boolean;
               /** @example true */
@@ -3749,8 +3765,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
             clients?: ACLClient[];
             /** Number of clients returned */
             count?: number;
+            /** Identity name to error, for identities whose stored ACL cannot be read */
+            store_errors?: Record<string, string>;
             /** Filter applied (if any) */
-            filter?: string | null;
+            filter?: {
+              identity_hash?: string | null;
+              identity_name?: string | null;
+            } | null;
           };
         },
         any
@@ -3778,7 +3799,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
          * @pattern ^0x[0-9a-fA-F]{2}$
          * @example "0x42"
          */
-        identity_hash: string;
+        identity_hash?: string;
         /**
          * Identity name (alternative to hash)
          * @example "General"
@@ -3802,6 +3823,61 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  aclSetPermissions = {
+    /**
+     * @description The web equivalent of the `setperm` CLI command. To remove an entry, use /acl_remove_client.
+     *
+     * @tags ACL
+     * @name AclSetPermissionsCreate
+     * @summary Add or change an ACL entry
+     * @request POST:/acl_set_permissions
+     */
+    aclSetPermissionsCreate: (
+      data: {
+        /**
+         * Identity name ("repeater" or a room server's name)
+         * @example "repeater"
+         */
+        identity_name: string;
+        /**
+         * Full client public key
+         * @pattern ^[0-9a-fA-F]{64}$
+         */
+        client_pubkey: string;
+        /**
+         * Permissions byte. The low two bits are the role: 1 read-only, 2 read-write, 3 admin.
+         * @min 1
+         * @max 255
+         */
+        permissions: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+          message?: string;
+          error?: string;
+          data?: {
+            identity_name?: string;
+            identity_type?: 'repeater' | 'room_server';
+            client_pubkey?: string;
+            permissions?: 'admin' | 'read_write' | 'read_only' | 'guest';
+            permissions_value?: number;
+            /** Whether the entry survives a restart */
+            persisted?: boolean;
+          };
+        },
+        any
+      >({
+        path: `/acl_set_permissions`,
+        method: 'POST',
+        body: data,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
   aclStats = {
     /**
      * @description Get statistics about access control lists
@@ -3816,8 +3892,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         {
           success?: boolean;
           data?: {
-            total_entries?: number;
-            by_identity?: object;
+            /** Identities with an access list (the repeater and room servers) */
+            total_identities?: number;
+            /** ACL entries across them, sessions and provisioned alike */
+            total_clients?: number;
+            admin_clients?: number;
+            /** Entries that are not admins (any other role) */
+            guest_clients?: number;
+            by_identity_type?: Record<
+              string,
+              {
+                count?: number;
+                clients?: number;
+              }
+            >;
           };
         },
         any

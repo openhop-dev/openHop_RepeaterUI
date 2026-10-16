@@ -1,7 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, nextTick } from 'vue';
 import ApiService from '@/utils/api';
+import type { ACLClient } from '@/generated/openapi';
 import Spinner from '@/components/ui/Spinner.vue';
+import AclEntryModal from '@/components/modals/AclEntryModal.vue';
+import ConfirmDialog from '@/components/modals/ConfirmDialog.vue';
+import {
+  ACL_ASSIGNABLE_ROLES,
+  ACL_ROLE_ADMIN,
+  ACL_ROLE_MASK,
+  aclRoleBadgeClass,
+  aclRoleLabel,
+  withAclRole,
+} from '@/utils/aclRoles';
 
 defineOptions({ name: 'SessionsView' });
 
@@ -12,13 +23,13 @@ const error = ref<string | null>(null);
 
 // ACL data
 const aclInfo = ref<any>(null);
-const aclClients = ref<any[]>([]);
+const aclClients = ref<ACLClient[]>([]);
 const aclStats = ref<any>(null);
 const selectedIdentity = ref<string | null>(null);
 
 const tabs = [
   { id: 'overview', label: 'Overview', icon: 'overview' },
-  { id: 'clients', label: 'Authenticated Clients', icon: 'clients' },
+  { id: 'clients', label: 'Access List', icon: 'clients' },
   { id: 'identities', label: 'By Identity', icon: 'identities' },
 ];
 
@@ -27,61 +38,272 @@ onMounted(async () => {
   initialLoadComplete.value = true;
 });
 
+// Refreshes overlap when several rows change at once; only the latest one's
+// results are applied, so an older response cannot overwrite a newer list.
+let fetchGeneration = 0;
+
 async function fetchAllACLData() {
+  const generation = ++fetchGeneration;
   loading.value = true;
   error.value = null;
 
   try {
-    // Fetch ACL info
-    const infoResponse = await ApiService.getACLInfo();
-    if (infoResponse.success) {
-      aclInfo.value = infoResponse.data;
+    const [infoResponse, clientsResponse, statsResponse] = await Promise.all([
+      ApiService.getACLInfo(),
+      ApiService.getACLClients(),
+      ApiService.getACLStats().catch(() => null),
+    ]);
+    if (generation !== fetchGeneration) return;
+    // The backend answers a failure with success: false, not an HTTP error.
+    // Showing the error, not the last list, keeps a failed read from passing
+    // for an empty list or for the result of the change just made. The stats
+    // are only summary counts, so they never block managing the list.
+    const failed = [infoResponse, clientsResponse].find((r) => !r.success);
+    if (failed) {
+      error.value = failed.error || 'Failed to load ACL data';
+      return;
     }
-
-    // Fetch ACL clients
-    const clientsResponse = await ApiService.getACLClients();
-    if (clientsResponse.success && clientsResponse.data) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      aclClients.value = (clientsResponse.data as any).clients || [];
-    }
-
-    // Fetch ACL stats
-    const statsResponse = await ApiService.getACLStats();
-    if (statsResponse.success) {
-      aclStats.value = statsResponse.data;
-    }
+    aclInfo.value = infoResponse.data;
+    aclClients.value = clientsResponse.data?.clients || [];
+    aclStats.value = statsResponse?.success ? statsResponse.data : null;
   } catch (err) {
+    if (generation !== fetchGeneration) return;
     error.value = err instanceof Error ? err.message : 'Failed to load ACL data';
     console.error('Error fetching ACL data:', err);
   } finally {
-    loading.value = false;
+    if (generation === fetchGeneration) loading.value = false;
   }
 }
 
-async function removeClient(publicKey: string, identityHash?: string) {
-  if (!confirm('Are you sure you want to remove this client from the ACL?')) {
+// ACL management
+type AclEntry = ACLClient;
+
+const showAddModal = ref(false);
+const pendingRemoval = ref<AclEntry | null>(null);
+const busyKeys = ref(new Set<string>());
+const notice = ref<{ kind: 'success' | 'error'; text: string } | null>(null);
+let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+/** The client's advertised name with its short key, or the key alone. */
+function entryLabel(client: AclEntry): string {
+  return client.client_name ? `${client.client_name} (${client.public_key})` : client.public_key;
+}
+
+function entryKey(client: AclEntry): string {
+  return `${client.identity_name}:${client.public_key_full}`;
+}
+
+function isBusy(client: AclEntry): boolean {
+  return busyKeys.value.has(entryKey(client));
+}
+
+async function whileBusy(client: AclEntry, work: () => Promise<void>) {
+  const key = entryKey(client);
+  // One change per entry at a time; a second must not run, nor release the
+  // first one's hold when it finishes.
+  if (busyKeys.value.has(key)) return;
+  busyKeys.value.add(key);
+  try {
+    await work();
+  } finally {
+    busyKeys.value.delete(key);
+  }
+}
+
+const noticeRegion = ref<HTMLElement | null>(null);
+
+function showNotice(kind: 'success' | 'error', text: string) {
+  clearTimeout(noticeTimer);
+  notice.value = { kind, text };
+  // Results fade on their own; errors stay until dismissed.
+  if (kind === 'success') noticeTimer = setTimeout(() => (notice.value = null), 5000);
+  // A change made far down the list reports at the top of the card.
+  void nextTick(() => noticeRegion.value?.scrollIntoView?.({ block: 'nearest' }));
+}
+
+// Where focus goes after a confirmed change: the confirm dialog cannot
+// return it to the control that opened it, which the change disabled (or,
+// for a removal, deleted), so it is put back once the list has refreshed.
+const addEntryButton = ref<HTMLElement | null>(null);
+// The By Identity tab has no Add entry button; its filter is the anchor there.
+const identityFilter = ref<HTMLElement | null>(null);
+// Always rendered, unlike the two above, which an error state replaces.
+const tabList = ref<HTMLElement | null>(null);
+const refocusKey = ref<string | null>(null);
+
+function onFocusLost(element: HTMLElement | null) {
+  refocusKey.value = element?.dataset.focusKey ?? null;
+}
+
+/**
+ * Put focus back after a change and its refresh. After a confirm dialog
+ * (``fromDialog``) it returns to the control the dialog recorded. Otherwise
+ * it acts only when focus fell to the body (a failed refresh unmounted the
+ * control), and leaves any key a confirmed change is still waiting on.
+ */
+async function restoreFocus(fromDialog = true) {
+  const key = fromDialog ? refocusKey.value : null;
+  if (fromDialog) refocusKey.value = null;
+  await nextTick();
+  // Another dialog opened while this change ran: it owns focus, and puts it
+  // back itself when it closes.
+  if (showAddModal.value || pendingRemoval.value !== null || pendingRoleChange.value !== null) {
     return;
   }
-
-  try {
-    const response = await ApiService.removeACLClient({
-      public_key: publicKey,
-      identity_hash: identityHash,
-    });
-
-    if (response.success) {
-      await fetchAllACLData();
-    } else {
-      alert(`Failed to remove client: ${response.error}`);
-    }
-  } catch (err) {
-    alert(`Error removing client: ${err}`);
-  }
+  // Nothing recorded, and focus is still somewhere: leave it. Focus can also
+  // fall to the body after the dialog closed, when the refresh unmounts the
+  // control it returned to (an error state replaces the tab content).
+  const onBody = !document.activeElement || document.activeElement === document.body;
+  if (key === null && !onBody) return;
+  const target = Array.from(document.querySelectorAll<HTMLElement>('[data-focus-key]')).find(
+    (element) => element.dataset.focusKey === key,
+  );
+  const usable = (element: HTMLElement | null | undefined) =>
+    element && element.isConnected && !element.matches(':disabled') ? element : null;
+  // Without scrolling: the result notice already moved the view to where
+  // the outcome is reported.
+  const activeTabButton = tabList.value?.querySelector<HTMLElement>('[data-active-tab="true"]');
+  (
+    usable(target) ??
+    usable(addEntryButton.value) ??
+    usable(identityFilter.value) ??
+    usable(activeTabButton)
+  )?.focus({ preventScroll: true });
 }
 
-function formatTimestamp(timestamp: number): string {
+onBeforeUnmount(() => clearTimeout(noticeTimer));
+
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+async function onEntrySaved(message: string) {
+  showAddModal.value = false;
+  showNotice('success', message);
+  await fetchAllACLData();
+  await restoreFocus(false);
+}
+
+async function confirmRemoval() {
+  const client = pendingRemoval.value;
+  pendingRemoval.value = null;
+  if (!client) return;
+  let removed = false;
+  await whileBusy(client, async () => {
+    try {
+      const response = await ApiService.removeACLClient({
+        public_key: client.public_key_full,
+        identity_name: client.identity_name,
+        identity_hash: client.identity_hash,
+      });
+      removed = !!response.success;
+      if (response.success) {
+        showNotice('success', `Removed ${entryLabel(client)} from ${client.identity_name}`);
+      } else {
+        showNotice('error', `Could not remove the entry: ${response.error}`);
+      }
+    } catch (err) {
+      showNotice('error', `Could not remove the entry: ${errorText(err)}`);
+    }
+    // Refreshed while the row is still busy: until the list reloads, a
+    // removed row's controls must stay disabled, or a role change would
+    // recreate the entry just removed.
+    if (removed) await fetchAllACLData();
+  });
+  await restoreFocus();
+}
+
+function roleValue(client: AclEntry): number {
+  return (client.permissions_value ?? 0) & ACL_ROLE_MASK;
+}
+
+/** A role change the operator must confirm: it makes a saved room admin temporary. */
+const pendingRoleChange = ref<{
+  client: AclEntry;
+  role: number;
+  select: HTMLSelectElement;
+} | null>(null);
+
+function onRoleSelected(client: AclEntry, event: Event) {
+  const select = event.target as HTMLSelectElement;
+  if (isBusy(client)) {
+    select.value = String(roleValue(client));
+    return;
+  }
+  const role = Number(select.value);
+  if (client.identity_type === 'room_server' && client.persisted && role !== ACL_ROLE_ADMIN) {
+    pendingRoleChange.value = { client, role, select };
+    return;
+  }
+  void applyRole(client, role, select, false);
+}
+
+const pendingRoleLabel = computed(
+  () =>
+    ACL_ASSIGNABLE_ROLES.find((option) => option.value === pendingRoleChange.value?.role)?.label ??
+    '',
+);
+
+function storeErrorText(identity: { name: string; store_error?: string | null }): string {
+  return (
+    `${identity.name}: the saved access list could not be read (${identity.store_error}). ` +
+    'Saved keys cannot log in until it is read; the repeater retries on the next login.'
+  );
+}
+
+function cancelRoleChange() {
+  const pending = pendingRoleChange.value;
+  pendingRoleChange.value = null;
+  if (pending) pending.select.value = String(roleValue(pending.client));
+}
+
+function confirmRoleChange() {
+  const pending = pendingRoleChange.value;
+  pendingRoleChange.value = null;
+  if (pending) void applyRole(pending.client, pending.role, pending.select, true);
+}
+
+async function applyRole(
+  client: AclEntry,
+  role: number,
+  select: HTMLSelectElement,
+  afterDialog: boolean,
+) {
+  let applied = false;
+  await whileBusy(client, async () => {
+    try {
+      const response = await ApiService.setACLPermissions({
+        identity_name: client.identity_name!,
+        client_pubkey: client.public_key_full,
+        permissions: withAclRole(client.permissions_value, role),
+      });
+      applied = !!response.success;
+      if (response.success) {
+        showNotice('success', response.message || 'Role changed');
+      } else {
+        showNotice('error', `Could not change the role: ${response.error}`);
+      }
+    } catch (err) {
+      showNotice('error', `Could not change the role: ${errorText(err)}`);
+    }
+    if (applied) await fetchAllACLData();
+  });
+  // The browser already shows the new choice; put the stored role back
+  // rather than rely on a refresh to overwrite it.
+  if (!applied) select.value = String(roleValue(client));
+  // Only a change confirmed in a dialog lost focus; a direct change must not
+  // take the focus another confirmation is waiting to restore.
+  await restoreFocus(afterDialog);
+}
+
+function formatTimestamp(timestamp: number | undefined): string {
   if (!timestamp) return 'Never';
   return new Date(timestamp * 1000).toLocaleString();
+}
+
+function formatActivity(timestamp: number | undefined): string {
+  // An entry loaded at startup or added here has no activity until it logs in.
+  return timestamp ? formatTimestamp(timestamp) : 'No activity yet';
 }
 
 function setActiveTab(tabId: string) {
@@ -97,6 +319,16 @@ const identityList = computed(() => {
   if (!aclInfo.value) return [];
   return aclInfo.value.acls || [];
 });
+
+/** Identities that take logins, and so have an access list. */
+const aclIdentities = computed(() =>
+  identityList.value.filter((identity: { type?: string }) => identity.type !== 'companion'),
+);
+
+/** Identities whose saved access list could not be read at startup. */
+const identitiesWithStoreError = computed(() =>
+  aclIdentities.value.filter((identity: { store_error?: string | null }) => identity.store_error),
+);
 
 function isCompanion(identity: { type?: string }): boolean {
   return identity?.type === 'companion';
@@ -125,7 +357,7 @@ function formatOptionalAcl(value: unknown): string {
         Sessions & Access Control
       </h1>
       <p class="text-content-secondary dark:text-content-muted mt-1 sm:mt-2 text-ui-label sm:text-ui-body">
-        Manage authenticated clients and access control lists
+        Manage sessions and the keys allowed to log in without a password
       </p>
       <p class="text-content-muted text-ui-label mt-1">
         Repeater, room servers, and companion identities; companions do not accept client logins.
@@ -133,7 +365,8 @@ function formatOptionalAcl(value: unknown): string {
     </div>
 
     <!-- Stats Cards -->
-    <div v-if="aclStats" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <!-- Hidden while the list shows an error: the counts would be stale. -->
+    <div v-if="aclStats && !error" class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">
           Total Identities
@@ -144,20 +377,20 @@ function formatOptionalAcl(value: unknown): string {
       </div>
       <div class="glass-card rounded-[15px] p-4">
         <div class="text-content-secondary dark:text-content-muted text-sm mb-1">
-          Authenticated Clients
+          Access List Entries
         </div>
         <div class="text-2xl font-bold text-primary">
           {{ aclStats.total_clients }}
         </div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
-        <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Admin Clients</div>
+        <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Admins</div>
         <div class="text-2xl font-bold text-accent-green">
           {{ aclStats.admin_clients }}
         </div>
       </div>
       <div class="glass-card rounded-[15px] p-4">
-        <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Guest Clients</div>
+        <div class="text-content-secondary dark:text-content-muted text-sm mb-1">Other Roles</div>
         <div class="text-2xl font-bold text-secondary">
           {{ aclStats.guest_clients }}
         </div>
@@ -167,10 +400,11 @@ function formatOptionalAcl(value: unknown): string {
     <!-- Main Content -->
     <div class="glass-card rounded-[15px] p-6">
       <!-- Tab Navigation -->
-      <div class="flex flex-wrap border-b border-stroke-subtle dark:border-stroke/opacity-light mb-6">
+      <div ref="tabList" class="flex flex-wrap border-b border-stroke-subtle dark:border-stroke/opacity-light mb-6">
         <button
           v-for="tab in tabs"
           :key="tab.id"
+          :data-active-tab="activeTab === tab.id"
           @click="setActiveTab(tab.id)"
           :class="[
             'px-4 py-2 text-sm font-medium transition-colors duration-200 border-b-2 mr-6 mb-2',
@@ -227,6 +461,22 @@ function formatOptionalAcl(value: unknown): string {
         </button>
       </div>
 
+      <!-- Results of changes. The live region stays in the page so screen
+           readers announce what is put into it; errors interrupt. -->
+      <div ref="noticeRegion" aria-live="polite" class="scroll-mt-4">
+        <div
+          v-if="notice"
+          :role="notice.kind === 'error' ? 'alert' : undefined"
+          :class="[
+            'mb-4 flex items-start justify-between gap-3',
+            notice.kind === 'success' ? 'notice-success' : 'notice-error',
+          ]"
+        >
+          <span>{{ notice.text }}</span>
+          <button type="button" class="shrink-0 underline" @click="notice = null">Dismiss</button>
+        </div>
+      </div>
+
       <!-- Tab Content -->
       <div class="min-h-[400px]">
         <!-- Loading State -->
@@ -264,7 +514,7 @@ function formatOptionalAcl(value: unknown): string {
           <div v-else class="space-y-4">
             <div
               v-for="identity in identityList"
-              :key="identity.hash"
+              :key="identity.name"
               class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/opacity-light hover:border-primary/opacity-medium dark:hover:border-primary/opacity-medium transition-colors"
             >
               <div class="flex items-start justify-between">
@@ -398,6 +648,20 @@ function formatOptionalAcl(value: unknown): string {
                       </div>
                     </div>
 
+                    <p v-if="identity.store_error" class="mt-3 notice-error text-xs">
+                      {{ storeErrorText(identity) }}
+                    </p>
+                    <div
+                      v-if="identity.acl_entries != null"
+                      class="mt-3 text-xs text-content-secondary dark:text-content-muted"
+                    >
+                      Access list: {{ identity.acl_entries }}
+                      {{ identity.acl_entries === 1 ? 'entry' : 'entries'
+                      }}<template v-if="identity.stored_entries != null"
+                        >, {{ identity.stored_entries }} saved</template
+                      >
+                    </div>
+
                     <div class="mt-3 flex items-center gap-2">
                       <span class="text-content-secondary dark:text-content-muted text-xs"
                         >Read-Only Access:</span
@@ -425,67 +689,91 @@ function formatOptionalAcl(value: unknown): string {
           </div>
         </div>
 
-        <!-- Clients Tab -->
+        <!-- Access List Tab -->
         <div v-else-if="activeTab === 'clients'" class="space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <p class="text-content-secondary dark:text-content-muted text-sm max-w-2xl">
+              Keys listed here log in with a blank password. Saved entries survive a restart;
+              room servers save admins only, as MeshCore firmware does.
+            </p>
+            <button
+              ref="addEntryButton"
+              type="button"
+              class="btn-primary shrink-0"
+              :disabled="aclIdentities.length === 0"
+              @click="showAddModal = true"
+            >
+              Add entry
+            </button>
+          </div>
+
+          <p
+            v-for="identity in identitiesWithStoreError"
+            :key="`store-error-${identity.name}`"
+            class="notice-error"
+          >
+            {{ storeErrorText(identity) }}
+          </p>
+
           <div
             v-if="aclClients.length === 0"
             class="text-center py-12 text-content-secondary dark:text-content-muted"
           >
-            No authenticated clients
+            No entries yet. Add a key to let it log in without a password.
           </div>
           <div v-else class="overflow-x-auto">
             <table class="w-full">
               <thead>
                 <tr class="border-b border-stroke-subtle dark:border-stroke/opacity-light">
                   <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
+                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3 pr-4"
                   >
                     Client
                   </th>
                   <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
-                  >
-                    Address
-                  </th>
-                  <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
+                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3 pr-4"
                   >
                     Identity
                   </th>
                   <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
+                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3 pr-4"
                   >
-                    Permissions
+                    Role
                   </th>
                   <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
+                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3 pr-4"
+                  >
+                    Kept
+                  </th>
+                  <th
+                    class="hidden sm:table-cell text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3 pr-4"
                   >
                     Last Activity
                   </th>
-                  <th
-                    class="text-left text-content-secondary dark:text-content-muted text-sm font-medium pb-3"
-                  >
-                    Actions
-                  </th>
+                  <th class="pb-3 text-right"><span class="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
                 <tr
                   v-for="client in aclClients"
-                  :key="client.public_key_full"
+                  :key="entryKey(client)"
                   class="border-b border-stroke-subtle dark:border-white/opacity-light hover:bg-background-mute/opacity-heavy dark:hover:bg-white/opacity-light transition-colors"
                 >
-                  <td class="py-3">
-                    <div class="font-mono text-sm text-content-primary">
+                  <td class="py-3 pr-4">
+                    <div v-if="client.client_name" class="text-sm text-content-primary">
+                      {{ client.client_name }}
+                    </div>
+                    <div
+                      :class="[
+                        'font-mono',
+                        client.client_name ? 'text-xs text-content-muted' : 'text-sm text-content-primary',
+                      ]"
+                      :title="client.public_key_full"
+                    >
                       {{ client.public_key }}
                     </div>
                   </td>
-                  <td class="py-3">
-                    <div class="font-mono text-xs text-content-secondary dark:text-content-muted">
-                      {{ client.address }}
-                    </div>
-                  </td>
-                  <td class="py-3">
+                  <td class="py-3 pr-4">
                     <div class="text-sm text-content-primary">
                       {{ client.identity_name }}
                     </div>
@@ -493,27 +781,46 @@ function formatOptionalAcl(value: unknown): string {
                       {{ client.identity_hash }}
                     </div>
                   </td>
-                  <td class="py-3">
-                    <span
-                      :class="[
-                        'px-2 py-1 text-xs font-medium rounded',
-                        client.permissions === 'admin'
-                          ? 'bg-accent-green/opacity-medium text-accent-green'
-                          : 'bg-secondary/opacity-medium text-secondary',
-                      ]"
+                  <td class="py-3 pr-4">
+                    <select
+                      class="cfg-select w-auto min-w-[8.5rem]"
+                      :value="roleValue(client)"
+                      :data-focus-key="`${entryKey(client)}:role`"
+                      :disabled="isBusy(client)"
+                      :aria-label="`Role for ${entryLabel(client)} on ${client.identity_name}`"
+                      @change="onRoleSelected(client, $event)"
                     >
-                      {{ client.permissions }}
-                    </span>
+                      <option v-if="roleValue(client) === 0" :value="0" disabled>Guest</option>
+                      <option
+                        v-for="option in ACL_ASSIGNABLE_ROLES"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
                   </td>
-                  <td class="py-3">
-                    <div class="text-sm text-content-secondary dark:text-content-muted">
-                      {{ formatTimestamp(client.last_activity) }}
+                  <td class="py-3 pr-4">
+                    <span :class="client.persisted ? 'pill-green' : 'pill-neutral'">
+                      {{ client.persisted ? 'Saved' : 'Until restart' }}
+                    </span>
+                    <span class="sr-only">{{
+                      client.persisted ? ': survives a restart' : ': cleared on restart'
+                    }}</span>
+                  </td>
+                  <td class="hidden sm:table-cell py-3 pr-4">
+                    <div class="text-sm text-content-secondary dark:text-content-muted whitespace-nowrap">
+                      {{ formatActivity(client.last_activity) }}
                     </div>
                   </td>
-                  <td class="py-3">
+                  <td class="py-3 text-right">
                     <button
-                      @click="removeClient(client.public_key_full, client.identity_hash)"
+                      type="button"
                       class="btn-danger-xs"
+                      :data-focus-key="`${entryKey(client)}:remove`"
+                      :disabled="isBusy(client)"
+                      :aria-label="`Remove ${entryLabel(client)} from ${client.identity_name}`"
+                      @click="pendingRemoval = client"
                     >
                       Remove
                     </button>
@@ -532,6 +839,7 @@ function formatOptionalAcl(value: unknown): string {
               >Filter by Identity</label
             >
             <select
+              ref="identityFilter"
               v-model="selectedIdentity"
               class="bg-background-mute dark:bg-white/opacity-subtle border border-stroke-subtle dark:border-stroke/opacity-light rounded-lg px-4 py-2 text-content-primary focus:outline-none focus:border-primary/opacity-heavy transition-colors"
             >
@@ -552,35 +860,48 @@ function formatOptionalAcl(value: unknown): string {
           <div v-else class="grid grid-cols-1 gap-4">
             <div
               v-for="client in filteredClients"
-              :key="client.public_key_full"
+              :key="entryKey(client)"
               class="glass-card rounded-[10px] p-4 border border-stroke-subtle dark:border-white/opacity-light"
             >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-3">
-                    <span
-                      :class="[
-                        'px-2 py-1 text-xs font-medium rounded',
-                        client.permissions === 'admin'
-                          ? 'bg-accent-green/opacity-medium text-accent-green'
-                          : 'bg-secondary/opacity-medium text-secondary',
-                      ]"
-                    >
-                      {{ client.permissions }}
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <span :class="aclRoleBadgeClass(client.permissions)">
+                      {{ aclRoleLabel(client.permissions) }}
                     </span>
-                    <span
-                      class="text-content-primary font-mono text-sm"
-                      >{{ client.public_key }}</span
+                    <span :class="client.persisted ? 'pill-green' : 'pill-neutral'">
+                      {{ client.persisted ? 'Saved' : 'Until restart' }}
+                    </span>
+                    <span class="sr-only">{{
+                      client.persisted ? ': survives a restart' : ': cleared on restart'
+                    }}</span>
+                  </div>
+                  <div class="mb-3 min-w-0">
+                    <div
+                      v-if="client.client_name"
+                      class="text-content-primary font-medium break-words"
                     >
+                      {{ client.client_name }}
+                    </div>
+                    <div
+                      :class="[
+                        'font-mono break-all',
+                        client.client_name
+                          ? 'text-xs text-content-muted'
+                          : 'text-sm text-content-primary',
+                      ]"
+                      :title="client.public_key_full"
+                    >
+                      {{ client.public_key }}
+                    </div>
                   </div>
 
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span class="text-content-secondary dark:text-content-muted">Address:</span>
-                      <span
-                        class="text-content-primary/opacity-heavy font-mono ml-2"
-                        >{{ client.address }}</span
-                      >
+                    <div v-if="client.client_type">
+                      <span class="text-content-secondary dark:text-content-muted">Type:</span>
+                      <span class="text-content-primary/opacity-heavy ml-2">{{
+                        client.client_type
+                      }}</span>
                     </div>
                     <div>
                       <span class="text-content-secondary dark:text-content-muted">Identity:</span>
@@ -593,7 +914,7 @@ function formatOptionalAcl(value: unknown): string {
                         >Last Activity:</span
                       >
                       <span class="text-content-primary/opacity-heavy ml-2">{{
-                        formatTimestamp(client.last_activity)
+                        formatActivity(client.last_activity)
                       }}</span>
                     </div>
                     <div>
@@ -607,8 +928,12 @@ function formatOptionalAcl(value: unknown): string {
                   </div>
                 </div>
                 <button
-                  @click="removeClient(client.public_key_full, client.identity_hash)"
-                  class="ml-4 btn-danger-xs"
+                  type="button"
+                  class="btn-danger-xs shrink-0"
+                  :data-focus-key="`${entryKey(client)}:card-remove`"
+                  :disabled="isBusy(client)"
+                  :aria-label="`Remove ${entryLabel(client)} from ${client.identity_name}`"
+                  @click="pendingRemoval = client"
                 >
                   Remove
                 </button>
@@ -618,6 +943,43 @@ function formatOptionalAcl(value: unknown): string {
         </div>
       </div>
     </div>
+
+    <AclEntryModal
+      :show="showAddModal"
+      :identities="aclIdentities"
+      :entries="aclClients"
+      :initial-identity="selectedIdentity"
+      @close="showAddModal = false"
+      @saved="onEntrySaved"
+    />
+    <ConfirmDialog
+      :show="pendingRemoval !== null"
+      title="Remove access entry"
+      :message="
+        pendingRemoval
+          ? `Remove ${entryLabel(pendingRemoval)} from ${pendingRemoval.identity_name}? It will need a password to log in again.`
+          : ''
+      "
+      confirm-text="Remove"
+      variant="danger"
+      @close="pendingRemoval = null"
+      @confirm="confirmRemoval"
+      @focus-lost="onFocusLost"
+    />
+    <ConfirmDialog
+      :show="pendingRoleChange !== null"
+      title="Stop saving this admin?"
+      :message="
+        pendingRoleChange
+          ? `${pendingRoleChange.client.identity_name} is a room server, which keeps only admins after a restart, as MeshCore firmware does. As ${pendingRoleLabel} this entry lasts until the next restart.`
+          : ''
+      "
+      confirm-text="Change role"
+      variant="warning"
+      @close="cancelRoleChange"
+      @confirm="confirmRoleChange"
+      @focus-lost="onFocusLost"
+    />
 
     <!-- Refresh Button -->
     <div class="flex justify-end">
