@@ -1,0 +1,9 @@
+/* Imports every custom theme; light and dark live in src/assets/base.css. */
+@import './amoled.css';
+@import './hacker.css';
+@import './midnight.css';
+@import './cyberpunk.css';
+@import './dracula.css';
+@import './nord.css';
+@import './forest.css';
+@import './synthwave.css';

@@ -1,0 +1,43 @@
+/* Dracula: the Dracula colour scheme (draculatheme.com). Builds on dark. */
+
+html[data-theme='dracula'] {
+  --openhop-blue: #bd93f9;
+  --openhop-purple: #ff79c6;
+
+  --color-background: #282a36;
+  --color-background-soft: #282a36;
+  --color-background-mute: #343746;
+  --color-surface: #282a36;
+  --color-surface-elevated: #343746;
+
+  --color-heading: #ffffff;
+  --color-text-primary: #f8f8f2;
+  --color-text-secondary: #d6d6e0;
+  --color-text-muted: #8f9bc8;
+
+  --color-border: #565a73;
+  --color-border-subtle: #44475a;
+  --color-border-hover: #6272a4;
+
+  --color-accent-cyan: #8be9fd;
+  --color-accent-green: #50fa7b;
+  --color-accent-green-light: #b5fcc8;
+  --color-accent-orange: #ffb86c;
+  --color-accent-amber: #f1fa8c;
+  --color-accent-purple: #bd93f9;
+  --color-accent-red: #ff5555;
+
+  --color-primary-bg: #4b3d6e;
+  --color-secondary-bg: #5c3553;
+
+  --color-badge-cyan-bg: rgba(139, 233, 253, 0.14);
+  --color-badge-cyan-text: #8be9fd;
+  --color-badge-neutral-bg: #44475a;
+  --color-badge-neutral-text: #f8f8f2;
+  --color-badge-green-text: #50fa7b;
+  --color-badge-red-text: #ff8a8a;
+  --color-badge-amber-text: #f1fa8c;
+
+  --color-glass-bg: rgba(40, 42, 54, 0.82);
+  --color-glass-border: rgba(189, 147, 249, 0.12);
+}
