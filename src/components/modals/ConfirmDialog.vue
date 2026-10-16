@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { ref, toRef, useId } from 'vue';
+import { useDialogFocus } from '@/composables/useDialogFocus';
+
 interface Props {
   show: boolean;
   title?: string;
@@ -11,6 +14,8 @@ interface Props {
 interface Emits {
   (e: 'close'): void;
   (e: 'confirm'): void;
+  /** Focus could not return to the element that opened the dialog. */
+  (e: 'focus-lost', element: HTMLElement | null): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,18 +27,33 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
+// The severity icon must meet 3:1 as a graphic; same-hue tints did not.
 const variantColors = {
-  danger: 'bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border-accent-red/opacity-medium text-accent-red',
-  warning:
-    'bg-accent-amber/opacity-light dark:bg-accent-amber/opacity-medium border-accent-amber/opacity-medium text-accent-amber',
-  info: 'bg-primary/opacity-medium border-primary/opacity-medium text-primary',
+  danger: 'border border-accent-red/opacity-medium bg-badge-red-bg text-badge-red-text',
+  warning: 'border border-accent-amber/opacity-medium bg-badge-amber-bg text-badge-amber-text',
+  info: 'border border-primary/opacity-medium bg-badge-cyan-bg text-badge-cyan-text',
 };
 
-const buttonColors = {
-  danger: 'bg-accent-red/opacity-light hover:bg-accent-red/opacity-light',
-  warning: 'bg-accent-amber/opacity-light hover:bg-accent-amber/opacity-light',
-  info: 'bg-primary/opacity-light hover:bg-primary/opacity-light',
+// White text on the light tint was unreadable in light mode; these keep AA
+// contrast in both themes (main.css).
+const buttonClasses = {
+  danger: 'modal-btn-confirm-danger',
+  warning: 'modal-btn-confirm-warning',
+  info: 'modal-btn-confirm-info',
 };
+
+const dialog = ref<HTMLElement | null>(null);
+// The least destructive choice has focus when the dialog opens.
+const cancelButton = ref<HTMLElement | null>(null);
+const titleId = useId();
+const messageId = useId();
+useDialogFocus(
+  toRef(props, 'show'),
+  dialog,
+  () => emit('close'),
+  cancelButton,
+  (lost) => emit('focus-lost', lost),
+);
 </script>
 
 <template>
@@ -46,18 +66,25 @@ const buttonColors = {
   >
     <!-- Modal Content -->
     <div
+      ref="dialog"
       class="modal-card max-w-md"
+      role="alertdialog"
+      aria-modal="true"
+      :aria-labelledby="titleId"
+      :aria-describedby="messageId"
     >
       <!-- Header -->
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-xl font-semibold text-content-primary">
+        <h3 :id="titleId" class="text-xl font-semibold text-content-primary">
           {{ props.title }}
         </h3>
         <button
+          type="button"
+          aria-label="Close"
           @click="emit('close')"
           class="text-content-secondary dark:text-content-muted hover:text-content-primary dark:hover:text-content-primary transition-colors"
         >
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -75,6 +102,7 @@ const buttonColors = {
           <svg
             v-if="props.variant === 'danger'"
             class="w-6 h-6"
+            aria-hidden="true"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -90,6 +118,7 @@ const buttonColors = {
           <svg
             v-else-if="props.variant === 'warning'"
             class="w-6 h-6"
+            aria-hidden="true"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -102,7 +131,7 @@ const buttonColors = {
             />
           </svg>
           <!-- Info Icon -->
-          <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg v-else class="w-6 h-6" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -111,26 +140,17 @@ const buttonColors = {
             />
           </svg>
         </div>
-        <p class="text-content-secondary dark:text-content-primary/opacity-heavy text-base leading-relaxed">
+        <p :id="messageId" class="text-content-secondary dark:text-content-primary/opacity-heavy text-base leading-relaxed">
           {{ props.message }}
         </p>
       </div>
 
       <!-- Actions -->
-      <div class="flex gap-3">
-        <button
-          @click="emit('close')"
-          class="flex-1 px-4 py-3 rounded-xl bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary transition-all duration-200 border border-stroke-subtle dark:border-stroke/opacity-light"
-        >
+      <div class="modal-actions">
+        <button ref="cancelButton" type="button" class="modal-btn-cancel" @click="emit('close')">
           {{ props.cancelText }}
         </button>
-        <button
-          @click="emit('confirm')"
-          :class="[
-            'flex-1 px-4 py-3 rounded-xl text-white transition-all duration-200',
-            buttonColors[props.variant],
-          ]"
-        >
+        <button type="button" :class="buttonClasses[props.variant]" @click="emit('confirm')">
           {{ props.confirmText }}
         </button>
       </div>
