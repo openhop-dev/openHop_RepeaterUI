@@ -73,10 +73,21 @@
   /* Badges */
 
   --color-badge-cyan-bg: #dbeafe;
-  --color-badge-cyan-text: #2563eb;
+  /* #2563eb was 4.24:1 on the fill; this is 5.49:1. */
+  --color-badge-cyan-text: #1d4ed8;
 
   --color-badge-neutral-bg: #f1f5f9;
   --color-badge-neutral-text: #334155;
+
+  /* Status badges with AA-contrast text (4.5:1+) on their own fill. The
+     accent tints with same-hue text (alert-*, status-badge-*) fall short in
+     light mode. */
+  --color-badge-green-bg: #dcfce7;
+  --color-badge-green-text: #166534;
+  --color-badge-red-bg: #fee2e2;
+  --color-badge-red-text: #991b1b;
+  --color-badge-amber-bg: #fef3c7;
+  --color-badge-amber-text: #92400e;
 
   /* Glassmorphism */
 
@@ -187,6 +198,13 @@
 
   --color-badge-neutral-bg: #1f2937;
   --color-badge-neutral-text: #cbd5e1;
+
+  --color-badge-green-bg: rgba(34, 197, 94, 0.15);
+  --color-badge-green-text: #86efac;
+  --color-badge-red-bg: rgba(239, 68, 68, 0.15);
+  --color-badge-red-text: #fca5a5;
+  --color-badge-amber-bg: rgba(245, 158, 11, 0.15);
+  --color-badge-amber-text: #fcd34d;
 
   /* Glassmorphism */
 
