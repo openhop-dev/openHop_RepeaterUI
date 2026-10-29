@@ -49,6 +49,8 @@ interface CustomBroker {
   retain_status: boolean;
   neighbors: boolean;
   tls: { enabled?: boolean; insecure?: boolean };
+  // Name as stored on the repeater, so a rename can keep the redacted password.
+  previous_name?: string;
 }
 
 function cloneBroker(b: CustomBroker): CustomBroker {
@@ -269,7 +271,10 @@ function syncForm() {
   neighborsEnabledInput.value = n.enabled ?? true;
   neighborsIntervalInput.value = n.interval_hours ?? NEIGHBORS_DEFAULT_INTERVAL_HOURS;
   customBrokers.value = Array.isArray(c.brokers)
-    ? (c.brokers as Record<string, unknown>[]).map(b => mkBroker(b as Partial<Omit<CustomBroker, '_id'>>))
+    ? (c.brokers as Record<string, unknown>[]).map(b => ({
+        ...mkBroker(b as Partial<Omit<CustomBroker, '_id'>>),
+        previous_name: typeof b.name === 'string' ? b.name : undefined,
+      }))
     : [];
 }
 
@@ -299,6 +304,7 @@ function buildPayload() {
         base_topic: b.base_topic, retain_status: b.retain_status,
         neighbors: b.neighbors,
         tls: { enabled: b.tls?.enabled ?? false, insecure: b.tls?.insecure ?? false },
+        ...(b.previous_name ? { previous_name: b.previous_name } : {}),
       };
       return b.use_jwt_auth
         ? { ...base, audience: b.audience }
