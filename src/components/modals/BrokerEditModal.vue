@@ -23,7 +23,11 @@ interface Broker {
   retain_status: boolean;
   neighbors: boolean;
   tls: { enabled?: boolean; insecure?: boolean };
+  previous_name?: string;
 }
+
+// The repeater sends stored broker passwords as this placeholder.
+const REDACTED_PASSWORD = '*** REDACTED ***';
 
 interface Props {
   show: boolean;
@@ -49,9 +53,14 @@ const draft = ref<Broker>({
   retain_status: false, neighbors: false, tls: { enabled: true, insecure: false },
 });
 
+const passwordWasRedacted = ref(false);
+
 watch(
   () => props.broker,
-  (b) => { if (b) draft.value = cloneBroker(b); },
+  (b) => {
+    if (b) draft.value = cloneBroker(b);
+    passwordWasRedacted.value = false;
+  },
   { immediate: true },
 );
 
@@ -74,7 +83,22 @@ function toggleDisallowed(type: string) {
   else draft.value.disallowedInput.splice(idx, 1);
 }
 
+// Clear the placeholder on focus so typing replaces it; restore it if left blank.
+function onPasswordFocus() {
+  if (draft.value.password === REDACTED_PASSWORD) {
+    passwordWasRedacted.value = true;
+    draft.value.password = '';
+  }
+}
+
+function onPasswordBlur() {
+  if (passwordWasRedacted.value && !draft.value.password) {
+    draft.value.password = REDACTED_PASSWORD;
+  }
+}
+
 function handleDone() {
+  onPasswordBlur();
   if (!draftIsValid.value) return;
   emit('done', cloneBroker(draft.value));
 }
@@ -277,6 +301,9 @@ function handleCancel() {
                   readonly
                   onfocus="this.removeAttribute('readonly');"
                   onblur="this.setAttribute('readonly', true);"
+                  :placeholder="passwordWasRedacted ? 'Leave blank to keep the saved password' : ''"
+                  @focus="onPasswordFocus"
+                  @blur="onPasswordBlur"
                   class="modal-input"
                 />
               </div>
