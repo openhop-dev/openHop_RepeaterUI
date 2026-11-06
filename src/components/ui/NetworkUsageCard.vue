@@ -27,9 +27,6 @@ watch(
     <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
       <div>
         <h3 class="text-content-primary text-xl font-semibold">Network and MQTT usage</h3>
-        <p class="text-sm text-content-muted mt-1">
-          Rolling totals · decimal bytes (1000 B = 1 KB)
-        </p>
       </div>
       <div class="flex flex-wrap items-end gap-3">
         <label class="text-sm text-content-secondary">
@@ -66,22 +63,31 @@ watch(
       <span v-if="data">Last successful snapshot shown below; totals may be stale.</span>
     </p>
     <template v-if="data">
-      <p data-testid="usage-window" class="text-xs text-content-muted break-words">
-        {{ date(data.start) }} – {{ date(data.end) }} · {{ data.bucket_seconds }}-second buckets
-      </p>
       <details class="text-xs text-content-secondary mt-2 break-words">
         <summary class="cursor-pointer">Measurement scope</summary>
+        <p data-testid="usage-window" class="mt-2 text-content-muted">
+          {{ date(data.start) }} – {{ date(data.end) }} · {{ data.bucket_seconds }}-second buckets
+        </p>
         <p class="mt-2">
           {{ data.scope }}. Select one interface to avoid counting overlapping bridge or VPN traffic
           twice. This is namespace-wide traffic, not repeater-only traffic.
         </p>
+        <p class="mt-2">Units use decimal bytes (1000 B = 1 KB), not bits.</p>
+        <p class="mt-2">
+          Payload bytes accepted locally, not broker receipt or transport costs (TCP, TLS and MQTT
+          overhead). These are not additional network-interface bytes.
+        </p>
+        <p v-if="data.partial" class="mt-2">
+          Partial history: recorded samples only; gaps may be uncounted.
+        </p>
+        <p v-if="data.available_since !== null" class="text-content-muted mt-1">
+          History available since {{ date(data.available_since) }}.
+        </p>
+        <p class="text-content-muted mt-1">
+          Last sample:
+          {{ data.collection.last_sample === null ? 'none' : date(data.collection.last_sample) }}.
+        </p>
       </details>
-      <p v-if="data.partial" class="text-sm text-accent-amber mt-2">
-        Partial history: recorded samples only; gaps may be uncounted.
-      </p>
-      <p v-if="data.available_since !== null" class="text-xs text-content-muted mt-1">
-        History available since {{ date(data.available_since) }}.
-      </p>
       <p
         v-if="!data.collection.running || data.collection.error"
         role="alert"
@@ -91,10 +97,7 @@ watch(
         }}<template v-if="data.collection.error">: {{ data.collection.error }}</template
         >. Recorded totals may be incomplete or stale.
       </p>
-      <p class="text-xs text-content-muted mt-1">
-        Last sample:
-        {{ data.collection.last_sample === null ? 'none' : date(data.collection.last_sample) }}.
-      </p>
+
       <p
         v-if="data.available_since === null"
         class="text-sm text-content-secondary mt-4"
@@ -163,8 +166,7 @@ watch(
         <div class="min-w-0">
           <h4 class="font-semibold text-content-primary mb-2">MQTT uploaded payload</h4>
           <p class="text-xs text-content-muted mb-3">
-            Payload bytes accepted locally, not broker receipt or transport costs (TCP, TLS and MQTT
-            overhead). These are not additional network-interface bytes.
+            Uploaded message data, excluding connection overhead.
           </p>
           <dl class="space-y-3">
             <div data-testid="mqtt-total" class="rounded-lg bg-primary/opacity-light p-3">

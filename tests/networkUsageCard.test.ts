@@ -24,6 +24,26 @@ afterEach(() => {
 const render = () => (wrapper = mount(NetworkUsageCard));
 
 describe('usage card', () => {
+  it('keeps technical history details inside the collapsed disclosure, not above the totals', async () => {
+    vi.mocked(ApiService.getNetworkUsage).mockResolvedValueOnce({ ...usage(), partial: true });
+    render();
+    await flushPromises();
+    const details = wrapper.get('details');
+    expect(details.attributes('open')).toBeUndefined();
+    expect(details.get('[data-testid="usage-window"]').text()).toContain('60-second buckets');
+    expect(details.text()).toContain('Partial history');
+    expect(details.text()).toContain('History available since');
+    expect(details.text()).toContain('Last sample');
+    expect(wrapper.text()).not.toContain('Rolling totals · decimal bytes');
+    const outside = wrapper.element.cloneNode(true) as HTMLElement;
+    outside.querySelectorAll('details').forEach((element) => element.remove());
+    expect(outside.textContent).not.toContain('Partial history');
+    expect(outside.textContent).not.toContain('60-second buckets');
+    expect(outside.textContent).not.toContain('History available since');
+    expect(outside.textContent).not.toContain('Last sample');
+    expect(outside.textContent).toContain('Uploaded message data, excluding connection overhead.');
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
   it('shows loading then explicit interface selection and all brokers combined', async () => {
     render();
     expect(wrapper.text()).toContain('Loading usage');
