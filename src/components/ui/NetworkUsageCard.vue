@@ -69,14 +69,15 @@ watch(
       <p data-testid="usage-window" class="text-xs text-content-muted break-words">
         {{ date(data.start) }} – {{ date(data.end) }} · {{ data.bucket_seconds }}-second buckets
       </p>
-      <p class="text-sm text-content-secondary mt-2 break-words">
-        Scope: {{ data.scope }}. Interface counters reflect the visible host or container network
-        namespace, not repeater-only traffic. Bridge and VPN interfaces can overlap; only the
-        selected interface is shown, never a sum of interfaces.
-      </p>
+      <details class="text-xs text-content-secondary mt-2 break-words">
+        <summary class="cursor-pointer">Measurement scope</summary>
+        <p class="mt-2">
+          {{ data.scope }}. Select one interface to avoid counting overlapping bridge or VPN traffic
+          twice. This is namespace-wide traffic, not repeater-only traffic.
+        </p>
+      </details>
       <p v-if="data.partial" class="text-sm text-accent-amber mt-2">
-        Partial history: totals cover only recorded samples, not necessarily the full selected
-        window. Gaps and restarts can leave traffic uncounted.
+        Partial history: recorded samples only; gaps may be uncounted.
       </p>
       <p v-if="data.available_since !== null" class="text-xs text-content-muted mt-1">
         History available since {{ date(data.available_since) }}.

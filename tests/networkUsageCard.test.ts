@@ -40,6 +40,8 @@ describe('usage card', () => {
     expect(wrapper.text()).toContain('Beta');
     expect(wrapper.text()).toContain('accepted locally');
     expect(wrapper.text()).toContain('not broker receipt');
+    expect(wrapper.get('details').attributes('open')).toBeUndefined();
+    expect(wrapper.get('details summary').text()).toBe('Measurement scope');
   });
   it('switches actual rolling windows, dates and interfaces, retaining choices on poll and remount', async () => {
     vi.mocked(ApiService.getNetworkUsage).mockImplementation(async (days) => ({
