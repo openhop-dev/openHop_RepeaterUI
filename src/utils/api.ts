@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { NetworkUsage } from '@/utils/networkUsage';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type { RequestParams } from '@/generated/openapi';
 import {
@@ -402,6 +403,18 @@ apiClient.interceptors.response.use(
 
 // Generic API utility class
 export class ApiService {
+  static async getNetworkUsage(days: number): Promise<NetworkUsage> {
+    if (!Number.isInteger(days) || days < 1 || days > 7) {
+      throw new Error('Usage days must be an integer from 1 to 7');
+    }
+    try {
+      const response = await apiClient.get<NetworkUsage>('/network_usage', { params: { days } });
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   private static async resolveRequestToken(): Promise<string | undefined> {
     const token = getToken();
 
