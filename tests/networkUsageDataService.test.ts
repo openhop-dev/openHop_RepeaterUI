@@ -21,7 +21,7 @@ describe('DataService usage ownership', () => {
   it('refreshes active windows on reconnect even while cached and stops on lifecycle cleanup', async () => {
     vi.spyOn(usePacketStore(), 'fetchPacketStats').mockResolvedValue(undefined);
     vi.spyOn(usePacketStore(), 'fetchNoiseFloorHistory').mockResolvedValue([]);
-    vi.mocked(ApiService.getNetworkUsage).mockResolvedValue(usage());
+    vi.mocked(ApiService.getNetworkUsage).mockResolvedValue(usage(1));
     const store = useDataService();
     const off = store.subscribeNetworkUsage(1);
     await vi.advanceTimersByTimeAsync(0);
@@ -35,7 +35,7 @@ describe('DataService usage ownership', () => {
     expect(ApiService.getNetworkUsage).toHaveBeenCalledTimes(2);
     off();
   });
-  it('deduplicates and caches by day without letting old windows overwrite a new selection', async () => {
+  it('deduplicates and caches by hour without letting old windows overwrite a new selection', async () => {
     let finish!: (value: NetworkUsage) => void;
     vi.mocked(ApiService.getNetworkUsage).mockImplementation((days) =>
       days === 1
@@ -47,17 +47,17 @@ describe('DataService usage ownership', () => {
     const store = useDataService();
     const first = store.ensureNetworkUsage(1);
     const duplicate = store.ensureNetworkUsage(1);
-    store.usageDays = 7;
-    await store.ensureNetworkUsage(7);
+    store.usageHours = 168;
+    await store.ensureNetworkUsage(168);
     finish(usage(1));
     await Promise.all([first, duplicate]);
     expect(ApiService.getNetworkUsage).toHaveBeenCalledTimes(2);
-    expect(store.networkUsage[store.usageDays]?.data?.days).toBe(7);
-    await store.ensureNetworkUsage(7);
+    expect(store.networkUsage[store.usageHours]?.data?.hours).toBe(168);
+    await store.ensureNetworkUsage(168);
     expect(ApiService.getNetworkUsage).toHaveBeenCalledTimes(2);
   });
   it('owns polling with shared subscriptions and stops after the last consumer', async () => {
-    vi.mocked(ApiService.getNetworkUsage).mockResolvedValue(usage());
+    vi.mocked(ApiService.getNetworkUsage).mockResolvedValue(usage(1));
     const store = useDataService();
     const off = store.subscribeNetworkUsage(1);
     const off2 = store.subscribeNetworkUsage(1);
@@ -71,7 +71,7 @@ describe('DataService usage ownership', () => {
   });
   it('retains a stale snapshot with an explicit error instead of replacing it with zero', async () => {
     vi.mocked(ApiService.getNetworkUsage)
-      .mockResolvedValueOnce(usage())
+      .mockResolvedValueOnce(usage(1))
       .mockRejectedValueOnce(new Error('offline'));
     const store = useDataService();
     await store.ensureNetworkUsage(1);
@@ -90,7 +90,7 @@ describe('DataService usage ownership', () => {
     const store = useDataService();
     const pending = store.ensureNetworkUsage(1);
     store.reset();
-    finish(usage());
+    finish(usage(1));
     await pending;
     expect(store.networkUsage[1]).toBeUndefined();
   });

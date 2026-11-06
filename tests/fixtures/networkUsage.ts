@@ -1,9 +1,10 @@
 import type { NetworkUsage } from '@/utils/networkUsage';
 
-export function usage(days = 1): NetworkUsage {
+export function usage(hours = 24): NetworkUsage {
   return {
-    days,
-    start: 1700000040,
+    hours,
+    days: hours / 24,
+    start: 1700086440 - hours * 3600,
     end: 1700086440,
     bucket_seconds: 60,
     available_since: 1700000040,

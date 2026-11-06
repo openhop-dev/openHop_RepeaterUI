@@ -24,6 +24,30 @@ afterEach(() => {
 const render = () => (wrapper = mount(NetworkUsageCard));
 
 describe('usage card', () => {
+  it('offers the requested rolling Statistics windows and defaults to 24 hours', async () => {
+    render();
+    await flushPromises();
+    const select = wrapper.get('select[aria-label="Usage window"]');
+    expect(
+      select
+        .findAll('option')
+        .map((option) => ({ value: option.attributes('value'), label: option.text() })),
+    ).toEqual([
+      { value: '1', label: '1 Hour' },
+      { value: '6', label: '6 Hours' },
+      { value: '24', label: '24 Hours' },
+      { value: '48', label: '2 Days' },
+      { value: '168', label: '1 Week' },
+    ]);
+    expect((select.element as HTMLSelectElement).value).toBe('24');
+    expect(ApiService.getNetworkUsage).toHaveBeenCalledWith(24);
+    for (const hours of [1, 6, 24, 48, 168]) {
+      await select.setValue(String(hours));
+      await flushPromises();
+      expect(ApiService.getNetworkUsage).toHaveBeenCalledWith(hours);
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    }
+  });
   it('keeps technical history details inside the collapsed disclosure, not above the totals', async () => {
     vi.mocked(ApiService.getNetworkUsage).mockResolvedValueOnce({ ...usage(), partial: true });
     render();
@@ -66,7 +90,7 @@ describe('usage card', () => {
   it('switches actual rolling windows, dates and interfaces, retaining choices on poll and remount', async () => {
     vi.mocked(ApiService.getNetworkUsage).mockImplementation(async (days) => ({
       ...usage(days),
-      start: days === 7 ? 1699481640 : 1700000040,
+      start: days === 168 ? 1699481640 : 1700000040,
       interfaces: [
         ...usage().interfaces,
         {
@@ -81,9 +105,9 @@ describe('usage card', () => {
     render();
     await flushPromises();
     await wrapper.get('select[aria-label="Network interface"]').setValue('net:vpn');
-    await wrapper.get('select[aria-label="Usage window"]').setValue('7');
+    await wrapper.get('select[aria-label="Usage window"]').setValue('168');
     await flushPromises();
-    expect(ApiService.getNetworkUsage).toHaveBeenLastCalledWith(7);
+    expect(ApiService.getNetworkUsage).toHaveBeenLastCalledWith(168);
     expect(wrapper.get('[data-testid="usage-window"]').text()).toContain(
       new Date(1699481640 * 1000).toLocaleString(),
     );
@@ -98,7 +122,7 @@ describe('usage card', () => {
     await flushPromises();
     expect(
       (wrapper.get('select[aria-label="Usage window"]').element as HTMLSelectElement).value,
-    ).toBe('7');
+    ).toBe('168');
     expect(wrapper.get('[data-testid="interface-totals"]').text()).toContain('3 GB');
     const calls = vi.mocked(ApiService.getNetworkUsage).mock.calls.length;
     wrapper.unmount();
@@ -115,10 +139,10 @@ describe('usage card', () => {
           resolve = r;
         }),
     );
-    await wrapper.get('select[aria-label="Usage window"]').setValue('2');
+    await wrapper.get('select[aria-label="Usage window"]').setValue('6');
     expect(wrapper.text()).toContain('Loading usage');
     expect(wrapper.find('[data-testid="mqtt-total"]').exists()).toBe(false);
-    resolve(usage(2));
+    resolve(usage(6));
     await flushPromises();
     expect(wrapper.get('[data-testid="mqtt-total"]').text()).toContain('3 KB');
   });

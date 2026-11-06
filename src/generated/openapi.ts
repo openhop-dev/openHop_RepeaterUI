@@ -52,7 +52,14 @@ export interface NetworkUsageBroker {
 
 export interface NetworkUsage {
   /**
+   * Effective rolling duration in hours.
    * @min 1
+   * @max 168
+   */
+  hours: number;
+  /**
+   * Compatibility duration equal to hours / 24; fractional for subday windows.
+   * @min 0.041666666666666664
    * @max 7
    */
   days: number;
@@ -1667,7 +1674,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   networkUsage = {
     /**
-     * @description Persisted minute-resolution deltas in the current network namespace, retained for eight days. Container deployments measure container-visible interfaces, not whole-host traffic. Interfaces overlap (bridges, tunnels, loopback and physical uplinks); select an interface rather than summing them. MQTT totals are UTF-8 payload bytes/messages accepted locally by Paho across broker and legacy publishers (including Glass telemetry), not transport bytes, broker receipts or carrier billing. Overall MQTT totals derive from the broker rows. No backfill before collection started. In-progress minute is excluded; start and end are effective minute-aligned UNIX seconds with a half-open range. Interface deltas are attributed to the sample-ending minute. Full coverage requires uninterrupted sampling across each minute; startup, restart, counter resets, interface changes, delayed/failed sampling and dropped pending data leave partial history. Empty MQTT rows mean zero only when partial is false. Values are persisted only, normally lagging collection by up to ten seconds.
+     * @description Persisted minute-resolution deltas in the current network namespace, retained for eight days. Container deployments measure container-visible interfaces, not whole-host traffic. Interfaces overlap (bridges, tunnels, loopback and physical uplinks); select an interface rather than summing them. MQTT totals are UTF-8 payload bytes/messages accepted locally by Paho across broker and legacy publishers (including Glass telemetry), not transport bytes, broker receipts or carrier billing. Overall MQTT totals derive from the broker rows. No backfill before collection started. In-progress minute is excluded; start and end are effective minute-aligned UNIX seconds with a half-open range. Interface deltas are attributed to the sample-ending minute. Full coverage requires uninterrupted sampling across each minute; startup, restart, counter resets, interface changes, delayed/failed sampling and dropped pending data leave partial history. Empty MQTT rows mean zero only when partial is false. Values are persisted only, normally lagging collection by up to ten seconds. Windows are rolling durations, defaulting to 24 hours. Specify hours or the deprecated days parameter, never both. No history reset or migration is needed.
      *
      * @tags System
      * @name GetNetworkUsage
@@ -1678,6 +1685,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getNetworkUsage: (
       query?: {
         /**
+         * Rolling duration in hours; defaults to 24 when neither parameter is supplied.
+         * @min 1
+         * @max 168
+         * @default 24
+         */
+        hours?: number;
+        /**
+         * Legacy rolling duration in days; mutually exclusive with hours.
+         * @deprecated
          * @min 1
          * @max 7
          * @default 1

@@ -6,17 +6,24 @@ import { formatUsageBytes } from '@/utils/networkUsage';
 import Spinner from '@/components/ui/Spinner.vue';
 
 const dataService = useDataService();
-const { networkUsage, usageDays, usageInterface } = storeToRefs(dataService);
-const state = computed(() => networkUsage.value[usageDays.value]);
+const { networkUsage, usageHours, usageInterface } = storeToRefs(dataService);
+const state = computed(() => networkUsage.value[usageHours.value]);
 const data = computed(() => state.value?.data);
 const selectedInterface = computed(() =>
   data.value?.interfaces.find((item) => item.source === usageInterface.value),
 );
+const timeOptions = [
+  { value: 1, label: '1 Hour' },
+  { value: 6, label: '6 Hours' },
+  { value: 24, label: '24 Hours' },
+  { value: 48, label: '2 Days' },
+  { value: 168, label: '1 Week' },
+];
 const date = (seconds: number) => new Date(seconds * 1000).toLocaleString();
 watch(
-  usageDays,
-  (days, _old, onCleanup) => {
-    onCleanup(dataService.subscribeNetworkUsage(days));
+  usageHours,
+  (hours, _old, onCleanup) => {
+    onCleanup(dataService.subscribeNetworkUsage(hours));
   },
   { immediate: true },
 );
@@ -32,12 +39,12 @@ watch(
         <label class="text-sm text-content-secondary">
           Window
           <select
-            v-model.number="usageDays"
+            v-model.number="usageHours"
             aria-label="Usage window"
             class="block mt-1 rounded-lg border border-stroke bg-surface text-content-primary px-3 py-2"
           >
-            <option v-for="days in 7" :key="days" :value="days">
-              Last {{ days }} {{ days === 1 ? 'day' : 'days' }}
+            <option v-for="option in timeOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
             </option>
           </select>
         </label>
@@ -45,7 +52,7 @@ watch(
           type="button"
           class="btn-secondary"
           :disabled="state?.loading"
-          @click="dataService.ensureNetworkUsage(usageDays, true)"
+          @click="dataService.ensureNetworkUsage(usageHours, true)"
         >
           {{ state?.error ? 'Retry' : 'Refresh' }}
         </button>

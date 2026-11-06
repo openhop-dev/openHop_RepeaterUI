@@ -62,18 +62,18 @@ export const useDataService = defineStore('dataService', () => {
 
   // Historical windows are independent cache keys; live pushes never replace them.
   const networkUsage = reactive<Partial<Record<number, UsageState>>>({});
-  const usageDays = ref(1);
+  const usageHours = ref(24);
   const usageInterface = ref('');
   const usageInFlight = new Map<number, Promise<void>>();
   const usageSubscribers = new Map<number, number>();
   let usageTimer: number | null = null;
   let usageGeneration = 0;
 
-  async function ensureNetworkUsage(days: number, force = false): Promise<void> {
-    if (!Number.isInteger(days) || days < 1 || days > 7) return;
-    const existing = usageInFlight.get(days);
+  async function ensureNetworkUsage(hours: number, force = false): Promise<void> {
+    if (!Number.isInteger(hours) || hours < 1 || hours > 168) return;
+    const existing = usageInFlight.get(hours);
     if (existing) return existing;
-    const state = (networkUsage[days] ??= reactive({
+    const state = (networkUsage[hours] ??= reactive({
       data: null as NetworkUsage | null,
       loading: false,
       error: null as string | null,
@@ -84,9 +84,9 @@ export const useDataService = defineStore('dataService', () => {
     const generation = usageGeneration;
     const request = (async () => {
       try {
-        const data = await ApiService.getNetworkUsage(days);
+        const data = await ApiService.getNetworkUsage(hours);
         if (generation !== usageGeneration) return;
-        if (data.days !== days)
+        if (data.hours !== hours)
           throw new Error('Usage response does not match the selected window');
         state.data = data;
         state.error = null;
@@ -98,29 +98,29 @@ export const useDataService = defineStore('dataService', () => {
       } finally {
         if (generation === usageGeneration) {
           state.loading = false;
-          usageInFlight.delete(days);
+          usageInFlight.delete(hours);
         }
       }
     })();
-    usageInFlight.set(days, request);
+    usageInFlight.set(hours, request);
     return request;
   }
 
-  function subscribeNetworkUsage(days: number): () => void {
-    usageSubscribers.set(days, (usageSubscribers.get(days) ?? 0) + 1);
-    void ensureNetworkUsage(days);
+  function subscribeNetworkUsage(hours: number): () => void {
+    usageSubscribers.set(hours, (usageSubscribers.get(hours) ?? 0) + 1);
+    void ensureNetworkUsage(hours);
     if (usageTimer === null) {
       usageTimer = window.setInterval(() => {
-        for (const day of usageSubscribers.keys()) void ensureNetworkUsage(day);
+        for (const hour of usageSubscribers.keys()) void ensureNetworkUsage(hour);
       }, 60_000);
     }
     let released = false;
     return () => {
       if (released) return;
       released = true;
-      const count = usageSubscribers.get(days) ?? 0;
-      if (count > 1) usageSubscribers.set(days, count - 1);
-      else usageSubscribers.delete(days);
+      const count = usageSubscribers.get(hours) ?? 0;
+      if (count > 1) usageSubscribers.set(hours, count - 1);
+      else usageSubscribers.delete(hours);
       if (usageSubscribers.size === 0 && usageTimer !== null) {
         clearInterval(usageTimer);
         usageTimer = null;
@@ -347,7 +347,7 @@ export const useDataService = defineStore('dataService', () => {
     const since = _disconnectTime !== null ? Math.max(_disconnectTime, tenMinutesAgo) : tenMinutesAgo;
     _disconnectTime = null;
     invalidate('noiseFloor');
-    for (const day of usageSubscribers.keys()) void ensureNetworkUsage(day, true);
+    for (const hour of usageSubscribers.keys()) void ensureNetworkUsage(hour, true);
     await Promise.allSettled([
       ensure('stats'),
       ensure('packetStats'),
@@ -373,8 +373,8 @@ export const useDataService = defineStore('dataService', () => {
     usageGeneration++;
     usageInFlight.clear();
     usageSubscribers.clear();
-    for (const day of Object.keys(networkUsage)) delete networkUsage[Number(day)];
-    usageDays.value = 1;
+    for (const hour of Object.keys(networkUsage)) delete networkUsage[Number(hour)];
+    usageHours.value = 24;
     usageInterface.value = '';
     _lastFetch.clear();
     _inFlight.clear();
@@ -392,7 +392,7 @@ export const useDataService = defineStore('dataService', () => {
 
   return {
     networkUsage,
-    usageDays,
+    usageHours,
     usageInterface,
     ensureNetworkUsage,
     subscribeNetworkUsage,

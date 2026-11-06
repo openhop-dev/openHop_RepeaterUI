@@ -403,12 +403,12 @@ apiClient.interceptors.response.use(
 
 // Generic API utility class
 export class ApiService {
-  static async getNetworkUsage(days: number): Promise<NetworkUsage> {
-    if (!Number.isInteger(days) || days < 1 || days > 7) {
-      throw new Error('Usage days must be an integer from 1 to 7');
+  static async getNetworkUsage(hours: number): Promise<NetworkUsage> {
+    if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
+      throw new Error('Usage hours must be an integer from 1 to 168');
     }
     try {
-      const response = await apiClient.get<NetworkUsage>('/network_usage', { params: { days } });
+      const response = await apiClient.get<NetworkUsage>('/network_usage', { params: { hours } });
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);
