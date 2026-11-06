@@ -25,6 +25,13 @@ describe('existing System Stats page usage integration', () => {
       expect(wrapper.text()).toContain('CPU Performance');
       expect(wrapper.text()).toContain('Network and MQTT usage');
       expect(wrapper.get('[data-testid="mqtt-total"]').text()).toContain('3 KB');
+      const headings = wrapper.findAll('h3').map((heading) => heading.text());
+      expect(headings.indexOf('Network Statistics')).toBeLessThan(
+        headings.indexOf('Network and MQTT usage'),
+      );
+      expect(headings.indexOf('Network and MQTT usage')).toBeLessThan(
+        headings.indexOf('Top Processes'),
+      );
     } finally {
       wrapper.unmount();
     }

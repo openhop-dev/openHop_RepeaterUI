@@ -701,8 +701,6 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <NetworkUsageCard />
-
     <!-- System Information Cards -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- CPU Details -->
@@ -888,6 +886,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <NetworkUsageCard />
 
     <!-- Top Processes Section -->
     <div class="glass-card rounded-[15px] p-6">
