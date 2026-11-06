@@ -116,6 +116,7 @@ watch(
             Interface
             <select
               v-model="usageInterface"
+              @change="dataService.selectUsageInterface(usageInterface)"
               aria-label="Network interface"
               class="block w-full mt-1 rounded-lg border border-stroke bg-surface text-content-primary px-3 py-2"
             >

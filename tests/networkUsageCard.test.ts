@@ -24,6 +24,36 @@ afterEach(() => {
 const render = () => (wrapper = mount(NetworkUsageCard));
 
 describe('usage card', () => {
+  it('auto-selects a recommended interface once and never replaces a manual choice', async () => {
+    vi.mocked(ApiService.getNetworkUsage).mockImplementation(async (hours) => ({
+      ...usage(hours),
+      default_interface: 'net:eth0',
+    }));
+    render();
+    await flushPromises();
+    expect(useDataService().usageInterface).toBe('net:eth0');
+    expect(wrapper.get('[data-testid="interface-totals"]').text()).toContain('1.5 KB');
+    await wrapper.get('select[aria-label="Network interface"]').setValue('net:lo');
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(useDataService().usageInterface).toBe('net:lo');
+    await wrapper.get('select[aria-label="Network interface"]').setValue('');
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(useDataService().usageInterface).toBe('');
+    expect(wrapper.find('[data-testid="interface-totals"]').exists()).toBe(false);
+  });
+  it.each([null, 'missing', 'net:lo'])(
+    'does not guess when the recommendation is %s',
+    async (default_interface) => {
+      vi.mocked(ApiService.getNetworkUsage).mockResolvedValueOnce({
+        ...usage(),
+        default_interface,
+      });
+      render();
+      await flushPromises();
+      expect(useDataService().usageInterface).toBe('');
+      expect(wrapper.find('[data-testid="interface-totals"]').exists()).toBe(false);
+    },
+  );
   it('offers the requested rolling Statistics windows and defaults to 24 hours', async () => {
     render();
     await flushPromises();

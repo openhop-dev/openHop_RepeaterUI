@@ -50,6 +50,14 @@ export interface NetworkUsageBroker {
   messages: number;
 }
 
+/** Locally accepted outgoing message counts and UTF-8 payload bytes for this broker connection. Reset on connection recreation or service restart, not on a normal reconnect. Excludes topics, protocol overhead, retries and Glass's separate client; accepted messages are not guaranteed delivered. */
+export interface MqttSentCounters {
+  /** @min 0 */
+  messages: number;
+  /** @min 0 */
+  payload_bytes: number;
+}
+
 export interface NetworkUsage {
   /**
    * Effective rolling duration in hours.
@@ -73,6 +81,8 @@ export interface NetworkUsage {
   /** True if any requested minute lacks certified collection coverage. Partial totals are observed lower bounds, not zero-filled estimates. */
   partial: boolean;
   scope: string;
+  /** Best-effort current Linux main-table default-route recommendation, equal to a returned interfaces source whose NIC is currently up and nonloopback. Null for unavailable discovery, ambiguous routes, differing IPv4/IPv6 defaults or no matching source. Not a policy-routing or carrier-billing determination. Use only for initial selection; never override a manual selection. */
+  default_interface: string | null;
   /** Observed sources separately; do not sum overlapping interfaces automatically. */
   interfaces: NetworkUsageInterface[];
   mqtt: {
@@ -4628,7 +4638,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   mqttStatus = {
     /**
-     * No description
+     * @description Per-broker sent counters are session-only and reset when the broker connection is recreated or the service restarts. They count locally accepted payload bytes, not confirmed delivery or network overhead. For persistent rolling totals, including Glass telemetry, use /network_usage.
      *
      * @tags System
      * @name MqttStatusList
@@ -4636,7 +4646,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/mqtt_status
      */
     mqttStatusList: (params: RequestParams = {}) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            handler_active?: boolean;
+            brokers?: {
+              enabled?: boolean;
+              name?: string;
+              host?: string;
+              format?: string;
+              neighbors?: boolean;
+              status?: {
+                connected?: boolean;
+                reconnecting?: boolean;
+              };
+              /** Locally accepted outgoing message counts and UTF-8 payload bytes for this broker connection. Reset on connection recreation or service restart, not on a normal reconnect. Excludes topics, protocol overhead, retries and Glass's separate client; accepted messages are not guaranteed delivered. */
+              sent?: MqttSentCounters;
+            }[];
+            neighbors?: object | null;
+          };
+        },
+        any
+      >({
         path: `/mqtt_status`,
         method: 'GET',
         format: 'json',

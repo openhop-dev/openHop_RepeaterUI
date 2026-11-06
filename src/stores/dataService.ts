@@ -64,6 +64,11 @@ export const useDataService = defineStore('dataService', () => {
   const networkUsage = reactive<Partial<Record<number, UsageState>>>({});
   const usageHours = ref(24);
   const usageInterface = ref('');
+  let usageInterfaceChosen = false;
+  function selectUsageInterface(source: string): void {
+    usageInterface.value = source;
+    usageInterfaceChosen = true;
+  }
   const usageInFlight = new Map<number, Promise<void>>();
   const usageSubscribers = new Map<number, number>();
   let usageTimer: number | null = null;
@@ -89,6 +94,17 @@ export const useDataService = defineStore('dataService', () => {
         if (data.hours !== hours)
           throw new Error('Usage response does not match the selected window');
         state.data = data;
+        const recommended = data.interfaces.find(
+          (item) => item.source === data.default_interface,
+        );
+        if (
+          !usageInterfaceChosen &&
+          !usageInterface.value &&
+          recommended &&
+          !['lo', 'lo0'].includes(recommended.name)
+        ) {
+          selectUsageInterface(recommended.source);
+        }
         state.error = null;
         state.fetchedAt = Date.now();
       } catch (error) {
@@ -376,6 +392,7 @@ export const useDataService = defineStore('dataService', () => {
     for (const hour of Object.keys(networkUsage)) delete networkUsage[Number(hour)];
     usageHours.value = 24;
     usageInterface.value = '';
+    usageInterfaceChosen = false;
     _lastFetch.clear();
     _inFlight.clear();
     isBootstrapping.value = false;
@@ -394,6 +411,7 @@ export const useDataService = defineStore('dataService', () => {
     networkUsage,
     usageHours,
     usageInterface,
+    selectUsageInterface,
     ensureNetworkUsage,
     subscribeNetworkUsage,
     advertTier,

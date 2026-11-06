@@ -4,6 +4,7 @@ export function usage(hours = 24): NetworkUsage {
   return {
     hours,
     days: hours / 24,
+    default_interface: null,
     start: 1700086440 - hours * 3600,
     end: 1700086440,
     bucket_seconds: 60,
@@ -16,6 +17,13 @@ export function usage(hours = 24): NetworkUsage {
         name: 'eth0',
         upload_bytes: 1500,
         download_bytes: 2000000,
+        messages: 0,
+      },
+      {
+        source: 'net:lo',
+        name: 'lo',
+        upload_bytes: 0,
+        download_bytes: 0,
         messages: 0,
       },
     ],
