@@ -19,7 +19,6 @@ const timeOptions = [
   { value: 48, label: '2 Days' },
   { value: 168, label: '1 Week' },
 ];
-const date = (seconds: number) => new Date(seconds * 1000).toLocaleString();
 watch(
   usageHours,
   (hours, _old, onCleanup) => {
@@ -70,30 +69,28 @@ watch(
       <span v-if="data">Last successful snapshot shown below; totals may be stale.</span>
     </p>
     <template v-if="data">
-      <details class="text-xs text-content-secondary mt-2 break-words">
-        <summary class="cursor-pointer">Measurement scope</summary>
-        <p data-testid="usage-window" class="mt-2 text-content-muted">
-          {{ date(data.start) }} – {{ date(data.end) }} · {{ data.bucket_seconds }}-second buckets
-        </p>
-        <p class="mt-2">
-          {{ data.scope }}. Select one interface to avoid counting overlapping bridge or VPN traffic
-          twice. This is namespace-wide traffic, not repeater-only traffic.
-        </p>
-        <p class="mt-2">Units use decimal bytes (1000 B = 1 KB), not bits.</p>
-        <p class="mt-2">
-          Payload bytes accepted locally, not broker receipt or transport costs (TCP, TLS and MQTT
-          overhead). These are not additional network-interface bytes.
-        </p>
-        <p v-if="data.partial" class="mt-2">
-          Partial history: recorded samples only; gaps may be uncounted.
-        </p>
-        <p v-if="data.available_since !== null" class="text-content-muted mt-1">
-          History available since {{ date(data.available_since) }}.
-        </p>
-        <p class="text-content-muted mt-1">
-          Last sample:
-          {{ data.collection.last_sample === null ? 'none' : date(data.collection.last_sample) }}.
-        </p>
+      <details class="text-sm text-content-secondary mt-2 break-words">
+        <summary class="cursor-pointer">How these totals work</summary>
+        <div class="mt-3 space-y-3">
+          <p>
+            <strong>Time window:</strong> “24 Hours” means the last 24 hours, not since midnight.
+          </p>
+          <p>
+            <strong>Network:</strong> All traffic on the selected connection, including other apps
+            and local traffic. If openHop runs in a container, this covers the container, not the
+            whole computer.
+          </p>
+          <p>
+            <strong>MQTT:</strong> Outgoing message data only. The extra data needed to send
+            messages and any incoming messages are not counted here, so your mobile provider may
+            report more usage. MQTT is already included in the network totals. Do not add the two
+            together.
+          </p>
+          <p>
+            <strong>History:</strong> Only recorded usage is shown. Older usage and time while
+            openHop was stopped are not included.
+          </p>
+        </div>
       </details>
       <p
         v-if="!data.collection.running || data.collection.error"

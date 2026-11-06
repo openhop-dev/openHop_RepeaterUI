@@ -48,24 +48,33 @@ describe('usage card', () => {
       expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     }
   });
-  it('keeps technical history details inside the collapsed disclosure, not above the totals', async () => {
+  it('explains totals in plain language without raw diagnostics or routine history warnings', async () => {
     vi.mocked(ApiService.getNetworkUsage).mockResolvedValueOnce({ ...usage(), partial: true });
     render();
     await flushPromises();
     const details = wrapper.get('details');
     expect(details.attributes('open')).toBeUndefined();
-    expect(details.get('[data-testid="usage-window"]').text()).toContain('60-second buckets');
-    expect(details.text()).toContain('Partial history');
-    expect(details.text()).toContain('History available since');
-    expect(details.text()).toContain('Last sample');
-    expect(wrapper.text()).not.toContain('Rolling totals · decimal bytes');
-    const outside = wrapper.element.cloneNode(true) as HTMLElement;
-    outside.querySelectorAll('details').forEach((element) => element.remove());
-    expect(outside.textContent).not.toContain('Partial history');
-    expect(outside.textContent).not.toContain('60-second buckets');
-    expect(outside.textContent).not.toContain('History available since');
-    expect(outside.textContent).not.toContain('Last sample');
-    expect(outside.textContent).toContain('Uploaded message data, excluding connection overhead.');
+    expect(details.get('summary').text()).toBe('How these totals work');
+    expect(details.text()).toContain('last 24 hours, not since midnight');
+    expect(details.text()).toContain('including other apps and local traffic');
+    expect(details.text()).toContain('not the whole computer');
+    expect(details.text()).toContain('already included in the network totals');
+    expect(details.text()).toContain('your mobile provider may report more usage');
+    expect(details.text()).toContain('Only recorded usage is shown');
+    for (const jargon of [
+      'namespace',
+      'buckets',
+      'accepted locally',
+      'broker receipt',
+      'TCP',
+      'TLS',
+      'Partial history',
+      'History available since',
+      'Last sample',
+      new Date(usage().start * 1000).toLocaleString(),
+    ]) {
+      expect(wrapper.text()).not.toContain(jargon);
+    }
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
   });
   it('shows loading then explicit interface selection and all brokers combined', async () => {
@@ -82,12 +91,11 @@ describe('usage card', () => {
     expect(wrapper.get('[data-testid="mqtt-total"]').text()).toContain('5 messages');
     expect(wrapper.text()).toContain('Alpha');
     expect(wrapper.text()).toContain('Beta');
-    expect(wrapper.text()).toContain('accepted locally');
-    expect(wrapper.text()).toContain('not broker receipt');
+    expect(wrapper.text()).toContain('Outgoing message data only');
     expect(wrapper.get('details').attributes('open')).toBeUndefined();
-    expect(wrapper.get('details summary').text()).toBe('Measurement scope');
+    expect(wrapper.get('details summary').text()).toBe('How these totals work');
   });
-  it('switches actual rolling windows, dates and interfaces, retaining choices on poll and remount', async () => {
+  it('switches actual rolling windows and interfaces, retaining choices on poll and remount', async () => {
     vi.mocked(ApiService.getNetworkUsage).mockImplementation(async (days) => ({
       ...usage(days),
       start: days === 168 ? 1699481640 : 1700000040,
@@ -108,9 +116,7 @@ describe('usage card', () => {
     await wrapper.get('select[aria-label="Usage window"]').setValue('168');
     await flushPromises();
     expect(ApiService.getNetworkUsage).toHaveBeenLastCalledWith(168);
-    expect(wrapper.get('[data-testid="usage-window"]').text()).toContain(
-      new Date(1699481640 * 1000).toLocaleString(),
-    );
+    expect(useDataService().networkUsage[168]?.data?.hours).toBe(168);
     expect(wrapper.get('[data-testid="interface-totals"]').text()).toContain('3 GB');
     expect(wrapper.get('[data-testid="interface-totals"]').text()).toContain('0 B');
     await vi.advanceTimersByTimeAsync(60000);
@@ -173,9 +179,9 @@ describe('usage card', () => {
     render();
     await flushPromises();
     expect(wrapper.text()).toContain('No usage history');
-    expect(wrapper.text()).toContain('Partial history');
+    expect(wrapper.text()).toContain('Only recorded usage is shown');
     expect(wrapper.text()).toContain('container');
-    expect(wrapper.text()).toContain('disk unavailable');
+    expect(wrapper.get('[role="alert"]').text()).toContain('disk unavailable');
     expect(wrapper.find('[data-testid="mqtt-total"]').exists()).toBe(false);
   });
 });
