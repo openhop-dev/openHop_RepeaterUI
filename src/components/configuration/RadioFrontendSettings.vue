@@ -4,14 +4,17 @@ import { ApiService } from '@/utils/api';
 import type { RadioFrontendSettings, RadioFrontendStatus } from '@/generated/openapi';
 import { AGC_HOST_MAX_SEC } from '@/commands/radioFrontend';
 
-// RF front-end rows for the default radio (KISS or openHop modem), shown inside Radio
-// Hardware and driven by that page's Edit / Save. Unlike the rest of the page,
-// these apply to the modem immediately rather than after a restart, so the
-// parent calls apply() first and only offers a restart for hardware changes.
+// RF front-end rows for one radio (KISS or openHop modem), shown inside Radio
+// Hardware under the selected radio and driven by that page's Edit / Save.
+// Unlike the rest of the page, these apply to the modem immediately rather than
+// after a restart, so the parent calls apply() first and only offers a restart
+// for hardware changes.
 
 const props = defineProps<{
   /** Follows the parent page's edit mode; entering it reloads the inputs. */
   editing: boolean;
+  /** radios[] entry on a multi-radio node; omitted for the default radio. */
+  radioId?: string;
 }>();
 
 type GainChoice = 'on' | 'off' | '';
@@ -63,7 +66,7 @@ const agcHint = computed(() =>
 async function load() {
   loading.value = true;
   try {
-    const result = await ApiService.getRadioFrontend();
+    const result = await ApiService.getRadioFrontend(props.radioId || undefined);
     status.value = result.success ? result.data : null;
   } catch {
     status.value = null;
@@ -73,6 +76,15 @@ async function load() {
 }
 
 onMounted(load);
+
+watch(
+  () => props.radioId,
+  () => {
+    successMessage.value = '';
+    errorMessage.value = '';
+    void load();
+  },
+);
 
 function agcLabel(seconds: number | undefined): string {
   if (seconds === undefined) return 'Unknown';
@@ -156,7 +168,7 @@ async function apply(): Promise<boolean> {
   if (Object.keys(result).length === 0) return true;
   errorMessage.value = '';
   try {
-    const response = await ApiService.setRadioFrontend(result);
+    const response = await ApiService.setRadioFrontend(result, props.radioId || undefined);
     if (response.data) status.value = response.data;
     if (!response.success) {
       errorMessage.value = response.error || 'Failed to apply RF front-end settings';
@@ -177,7 +189,7 @@ async function apply(): Promise<boolean> {
   }
 }
 
-// What the server now has configured for the default radio, after apply().
+// What the server now has configured for this radio, after apply().
 const configured = computed<Record<string, unknown>>(() => ({
   ...(status.value?.configured ?? {}),
 }));

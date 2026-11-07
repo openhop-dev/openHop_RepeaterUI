@@ -160,10 +160,10 @@ describe('RadioFrontendSettings', () => {
     const card = wrapper.vm as unknown as Card;
     expect(card.hasChanges()).toBe(true);
     expect(await card.apply()).toBe(true);
-    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith({
-      agc_reset_interval_seconds: 10,
-      rx_boosted_gain: false,
-    });
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 10, rx_boosted_gain: false },
+      undefined,
+    );
 
     await wrapper.setProps({ editing: false });
     expect(wrapper.get('[data-testid="frontend-success"]').text()).toContain(
@@ -242,7 +242,10 @@ describe('RadioFrontendSettings', () => {
     const card = wrapper.vm as unknown as Card;
     expect(card.validate()).toBe('');
     expect(await card.apply()).toBe(true);
-    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 2000 });
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 2000 },
+      undefined,
+    );
     await wrapper.setProps({ editing: false });
     expect(wrapper.get('[data-testid="frontend-success"]').text()).toBe(
       'RF front end applied to the radio.',
@@ -356,7 +359,8 @@ describe('RadioHardwareSettings with the RF front end', () => {
     await wrapper.get('[data-testid="frontend-fem_rx_gain-input"]').setValue('on');
     await click(wrapper, 'Save Changes');
 
-    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith({ fem_rx_gain: true });
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith({ fem_rx_gain: true }, undefined);
+    expect(ApiService.getRadioFrontend).toHaveBeenCalledWith(undefined);
     expect(ApiService.importConfig).not.toHaveBeenCalled();
     expect(restartShown(wrapper)).toBe(false);
     expect(button(wrapper, 'Edit Settings')).toBeTruthy();
@@ -414,14 +418,19 @@ describe('RadioHardwareSettings with the RF front end', () => {
     expect(ApiService.importConfig).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the front end only under the default radio on a multi-radio node', async () => {
+  it('shows each radio’s own front end on a multi-radio node', async () => {
     const config = {
       ...kissConfig(),
       radios: [
         { id: 'local', radio_type: 'kiss', radio: { ...AIR }, kiss: { port: '/dev/ttyACM0' } },
-        { id: 'link', radio_type: 'kiss', radio: { ...AIR }, kiss: { port: '/dev/ttyACM1' } },
+        {
+          id: 'link',
+          radio_type: 'modem_tcp',
+          radio: { ...AIR },
+          modem_tcp: { host: '192.0.2.7', port: 5055 },
+        },
       ],
-      fabric: { default_radio: 'link', tx_mode: 'bridge' },
+      fabric: { default_radio: 'local', tx_mode: 'bridge' },
     };
     const wrapper = mountPage(config);
     await flushPromises();
@@ -429,12 +438,61 @@ describe('RadioHardwareSettings with the RF front end', () => {
     const card = (id: string) =>
       wrapper.findAll('button').find((b) => b.text().trim().startsWith(id))!;
 
-    await card('local').trigger('click');
-    await flushPromises();
-    expect(shown()).toBe(false);
+    expect(shown()).toBe(true);
+    expect(ApiService.getRadioFrontend).toHaveBeenLastCalledWith('local');
     await card('link').trigger('click');
     await flushPromises();
     expect(shown()).toBe(true);
+    expect(ApiService.getRadioFrontend).toHaveBeenLastCalledWith('link');
+  });
+
+  it('applies a non-default radio’s front end to that radio and saves it into its entry', async () => {
+    apiMock.setRadioFrontend.mockResolvedValue(
+      applied(
+        { agc_reset_interval_seconds: 60, fem_rx_gain: false, rx_boosted_gain: true },
+        { agc_reset_interval_seconds: 60 },
+      ),
+    );
+    const linkTcp = { host: '192.0.2.7', port: 5055 };
+    const config = {
+      ...kissConfig(),
+      kiss: { port: '/dev/ttyACM0', baud_rate: 115200, agc_reset_interval_seconds: 32 },
+      modem_tcp: { host: 'shared', port: 5055 },
+      radios: [
+        { id: 'local', radio_type: 'kiss', radio: { ...AIR }, kiss: { port: '/dev/ttyACM0' } },
+        { id: 'link', radio_type: 'modem_tcp', radio: { ...AIR }, modem_tcp: { ...linkTcp } },
+      ],
+      fabric: { default_radio: 'local', tx_mode: 'bridge' },
+    };
+    const wrapper = mountPage(config);
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().trim().startsWith('link'))!
+      .trigger('click');
+    await flushPromises();
+    await click(wrapper, 'Edit Settings');
+    await wrapper.get('[data-testid="frontend-agc-input"]').setValue(60);
+    // A hardware edit too, so the page saves the entries and the overlay shows.
+    const port = wrapper
+      .findAll('input[type="number"]')
+      .find((i) => (i.element as HTMLInputElement).value === '5055')!;
+    await port.setValue(5056);
+    await click(wrapper, 'Save Changes');
+
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 60 },
+      'link',
+    );
+    const calls = (ApiService.importConfig as ReturnType<typeof vi.fn>).mock.calls;
+    const body = calls[calls.length - 1][0];
+    const link = body.radios.find((r: { id: string }) => r.id === 'link');
+    const local = body.radios.find((r: { id: string }) => r.id === 'local');
+    expect(link.modem_tcp).toMatchObject({ port: 5056, agc_reset_interval_seconds: 60 });
+    expect(local.kiss?.agc_reset_interval_seconds).toBeUndefined();
+    // The top-level sections mirror the default radio only.
+    expect(body.modem_tcp?.agc_reset_interval_seconds).toBeUndefined();
+    expect(body.kiss?.agc_reset_interval_seconds).not.toBe(60);
   });
 
   it('keeps a KISS radio’s tuning and front-end keys when its port is edited', async () => {
