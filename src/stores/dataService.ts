@@ -5,6 +5,14 @@ import { usePacketStore } from './packets';
 import { useNeighborStore } from './neighbors';
 import ApiService from '@/utils/api';
 import type { RecentPacket } from '@/types/api';
+import type { NetworkUsage } from '@/utils/networkUsage';
+
+interface UsageState {
+  data: NetworkUsage | null;
+  loading: boolean;
+  error: string | null;
+  fetchedAt: number | null;
+}
 
 type DataKey = 'stats' | 'packetStats' | 'noiseFloor' | 'recentPackets' | 'sparklines' | 'advertTier' | 'neighbors' | 'radioConfig';
 export type StepStatus = 'pending' | 'loading' | 'done' | 'error';
@@ -51,6 +59,90 @@ export const useDataService = defineStore('dataService', () => {
     neighbors: 'pending',
     radioConfig: 'pending',
   });
+
+  // Historical windows are independent cache keys; live pushes never replace them.
+  const networkUsage = reactive<Partial<Record<number, UsageState>>>({});
+  const usageHours = ref(24);
+  const usageInterface = ref('');
+  let usageInterfaceChosen = false;
+  function selectUsageInterface(source: string): void {
+    usageInterface.value = source;
+    usageInterfaceChosen = true;
+  }
+  const usageInFlight = new Map<number, Promise<void>>();
+  const usageSubscribers = new Map<number, number>();
+  let usageTimer: number | null = null;
+  let usageGeneration = 0;
+
+  async function ensureNetworkUsage(hours: number, force = false): Promise<void> {
+    if (!Number.isInteger(hours) || hours < 1 || hours > 168) return;
+    const existing = usageInFlight.get(hours);
+    if (existing) return existing;
+    const state = (networkUsage[hours] ??= reactive({
+      data: null as NetworkUsage | null,
+      loading: false,
+      error: null as string | null,
+      fetchedAt: null as number | null,
+    }));
+    if (!force && state.fetchedAt !== null && Date.now() - state.fetchedAt < 60_000) return;
+    state.loading = true;
+    const generation = usageGeneration;
+    const request = (async () => {
+      try {
+        const data = await ApiService.getNetworkUsage(hours);
+        if (generation !== usageGeneration) return;
+        if (data.hours !== hours)
+          throw new Error('Usage response does not match the selected window');
+        state.data = data;
+        const recommended = data.interfaces.find(
+          (item) => item.source === data.default_interface,
+        );
+        if (
+          !usageInterfaceChosen &&
+          !usageInterface.value &&
+          recommended &&
+          !['lo', 'lo0'].includes(recommended.name)
+        ) {
+          selectUsageInterface(recommended.source);
+        }
+        state.error = null;
+        state.fetchedAt = Date.now();
+      } catch (error) {
+        if (generation === usageGeneration) {
+          state.error = error instanceof Error ? error.message : 'Unable to load usage';
+        }
+      } finally {
+        if (generation === usageGeneration) {
+          state.loading = false;
+          usageInFlight.delete(hours);
+        }
+      }
+    })();
+    usageInFlight.set(hours, request);
+    return request;
+  }
+
+  function subscribeNetworkUsage(hours: number): () => void {
+    usageSubscribers.set(hours, (usageSubscribers.get(hours) ?? 0) + 1);
+    void ensureNetworkUsage(hours);
+    if (usageTimer === null) {
+      usageTimer = window.setInterval(() => {
+        for (const hour of usageSubscribers.keys()) void ensureNetworkUsage(hour);
+      }, 60_000);
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const count = usageSubscribers.get(hours) ?? 0;
+      if (count > 1) usageSubscribers.set(hours, count - 1);
+      else usageSubscribers.delete(hours);
+      if (usageSubscribers.size === 0 && usageTimer !== null) {
+        clearInterval(usageTimer);
+        usageTimer = null;
+      }
+    };
+  }
 
   const _lastFetch = new Map<DataKey, number>();
   const _inFlight = new Map<DataKey, Promise<void>>();
@@ -230,7 +322,9 @@ export const useDataService = defineStore('dataService', () => {
   // every WS vitals delivery, so HTTP only steps in when the socket is
   // silent.
   function _startPolling(): void {
-    stopPolling();
+    // Page-scoped historical subscriptions may already be active during bootstrap.
+    for (const h of _pollHandles) clearInterval(h);
+    _pollHandles = [];
 
     _pollHandles.push(
       window.setInterval(() => {
@@ -269,6 +363,7 @@ export const useDataService = defineStore('dataService', () => {
     const since = _disconnectTime !== null ? Math.max(_disconnectTime, tenMinutesAgo) : tenMinutesAgo;
     _disconnectTime = null;
     invalidate('noiseFloor');
+    for (const hour of usageSubscribers.keys()) void ensureNetworkUsage(hour, true);
     await Promise.allSettled([
       ensure('stats'),
       ensure('packetStats'),
@@ -284,11 +379,20 @@ export const useDataService = defineStore('dataService', () => {
   function stopPolling(): void {
     for (const h of _pollHandles) clearInterval(h);
     _pollHandles = [];
+    if (usageTimer !== null) clearInterval(usageTimer);
+    usageTimer = null;
   }
 
   function reset(): void {
     stopPolling();
     _bootstrapped = false;
+    usageGeneration++;
+    usageInFlight.clear();
+    usageSubscribers.clear();
+    for (const hour of Object.keys(networkUsage)) delete networkUsage[Number(hour)];
+    usageHours.value = 24;
+    usageInterface.value = '';
+    usageInterfaceChosen = false;
     _lastFetch.clear();
     _inFlight.clear();
     isBootstrapping.value = false;
@@ -304,6 +408,12 @@ export const useDataService = defineStore('dataService', () => {
   }
 
   return {
+    networkUsage,
+    usageHours,
+    usageInterface,
+    selectUsageInterface,
+    ensureNetworkUsage,
+    subscribeNetworkUsage,
     advertTier,
     isBootstrapping,
     statsSubStatus,

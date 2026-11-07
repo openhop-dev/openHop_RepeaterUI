@@ -10,9 +10,106 @@
  * ---------------------------------------------------------------
  */
 
+export interface NetworkUsageInterface {
+  /** Interface name in the current network namespace. */
+  source: string;
+  name: string;
+  /**
+   * @format int64
+   * @min 0
+   */
+  upload_bytes: number;
+  /**
+   * @format int64
+   * @min 0
+   */
+  download_bytes: number;
+  /**
+   * Always zero for interface counters.
+   * @format int64
+   * @min 0
+   */
+  messages: number;
+}
+
+export interface NetworkUsageBroker {
+  /** Opaque hash of nonsecret endpoint identity and broker name; independent of broker list ordering and credentials. Renaming a broker starts a new source. */
+  source: string;
+  /** Configured broker label (Glass telemetry has its own label). */
+  name: string;
+  /**
+   * Locally accepted payload bytes only; not transport bytes or broker acknowledgement.
+   * @format int64
+   * @min 0
+   */
+  upload_bytes: number;
+  /**
+   * @format int64
+   * @min 0
+   */
+  messages: number;
+}
+
+/** Locally accepted outgoing message counts and UTF-8 payload bytes for this broker connection. Reset on connection recreation or service restart, not on a normal reconnect. Excludes topics, protocol overhead, retries and Glass's separate client; accepted messages are not guaranteed delivered. */
+export interface MqttSentCounters {
+  /** @min 0 */
+  messages: number;
+  /** @min 0 */
+  payload_bytes: number;
+}
+
+export interface NetworkUsage {
+  /**
+   * Effective rolling duration in hours.
+   * @min 1
+   * @max 168
+   */
+  hours: number;
+  /**
+   * Compatibility duration equal to hours / 24; fractional for subday windows.
+   * @min 0.041666666666666664
+   * @max 7
+   */
+  days: number;
+  /** Inclusive effective UNIX seconds, minute aligned. */
+  start: number;
+  /** Exclusive effective UNIX seconds, minute aligned; excludes current minute. */
+  end: number;
+  bucket_seconds: 60;
+  /** Earliest retained fully observed minute, not a guarantee of continuous coverage after that point. Null until one full minute is recorded. */
+  available_since: number | null;
+  /** True if any requested minute lacks certified collection coverage. Partial totals are observed lower bounds, not zero-filled estimates. */
+  partial: boolean;
+  scope: string;
+  /** Best-effort current Linux main-table default-route recommendation, equal to a returned interfaces source whose NIC is currently up and nonloopback. Null for unavailable discovery, ambiguous routes, differing IPv4/IPv6 defaults or no matching source. Not a policy-routing or carrier-billing determination. Use only for initial selection; never override a manual selection. */
+  default_interface: string | null;
+  /** Observed sources separately; do not sum overlapping interfaces automatically. */
+  interfaces: NetworkUsageInterface[];
+  mqtt: {
+    brokers: NetworkUsageBroker[];
+    /**
+     * @format int64
+     * @min 0
+     */
+    upload_bytes: number;
+    /**
+     * @format int64
+     * @min 0
+     */
+    messages: number;
+  };
+  collection: {
+    running: boolean;
+    /** Last successful interface sample UNIX seconds; null before first success. */
+    last_sample: number | null;
+    /** Sanitized collection/persistence error, never connection details or credentials. */
+    error: string | null;
+  };
+}
+
 /** One snapshot's local, bounded measurement metadata; identity is configured sensor name plus source-path id. */
 export interface SensorMetricDescriptor {
-  /** RFC6901 JSON Pointer relative to the modem stats response. */
+  /** RFC6901 JSON Pointer relative to the plugin's source field mapping (modem stats JSON or parsed VE.Direct text labels). */
   id: string;
   source_path: string;
   /** Exact key in the flat data object; generic keys begin with modem:. */
@@ -691,15 +788,13 @@ export interface ACLClient {
    * @example "admin"
    */
   permissions: 'admin' | 'read_write' | 'read_only' | 'guest';
-  /** Raw permissions byte; the low two bits are the role */
-  permissions_value?: number;
   /**
    * Unix timestamp of last activity
    * @example 1766065148
    */
   last_activity?: number;
   /**
-   * Unix timestamp of last successful login
+   * Unix timestamp of last successful login, 0 if none. Kept across restarts for entries that persist; last_activity resets to 0.
    * @example 1766065146
    */
   last_login_success?: number;
@@ -724,13 +819,32 @@ export interface ACLClient {
    * @example "0xC5"
    */
   identity_hash?: string;
-  /** The client's advertised name, when known */
+  /**
+   * The client's advertised name, from an advert the repeater heard or
+   * else a companion's contact for it; null when neither knows it.
+   * @example "Howl"
+   */
   client_name?: string | null;
-  /** Contact type from the client's advert, when heard */
+  /**
+   * Contact type from the client's advert (e.g. "Chat Node"), when heard
+   * @example "Chat Node"
+   */
   client_type?: string | null;
-  /** Full public key of the identity, unique where the hash is not */
+  /**
+   * Full public key of the identity, unique where the hash is not
+   * @pattern ^[0-9a-fA-F]{64}$
+   */
   identity_pubkey?: string;
-  /** Whether the entry survives a restart */
+  /**
+   * The whole permissions byte; the role is its low two bits
+   * @example 3
+   */
+  permissions_value?: number;
+  /**
+   * Whether the entry is stored and survives a restart. The repeater
+   * stores every entry with permissions, a room server admins only.
+   * @example true
+   */
   persisted?: boolean;
 }
 
@@ -1564,6 +1678,45 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: 'POST',
         body: data,
         type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
+  networkUsage = {
+    /**
+     * @description Persisted minute-resolution deltas in the current network namespace, retained for eight days. Container deployments measure container-visible interfaces, not whole-host traffic. Interfaces overlap (bridges, tunnels, loopback and physical uplinks); select an interface rather than summing them. MQTT totals are UTF-8 payload bytes/messages accepted locally by Paho across broker and legacy publishers (including Glass telemetry), not transport bytes, broker receipts or carrier billing. Overall MQTT totals derive from the broker rows. No backfill before collection started. In-progress minute is excluded; start and end are effective minute-aligned UNIX seconds with a half-open range. Interface deltas are attributed to the sample-ending minute. Full coverage requires uninterrupted sampling across each minute; startup, restart, counter resets, interface changes, delayed/failed sampling and dropped pending data leave partial history. Empty MQTT rows mean zero only when partial is false. Values are persisted only, normally lagging collection by up to ten seconds. Windows are rolling durations, defaulting to 24 hours. Specify hours or the deprecated days parameter, never both. No history reset or migration is needed.
+     *
+     * @tags System
+     * @name GetNetworkUsage
+     * @summary Get measured network and MQTT usage
+     * @request GET:/network_usage
+     * @secure
+     */
+    getNetworkUsage: (
+      query?: {
+        /**
+         * Rolling duration in hours; defaults to 24 when neither parameter is supplied.
+         * @min 1
+         * @max 168
+         * @default 24
+         */
+        hours?: number;
+        /**
+         * Legacy rolling duration in days; mutually exclusive with hours.
+         * @deprecated
+         * @min 1
+         * @max 7
+         * @default 1
+         */
+        days?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<NetworkUsage, ErrorResponse | void>({
+        path: `/network_usage`,
+        method: 'GET',
+        query: query,
+        secure: true,
         format: 'json',
         ...params,
       }),
@@ -3006,6 +3159,93 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  trace = {
+    /**
+     * @description Send a MeshCore TRACE through the supplied hop hashes. The repeater automatically adds its own hash at both ends. For example, path ["d0"] becomes a closed route [local, "d0", local]. Success requires the final return to the originating repeater, not an overheard intermediate transmission.
+     *
+     * @tags Network Policy
+     * @name TraceCreate
+     * @summary Trace an explicit direct multi-hop path
+     * @request POST:/trace
+     * @secure
+     */
+    traceCreate: (
+      data: {
+        /**
+         * Ordered hops, for example ["d0"]. The local repeater is added at both ends automatically. Each string hop must be exactly 2, 4, or 8 hex characters (optional 0x prefix) to match the hash width. Limit is 62 hops for 1-byte, 62 for 2-byte, and 42 for 4-byte hashes.
+         * @maxItems 62
+         * @minItems 1
+         */
+        path: string[];
+        /** TRACE hash-width exponent; 0=1 byte, 1=2 bytes, 2=4 bytes. */
+        path_hash_mode?: 0 | 1 | 2;
+        /**
+         * @min 1
+         * @max 120
+         * @default 15
+         */
+        timeout?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success: boolean;
+          data: {
+            requested_path: string[];
+            /** Completed closed route including the origin. Hashes come from the matched TRACE payload, not independently discovered identities. */
+            path: string[];
+            /** One raw signed-byte SNR encoding per radio link, including final local reception. Values are stored as unsigned bytes; subtract 256 from values above 127, then divide by 4 for dB. */
+            path_snrs?: number[];
+            rtt_ms: number;
+            snr_db: number;
+            rssi: number;
+            tag: number;
+            path_hash_mode: number;
+          };
+          message?: string;
+          error?: string;
+        },
+        any
+      >({
+        path: `/trace`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
+  traceInfo = {
+    /**
+     * @description Return the local repeater hash for each supported TRACE hash width.
+     *
+     * @tags Network Policy
+     * @name TraceInfoList
+     * @summary Get local TRACE identity hashes
+     * @request GET:/trace_info
+     * @secure
+     */
+    traceInfoList: (params: RequestParams = {}) =>
+      this.request<
+        {
+          success: boolean;
+          data: {
+            hashes: Record<string, string>;
+            path_hash_modes: Record<string, number>;
+          };
+          error?: string;
+        },
+        any
+      >({
+        path: `/trace_info`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+  };
   discoverNeighborsStart = {
     /**
      * @description Start a short-lived discovery broadcast session and return a session ID for SSE streaming.
@@ -3704,13 +3944,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
               hash?: string;
               /** @example 100 */
               max_clients?: number;
-              /** @example 5 */
+              /**
+               * Entries that logged in or sent a message since
+               * they were loaded. Entries provisioned with
+               * setperm and not yet used are not counted.
+               * @example 5
+               */
               authenticated_clients?: number;
-              /** Set while the stored ACL cannot be read */
+              /**
+               * Set while the stored ACL cannot be read (at
+               * startup, and until a later login or change
+               * reads it): stored entries cannot log in, and
+               * the entries listed are not the stored ones.
+               */
               store_error?: string | null;
-              /** All entries in the ACL, sessions and provisioned */
+              /**
+               * All entries in the ACL, sessions and provisioned
+               * @example 7
+               */
               acl_entries?: number;
-              /** Entries kept across restarts */
+              /**
+               * Entries kept across restarts
+               * @example 2
+               */
               stored_entries?: number;
               /** @example true */
               has_admin_password?: boolean;
@@ -3735,7 +3991,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   aclClients = {
     /**
-     * @description Get list of authenticated clients in access control list for an identity
+     * @description List the entries in an identity's access control list: sessions from logins, and entries provisioned with setperm or /acl_set_permissions that may not have logged in yet (last_activity 0).
      *
      * @tags ACL
      * @name AclClientsList
@@ -3765,7 +4021,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
             clients?: ACLClient[];
             /** Number of clients returned */
             count?: number;
-            /** Identity name to error, for identities whose stored ACL cannot be read */
+            /**
+             * Identity name to error, for identities whose stored ACL
+             * cannot be read now; their list is not the stored one.
+             */
             store_errors?: Record<string, string>;
             /** Filter applied (if any) */
             filter?: {
@@ -3795,20 +4054,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     aclRemoveClientCreate: (
       data: {
         /**
+         * Identity name ("repeater" or a room server's name). Preferred
+         * over identity_hash, which two identities can share. With
+         * neither, the client is removed from every ACL.
+         * @example "repeater"
+         */
+        identity_name?: string;
+        /**
          * Identity hash
          * @pattern ^0x[0-9a-fA-F]{2}$
          * @example "0x42"
          */
         identity_hash?: string;
         /**
-         * Identity name (alternative to hash)
-         * @example "General"
-         */
-        identity_name?: string;
-        /**
-         * Client public key to remove
+         * Client public key to remove. Its stored entry is removed too.
          * @pattern ^[0-9a-fA-F]{64}$
-         * @example "abc123def456..."
+         * @example "03ccf3bb0bed9a5109868a1e33ed020519aab6dbb30e42df3b11a21d21416fff"
          */
         client_pubkey: string;
       },
@@ -3825,7 +4086,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   aclSetPermissions = {
     /**
-     * @description The web equivalent of the `setperm` CLI command. To remove an entry, use /acl_remove_client.
+     * @description The web equivalent of the `setperm` CLI command. The entry is stored, so the key logs in with a blank password after a restart. A room server stores admins only, as MeshCore firmware does; other roles there last until a restart (`persisted: false`). To remove an entry, use /acl_remove_client.
      *
      * @tags ACL
      * @name AclSetPermissionsCreate
@@ -3842,12 +4103,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         /**
          * Full client public key
          * @pattern ^[0-9a-fA-F]{64}$
+         * @example "03ccf3bb0bed9a5109868a1e33ed020519aab6dbb30e42df3b11a21d21416fff"
          */
         client_pubkey: string;
         /**
-         * Permissions byte. The low two bits are the role: 1 read-only, 2 read-write, 3 admin.
+         * Permissions byte. The low two bits are the role: 1 read-only,
+         * 2 read-write, 3 admin; 0 (guest) is refused here.
          * @min 1
          * @max 255
+         * @example 3
          */
         permissions: number;
       },
@@ -4374,7 +4638,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   mqttStatus = {
     /**
-     * No description
+     * @description Per-broker sent counters are session-only and reset when the broker connection is recreated or the service restarts. They count locally accepted payload bytes, not confirmed delivery or network overhead. For persistent rolling totals, including Glass telemetry, use /network_usage.
      *
      * @tags System
      * @name MqttStatusList
@@ -4382,7 +4646,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/mqtt_status
      */
     mqttStatusList: (params: RequestParams = {}) =>
-      this.request<object, any>({
+      this.request<
+        {
+          success?: boolean;
+          data?: {
+            handler_active?: boolean;
+            brokers?: {
+              enabled?: boolean;
+              name?: string;
+              host?: string;
+              format?: string;
+              neighbors?: boolean;
+              status?: {
+                connected?: boolean;
+                reconnecting?: boolean;
+              };
+              /** Locally accepted outgoing message counts and UTF-8 payload bytes for this broker connection. Reset on connection recreation or service restart, not on a normal reconnect. Excludes topics, protocol overhead, retries and Glass's separate client; accepted messages are not guaranteed delivered. */
+              sent?: MqttSentCounters;
+            }[];
+            neighbors?: object | null;
+          };
+        },
+        any
+      >({
         path: `/mqtt_status`,
         method: 'GET',
         format: 'json',

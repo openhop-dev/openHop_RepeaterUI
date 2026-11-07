@@ -4,6 +4,7 @@ import { streamingGet } from '@/utils/streamingFetch';
 import { formatBytes } from '@/utils/formatters';
 import SparklineChart from '@/components/ui/Sparkline.vue';
 import ChartCard from '@/components/ui/ChartCard.vue';
+import NetworkUsageCard from '@/components/ui/NetworkUsageCard.vue';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -885,6 +886,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <NetworkUsageCard />
 
     <!-- Top Processes Section -->
     <div class="glass-card rounded-[15px] p-6">
