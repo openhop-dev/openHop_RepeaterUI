@@ -1,0 +1,40 @@
+/* Synthwave: retro sunset coral and hot pink on purple. Builds on dark. */
+
+html[data-theme='synthwave'] {
+  --openhop-blue: #ff8a65;
+  --openhop-purple: #ff2e97;
+
+  --color-background: #2b1854;
+  --color-background-soft: #2b1854;
+  --color-background-mute: #351e62;
+  --color-surface: #2b1854;
+  --color-surface-elevated: #3d2468;
+
+  --color-heading: #ffffff;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e4d4ff;
+  --color-text-muted: #a68fd1;
+
+  --color-border: #5a3a8f;
+  --color-border-subtle: #4a2d7a;
+  --color-border-hover: #7350ad;
+
+  --color-accent-cyan: #36f9f6;
+  --color-accent-green: #72f1b8;
+  --color-accent-amber: #fede5d;
+  --color-accent-orange: #ff8a65;
+  --color-accent-purple: #c792ea;
+  --color-accent-red: #fe4450;
+
+  --color-primary-bg: #6b2f4f;
+  --color-secondary-bg: #6b1f5a;
+
+  --color-badge-cyan-bg: rgba(54, 249, 246, 0.14);
+  --color-badge-cyan-text: #8ffcfa;
+  --color-badge-neutral-bg: #3d2468;
+  --color-badge-neutral-text: #e4d4ff;
+
+  --color-glass-bg: rgba(43, 24, 84, 0.8);
+  --color-glass-border: rgba(255, 138, 101, 0.14);
+  --color-glass-shadow: 0 0 24px rgba(255, 46, 151, 0.08);
+}

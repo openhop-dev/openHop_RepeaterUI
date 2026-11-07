@@ -188,6 +188,37 @@ export interface NoiseFloorChartData {
 }
 
 // System related types
+export interface SensorMetricDescriptor {
+  id: string;
+  source_path: string;
+  data_key: string;
+  label: string;
+  unit: string | null;
+  kind: 'number' | 'boolean';
+  category: 'measurement' | 'diagnostic' | 'configuration' | 'status';
+  available: boolean;
+  reason?: 'null' | 'missing' | 'source_unavailable' | 'invalid' | 'read_failed';
+}
+
+export interface SensorReading {
+  name?: string;
+  type?: string;
+  ok?: boolean;
+  timestamp?: string | null;
+  error?: string;
+  data?: Record<string, unknown>;
+  metrics?: SensorMetricDescriptor[];
+}
+
+export interface SensorSummary {
+  enabled?: boolean;
+  poll_interval_seconds?: number;
+  configured?: number;
+  loaded?: number;
+  running?: boolean;
+  readings?: SensorReading[];
+}
+
 export interface SystemStats {
   version: string;
   core_version: string;
@@ -203,6 +234,7 @@ export interface SystemStats {
   temperature?: number;
   radio_status?: string;
   radio_error?: string;
+  modem_disconnected?: string[];
   last_packet_time?: number;
   noise_floor_dbm?: number;
   /** The other radios' latest samples; present only on a node with two or more. */
@@ -344,21 +376,7 @@ export interface SystemStats {
       }>;
     };
   };
-  sensors?: {
-    enabled?: boolean;
-    poll_interval_seconds?: number;
-    configured?: number;
-    loaded?: number;
-    running?: boolean;
-    readings?: Array<{
-      name?: string;
-      type?: string;
-      ok?: boolean;
-      timestamp?: string | null;
-      error?: string;
-      data?: Record<string, unknown>;
-    }>;
-  };
+  sensors?: SensorSummary;
   // Include other possible fields that might be returned by stats_getter
   [key: string]: unknown;
 }

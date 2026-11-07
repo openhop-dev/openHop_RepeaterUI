@@ -57,6 +57,12 @@ export default {
           'cyan-text': 'var(--color-badge-cyan-text)',
           'neutral-bg': 'var(--color-badge-neutral-bg)',
           'neutral-text': 'var(--color-badge-neutral-text)',
+          'green-bg': 'var(--color-badge-green-bg)',
+          'green-text': 'var(--color-badge-green-text)',
+          'red-bg': 'var(--color-badge-red-bg)',
+          'red-text': 'var(--color-badge-red-text)',
+          'amber-bg': 'var(--color-badge-amber-bg)',
+          'amber-text': 'var(--color-badge-amber-text)',
         },
         // Legacy mappings (for backward compatibility during migration)
         light: {

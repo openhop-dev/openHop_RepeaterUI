@@ -324,6 +324,9 @@ export const useSystemStore = defineStore('system', () => {
       // Update only the dynamic fields that change frequently
       if (data.uptime_seconds !== undefined) stats.value.uptime_seconds = data.uptime_seconds;
       if (data.noise_floor_dbm !== undefined) stats.value.noise_floor_dbm = data.noise_floor_dbm;
+      if (data.modem_disconnected !== undefined) {
+        stats.value.modem_disconnected = data.modem_disconnected;
+      }
 
       // Preserve existing config, node info, and other stable fields
       // Only update them if they're explicitly provided and different

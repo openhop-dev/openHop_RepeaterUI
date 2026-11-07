@@ -11,9 +11,15 @@ import Spinner from '@/components/ui/Spinner.vue';
 import PingResultModal from '@/components/modals/PingResultModal.vue';
 import NeighborDetailsModal from '@/components/modals/NeighborDetailsModal.vue';
 import NeighborScopesModal from '@/components/modals/NeighborScopesModal.vue';
+import MeshCoreQrModal from '@/components/modals/MeshCoreQrModal.vue';
 import NetworkMap from '@/components/neighbors/NetworkMap.vue';
 import NeighborTable from '@/components/neighbors/NeighborTable.vue';
 import { getPreference, setPreference } from '@/utils/preferences';
+import {
+  buildMeshCoreAddContactUrl,
+  isValidMeshCorePublicKey,
+  type MeshCoreContactType,
+} from '@/utils/meshcoreQr';
 
 defineOptions({ name: 'NeighborsView' });
 
@@ -141,6 +147,10 @@ const selectedNeighborForDeletion = ref<Advert | null>(null);
 // Neighbor details modal state
 const showDetailsModal = ref(false);
 const selectedNeighborForDetails = ref<Advert | null>(null);
+const showQrModal = ref(false);
+const qrModalTitle = ref('');
+const qrModalSubtitle = ref('');
+const qrModalValue = ref('');
 
 // Region scopes panel. Only offered for repeaters: core answers the anon-regions
 // sub-type from repeater identities and routes it to the login handler for a room
@@ -507,6 +517,48 @@ const handleShowDetails = (neighbor: unknown) => {
 const closeDetailsModal = () => {
   showDetailsModal.value = false;
   selectedNeighborForDetails.value = null;
+};
+
+const meshCoreTypeForNeighbor = (neighbor: Advert): MeshCoreContactType | null => {
+  switch (neighbor.contact_type) {
+    case 'Chat Node':
+      return 1;
+    case 'Repeater':
+      return 2;
+    case 'Room Server':
+      return 3;
+    case 'Hybrid Node':
+      return 4;
+    default:
+      return null;
+  }
+};
+
+const handleShowQr = (neighbor: unknown) => {
+  const advert = neighbor as Advert;
+  if (!isValidMeshCorePublicKey(advert.pubkey)) {
+    return;
+  }
+
+  const type = meshCoreTypeForNeighbor(advert);
+  if (type === null) {
+    return;
+  }
+
+  const contactName = advert.node_name || 'Neighbor';
+  qrModalTitle.value = `Neighbor QR: ${contactName}`;
+  qrModalSubtitle.value =
+    'Scan in MeshCore app to add this neighbor contact.';
+  qrModalValue.value = buildMeshCoreAddContactUrl({
+    name: contactName,
+    publicKey: advert.pubkey,
+    type,
+  });
+  showQrModal.value = true;
+};
+
+const closeQrModal = () => {
+  showQrModal.value = false;
 };
 
 const setScopesQueryError = (pubkey: string, message: string | null) => {
@@ -969,6 +1021,7 @@ onUnmounted(() => {
           @menu-ping="handleMenuPing"
           @menu-delete="handleMenuDelete"
           @show-details="handleShowDetails"
+          @show-qr="handleShowQr"
           @show-scopes="openScopesModal"
           @query-scopes="handleMenuQueryScopes"
         />
@@ -1092,6 +1145,14 @@ onUnmounted(() => {
       @close="closeScopesModal"
       @query="runScopeQuery"
       @add-scope="addScopeToRepeater"
+    />
+
+    <MeshCoreQrModal
+      :is-open="showQrModal"
+      :title="qrModalTitle"
+      :subtitle="qrModalSubtitle"
+      :value="qrModalValue"
+      @close="closeQrModal"
     />
   </div>
 </template>

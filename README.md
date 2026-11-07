@@ -1,6 +1,6 @@
 # openHop Repeater UI
 
-Web dashboard for [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) — monitor and manage your openHop repeater entirely from the browser.
+Web dashboard for [openHop Repeater](https://github.com/openhop-dev/openhop_repeater) — monitor and manage your openHop repeater entirely from the browser.
 
 Built with **Vue 3**, **TypeScript**, and **TailwindCSS**. This repository holds the standalone UI source; it builds directly into the repeater project and is served by its embedded web server. Keeping the frontend separate keeps the repeater codebase lean and makes UI contributions easier.
 
@@ -41,7 +41,7 @@ The MapLibre worker is bundled through Vite's `?worker&url` import. Deployment m
 ## Prerequisites
 
 - **Node.js** 20 or later
-- A running [openHop Repeater](https://github.com/openhop-dev/openhop-repeater) backend
+- A running [openHop Repeater](https://github.com/openhop-dev/openhop_repeater) backend
 
 ## Quick Start
 

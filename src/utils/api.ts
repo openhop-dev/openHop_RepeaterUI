@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { NetworkUsage } from '@/utils/networkUsage';
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import type {
   RadioFrontendApplyResult,
@@ -42,6 +43,9 @@ type AclClientsResponse = EndpointApiResponse<
 >;
 type AclRemoveClientResponse = EndpointApiResponse<
   (typeof generatedApiClient)['aclRemoveClient']['aclRemoveClientCreate']
+>;
+type AclSetPermissionsResponse = EndpointApiResponse<
+  (typeof generatedApiClient)['aclSetPermissions']['aclSetPermissionsCreate']
 >;
 type AclStatsResponse = EndpointApiResponse<(typeof generatedApiClient)['aclStats']['aclStatsList']>;
 type RoomMessagesResponse = EndpointApiResponse<
@@ -404,6 +408,18 @@ apiClient.interceptors.response.use(
 
 // Generic API utility class
 export class ApiService {
+  static async getNetworkUsage(hours: number): Promise<NetworkUsage> {
+    if (!Number.isInteger(hours) || hours < 1 || hours > 168) {
+      throw new Error('Usage hours must be an integer from 1 to 168');
+    }
+    try {
+      const response = await apiClient.get<NetworkUsage>('/network_usage', { params: { hours } });
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
   private static async resolveRequestToken(): Promise<string | undefined> {
     const token = getToken();
 
@@ -1190,17 +1206,49 @@ export class ApiService {
     }
   }
 
+  /**
+   * Remove a client from one identity's ACL, and its stored entry. The backend
+   * prefers `identity_name`, which two identities cannot share as they can a
+   * hash; the hash is sent too as a fallback. One of them is required: with
+   * neither, the backend would remove the client from every ACL.
+   */
   static async removeACLClient(data: {
     public_key: string;
+    identity_name?: string;
     identity_hash?: string;
   }): Promise<AclRemoveClientResponse> {
+    if (!data.identity_name && !data.identity_hash) {
+      throw new Error('removeACLClient needs identity_name or identity_hash');
+    }
     try {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.aclRemoveClient.aclRemoveClientCreate(
         {
           client_pubkey: data.public_key,
-          identity_hash: data.identity_hash ?? '',
+          ...(data.identity_name ? { identity_name: data.identity_name } : {}),
+          ...(data.identity_hash ? { identity_hash: data.identity_hash } : {}),
         },
+        params,
+      );
+      return response.data;
+    } catch (error: unknown) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
+   * Add or change an ACL entry, as the `setperm` CLI command. The key then
+   * logs in with a blank password, across restarts where `persisted`.
+   */
+  static async setACLPermissions(data: {
+    identity_name: string;
+    client_pubkey: string;
+    permissions: number;
+  }): Promise<AclSetPermissionsResponse> {
+    try {
+      const params = await this.getGeneratedRequestParams();
+      const response = await generatedApiClient.aclSetPermissions.aclSetPermissionsCreate(
+        data,
         params,
       );
       return response.data;
@@ -1625,6 +1673,84 @@ export class ApiService {
       params.set('token', token);
     }
     return new EventSource(`${API_BASE_URL}/plugins/progress?${params.toString()}`);
+  }
+
+  // ========================
+  // Sensor Manager
+  // ========================
+
+  static async getSensorTypes(): Promise<
+    ApiResponse<{
+      types: Array<{
+        type: string;
+        name: string;
+        description: string;
+        settings: Array<{
+          key: string;
+          type: string;
+          label: string;
+          default?: unknown;
+          help?: string;
+        }>;
+      }>;
+    }>
+  > {
+    return this.get('/sensors_types');
+  }
+
+  static async getSensorConfig(): Promise<
+    ApiResponse<{
+      enabled: boolean;
+      poll_interval_seconds: number;
+      auto_install_packages: boolean;
+      definitions: Array<{
+        name: string;
+        _original_name?: string;
+        type: string;
+        enabled: boolean;
+        auto_install_packages?: boolean;
+        settings: Record<string, unknown>;
+      }>;
+    }>
+  > {
+    return this.get('/sensors_config');
+  }
+
+  static async updateSensorConfig(data: {
+    enabled: boolean;
+    poll_interval_seconds: number;
+    auto_install_packages: boolean;
+    definitions: Array<{
+      name: string;
+      _original_name?: string;
+      type: string;
+      enabled: boolean;
+      auto_install_packages?: boolean;
+      settings: Record<string, unknown>;
+    }>;
+  }): Promise<
+    ApiResponse<{
+      saved: boolean;
+      restart_required: boolean;
+      message: string;
+    }>
+  > {
+    return this.post('/sensors_config_update', data);
+  }
+
+  static async readSensors(): Promise<
+    ApiResponse<{
+      readings: Array<Record<string, unknown>>;
+      summary: {
+        enabled: boolean;
+        poll_interval_seconds: number;
+        configured: number;
+        loaded: number;
+        running: boolean;
+      };
+    }>
+  > {
+    return this.post('/sensors_read');
   }
 
   /**

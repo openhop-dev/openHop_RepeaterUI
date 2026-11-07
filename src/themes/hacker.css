@@ -1,0 +1,98 @@
+/* Hacker theme: phosphor green on black. Builds on the dark palette (the
+   `.dark` class is also applied), so only tokens that differ are set here. */
+
+html[data-theme='hacker'] {
+  --openhop-blue: #00ff41;
+  --openhop-blue-light: #5cff85;
+  --openhop-purple: #39ff14;
+  --openhop-purple-light: #8cff6e;
+
+  --openhop-gradient: linear-gradient(135deg, #00ff41 0%, #00b82e 100%);
+
+  /* Surfaces */
+  --color-background: #000000;
+  --color-background-soft: #010702;
+  --color-background-mute: #031a08;
+
+  --color-surface: #000000;
+  --color-surface-elevated: #030d05;
+
+  /* Typography */
+  --color-heading: #5cff85;
+  --color-text-primary: #00ff41;
+  --color-text-secondary: #00cc33;
+  --color-text-muted: #0a8f2a;
+  --color-text: var(--color-text-secondary);
+
+  /* Borders */
+  --color-border: #0f5c22;
+  --color-border-subtle: #073a14;
+  --color-border-hover: #14a83a;
+
+  /* Accents */
+  --color-primary: var(--openhop-blue);
+  --color-secondary: var(--openhop-purple);
+
+  --color-accent-cyan: #00ffcc;
+  --color-accent-green: #00ff41;
+  --color-accent-green-light: #a8ffbe;
+  --color-accent-orange: #ffb000;
+  --color-accent-amber: #ffd000;
+  --color-accent-purple: #b4ff00;
+  --color-accent-red: #ff3b3b;
+
+  /* Filled backgrounds */
+  --color-primary-bg: #04310f;
+  --color-secondary-bg: #0b3a06;
+
+  --color-accent-cyan-bg: #003b30;
+  --color-accent-green-bg: #04310f;
+  --color-accent-purple-bg: #253800;
+  --color-accent-red-bg: #3d0606;
+
+  /* Badges */
+  --color-badge-cyan-bg: rgba(0, 255, 204, 0.12);
+  --color-badge-cyan-text: #66ffe0;
+  --color-badge-neutral-bg: #062410;
+  --color-badge-neutral-text: #00cc33;
+  --color-badge-green-bg: rgba(0, 255, 65, 0.12);
+  --color-badge-green-text: #5cff85;
+  --color-badge-red-bg: rgba(255, 59, 59, 0.15);
+  --color-badge-red-text: #ff8a8a;
+  --color-badge-amber-bg: rgba(255, 208, 0, 0.12);
+  --color-badge-amber-text: #ffe066;
+
+  /* Glass */
+  --color-glass-bg: rgba(0, 12, 3, 0.8);
+  --color-glass-border: rgba(0, 255, 65, 0.15);
+  --color-glass-shadow: 0 0 24px rgba(0, 255, 65, 0.08);
+
+  --nav-hover-label-shadow: 0 0 6px #00ff41, 0 0 14px rgba(0, 255, 65, 0.6);
+  --nav-hover-icon-shadow: drop-shadow(0 0 5px #00ff41);
+
+  --theme-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  color-scheme: dark;
+}
+
+html[data-theme='hacker'] body,
+html[data-theme='hacker'] button,
+html[data-theme='hacker'] input,
+html[data-theme='hacker'] select,
+html[data-theme='hacker'] textarea,
+html[data-theme='hacker'] .font-sans,
+html[data-theme='hacker'] .font-heading {
+  font-family: var(--theme-font-mono);
+}
+
+html[data-theme='hacker'] h1,
+html[data-theme='hacker'] h2,
+html[data-theme='hacker'] h3 {
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.45);
+}
+
+html[data-theme='hacker'] ::selection {
+  background: #00ff41;
+  color: #000000;
+}

@@ -1,0 +1,43 @@
+/* Nord: the Nord polar-night palette (nordtheme.com). Builds on dark. */
+
+html[data-theme='nord'] {
+  --openhop-blue: #88c0d0;
+  --openhop-purple: #81a1c1;
+
+  --color-background: #2e3440;
+  --color-background-soft: #2e3440;
+  --color-background-mute: #3b4252;
+  --color-surface: #2e3440;
+  --color-surface-elevated: #3b4252;
+
+  --color-heading: #eceff4;
+  --color-text-primary: #eceff4;
+  --color-text-secondary: #d8dee9;
+  --color-text-muted: #9aa5b8;
+
+  --color-border: #4c566a;
+  --color-border-subtle: #434c5e;
+  --color-border-hover: #616e88;
+
+  --color-accent-cyan: #8fbcbb;
+  --color-accent-green: #a3be8c;
+  --color-accent-green-light: #c8dbb8;
+  --color-accent-orange: #d08770;
+  --color-accent-amber: #ebcb8b;
+  --color-accent-purple: #b48ead;
+  --color-accent-red: #bf616a;
+
+  --color-primary-bg: #3d5866;
+  --color-secondary-bg: #3e4f66;
+
+  --color-badge-cyan-bg: rgba(136, 192, 208, 0.16);
+  --color-badge-cyan-text: #a9d4e0;
+  --color-badge-neutral-bg: #434c5e;
+  --color-badge-neutral-text: #d8dee9;
+  --color-badge-green-text: #c8dbb8;
+  --color-badge-red-text: #e0a3a9;
+  --color-badge-amber-text: #ebcb8b;
+
+  --color-glass-bg: rgba(46, 52, 64, 0.82);
+  --color-glass-border: rgba(136, 192, 208, 0.1);
+}

@@ -34,7 +34,7 @@ export function __resetAirtimeCache() {
  * Every panel shares one bucket grid, one EMA half-life and one Y-axis maximum
  * so the two sides can be compared by eye.
  */
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from 'vue';
 import { streamingGet } from '@/utils/streamingFetch';
 import { usePacketStore } from '@/stores/packets';
 import { useRadioProfiles } from '@/composables/useRadioProfiles';
@@ -63,6 +63,7 @@ const { profiles: configProfiles } = useRadioProfiles();
 const panels = ref<RadioPanelData[]>([]);
 const isInitialFetch = ref(true);
 const isRefreshing = ref(false);
+const isFetching = ref(false);
 const chartError = ref<string | null>(null);
 const chartStatus = ref('Connecting...');
 const unattributedRx = ref(0);

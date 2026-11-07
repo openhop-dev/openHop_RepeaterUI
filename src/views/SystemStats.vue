@@ -4,6 +4,7 @@ import { streamingGet } from '@/utils/streamingFetch';
 import { formatBytes } from '@/utils/formatters';
 import SparklineChart from '@/components/ui/Sparkline.vue';
 import ChartCard from '@/components/ui/ChartCard.vue';
+import NetworkUsageCard from '@/components/ui/NetworkUsageCard.vue';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -96,7 +97,7 @@ interface ProcessesResponse {
   total_processes: number;
 }
 
-const { theme } = useTheme();
+const { themeId } = useTheme();
 
 const cssVar = (name: string, fallback: string): string => {
   if (typeof window === 'undefined') return fallback;
@@ -602,7 +603,7 @@ const destroyAllCharts = () => {
 };
 
 // Rebuild charts when theme changes
-watch(theme, () => {
+watch(themeId, () => {
   destroyAllCharts();
   nextTick(() => updateCharts());
 });
@@ -885,6 +886,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <NetworkUsageCard />
 
     <!-- Top Processes Section -->
     <div class="glass-card rounded-[15px] p-6">

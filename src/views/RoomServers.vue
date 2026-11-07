@@ -476,6 +476,7 @@ async function removeClient(publicKey: string, identityHash?: string) {
   try {
     const response = await ApiService.removeACLClient({
       public_key: publicKey,
+      identity_name: selectedRoom.value || undefined,
       identity_hash: identityHash,
     });
 

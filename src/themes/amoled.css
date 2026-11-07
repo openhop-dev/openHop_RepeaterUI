@@ -1,0 +1,33 @@
+/* AMOLED: true black with neutral greys, for OLED screens. Builds on dark. */
+
+html[data-theme='amoled'] {
+  --openhop-blue: #ffffff;
+  --openhop-purple: #a3a3a3;
+
+  --color-background: #000000;
+  --color-background-soft: #000000;
+  --color-background-mute: #111111;
+  --color-surface: #000000;
+  --color-surface-elevated: #0a0a0a;
+
+  --color-heading: #ffffff;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #d4d4d4;
+  --color-text-muted: #8a8a8a;
+
+  --color-border: #333333;
+  --color-border-subtle: #1a1a1a;
+  --color-border-hover: #525252;
+
+  --color-primary-bg: #262626;
+  --color-secondary-bg: #1a1a1a;
+
+  --color-badge-cyan-bg: rgba(255, 255, 255, 0.1);
+  --color-badge-cyan-text: #e5e5e5;
+  --color-badge-neutral-bg: #171717;
+  --color-badge-neutral-text: #d4d4d4;
+
+  --color-glass-bg: rgba(0, 0, 0, 0.85);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-glass-shadow: none;
+}

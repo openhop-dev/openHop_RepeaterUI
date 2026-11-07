@@ -12,6 +12,16 @@ function collectEnabledWhen(items: NavItemConfig[]): string[] {
 }
 
 describe('nav capability guard', () => {
+  it('names the System configuration sensor tab Sensor Manager', () => {
+    const system = navigationItems.find((item) => item.id === 'system')
+    const configuration = system?.children?.find((item) => item.id === 'configuration')
+    const maintenance = configuration?.children?.find((item) => item.id === 'config-maintenance')
+    const manager = maintenance?.children?.find((item) => item.id === 'config-sensors')
+    expect(manager?.label).toBe('Sensor Manager')
+    expect(manager?.route).toBe('/configuration')
+    expect(manager?.params?.tab).toBe('sensormanager')
+  })
+
   it('every enabledWhen value in the nav config is registered in knownCapabilities', () => {
     const used = collectEnabledWhen(navigationItems)
     const known = new Set<string>(knownCapabilities)

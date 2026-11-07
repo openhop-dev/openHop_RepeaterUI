@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useTheme } from '@/composables/useTheme';
 
-const { theme, toggleTheme } = useTheme();
+const { theme, isCustomTheme, toggleTheme } = useTheme();
 </script>
 
 <template>
   <button
+    v-if="!isCustomTheme"
     @click="toggleTheme"
     class="topbar-icon-btn"
     :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"

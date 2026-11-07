@@ -173,11 +173,11 @@ describe('NavItem — 3-level group', () => {
     expect(backupBtn).toBeDefined()
     expect(backupBtn!.classes().join(' ')).toContain('text-primary')
 
-    // Parent group buttons must NOT carry the active blue style
+    // Expanded parent groups may be bold, but only the leaf has the active color.
     const configBtn = buttons[0]
-    expect(configBtn.classes().join(' ')).not.toContain('font-semibold')
+    expect(configBtn.classes()).not.toContain('text-primary')
     const maintenanceBtn = buttons.find((b) => b.text().includes('Maintenance'))
-    expect(maintenanceBtn!.classes().join(' ')).not.toContain('font-semibold')
+    expect(maintenanceBtn!.classes()).not.toContain('text-primary')
   })
 
   it('does not navigate when the group toggle is clicked', async () => {

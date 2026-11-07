@@ -7,6 +7,7 @@ import { formatRSSI, formatSNR, formatTimestamp, formatRouteType } from '@/utils
 import SignalBars from '@/components/ui/SignalBars.vue';
 import L from 'leaflet';
 import { createMapBaseLayer } from '@/utils/mapTiles';
+import { escapeHtml } from '@/utils/escapeHtml';
 import 'leaflet/dist/leaflet.css';
 
 defineOptions({ name: 'NeighborDetailsModal' });
@@ -150,7 +151,7 @@ const initMap = () => {
   // Add neighbor marker
   const neighborIcon = L.divIcon({
     className: 'custom-marker',
-    html: `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--color-primary);border:2px solid white;box-shadow:0 4px 6px -1px rgb(0 0 0/0.1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.75rem">${props.neighbor.node_name?.charAt(0) || '?'}</div>`,
+    html: `<div style="width:2rem;height:2rem;border-radius:9999px;background:var(--color-primary);border:2px solid white;box-shadow:0 4px 6px -1px rgb(0 0 0/0.1);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:0.75rem">${escapeHtml(props.neighbor.node_name?.charAt(0) || '?')}</div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 16],
   });
@@ -158,7 +159,7 @@ const initMap = () => {
   L.marker([props.neighbor.latitude!, props.neighbor.longitude!], { icon: neighborIcon })
     .addTo(map)
     .bindPopup(
-      `<b>${props.neighbor.node_name || 'Unknown'}</b><br>${props.neighbor.pubkey.slice(0, 8)}...`,
+      `<b>${escapeHtml(props.neighbor.node_name || 'Unknown')}</b><br>${escapeHtml(props.neighbor.pubkey.slice(0, 8))}...`,
     );
 
   // Add base station marker and line if valid coordinates are available

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Tag } from '@lucide/vue';
+import { Tag, QrCode } from '@lucide/vue';
 import NeighborMenu from '@/components/ui/NeighborMenu.vue';
 import { describeScopes } from '@/utils/neighborScopes';
 import type { ScopeDisplay } from '@/utils/neighborScopes';
@@ -8,6 +8,7 @@ import type { NeighborScopeRecord } from '@/generated/openapi';
 import { useCopyToClipboard } from '@/composables/useCopyToClipboard';
 import { useSignalQuality } from '@/composables/useSignalQuality';
 import SignalBars from '@/components/ui/SignalBars.vue';
+import { isValidMeshCorePublicKey } from '@/utils/meshcoreQr';
 import {
   formatRSSI,
   formatSNR,
@@ -82,6 +83,7 @@ const emit = defineEmits<{
   'menu-ping': [neighbor: unknown];
   'menu-delete': [neighbor: unknown];
   'show-details': [neighbor: unknown];
+  'show-qr': [neighbor: unknown];
   'show-scopes': [neighbor: unknown];
   'query-scopes': [neighbor: unknown];
   'toggle-view': [];
@@ -236,6 +238,10 @@ const handleMenuShowDetails = (neighbor: unknown) => {
   emit('show-details', neighbor);
 };
 
+const handleMenuShowQr = (neighbor: unknown) => {
+  emit('show-qr', neighbor);
+};
+
 const handleMenuDelete = (neighbor: unknown) => {
   emit('menu-delete', neighbor);
 };
@@ -246,6 +252,13 @@ const handleShowScopes = (neighbor: unknown) => {
 
 const handleQueryScopes = (neighbor: unknown) => {
   emit('query-scopes', neighbor);
+};
+
+const canShowQrForAdvert = (advert: Advert): boolean => {
+  return (
+    isValidMeshCorePublicKey(advert.pubkey) &&
+    ['Chat Node', 'Repeater', 'Room Server', 'Hybrid Node'].includes(advert.contact_type)
+  );
 };
 
 // Sorting functionality
@@ -634,21 +647,32 @@ const sortedAdverts = computed(() => {
             <td
               :class="`${getCellPadding()} text-content-primary text-sm font-mono`"
             >
-              <button
-                @click.stop="copyPubkey(advert.pubkey)"
-                :class="[
-                  'text-content-primary hover:text-primary transition-colors cursor-pointer underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60',
-                  copiedPubkey === advert.pubkey
-                    ? 'text-primary decoration-primary/60'
-                    : '',
-                ]"
-                :title="
-                  copiedPubkey === advert.pubkey ? 'Copied!' : 'Click to copy full public key'
-                "
-              >
-                {{ formatPubkey(advert.pubkey) }}
-                <span v-if="copiedPubkey === advert.pubkey" class="ml-1 text-xs">✓</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  @click.stop="copyPubkey(advert.pubkey)"
+                  :class="[
+                    'text-content-primary hover:text-primary transition-colors cursor-pointer underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60',
+                    copiedPubkey === advert.pubkey
+                      ? 'text-primary decoration-primary/60'
+                      : '',
+                  ]"
+                  :title="
+                    copiedPubkey === advert.pubkey ? 'Copied!' : 'Click to copy full public key'
+                  "
+                >
+                  {{ formatPubkey(advert.pubkey) }}
+                  <span v-if="copiedPubkey === advert.pubkey" class="ml-1 text-xs">✓</span>
+                </button>
+                <button
+                  @click.stop="handleMenuShowQr(advert)"
+                  class="inline-flex items-center gap-1 rounded-[8px] border border-stroke-subtle dark:border-stroke/opacity-medium px-2 py-1 text-[11px] text-content-secondary hover:text-content-primary hover:border-primary/opacity-heavy transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="!canShowQrForAdvert(advert)"
+                  title="Show MeshCore add-contact QR"
+                >
+                  <QrCode class="h-3.5 w-3.5" />
+  
+                </button>
+              </div>
             </td>
             <td
               :class="`${getCellPadding()} text-content-primary text-sm`"
@@ -884,21 +908,32 @@ const sortedAdverts = computed(() => {
             <!-- Public Key -->
             <div>
               <div class="text-content-muted text-xs mb-1">Public Key</div>
-              <button
-                @click="copyPubkey(advert.pubkey)"
-                :class="[
-                  'text-content-primary hover:text-primary transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60 break-all',
-                  copiedPubkey === advert.pubkey
-                    ? 'text-primary decoration-primary/60'
-                    : '',
-                ]"
-                :title="
-                  copiedPubkey === advert.pubkey ? 'Copied!' : 'Click to copy full public key'
-                "
-              >
-                {{ formatPubkey(advert.pubkey) }}
-                <span v-if="copiedPubkey === advert.pubkey" class="ml-1 text-xs">✓</span>
-              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  @click="copyPubkey(advert.pubkey)"
+                  :class="[
+                    'text-content-primary hover:text-primary transition-colors cursor-pointer font-mono text-sm underline underline-offset-2 decoration-stroke-hover hover:decoration-primary/60 break-all',
+                    copiedPubkey === advert.pubkey
+                      ? 'text-primary decoration-primary/60'
+                      : '',
+                  ]"
+                  :title="
+                    copiedPubkey === advert.pubkey ? 'Copied!' : 'Click to copy full public key'
+                  "
+                >
+                  {{ formatPubkey(advert.pubkey) }}
+                  <span v-if="copiedPubkey === advert.pubkey" class="ml-1 text-xs">✓</span>
+                </button>
+                <button
+                  @click.stop="handleMenuShowQr(advert)"
+                  class="inline-flex items-center gap-1 rounded-[8px] border border-stroke-subtle dark:border-stroke/opacity-medium px-2 py-1 text-[11px] text-content-secondary hover:text-content-primary hover:border-primary/opacity-heavy transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="!canShowQrForAdvert(advert)"
+                  title="Show MeshCore add-contact QR"
+                >
+                  <QrCode class="h-3.5 w-3.5" />
+        
+                </button>
+              </div>
             </div>
 
             <!-- Signal Strength -->

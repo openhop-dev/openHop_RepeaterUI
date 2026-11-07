@@ -1,64 +1,81 @@
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import {
+  BASE_THEME_IDS,
+  THEMES,
+  getThemeDefinition,
+  isThemeId,
+  type ThemeId,
+  type ThemeMode,
+} from '@/themes';
+import { getCookie, setCookie } from '@/utils/cookies';
 
-export type Theme = 'light' | 'dark';
+/** Light/dark mode of the active theme. */
+export type Theme = ThemeMode;
+export type { ThemeId };
 
-const STORAGE_KEY = 'theme-preference';
-const theme = ref<Theme>('dark');
-const isInitialized = ref(false);
+export const THEME_COOKIE = 'openhop_theme';
+const LEGACY_STORAGE_KEY = 'theme-preference';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
-// Apply theme to document
-function applyTheme(newTheme: Theme) {
+const themeId = ref<ThemeId>('dark');
+const theme = computed<Theme>(() => getThemeDefinition(themeId.value).mode);
+const isCustomTheme = computed(() => !BASE_THEME_IDS.includes(themeId.value));
+
+function applyTheme(id: ThemeId) {
   const html = document.documentElement;
-
-  if (newTheme === 'dark') {
-    html.classList.add('dark');
-  } else {
-    html.classList.remove('dark');
-  }
+  html.classList.toggle('dark', getThemeDefinition(id).mode === 'dark');
+  html.dataset.theme = id;
 }
 
-// Initialize theme immediately when module loads
-function initTheme() {
-  if (isInitialized.value) return;
-
-  const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-
-  if (stored && (stored === 'light' || stored === 'dark')) {
-    theme.value = stored;
-  } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-    theme.value = 'light';
-  } else {
-    theme.value = 'dark';
+function readStoredTheme(): ThemeId | null {
+  const fromCookie = getCookie(THEME_COOKIE);
+  if (isThemeId(fromCookie)) return fromCookie;
+  try {
+    const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (isThemeId(legacy)) return legacy;
+  } catch {
+    // Storage can be unavailable (privacy mode); fall through to the system preference.
   }
-
-  applyTheme(theme.value);
-  isInitialized.value = true;
+  return null;
 }
 
-// Initialize immediately on module load
+export function initTheme() {
+  const stored = readStoredTheme();
+  if (stored) {
+    themeId.value = stored;
+  } else if (window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+    themeId.value = 'light';
+  } else {
+    themeId.value = 'dark';
+  }
+  applyTheme(themeId.value);
+}
+
 if (typeof window !== 'undefined') {
   initTheme();
 }
 
-// Watch for theme changes
-watch(theme, (newTheme) => {
-  localStorage.setItem(STORAGE_KEY, newTheme);
-  applyTheme(newTheme);
+watch(themeId, (id) => {
+  setCookie(THEME_COOKIE, id, COOKIE_MAX_AGE);
+  applyTheme(id);
 });
 
 export function useTheme() {
   const toggleTheme = () => {
-    theme.value = theme.value === 'dark' ? 'light' : 'dark';
+    themeId.value = theme.value === 'dark' ? 'light' : 'dark';
   };
 
-  const setTheme = (newTheme: Theme) => {
-    theme.value = newTheme;
+  const setTheme = (id: ThemeId) => {
+    if (isThemeId(id)) themeId.value = id;
   };
 
   const isDark = () => theme.value === 'dark';
 
   return {
     theme,
+    themeId,
+    themes: THEMES,
+    isCustomTheme,
     toggleTheme,
     setTheme,
     isDark,
