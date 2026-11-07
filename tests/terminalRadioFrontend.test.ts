@@ -76,7 +76,7 @@ describe('web terminal RF front end', () => {
     expect(await run(new GetCommand(), 'radio.rxgain')).toContain('✓ on');
   });
 
-  it('reports unsupported controls and non-KISS radios', async () => {
+  it('reports unsupported controls and radios without a front end', async () => {
     expect(await run(new GetCommand(), 'radio.fem.txgain')).toContain('Error: unsupported');
     apiMock.getRadioFrontend.mockResolvedValue(status({ available: false }));
     expect(await run(new GetCommand(), 'agc.reset.interval')).toContain('Error: unsupported');
@@ -89,15 +89,43 @@ describe('web terminal RF front end', () => {
     expect(await run(new GetCommand(), 'agc.reset.interval')).toContain('0 (off)');
   });
 
-  it('sets AGC and reports the modem’s rounding', async () => {
+  it('sets AGC and reports the value the radio settled on', async () => {
     apiMock.setRadioFrontend.mockResolvedValue({
       success: true,
       data: { ...status().data, applied: { agc_reset_interval_seconds: 8 }, errors: {} },
     });
     const out = await run(new SetCommand(), 'agc.reset.interval', '10');
     expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 10 });
-    expect(out).toContain('OK - interval rounded to 8');
+    expect(out).toContain('OK - interval now 8');
     expect(out).not.toContain('restart');
+  });
+
+  it('leaves the radio’s own range to the server and shows its reason', async () => {
+    apiMock.setRadioFrontend.mockResolvedValue({
+      success: false,
+      error: 'Some settings were not applied',
+      data: {
+        ...status().data,
+        applied: {},
+        errors: {
+          agc_reset_interval_seconds:
+            "AGC reset interval 2000 is outside this radio's range (0-1020 seconds)",
+        },
+      },
+    });
+    const out = await run(new SetCommand(), 'agc.reset.interval', '2000');
+    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 2000 });
+    expect(out).toContain('(0-1020 seconds)');
+  });
+
+  it('says OK without a note when the radio kept the exact interval', async () => {
+    apiMock.setRadioFrontend.mockResolvedValue({
+      success: true,
+      data: { ...status().data, applied: { agc_reset_interval_seconds: 2000 }, errors: {} },
+    });
+    const out = await run(new SetCommand(), 'agc.reset.interval', '2000');
+    expect(out).toContain('OK');
+    expect(out).not.toContain('interval now');
   });
 
   it('sets gains on/off', async () => {
@@ -110,8 +138,9 @@ describe('web terminal RF front end', () => {
   });
 
   it('validates before sending', async () => {
-    expect(await run(new SetCommand(), 'agc.reset.interval', '2000')).toContain('0-1020');
-    expect(await run(new SetCommand(), 'agc.reset.interval')).toContain('0-1020');
+    expect(await run(new SetCommand(), 'agc.reset.interval', '4000')).toContain('0-3600');
+    expect(await run(new SetCommand(), 'agc.reset.interval', '-1')).toContain('0-3600');
+    expect(await run(new SetCommand(), 'agc.reset.interval')).toContain('0-3600');
     expect(await run(new SetCommand(), 'radio.fem.rxgain', 'maybe')).toContain('on or off');
     expect(apiMock.setRadioFrontend).not.toHaveBeenCalled();
   });

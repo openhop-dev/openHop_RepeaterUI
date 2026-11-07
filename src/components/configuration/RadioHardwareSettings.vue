@@ -1313,6 +1313,61 @@ function buildHardwarePayloadFromForm(): Record<string, unknown> | null {
   return payload;
 }
 
+// Radio types with RF front-end controls, and the config section each one keeps
+// its AGC/FEM keys in (the repeater's radio_frontend_config reads the same ones).
+const FRONTEND_SECTIONS: Partial<Record<SupportedRadioType, 'kiss' | 'modem_usb' | 'modem_tcp'>> = {
+  kiss: 'kiss',
+  modem_usb: 'modem_usb',
+  modem_tcp: 'modem_tcp',
+};
+const FRONTEND_KEYS = [
+  'agc_reset_interval_seconds',
+  'fem_rx_gain',
+  'fem_tx_gain',
+  'rx_boosted_gain',
+] as const;
+
+function frontendKeysOf(section: unknown): Record<string, unknown> {
+  if (!section || typeof section !== 'object') return {};
+  const source = section as Record<string, unknown>;
+  const kept: Record<string, unknown> = {};
+  for (const key of FRONTEND_KEYS) if (key in source) kept[key] = source[key];
+  return kept;
+}
+
+/**
+ * Write the default radio's confirmed front-end values into a save body.
+ *
+ * A radios[] entry is replaced whole on import, so an entry built before the
+ * front end was applied would put the old AGC/FEM values back. The mirrored
+ * top-level section is merged key by key and would do the same.
+ */
+function overlayFrontendConfigured(
+  importBody: Record<string, unknown>,
+  configured: Record<string, unknown>,
+) {
+  const entries = importBody.radios;
+  if (!Array.isArray(entries)) return;
+  const fabricCfg = (importBody.fabric || {}) as Record<string, unknown>;
+  const defId = String(fabricCfg.default_radio || entries[0]?.id || '');
+  const index = entries.findIndex((r) => String((r as Record<string, unknown>).id) === defId);
+  if (index < 0) return;
+  const entry = { ...(entries[index] as Record<string, unknown>) };
+  const name = FRONTEND_SECTIONS[normalizeRadioType(entry.radio_type)];
+  if (!name) return;
+  const section = { ...((entry[name] as Record<string, unknown>) || {}) };
+  for (const key of FRONTEND_KEYS) delete section[key];
+  Object.assign(section, frontendKeysOf(configured));
+  entry[name] = section;
+  importBody.radios = entries.map((r, i) => (i === index ? entry : r));
+  if (importBody[name] && typeof importBody[name] === 'object') {
+    importBody[name] = { ...(importBody[name] as Record<string, unknown>), ...section };
+    for (const key of FRONTEND_KEYS) {
+      if (!(key in section)) delete (importBody[name] as Record<string, unknown>)[key];
+    }
+  }
+}
+
 function applyPayloadToEntry(
   entry: Record<string, unknown>,
   payload: Record<string, unknown>,
@@ -1339,8 +1394,17 @@ function applyPayloadToEntry(
         : {};
     updated.kiss = { ...keep, ...(payload.kiss as Record<string, unknown>) };
   }
-  if (payload.modem_usb) updated.modem_usb = payload.modem_usb;
-  if (payload.modem_tcp) updated.modem_tcp = payload.modem_tcp;
+  // The modem forms edit only the transport; keep the entry's AGC/FEM front end
+  // when the radio stays the same kind of modem.
+  const previousType = normalizeRadioType(entry.radio_type);
+  if (payload.modem_usb) {
+    const keep = previousType === 'modem_usb' ? frontendKeysOf(entry.modem_usb) : {};
+    updated.modem_usb = { ...keep, ...(payload.modem_usb as Record<string, unknown>) };
+  }
+  if (payload.modem_tcp) {
+    const keep = previousType === 'modem_tcp' ? frontendKeysOf(entry.modem_tcp) : {};
+    updated.modem_tcp = { ...keep, ...(payload.modem_tcp as Record<string, unknown>) };
+  }
   // Air settings: prefer form payload.radio, else keep existing entry.radio.
   if (payload.radio && typeof payload.radio === 'object') {
     updated.radio = payload.radio;
@@ -1585,6 +1649,7 @@ async function saveChanges(): Promise<boolean> {
     if (frontend && frontend.validate()) return false;
     const frontendChanged = !!frontend?.hasChanges();
     if (frontendChanged && !(await frontend!.apply())) return false;
+    if (frontendChanged) overlayFrontendConfigured(importBody, frontend!.configured);
 
     // A front-end-only edit is done: don't resave the hardware or offer a restart.
     // Without any edit, Save still writes the config as before (it also migrates
@@ -1657,13 +1722,14 @@ const showSerialFields = computed(
 );
 const showTcpFields = computed(() => selectedRadioType.value === 'modem_tcp');
 
-// The RF front end belongs to the running default radio's KISS modem, so show it
-// only under that radio, and not while radios are being added or removed.
+// The RF front end belongs to the running default radio's modem (KISS or openHop
+// USB/TCP), so show it only under that radio, while its type is unchanged, and
+// not while radios are being added or removed.
 const frontendRef = ref<InstanceType<typeof RadioFrontendSettings> | null>(null);
 const showFrontend = computed(
   () =>
-    selectedRadioType.value === 'kiss' &&
-    currentRadioType.value === 'kiss' &&
+    !!FRONTEND_SECTIONS[selectedRadioType.value] &&
+    selectedRadioType.value === currentRadioType.value &&
     !isDraftingMultiRadio.value &&
     !isStagingDisableMultiRadio.value &&
     (!isMultiRadio.value || String(effectiveSelectedId.value) === String(defaultRadioId.value)),

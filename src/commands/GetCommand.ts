@@ -54,7 +54,7 @@ export class GetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36mduty.max\x1b[0m            Max airtime %');
       this.writeLine(term, '  \x1b[36mpublic.key\x1b[0m          Public key');
       this.writeLine(term, '');
-      this.writeLine(term, '  \x1b[33mRF front end (KISS modem):\x1b[0m');
+      this.writeLine(term, '  \x1b[33mRF front end (default radio):\x1b[0m');
       for (const [name, , help] of FRONTEND_PARAM_HELP) {
         this.writeLine(term, `  \x1b[36m${name.padEnd(20)}\x1b[0m${help}`);
       }

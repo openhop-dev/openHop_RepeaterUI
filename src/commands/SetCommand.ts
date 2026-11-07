@@ -71,7 +71,7 @@ export class SetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36mflood.max <0-64>\x1b[0m         Max flood hops');
       this.writeLine(term, '  \x1b[36madvert.interval <mins>\x1b[0m   Local advert interval');
       this.writeLine(term, '');
-      this.writeLine(term, '  \x1b[33mRF front end (KISS modem, applied live):\x1b[0m');
+      this.writeLine(term, '  \x1b[33mRF front end (default radio, applied live):\x1b[0m');
       for (const [name, arg, help] of FRONTEND_PARAM_HELP) {
         this.writeLine(term, `  \x1b[36m${`${name} ${arg}`.padEnd(25)}\x1b[0m${help}`);
       }

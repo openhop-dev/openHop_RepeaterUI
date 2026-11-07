@@ -1,9 +1,9 @@
 import ApiService from '@/utils/api';
 import type { RadioFrontendSettings } from '@/generated/openapi';
 
-// KISS modem RF front-end parameters, named as in the MeshCore CLI. They are read
-// from and applied to the modem through /api/radio_frontend (default radio only),
-// take effect immediately, and need no restart.
+// RF front-end parameters of the default radio (KISS or openHop modem), named as
+// in the MeshCore CLI. They are read from and applied to the modem through
+// /api/radio_frontend, take effect immediately, and need no restart.
 const PARAMS = {
   'agc.reset.interval': 'agc_reset_interval_seconds',
   'radio.fem.rxgain': 'fem_rx_gain',
@@ -13,8 +13,12 @@ const PARAMS = {
 
 export type FrontendParam = keyof typeof PARAMS;
 
+// Widest AGC interval the repeater accepts from any radio (openHop modems). A KISS
+// modem's own ceiling is lower and comes back from the server as limits/errors.
+export const AGC_HOST_MAX_SEC = 3600;
+
 export const FRONTEND_PARAM_HELP: ReadonlyArray<[string, string, string]> = [
-  ['agc.reset.interval', '<0-1020>', 'AGC reset interval, seconds (x4, 0 = off)'],
+  ['agc.reset.interval', '<seconds>', 'AGC reset interval (0 = off; range set by the radio)'],
   ['radio.fem.rxgain', '<on|off>', 'External FEM RX gain (LNA)'],
   ['radio.fem.txgain', '<on|off>', 'External FEM TX gain (PA)'],
   ['radio.rxgain', '<on|off>', 'Radio chip boosted RX gain'],
@@ -58,8 +62,10 @@ export async function setFrontendParam(
   const settings: RadioFrontendSettings = {};
   if (key === 'agc_reset_interval_seconds') {
     const seconds = Number(value);
-    if (value === '' || !Number.isInteger(seconds) || seconds < 0 || seconds > 1020) {
-      return { ok: false, text: 'AGC reset interval must be 0-1020 seconds' };
+    // Only the host bound here: the server rejects anything outside this radio's own
+    // range with a message that names it.
+    if (value === '' || !Number.isInteger(seconds) || seconds < 0 || seconds > AGC_HOST_MAX_SEC) {
+      return { ok: false, text: `AGC reset interval must be 0-${AGC_HOST_MAX_SEC} seconds` };
     }
     settings[key] = seconds;
   } else {
@@ -74,8 +80,8 @@ export async function setFrontendParam(
       return { ok: false, text: reason };
     }
     const applied = result.data?.applied[key];
-    if (typeof applied === 'number') {
-      return { ok: true, text: `OK - interval rounded to ${applied}` };
+    if (typeof applied === 'number' && applied !== settings[key]) {
+      return { ok: true, text: `OK - interval now ${applied}` };
     }
     return { ok: true, text: 'OK' };
   } catch (error) {

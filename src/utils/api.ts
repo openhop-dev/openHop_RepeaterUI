@@ -1385,7 +1385,7 @@ export class ApiService {
     }
   }
 
-  // KISS modem RF front end (AGC reset interval, FEM gain) of the default radio.
+  // RF front end (AGC reset interval, FEM gain, boosted RX gain) of the default radio.
   static async getRadioFrontend(): Promise<{ success: boolean; data: RadioFrontendStatus }> {
     try {
       const params = await this.getGeneratedRequestParams();

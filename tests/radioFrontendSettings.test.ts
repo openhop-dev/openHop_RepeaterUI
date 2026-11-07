@@ -1,5 +1,5 @@
 /**
- * RF front end (KISS modem AGC reset interval / FEM gain / chip boosted RX gain).
+ * RF front end (KISS or openHop modem AGC reset interval / FEM gain / chip boosted RX gain).
  *
  * The rows live inside Radio Hardware and follow its Edit / Save. They apply to
  * the modem live, so Save must apply them first, skip the hardware resave and
@@ -64,6 +64,9 @@ function applied(running: Record<string, unknown>, appliedKeys: Record<string, u
 
 type Card = InstanceType<typeof RadioFrontendSettings>;
 
+const KISS_LIMITS = { agc_reset_interval_seconds: { min: 0, max: 1020, step: 4 } };
+const OPENHOP_LIMITS = { agc_reset_interval_seconds: { min: 0, max: 3600, step: 1 } };
+
 function mountCard(editing = false) {
   return mount(RadioFrontendSettings, { props: { editing } });
 }
@@ -73,7 +76,7 @@ describe('RadioFrontendSettings', () => {
     vi.clearAllMocks();
   });
 
-  it('renders nothing when the default radio is not a KISS modem', async () => {
+  it('renders nothing when the default radio has no front end', async () => {
     apiMock.getRadioFrontend.mockResolvedValue({
       success: true,
       data: status({ available: false }),
@@ -99,7 +102,9 @@ describe('RadioFrontendSettings', () => {
     });
     const wrapper = mountCard();
     await flushPromises();
-    expect(wrapper.find('[data-testid="frontend-none"]').text()).toContain('KISS firmware v2');
+    const text = wrapper.find('[data-testid="frontend-none"]').text();
+    expect(text).toContain('KISS firmware v2');
+    expect(text).toContain('openHop modem firmware');
   });
 
   it('shows running values, board defaults, and unsupported controls', async () => {
@@ -138,7 +143,7 @@ describe('RadioFrontendSettings', () => {
     ).toBe('32');
   });
 
-  it('applies only changed settings and reports rounding', async () => {
+  it('applies only changed settings and reports the value the radio settled on', async () => {
     apiMock.getRadioFrontend.mockResolvedValue({ success: true, data: status() });
     apiMock.setRadioFrontend.mockResolvedValue(
       applied(
@@ -161,7 +166,9 @@ describe('RadioFrontendSettings', () => {
     });
 
     await wrapper.setProps({ editing: false });
-    expect(wrapper.get('[data-testid="frontend-success"]').text()).toContain('rounded to 8 s');
+    expect(wrapper.get('[data-testid="frontend-success"]').text()).toContain(
+      'set the AGC reset interval to 8 s',
+    );
     expect(wrapper.get('[data-testid="frontend-agc"]').text()).toBe('8 s');
     expect(wrapper.get('[data-testid="frontend-rx_boosted_gain"]').text()).toBe('Off');
   });
@@ -177,8 +184,11 @@ describe('RadioFrontendSettings', () => {
     expect(ApiService.setRadioFrontend).not.toHaveBeenCalled();
   });
 
-  it('rejects an out-of-range interval before sending', async () => {
-    apiMock.getRadioFrontend.mockResolvedValue({ success: true, data: status() });
+  it('rejects an interval outside the radio’s own range before sending', async () => {
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ limits: KISS_LIMITS }),
+    });
     const wrapper = mountCard();
     await flushPromises();
     await wrapper.setProps({ editing: true });
@@ -187,6 +197,65 @@ describe('RadioFrontendSettings', () => {
     await flushPromises();
     expect(wrapper.get('[data-testid="frontend-error"]').text()).toContain('0-1020');
     expect(ApiService.setRadioFrontend).not.toHaveBeenCalled();
+  });
+
+  it('uses the radio’s range and step for the input and hint', async () => {
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ limits: KISS_LIMITS }),
+    });
+    const kissCard = mountCard(true);
+    await flushPromises();
+    const kissInput = kissCard.get('[data-testid="frontend-agc-input"]')
+      .element as HTMLInputElement;
+    expect([kissInput.max, kissInput.step]).toEqual(['1020', '4']);
+    expect(kissCard.get('[data-testid="frontend-agc-hint"]').text()).toContain(
+      'rounded down to a multiple of 4',
+    );
+
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ limits: OPENHOP_LIMITS }),
+    });
+    const modemCard = mountCard(true);
+    await flushPromises();
+    const modemInput = modemCard.get('[data-testid="frontend-agc-input"]')
+      .element as HTMLInputElement;
+    expect([modemInput.max, modemInput.step]).toEqual(['3600', '1']);
+    const hint = modemCard.get('[data-testid="frontend-agc-hint"]').text();
+    expect(hint).toContain('0-3600');
+    expect(hint).not.toContain('rounded');
+  });
+
+  it('lets an openHop modem take intervals above a KISS modem’s ceiling', async () => {
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ limits: OPENHOP_LIMITS }),
+    });
+    apiMock.setRadioFrontend.mockResolvedValue(
+      applied({ agc_reset_interval_seconds: 2000 }, { agc_reset_interval_seconds: 2000 }),
+    );
+    const wrapper = mountCard();
+    await flushPromises();
+    await wrapper.setProps({ editing: true });
+    await wrapper.get('[data-testid="frontend-agc-input"]').setValue(2000);
+    const card = wrapper.vm as unknown as Card;
+    expect(card.validate()).toBe('');
+    expect(await card.apply()).toBe(true);
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 2000 });
+    await wrapper.setProps({ editing: false });
+    expect(wrapper.get('[data-testid="frontend-success"]').text()).toBe(
+      'RF front end applied to the radio.',
+    );
+  });
+
+  it('falls back to the host bound when the server sends no limits', async () => {
+    apiMock.getRadioFrontend.mockResolvedValue({ success: true, data: status() });
+    const wrapper = mountCard();
+    await flushPromises();
+    await wrapper.setProps({ editing: true });
+    await wrapper.get('[data-testid="frontend-agc-input"]').setValue(4000);
+    expect((wrapper.vm as unknown as Card).validate()).toContain('0-3600');
   });
 
   it('reports a partial failure', async () => {
@@ -410,5 +479,115 @@ describe('RadioHardwareSettings with the RF front end', () => {
       agc_reset_interval_seconds: 4,
       fem_rx_gain: true,
     });
+  });
+
+  it('shows the front end for an openHop USB or TCP modem', async () => {
+    for (const config of [
+      { radio_type: 'modem_usb', radio: { ...AIR }, modem_usb: { port: '/dev/ttyACM0' } },
+      { radio_type: 'modem_tcp', radio: { ...AIR }, modem_tcp: { host: '10.0.0.5', port: 5055 } },
+    ]) {
+      const wrapper = mountPage(config);
+      await flushPromises();
+      expect(wrapper.find('[data-testid="radio-frontend"]').exists()).toBe(true);
+      wrapper.unmount();
+    }
+  });
+
+  it('hides the front end while the radio type is being changed', async () => {
+    const wrapper = mountPage({
+      radio_type: 'modem_usb',
+      radio: { ...AIR },
+      modem_usb: { port: '/dev/ttyACM0' },
+    });
+    await flushPromises();
+    await click(wrapper, 'Edit Settings');
+    const typeSelect = wrapper
+      .findAll('select')
+      .find((s) => s.findAll('option').some((o) => o.attributes('value') === 'modem_tcp'))!;
+    await typeSelect.setValue('modem_tcp');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="radio-frontend"]').exists()).toBe(false);
+  });
+
+  it('keeps a USB modem’s front-end keys when its baud rate is edited', async () => {
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ available: false }),
+    });
+    const usb = {
+      port: '/dev/ttyACM0',
+      baudrate: 921600,
+      agc_reset_interval_seconds: 120,
+      rx_boosted_gain: true,
+    };
+    const config = {
+      radio_type: 'modem_usb',
+      radio: { ...AIR },
+      modem_usb: { ...usb },
+      radios: [
+        { id: 'local', radio_type: 'modem_usb', radio: { ...AIR }, modem_usb: { ...usb } },
+        {
+          id: 'link',
+          radio_type: 'modem_usb',
+          radio: { ...AIR },
+          modem_usb: { port: '/dev/ttyACM1', baudrate: 921600 },
+        },
+      ],
+      fabric: { default_radio: 'local', tx_mode: 'bridge' },
+    };
+    const wrapper = mountPage(config);
+    await flushPromises();
+    await click(wrapper, 'Edit Settings');
+    const baud = wrapper
+      .findAll('input[type="number"]')
+      .find((i) => (i.element as HTMLInputElement).value === '921600')!;
+    await baud.setValue(460800);
+    await click(wrapper, 'Save Changes');
+
+    const calls = (ApiService.importConfig as ReturnType<typeof vi.fn>).mock.calls;
+    const body = calls[calls.length - 1][0];
+    const local = body.radios.find((r: { id: string }) => r.id === 'local');
+    expect(local.modem_usb).toMatchObject({
+      baudrate: 460800,
+      agc_reset_interval_seconds: 120,
+      rx_boosted_gain: true,
+    });
+  });
+
+  it('saves hardware with the front-end values the radio just confirmed', async () => {
+    const kiss = { port: '/dev/ttyACM0', baud_rate: 115200, agc_reset_interval_seconds: 32 };
+    apiMock.setRadioFrontend.mockResolvedValue(
+      applied(
+        { agc_reset_interval_seconds: 64, fem_rx_gain: false, rx_boosted_gain: true },
+        { agc_reset_interval_seconds: 64 },
+      ),
+    );
+    const config = {
+      radio_type: 'kiss',
+      radio: { ...AIR },
+      kiss: { ...kiss },
+      radios: [
+        { id: 'local', radio_type: 'kiss', radio: { ...AIR }, kiss: { ...kiss } },
+        {
+          id: 'link',
+          radio_type: 'kiss',
+          radio: { ...AIR },
+          kiss: { port: '/dev/ttyACM1', baud_rate: 115200 },
+        },
+      ],
+      fabric: { default_radio: 'local', tx_mode: 'bridge' },
+    };
+    const wrapper = mountPage(config);
+    await flushPromises();
+    await click(wrapper, 'Edit Settings');
+    await wrapper.get('[data-testid="frontend-agc-input"]').setValue(64);
+    await baudInput(wrapper).setValue(57600);
+    await click(wrapper, 'Save Changes');
+
+    const calls = (ApiService.importConfig as ReturnType<typeof vi.fn>).mock.calls;
+    const body = calls[calls.length - 1][0];
+    const local = body.radios.find((r: { id: string }) => r.id === 'local');
+    expect(local.kiss).toMatchObject({ baud_rate: 57600, agc_reset_interval_seconds: 64 });
+    expect(body.kiss.agc_reset_interval_seconds).toBe(64);
   });
 });

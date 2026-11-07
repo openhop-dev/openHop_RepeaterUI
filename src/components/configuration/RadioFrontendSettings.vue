@@ -2,8 +2,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { ApiService } from '@/utils/api';
 import type { RadioFrontendSettings, RadioFrontendStatus } from '@/generated/openapi';
+import { AGC_HOST_MAX_SEC } from '@/commands/radioFrontend';
 
-// RF front-end rows for the default radio's KISS modem, shown inside Radio
+// RF front-end rows for the default radio (KISS or openHop modem), shown inside Radio
 // Hardware and driven by that page's Edit / Save. Unlike the rest of the page,
 // these apply to the modem immediately rather than after a restart, so the
 // parent calls apply() first and only offers a restart for hardware changes.
@@ -45,6 +46,19 @@ const hasAnyControl = computed(
       supports.value.rx_boosted_gain),
 );
 const available = computed(() => !loading.value && !!status.value?.available);
+
+// The radio's own AGC range: KISS firmware stops at 1020 s and rounds down to 4 s,
+// an openHop modem takes 0-3600 s in 1 s steps. Without limits from the server,
+// only the host bound is checked and the server names the radio's range.
+const agcMax = computed(
+  () => status.value?.limits?.agc_reset_interval_seconds?.max ?? AGC_HOST_MAX_SEC,
+);
+const agcStep = computed(() => status.value?.limits?.agc_reset_interval_seconds?.step ?? 1);
+const agcHint = computed(() =>
+  agcStep.value > 1
+    ? `Seconds, 0-${agcMax.value}, rounded down to a multiple of ${agcStep.value}; 0 turns it off`
+    : `Seconds, 0-${agcMax.value}; 0 turns it off`,
+);
 
 async function load() {
   loading.value = true;
@@ -104,8 +118,8 @@ function changes(): RadioFrontendSettings | string {
   const result: RadioFrontendSettings = {};
   if (supports.value?.agc_reset_interval_seconds && agcInput.value !== null) {
     const agc = Number(agcInput.value);
-    if (!Number.isInteger(agc) || agc < 0 || agc > 1020) {
-      return 'AGC reset interval must be a whole number of seconds, 0-1020';
+    if (!Number.isInteger(agc) || agc < 0 || agc > agcMax.value) {
+      return `AGC reset interval must be a whole number of seconds, 0-${agcMax.value}`;
     }
     if (agc !== running.agc_reset_interval_seconds) result.agc_reset_interval_seconds = agc;
   }
@@ -151,7 +165,7 @@ async function apply(): Promise<boolean> {
     const agc = response.data?.applied.agc_reset_interval_seconds;
     successMessage.value =
       agc !== undefined && agc !== result.agc_reset_interval_seconds
-        ? `RF front end applied. AGC reset interval rounded to ${agc} s.`
+        ? `RF front end applied. The radio set the AGC reset interval to ${agc} s.`
         : 'RF front end applied to the radio.';
     setTimeout(() => (successMessage.value = ''), 4000);
     return true;
@@ -163,7 +177,12 @@ async function apply(): Promise<boolean> {
   }
 }
 
-defineExpose({ apply, validate, hasChanges, reload: load, available });
+// What the server now has configured for the default radio, after apply().
+const configured = computed<Record<string, unknown>>(() => ({
+  ...(status.value?.configured ?? {}),
+}));
+
+defineExpose({ apply, validate, hasChanges, reload: load, available, configured });
 </script>
 
 <template>
@@ -189,8 +208,9 @@ defineExpose({ apply, validate, hasChanges, reload: load, available });
     </div>
 
     <p v-if="!hasAnyControl" class="text-xs text-content-muted py-2" data-testid="frontend-none">
-      This modem reports no front-end controls. They need MeshCore KISS firmware v2 or newer, and
-      FEM gain also needs a board that exposes it.
+      This radio reports no front-end controls. They need MeshCore KISS firmware v2 or newer, or
+      openHop modem firmware with RF front-end support, and FEM gain also needs a board that exposes
+      it.
     </p>
 
     <template v-else>
@@ -200,9 +220,9 @@ defineExpose({ apply, validate, hasChanges, reload: load, available });
       >
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
           AGC Reset Interval
-          <span class="block text-[11px] text-content-muted"
-            >Seconds, rounded down to a multiple of 4; 0 turns it off</span
-          >
+          <span class="block text-[11px] text-content-muted" data-testid="frontend-agc-hint">{{
+            agcHint
+          }}</span>
         </span>
         <span
           v-if="!props.editing"
@@ -217,8 +237,8 @@ defineExpose({ apply, validate, hasChanges, reload: load, available });
           v-model.number="agcInput"
           type="number"
           min="0"
-          max="1020"
-          step="4"
+          :max="agcMax"
+          :step="agcStep"
           class="cfg-input w-full sm:w-40"
           data-testid="frontend-agc-input"
         />

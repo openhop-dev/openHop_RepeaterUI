@@ -182,9 +182,9 @@ export interface PluginStatus {
 
 export interface RadioFrontendSettings {
   /**
-   * Periodic AGC reset in seconds, 4 s resolution (rounded down), 0 = off
+   * Periodic AGC reset in seconds, 0 = off. KISS firmware accepts 0-1020 and rounds down to a multiple of 4. An OpenHop modem accepts 0-3600 in 1-second steps. The stored value is what the radio confirmed. An interval within these request limits but outside the radio's range produces a per-key error naming that range and is not sent or saved.
    * @min 0
-   * @max 1020
+   * @max 3600
    */
   agc_reset_interval_seconds?: number;
   /** External FEM RX (LNA) gain */
@@ -196,7 +196,18 @@ export interface RadioFrontendSettings {
 }
 
 export interface RadioFrontendStatus {
-  /** Default radio is a KISS modem with front-end controls */
+  /** Configured default radio type, stripped and lower-cased; null when absent */
+  radio_type?: string | null;
+  /** Probed control limits; absent keys have no known limits */
+  limits?: {
+    /** AGC interval range and step in seconds, bounded by the host limit */
+    agc_reset_interval_seconds?: {
+      min: number;
+      max: number;
+      step: number;
+    };
+  };
+  /** Default radio is a KISS or OpenHop modem with front-end controls */
   available: boolean;
   supports: {
     agc_reset_interval_seconds: boolean;
@@ -1847,11 +1858,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
   };
   radioFrontend = {
     /**
-     * @description AGC reset interval, external FEM gain and radio chip boosted RX gain of the default radio, read from the modem. Only KISS modems running MeshCore KISS firmware v2 or later report support; the controls a board supports come from the board itself.
+     * @description AGC reset interval, external FEM gain and radio chip boosted RX gain of the default radio, read from the modem. KISS firmware v2 and OpenHop modem firmware that implements the RF frame commands report support; the controls a board supports come from the board itself.
      *
      * @tags System
      * @name RadioFrontendList
-     * @summary Get KISS modem RF front-end controls
+     * @summary Get default-radio RF front-end controls
      * @request GET:/radio_frontend
      * @secure
      */
@@ -1864,9 +1875,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/radio_frontend`,
-        method: "GET",
+        method: 'GET',
         secure: true,
-        format: "json",
+        format: 'json',
         ...params,
       }),
 
@@ -1875,14 +1886,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags System
      * @name RadioFrontendCreate
-     * @summary Set KISS modem RF front-end controls
+     * @summary Set default-radio RF front-end controls
      * @request POST:/radio_frontend
      * @secure
      */
-    radioFrontendCreate: (
-      data: RadioFrontendSettings,
-      params: RequestParams = {},
-    ) =>
+    radioFrontendCreate: (data: RadioFrontendSettings, params: RequestParams = {}) =>
       this.request<
         {
           success: boolean;
@@ -1893,11 +1901,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         any
       >({
         path: `/radio_frontend`,
-        method: "POST",
+        method: 'POST',
         body: data,
         secure: true,
         type: ContentType.Json,
-        format: "json",
+        format: 'json',
         ...params,
       }),
   };
