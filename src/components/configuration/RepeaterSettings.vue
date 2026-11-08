@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import Spinner from '@/components/ui/Spinner.vue';
 import { useSystemStore } from '@/stores/system';
 import type { SystemStats } from '@/types/api';
@@ -7,7 +7,9 @@ import apiClient from '@/utils/api';
 import { ApiService } from '@/utils/api';
 import LocationPicker from '@/components/modals/LocationPicker.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar from '@/components/ui/SaveBar.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
+import { useSettingsDraft } from '@/composables/useSettingsDraft';
 
 const systemStore = useSystemStore();
 
@@ -15,8 +17,6 @@ const config = computed(() => systemStore.stats?.config || {});
 const repeaterConfig = computed(() => config.value.repeater || {});
 const stats = computed(() => systemStore.stats as SystemStats | null);
 
-// Editable form values
-const isEditing = ref(false);
 const isSaving = ref(false);
 const error = ref<string | null>(null);
 const successMessage = ref<string | null>(null);
@@ -51,30 +51,44 @@ const getDirectAdvertIntervalHours = (): number | undefined => {
   return getNumericConfigValue(repeaterConfig.value.direct_advert_interval_hours);
 };
 
-const formatHours = (value: number): string => {
-  const rounded = Math.round(value * 100) / 100;
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
-};
+function loadForm() {
+  nodeNameInput.value = config.value.node_name || '';
+  latitudeInput.value = repeaterConfig.value.latitude || 0;
+  longitudeInput.value = repeaterConfig.value.longitude || 0;
+  advertIntervalInput.value = repeaterConfig.value.send_advert_interval_hours || 0;
+  directAdvertIntervalInput.value = getDirectAdvertIntervalHours() || 0;
+  const phm = meshConfig.value.path_hash_mode;
+  pathHashModeInput.value = phm === 0 || phm === 1 || phm === 2 ? phm + 1 : 1;
+}
 
-// Load current values into form
-watch(
-  [config, repeaterConfig, meshConfig],
-  () => {
-    if (!isEditing.value) {
-      nodeNameInput.value = config.value.node_name || '';
-      latitudeInput.value = repeaterConfig.value.latitude || 0;
-      longitudeInput.value = repeaterConfig.value.longitude || 0;
-      advertIntervalInput.value = repeaterConfig.value.send_advert_interval_hours || 0;
-      directAdvertIntervalInput.value = getDirectAdvertIntervalHours() || 0;
-      const phm = meshConfig.value.path_hash_mode;
-      pathHashModeInput.value = phm === 0 || phm === 1 || phm === 2 ? phm + 1 : 1;
-    }
+const hours = (value: unknown) =>
+  Number(value) === 0 ? 'disabled' : `${value} hour${Number(value) === 1 ? '' : 's'}`;
+
+const { isDirty, changes, reset } = useSettingsDraft({
+  state: () => ({
+    node_name: nodeNameInput.value,
+    path_hash_bytes: pathHashModeInput.value,
+    flood_advert_interval_hours: advertIntervalInput.value,
+    direct_advert_interval_hours: directAdvertIntervalInput.value,
+    latitude: latitudeInput.value,
+    longitude: longitudeInput.value,
+  }),
+  load: loadForm,
+  source: config,
+  labels: {
+    node_name: 'Node name',
+    path_hash_bytes: 'Path hash length',
+    flood_advert_interval_hours: 'Advert interval',
+    direct_advert_interval_hours: 'Direct advert interval',
+    latitude: 'Latitude',
+    longitude: 'Longitude',
   },
-  { immediate: true },
-);
-
-const nodeName = computed(() => {
-  return config.value.node_name || 'Not set';
+  format: (path, value) => {
+    if (path === 'path_hash_bytes') return `${value} byte${Number(value) === 1 ? '' : 's'}`;
+    if (path.endsWith('_interval_hours')) return hours(value);
+    if (value === '' || value === undefined) return '—';
+    return String(value);
+  },
 });
 
 const localHash = computed(() => {
@@ -87,16 +101,6 @@ const publicKey = computed(() => {
   return key;
 });
 
-const latitude = computed(() => {
-  const lat = repeaterConfig.value.latitude;
-  return lat && lat !== 0 ? lat.toFixed(6) : 'Not set';
-});
-
-const longitude = computed(() => {
-  const lng = repeaterConfig.value.longitude;
-  return lng && lng !== 0 ? lng.toFixed(6) : 'Not set';
-});
-
 const mode = computed(() => {
   const m = repeaterConfig.value.mode;
   if (!m) return 'Not set';
@@ -104,47 +108,12 @@ const mode = computed(() => {
   return m.charAt(0).toUpperCase() + m.slice(1);
 });
 
-const advertInterval = computed(() => {
-  const interval = repeaterConfig.value.send_advert_interval_hours;
-  if (interval === undefined) return 'Not set';
-  if (interval === 0) return 'Disabled';
-  return interval + ' hour' + (interval !== 1 ? 's' : '');
-});
-
-const directAdvertInterval = computed(() => {
-  const interval = getDirectAdvertIntervalHours();
-  if (interval === undefined) return 'Not set';
-  if (interval === 0) return 'Disabled';
-  const displayValue = formatHours(interval);
-  return displayValue + ' hour' + (Number(displayValue) !== 1 ? 's' : '');
-});
-
-const pathHashModeDisplay = computed(() => {
-  const phm = meshConfig.value.path_hash_mode;
-  if (phm === 0 || phm === 1 || phm === 2) return phm + 1 + (phm === 0 ? ' byte' : ' bytes');
-  return 'Not set';
-});
-
-const startEditing = () => {
-  isEditing.value = true;
-  error.value = null;
-  successMessage.value = null;
-};
-
 const cancelEditing = () => {
-  isEditing.value = false;
   error.value = null;
-  // Reload values
-  nodeNameInput.value = config.value.node_name || '';
-  latitudeInput.value = repeaterConfig.value.latitude || 0;
-  longitudeInput.value = repeaterConfig.value.longitude || 0;
-  advertIntervalInput.value = repeaterConfig.value.send_advert_interval_hours || 0;
-  directAdvertIntervalInput.value = getDirectAdvertIntervalHours() || 0;
-  const phm = meshConfig.value.path_hash_mode;
-  pathHashModeInput.value = phm === 0 || phm === 1 || phm === 2 ? phm + 1 : 1;
+  reset();
 };
 
-const saveChanges = async () => {
+const saveChanges = async (): Promise<boolean> => {
   isSaving.value = true;
   error.value = null;
   successMessage.value = null;
@@ -163,14 +132,13 @@ const saveChanges = async () => {
     const data = response.data as any;
 
     if (data.message || data.persisted) {
-      successMessage.value = data.message || 'Settings saved successfully';
-      isEditing.value = false;
-
       await systemStore.fetchStats();
-
+      reset();
+      successMessage.value = data.message || 'Settings saved successfully';
       setTimeout(() => {
         successMessage.value = null;
       }, 3000);
+      return true;
     } else if (data.error) {
       error.value = data.error;
     } else {
@@ -183,6 +151,7 @@ const saveChanges = async () => {
   } finally {
     isSaving.value = false;
   }
+  return false;
 };
 
 const openMapPicker = () => {
@@ -304,13 +273,13 @@ const applyGeneratedKey = async () => {
 };
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  isDirty,
   isSaving,
   cancelEditing,
-  async () => { await saveChanges(); return !isEditing.value; },
+  saveChanges,
 );
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 </script>
 
 <template>
@@ -329,31 +298,6 @@ defineExpose({ requestLeave, isEditing });
       <div>
         <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">Repeater Settings</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure repeater identity, location, and network settings</p>
-      </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <button
-          v-if="!isEditing"
-          @click="startEditing"
-          class="cfg-btn-primary"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="cfg-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveChanges"
-            :disabled="isSaving"
-            class="cfg-btn-primary"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
       </div>
     </div>
 
@@ -384,14 +328,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Node Name</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm break-all"
-        >
-          {{ nodeName }}
-        </div>
         <input
-          v-else
           v-model="nodeNameInput"
           type="text"
           maxlength="50"
@@ -426,7 +363,6 @@ defineExpose({ requestLeave, isEditing });
             >{{ publicKey }}</span
           >
           <button
-            v-if="isEditing"
             @click="openKeygenDialog"
             class="flex-shrink-0 px-2 py-1 text-xs bg-primary/opacity-light hover:bg-primary/opacity-medium text-content-secondary dark:text-content-muted rounded border border-primary/opacity-medium transition-colors whitespace-nowrap"
           >
@@ -452,14 +388,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Path hash length</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ pathHashModeDisplay }}
-        </div>
         <select
-          v-else
           v-model.number="pathHashModeInput"
           class="cfg-select w-full sm:w-32"
         >
@@ -475,13 +404,7 @@ defineExpose({ requestLeave, isEditing });
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
             >Periodic Advertisement Interval</span
           >
-          <div
-            v-if="!isEditing"
-            class="text-content-primary font-mono text-sm sm:ml-4"
-          >
-            {{ advertInterval }}
-          </div>
-          <div v-else class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <input
               v-model.number="advertIntervalInput"
               type="number"
@@ -503,13 +426,7 @@ defineExpose({ requestLeave, isEditing });
           <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
             >Additional Direct Advert Interval</span
           >
-          <div
-            v-if="!isEditing"
-            class="text-content-primary font-mono text-sm sm:ml-4"
-          >
-            {{ directAdvertInterval }}
-          </div>
-          <div v-else class="flex items-center gap-2">
+          <div class="flex items-center gap-2">
             <input
               v-model.number="directAdvertIntervalInput"
               type="number"
@@ -532,7 +449,6 @@ defineExpose({ requestLeave, isEditing });
       <div class="pb-2">
         <h3 class="text-lg font-semibold text-content-primary mb-3">Location Settings</h3>
         <button
-          v-if="isEditing"
           @click="openMapPicker"
           class="btn-primary flex items-center gap-2"
           title="Pick location on map"
@@ -548,11 +464,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Manual Latitude -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Latitude</span>
-        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-          {{ latitude }}
-        </div>
         <input
-          v-else
           v-model.number="latitudeInput"
           type="number"
           step="0.000001"
@@ -565,11 +477,7 @@ defineExpose({ requestLeave, isEditing });
       <!-- Manual Longitude -->
       <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 gap-1">
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Manual Longitude</span>
-        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-          {{ longitude }}
-        </div>
         <input
-          v-else
           v-model.number="longitudeInput"
           type="number"
           step="0.000001"
@@ -579,6 +487,13 @@ defineExpose({ requestLeave, isEditing });
         />
       </div>
     </div>
+
+    <SaveBar
+      :changes="changes"
+      :saving="isSaving"
+      @save="saveChanges"
+      @discard="cancelEditing"
+    />
 
     <!-- Location Picker Modal -->
     <LocationPicker
