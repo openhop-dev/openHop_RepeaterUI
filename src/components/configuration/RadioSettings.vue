@@ -368,7 +368,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
                     'w-full text-left rounded-[18px] border px-4 py-3 transition-all duration-200 flex items-center justify-between gap-4',
                     selectedPrefillPreset === preset.title
                       ? 'border-primary/opacity-heavy bg-primary/opacity-light shadow-sm shadow-primary/10'
-                      : 'border-stroke-subtle dark:border-white/opacity-light bg-white/60 dark:bg-white/opacity-subtle hover:border-primary/opacity-medium dark:hover:border-primary/opacity-medium hover:bg-stroke-subtle/60 dark:hover:bg-white/opacity-light',
+                      : 'border-stroke-subtle dark:border-white/opacity-light bg-white/60 dark:bg-white/opacity-subtle hover:border-stroke-hover hover:bg-stroke-subtle/60 dark:hover:bg-white/opacity-light',
                   ]"
                 >
                   <div class="min-w-0">

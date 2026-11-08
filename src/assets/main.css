@@ -90,7 +90,7 @@ html.is-mobile-app {
   }
 
   .cfg-btn-primary {
-    @apply px-4 py-2 bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary dark:text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-ui-label disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-primary/opacity-medium hover:bg-primary/35 hover:border-primary text-content-primary dark:text-content-primary rounded-lg border border-primary/opacity-heavy transition-colors text-ui-label disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .cfg-btn-secondary {
@@ -118,19 +118,19 @@ html.is-mobile-app {
 
   .btn-primary {
     @apply px-4 py-2 rounded-lg text-ui-label font-medium transition-colors
-           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary
+           bg-primary/opacity-medium hover:bg-primary/35 hover:border-primary border border-primary/opacity-heavy text-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
     @apply px-4 py-2 rounded-lg text-ui-label font-medium transition-colors
-           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red
+           bg-accent-red/opacity-medium hover:bg-accent-red/35 hover:border-accent-red border border-accent-red/opacity-heavy text-accent-red
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-success {
     @apply px-4 py-2 rounded-lg text-ui-label font-medium transition-colors
-           bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green
+           bg-accent-green/opacity-medium hover:bg-accent-green/35 hover:border-accent-green border border-accent-green/opacity-heavy text-accent-green
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -146,19 +146,19 @@ html.is-mobile-app {
 
   .btn-primary-xs {
     @apply px-3 py-1 rounded text-ui-caption transition-colors
-           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary
+           bg-primary/opacity-medium hover:bg-primary/35 hover:border-primary border border-primary/opacity-heavy text-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger-xs {
     @apply px-3 py-1 rounded text-ui-caption transition-colors
-           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red
+           bg-accent-red/opacity-medium hover:bg-accent-red/35 hover:border-accent-red border border-accent-red/opacity-heavy text-accent-red
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-success-xs {
     @apply px-3 py-1 rounded text-ui-caption transition-colors
-           bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium border border-accent-green/opacity-heavy text-accent-green
+           bg-accent-green/opacity-medium hover:bg-accent-green/35 hover:border-accent-green border border-accent-green/opacity-heavy text-accent-green
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
@@ -292,25 +292,25 @@ html.is-mobile-app {
   /* Primary positive action */
   .modal-btn-primary {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed
-           bg-primary/opacity-medium hover:bg-primary/opacity-medium border border-primary/opacity-heavy text-primary;
+           bg-primary/opacity-medium hover:bg-primary/35 hover:border-primary border border-primary/opacity-heavy text-primary;
   }
 
   /* Destructive action (delete, remove) */
   .modal-btn-danger {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors font-medium
-           bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red;
+           bg-accent-red/opacity-medium hover:bg-accent-red/35 hover:border-accent-red border border-accent-red/opacity-heavy text-accent-red;
   }
 
   /* ── Config page danger button ──────────────────────────────────────────── */
   /* Matches cfg-btn-primary sizing (py-2) but in the red/danger colour scheme */
   .cfg-btn-danger {
-    @apply px-4 py-2 bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red rounded-lg
+    @apply px-4 py-2 bg-accent-red/opacity-medium hover:bg-accent-red/35 hover:border-accent-red text-accent-red rounded-lg
            border border-accent-red/opacity-heavy transition-colors text-ui-label
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .cfg-btn-success {
-    @apply px-4 py-2 bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium text-accent-green rounded-lg
+    @apply px-4 py-2 bg-accent-green/opacity-medium hover:bg-accent-green/35 hover:border-accent-green text-accent-green rounded-lg
            border border-accent-green/opacity-heavy transition-colors text-ui-label
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
