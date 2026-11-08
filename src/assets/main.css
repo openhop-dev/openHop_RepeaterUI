@@ -94,7 +94,7 @@ html.is-mobile-app {
   }
 
   .cfg-btn-secondary {
-    @apply px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-ui-label disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke-hover dark:hover:border-stroke-hover text-content-primary dark:text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium transition-colors text-ui-label disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* ── Logo styling for light/dark mode ────────────────────────────────── */
@@ -136,7 +136,7 @@ html.is-mobile-app {
 
   .btn-secondary {
     @apply px-4 py-2 rounded-lg text-ui-label transition-colors
-           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke-hover dark:hover:border-stroke-hover
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
@@ -164,7 +164,7 @@ html.is-mobile-app {
 
   .btn-secondary-xs {
     @apply px-3 py-1.5 rounded-lg text-ui-caption transition-colors
-           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke-hover dark:hover:border-stroke-hover
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary
            disabled:opacity-50 disabled:cursor-not-allowed;
@@ -284,7 +284,7 @@ html.is-mobile-app {
   /* Cancel / secondary muted action (safe to reuse for "Save Only" in 3-button rows) */
   .modal-btn-cancel {
     @apply flex-1 px-4 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed
-           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light
+           bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light hover:border-stroke-hover dark:hover:border-stroke-hover
            border border-stroke-subtle dark:border-stroke/opacity-medium
            text-content-primary dark:text-content-primary;
   }
