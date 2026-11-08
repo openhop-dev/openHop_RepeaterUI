@@ -148,3 +148,36 @@ describe('KeyModal emit routing', () => {
     expect(payload.name).toBe('mykey')
   })
 })
+
+// ── Unfinished edits ─────────────────────────────────────────────────────────
+
+describe('KeyModal unfinished edits', () => {
+  type Exposed = { dirty: boolean; submit: () => boolean }
+
+  it('is not dirty as opened, and is once edited', async () => {
+    const wrapper = mountModal({ node: makeNode() })
+    const vm = wrapper.vm as unknown as Exposed
+    expect(vm.dirty).toBe(false)
+    await wrapper.find('input[type="text"]').setValue('fr')
+    expect(vm.dirty).toBe(true)
+  })
+
+  it('is never dirty while hidden', async () => {
+    const wrapper = mountModal({ node: null })
+    await wrapper.find('input[type="text"]').setValue('fr')
+    await wrapper.setProps({ show: false })
+    expect((wrapper.vm as unknown as Exposed).dirty).toBe(false)
+  })
+
+  it('submits like its button, and refuses an empty name', async () => {
+    const wrapper = mountModal({ node: makeNode() })
+    const vm = wrapper.vm as unknown as Exposed
+    await wrapper.find('input[type="text"]').setValue('')
+    expect(vm.submit()).toBe(false)
+    expect(wrapper.emitted('save')).toBeUndefined()
+
+    await wrapper.find('input[type="text"]').setValue('fr')
+    expect(vm.submit()).toBe(true)
+    expect(wrapper.emitted('save')![0][0]).toMatchObject({ id: 1, name: '#fr' })
+  })
+})

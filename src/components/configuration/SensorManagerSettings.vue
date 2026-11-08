@@ -103,12 +103,19 @@ const effectiveDraft = computed<SensorConfig | null>(() => {
   return { ...draftConfig.value, definitions };
 });
 
-const isDirty = computed(
+const draftDirty = computed(
   () =>
     !!config.value &&
     !!effectiveDraft.value &&
     JSON.stringify(effectiveDraft.value) !== JSON.stringify(config.value),
 );
+
+/** The add form holds a sensor the operator has started but not yet added. */
+const addFormStarted = computed(
+  () => showAddForm.value && (selectedNewType.value !== '' || newSensorName.value.trim() !== ''),
+);
+
+const isDirty = computed(() => draftDirty.value || addFormStarted.value);
 
 const GLOBAL_LABELS: Record<string, string> = {
   enabled: 'Sensors',
@@ -159,6 +166,12 @@ const changes = computed<SaveBarChange[]>(() => {
   }
   for (const name of saved.keys()) {
     if (!kept.has(name)) items.push({ label: `Remove sensor ${name}` });
+  }
+  if (addFormStarted.value) {
+    items.push({
+      label: `New sensor ${newSensorName.value.trim() || '(unnamed)'}`,
+      detail: 'not added yet',
+    });
   }
   return items;
 });
@@ -275,6 +288,14 @@ async function saveAll(): Promise<boolean> {
   if (!draftConfig.value || isSaving.value) return false;
   // The row editor is a separate draft; include it in both page and leave-guard saves.
   if (editingIndex.value !== null) saveEditSensor();
+  // So is a started add form: add it, or stop rather than save without it.
+  if (addFormStarted.value) {
+    if (!canAddSensor()) {
+      error.value = 'Finish or cancel the new sensor before saving.';
+      return false;
+    }
+    addSensor();
+  }
   isSaving.value = true;
   error.value = null;
   try {

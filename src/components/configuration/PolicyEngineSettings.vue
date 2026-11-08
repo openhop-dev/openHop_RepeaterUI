@@ -111,6 +111,8 @@ const showRuleModal = ref(false);
 const editingRuleIndex = ref<number | null>(null);
 const ruleDraft = ref<UiRule | null>(null);
 const ruleModalError = ref<string | null>(null);
+/** The rule as the modal opened it; edits since then are not in the policy yet. */
+const ruleModalBaseline = ref('');
 const showLogicMatrix = ref(false);
 const draggingConditionIndex = ref<number | null>(null);
 const dropInsertIndex = ref<number | null>(null);
@@ -334,6 +336,17 @@ const isDirty = computed(
   () => loadedDocument.value !== '' && JSON.stringify(draftDocument()) !== loadedDocument.value,
 );
 
+/** The rule modal holds edits that have not been applied to the policy yet. */
+const ruleModalDirty = computed(
+  () =>
+    showRuleModal.value &&
+    ruleDraft.value !== null &&
+    JSON.stringify(ruleDraft.value) !== ruleModalBaseline.value,
+);
+
+/** What the leave guards check: the policy draft or an open rule edit. */
+const hasUnsavedChanges = computed(() => isDirty.value || ruleModalDirty.value);
+
 const draftChanges = computed<SaveBarChange[]>(() => {
   if (!isDirty.value) return [];
   const before = JSON.parse(loadedDocument.value) as ReturnType<typeof draftDocument>;
@@ -418,14 +431,23 @@ function getPolicyObjectsForSubmit(): Record<string, unknown> {
   };
 }
 
+// Saving on the way out applies an open rule edit first, and stays if it does not validate.
+async function saveForNavigation(): Promise<boolean> {
+  if (ruleModalDirty.value) {
+    saveRuleModal();
+    if (showRuleModal.value) return false;
+  }
+  return savePolicy();
+}
+
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isDirty,
+  hasUnsavedChanges,
   saving,
   cancelEditing,
-  async () => savePolicy(),
+  saveForNavigation,
 );
 
-defineExpose({ requestLeave, isEditing: isDirty });
+defineExpose({ requestLeave, isEditing: hasUnsavedChanges });
 
 function formatPolicyApiError(err: unknown, fallback: string): string {
   const raw = err instanceof Error ? err.message : fallback;
@@ -959,6 +981,7 @@ function actionBadgeClasses(action: PolicyAction): string {
 function openAddRuleModal() {
   editingRuleIndex.value = null;
   ruleDraft.value = makeRule(nextRuleId());
+  ruleModalBaseline.value = JSON.stringify(ruleDraft.value);
   ruleModalError.value = null;
   showRuleModal.value = true;
 }
@@ -968,6 +991,7 @@ function openEditRuleModal(index: number) {
   if (!existing) return;
   editingRuleIndex.value = index;
   ruleDraft.value = JSON.parse(JSON.stringify(existing)) as UiRule;
+  ruleModalBaseline.value = JSON.stringify(ruleDraft.value);
   ruleModalError.value = null;
   showRuleModal.value = true;
 }
@@ -975,6 +999,7 @@ function openEditRuleModal(index: number) {
 function closeRuleModal() {
   showRuleModal.value = false;
   ruleDraft.value = null;
+  ruleModalBaseline.value = '';
   editingRuleIndex.value = null;
   ruleModalError.value = null;
   showLogicMatrix.value = false;

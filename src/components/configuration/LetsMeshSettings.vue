@@ -123,6 +123,21 @@ const brokerDraft = ref<CustomBroker>({
   use_jwt_auth: false, transport: 'websockets', disallowedInput: [],
   retain_status: false, neighbors: false, tls: { enabled: true, insecure: false },
 });
+// What the open broker modal holds now; brokerDraft is the broker as it opened.
+const brokerLive = ref<CustomBroker | null>(null);
+
+/** The open broker edit as it stands in the modal. */
+function openBrokerEdits(): CustomBroker {
+  const live = brokerLive.value;
+  return live && live._id === brokerDraft.value._id ? live : brokerDraft.value;
+}
+
+/** The broker modal holds edits that are not in the broker list yet. */
+const brokerModalDirty = computed(
+  () =>
+    editingBrokerId.value !== null &&
+    JSON.stringify(openBrokerEdits()) !== JSON.stringify(brokerDraft.value),
+);
 const showTemplateMenu = ref(false);
 
 // ── Live status ───────────────────────────────────────────────────────────
@@ -276,6 +291,9 @@ const isDirty = computed(
   () => baseline.value !== '' && JSON.stringify(buildPayload()) !== baseline.value,
 );
 
+/** What the leave guards check: the form or an open broker edit. */
+const hasUnsavedChanges = computed(() => isDirty.value || brokerModalDirty.value);
+
 const FIELD_LABELS: Record<string, string> = {
   iata_code: 'IATA code',
   status_interval: 'Status interval',
@@ -381,16 +399,29 @@ function cancelGlobalEditing() {
   syncForm();
 }
 
-async function saveGlobalSettings() {
-  // Commit any open broker edit before saving
-  if (editingBrokerId.value !== null) {
-    const d = brokerDraft.value;
-    if (!d.name.trim() || !d.host.trim()) {
-      errorMsg.value = 'Please complete or cancel the open broker edit before saving.';
-      return;
-    }
-    commitBrokerDraft();
+/**
+ * Fold an open broker edit into the list before a save: the modal's current
+ * edits, not the broker as it opened. An untouched new broker is dropped; an
+ * incomplete edit stops the save.
+ */
+function commitOpenBrokerEdit(): boolean {
+  if (editingBrokerId.value === null) return true;
+  if (isNewBroker.value && !brokerModalDirty.value) {
+    cancelBrokerEdit();
+    return true;
   }
+  const d = openBrokerEdits();
+  if (!brokerIsValid(d)) {
+    errorMsg.value = 'Please complete or cancel the open broker edit before saving.';
+    return false;
+  }
+  brokerDraft.value = cloneBroker(d);
+  commitBrokerDraft();
+  return true;
+}
+
+async function saveGlobalSettings() {
+  if (!commitOpenBrokerEdit()) return;
   isSaving.value = true;
   errorMsg.value = '';
   const result = await callSaveApi();
@@ -409,6 +440,7 @@ function addBroker() {
   if (editingBrokerId.value !== null) cancelBrokerEdit();
   const b = mkBroker();
   customBrokers.value.push(b);
+  brokerLive.value = null;
   originalBrokerDraft.value = null;
   isNewBroker.value = true;
   brokerDraft.value = cloneBroker(b);
@@ -418,6 +450,7 @@ function addBroker() {
 function openBrokerEdit(broker: CustomBroker) {
   if (editingBrokerId.value !== null && editingBrokerId.value !== broker._id) cancelBrokerEdit();
   originalBrokerDraft.value = cloneBroker(broker);
+  brokerLive.value = null;
   isNewBroker.value = false;
   brokerDraft.value = cloneBroker(broker);
   editingBrokerId.value = broker._id;
@@ -507,17 +540,16 @@ async function fetchBrokerPresets() {
   }
 }
 
-const draftIsValid = computed(() => {
-  const d = brokerDraft.value;
+function brokerIsValid(d: CustomBroker): boolean {
   return d.name.trim() !== '' && d.host.trim() !== '' &&
     d.port >= 1 && d.port <= 65535 &&
     (!d.use_jwt_auth || (d.audience?.trim() ?? '') !== '');
-});
+}
 
 
 // ── Navigation guard ──────────────────────────────────────────────────────
 async function saveForNavigation(): Promise<boolean> {
-  if (editingBrokerId.value !== null && draftIsValid.value) commitBrokerDraft();
+  if (!commitOpenBrokerEdit()) return false;
   isSaving.value = true;
   errorMsg.value = '';
   const result = await callSaveApi();
@@ -532,13 +564,13 @@ async function saveForNavigation(): Promise<boolean> {
 }
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isDirty,
+  hasUnsavedChanges,
   isSaving,
   cancelGlobalEditing,
   saveForNavigation,
 );
 
-defineExpose({ requestLeave, isEditing: isDirty });
+defineExpose({ requestLeave, isEditing: hasUnsavedChanges });
 
 let _statusTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -567,6 +599,7 @@ onUnmounted(() => {
     :is-new="isNewBroker"
     @done="handleModalDone"
     @cancel="cancelBrokerEdit"
+    @change="brokerLive = $event"
   />
 
   <!-- ── Unsaved Changes Modal ──────────────────────────────────────────── -->

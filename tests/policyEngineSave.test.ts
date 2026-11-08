@@ -24,14 +24,20 @@ const apiMock = vi.hoisted(() => ({
 }));
 
 vi.mock('@/utils/api', () => ({ default: apiMock, ApiService: apiMock }));
+// The arguments the page gave the leave guard: (isDirty, saving, discard, save).
+const guard = vi.hoisted(() => ({ args: [] as unknown[] }));
+
 vi.mock('@/composables/useUnsavedChanges', () => ({
-  useUnsavedChanges: () => ({
-    showUnsavedModal: false,
-    requestLeave: vi.fn(),
-    handleDiscard: vi.fn(),
-    handleSave: vi.fn(),
-    handleCancel: vi.fn(),
-  }),
+  useUnsavedChanges: (...args: unknown[]) => {
+    guard.args = args;
+    return {
+      showUnsavedModal: false,
+      requestLeave: vi.fn(),
+      handleDiscard: vi.fn(),
+      handleSave: vi.fn(),
+      handleCancel: vi.fn(),
+    };
+  },
 }));
 
 function mountPage() {
@@ -131,5 +137,47 @@ describe('PolicyEngineSettings without an edit mode', () => {
     await flushPromises();
     expect(button(wrapper, 'Hide JSON')).toBeDefined();
     expect(wrapper.text()).toContain('Fix the rules JSON before hiding it');
+  });
+
+  describe('an open rule edit', () => {
+    const ruleName = (wrapper: ReturnType<typeof mountPage>) =>
+      wrapper.find('input[placeholder="Block noisy channel route"]');
+    const isEditing = (wrapper: ReturnType<typeof mountPage>) =>
+      (wrapper.vm as unknown as { isEditing: boolean }).isEditing;
+    const saveOnLeave = () => (guard.args[3] as () => Promise<boolean>)();
+
+    it('counts as unsaved once it differs from the rule as opened', async () => {
+      const wrapper = mountPage();
+      await flushPromises();
+      await button(wrapper, 'Add Rule')!.trigger('click');
+      expect(isEditing(wrapper)).toBe(false);
+
+      await ruleName(wrapper).setValue('far hops');
+      expect(isEditing(wrapper)).toBe(true);
+    });
+
+    it('is applied and saved when leaving with Save', async () => {
+      const wrapper = mountPage();
+      await flushPromises();
+      await button(wrapper, 'Add Rule')!.trigger('click');
+      await ruleName(wrapper).setValue('far hops');
+
+      const saved = await saveOnLeave();
+      await flushPromises();
+      expect(saved).toBe(true);
+      expect(JSON.stringify(apiMock.updatePolicyDocument.mock.calls[0][0])).toContain('far hops');
+    });
+
+    it('stops the leave when it does not validate', async () => {
+      const wrapper = mountPage();
+      await flushPromises();
+      await button(wrapper, 'Add Rule')!.trigger('click');
+      await ruleName(wrapper).setValue('');
+
+      expect(await saveOnLeave()).toBe(false);
+      expect(apiMock.updatePolicyDocument).not.toHaveBeenCalled();
+      expect(ruleName(wrapper).exists()).toBe(true);
+      expect(wrapper.text()).toContain('Rule name is required');
+    });
   });
 });

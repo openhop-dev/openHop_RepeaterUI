@@ -262,6 +262,14 @@ const regionChanges = computed<SaveBarChange[]>(() => {
 
 const isDirty = computed(() => regionChanges.value.length > 0);
 
+// An add or edit left open in a KeyModal is not in the tree yet.
+const addModalRef = ref<InstanceType<typeof KeyModal> | null>(null);
+const editModalRef = ref<InstanceType<typeof KeyModal> | null>(null);
+const keyModalDirty = computed(() => !!addModalRef.value?.dirty || !!editModalRef.value?.dirty);
+
+/** What the leave guards check: the tree or an open key edit. */
+const hasUnsavedChanges = computed(() => isDirty.value || keyModalDirty.value);
+
 watch(
   statsFloodAllow,
   (val) => {
@@ -445,14 +453,25 @@ function handleUnscopedFloodPolicyChange(policy: 'allow' | 'deny') {
   unscopedFloodPolicy.value = policy;
 }
 
+// Saving on the way out applies an open key edit first, and stays if it does not validate.
+async function saveForNavigation(): Promise<boolean> {
+  for (const modal of [addModalRef.value, editModalRef.value]) {
+    if (modal?.dirty && !modal.submit()) {
+      saveError.value = 'Complete or cancel the open key edit before saving.';
+      return false;
+    }
+  }
+  return saveChanges();
+}
+
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isDirty,
+  hasUnsavedChanges,
   isSaving,
   cancelEditing,
-  saveChanges,
+  saveForNavigation,
 );
 
-defineExpose({ requestLeave, isEditing: isDirty });
+defineExpose({ requestLeave, isEditing: hasUnsavedChanges });
 </script>
 
 <template>
@@ -643,6 +662,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
 
     <!-- Add Modal -->
     <KeyModal
+      ref="addModalRef"
       :show="showAddModal"
       :node="null"
       :selected-parent-id="treeStore.selectedNodeId.value || undefined"
@@ -653,6 +673,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
 
     <!-- Edit Modal -->
     <KeyModal
+      ref="editModalRef"
       :show="showEditModal"
       :node="editingNode"
       :all-nodes="transportKeysData"
