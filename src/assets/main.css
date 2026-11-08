@@ -309,6 +309,17 @@ html.is-mobile-app {
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  .cfg-btn-success {
+    @apply px-4 py-2 bg-accent-green/opacity-medium hover:bg-accent-green/opacity-medium text-accent-green rounded-lg
+           border border-accent-green/opacity-heavy transition-colors text-ui-label
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Compact size for row actions; add to any cfg-btn-* (defined after them so it wins). */
+  .cfg-btn-sm {
+    @apply px-2.5 py-1 text-ui-caption;
+  }
+
   /* ── Alert / notice boxes ───────────────────────────────────────────────── */
   /* Coloured notice boxes — bg fill + border + text in one class */
   .alert-info    { @apply bg-accent-cyan/opacity-light border border-accent-cyan/opacity-medium rounded-lg p-3 text-accent-cyan; }

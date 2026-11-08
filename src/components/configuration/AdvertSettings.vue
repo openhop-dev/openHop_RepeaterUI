@@ -968,7 +968,7 @@ const tierBadgeClass = computed(() => {
           <div class="flex justify-end pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-medium">
             <button
               @click="showHelp = false"
-              class="btn-primary"
+              class="cfg-btn-primary"
             >
               Got it!
             </button>

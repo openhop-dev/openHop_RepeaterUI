@@ -381,7 +381,7 @@ onMounted(() => {
       >
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div class="text-sm font-semibold text-content-primary">Configured Sensors</div>
-          <button v-if="!showAddForm" @click="beginAddSensor" class="cfg-btn-primary text-xs">
+          <button v-if="!showAddForm" @click="beginAddSensor" class="cfg-btn-primary cfg-btn-sm">
             + Add Sensor
           </button>
         </div>
@@ -457,7 +457,7 @@ onMounted(() => {
               <button
                 @click="addSensor"
                 :disabled="!canAddSensor()"
-                class="cfg-btn-primary text-xs"
+                class="cfg-btn-primary cfg-btn-sm"
               >
                 Add
               </button>
@@ -468,7 +468,7 @@ onMounted(() => {
                     resetAddForm();
                   }
                 "
-                class="cfg-btn-secondary text-xs"
+                class="cfg-btn-secondary cfg-btn-sm"
               >
                 Cancel
               </button>
@@ -506,12 +506,12 @@ onMounted(() => {
                   </label>
                 </div>
                 <div class="flex items-center gap-1">
-                  <button @click="beginEditSensor(idx)" class="cfg-btn-secondary text-xs px-2 py-1">
+                  <button @click="beginEditSensor(idx)" class="cfg-btn-secondary cfg-btn-sm">
                     Edit
                   </button>
                   <button
                     @click="removeSensor(idx)"
-                    class="text-xs px-2 py-1 rounded-lg border border-accent-red/opacity-medium text-accent-red hover:bg-accent-red/opacity-light"
+                    class="cfg-btn-danger cfg-btn-sm"
                   >
                     Delete
                   </button>
@@ -555,8 +555,8 @@ onMounted(() => {
                 </div>
               </div>
               <div class="flex items-center gap-2 pt-2">
-                <button @click="saveEditSensor" class="cfg-btn-primary text-xs">Save</button>
-                <button @click="cancelEditSensor" class="cfg-btn-secondary text-xs">Cancel</button>
+                <button @click="saveEditSensor" class="cfg-btn-primary cfg-btn-sm">Save</button>
+                <button @click="cancelEditSensor" class="cfg-btn-secondary cfg-btn-sm">Cancel</button>
               </div>
             </div>
           </div>

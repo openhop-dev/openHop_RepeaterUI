@@ -2063,7 +2063,7 @@ watch(selectedRadioType, (type, previous) => {
           class="text-left rounded-lg border px-3 py-2.5 transition-colors"
           :class="card.isSelected && activePanel === 'radio'
             ? 'border-primary bg-primary/opacity-light'
-            : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-primary/opacity-medium'"
+            : 'border-stroke-subtle dark:border-stroke/opacity-medium hover:border-primary/opacity-medium'"
           :disabled="multiRadioBusy"
           @click="selectWorkingRadio(card.id)"
         >
@@ -2123,7 +2123,7 @@ watch(selectedRadioType, (type, previous) => {
           class="text-left rounded-lg border px-3 py-2.5 transition-colors"
           :class="activePanel === 'routing'
             ? 'border-primary bg-primary/opacity-light'
-            : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-primary/opacity-medium'"
+            : 'border-stroke-subtle dark:border-stroke/opacity-medium hover:border-primary/opacity-medium'"
           @click="activePanel = 'routing'"
         >
           <span class="flex items-center justify-between gap-2">
@@ -2234,7 +2234,7 @@ watch(selectedRadioType, (type, previous) => {
               </button>
               <button
                 type="button"
-                class="cfg-btn-secondary !text-accent-red"
+                class="cfg-btn-danger"
                 :disabled="multiRadioBusy || isSaving || !workingSelectedId"
                 @click="removeSelectedRadio"
               >

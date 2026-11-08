@@ -1461,9 +1461,9 @@ onMounted(loadPolicy);
             <div class="flex flex-wrap items-center justify-between gap-2">
               <label class="cfg-label">Policy Rules</label>
               <div class="flex items-center gap-2">
-                <button class="cfg-btn-secondary text-xs" :disabled="saving" @click="openAddRuleModal">Add Rule</button>
+                <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="openAddRuleModal">Add Rule</button>
                 <button
-                  class="cfg-btn-secondary text-xs"
+                  class="cfg-btn-secondary cfg-btn-sm"
                   :disabled="saving"
                   @click="toggleAdvancedJson"
                 >
@@ -1519,10 +1519,10 @@ onMounted(loadPolicy);
                     </td>
                     <td class="px-3 py-3 text-right">
                       <div class="inline-flex flex-wrap items-center justify-end gap-1">
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="saving" @click="moveRule(idx, -1)">▲</button>
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="saving" @click="moveRule(idx, 1)">▼</button>
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="saving" @click="openEditRuleModal(idx)">Edit</button>
-                        <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light disabled:opacity-40" :disabled="saving" @click="removeRule(idx)">Del</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="moveRule(idx, -1)">▲</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="moveRule(idx, 1)">▼</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="openEditRuleModal(idx)">Edit</button>
+                        <button class="cfg-btn-danger cfg-btn-sm" :disabled="saving" @click="removeRule(idx)">Del</button>
                       </div>
                     </td>
                   </tr>
@@ -1548,7 +1548,7 @@ onMounted(loadPolicy);
                 placeholder='[{"id":1,"if":{"all":[{"field":"hop_count","op":"greater_than","value":4}]},"then":{"action":"drop"}}]'
               />
               <div class="flex justify-end">
-                <button class="cfg-btn-secondary text-xs" :disabled="saving" @click="syncUiFromRulesJson">Apply JSON To Table</button>
+                <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="syncUiFromRulesJson">Apply JSON To Table</button>
               </div>
             </div>
           </div>
@@ -1631,7 +1631,7 @@ onMounted(loadPolicy);
               </h4>
               <button
                 v-if="selectedGroup"
-                class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
+                class="cfg-btn-danger cfg-btn-sm"
                 :disabled="saving"
                 @click="deleteGroup(selectedGroup.id)"
               >
@@ -1654,7 +1654,7 @@ onMounted(loadPolicy);
                     <td class="px-3 py-2 font-mono text-xs text-content-secondary">{{ entry.value }}</td>
                     <td class="px-3 py-2 text-right">
                       <button
-                        class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
+                        class="cfg-btn-danger cfg-btn-sm"
                         :disabled="saving"
                         @click="removeEntry(entry.id)"
                       >
@@ -1715,7 +1715,7 @@ onMounted(loadPolicy);
             >
               i
             </button>
-            <button class="cfg-btn-secondary text-xs" @click="closeRuleModal">Close</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="closeRuleModal">Close</button>
           </div>
         </div>
 
@@ -1725,7 +1725,7 @@ onMounted(loadPolicy);
         >
           <div class="flex items-center justify-between">
             <h4 class="text-sm font-semibold text-content-primary">Match Field Logic Matrix</h4>
-            <button class="cfg-btn-secondary text-xs" @click="showLogicMatrix = false">Hide</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="showLogicMatrix = false">Hide</button>
           </div>
           <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[840px] text-xs">
@@ -1781,7 +1781,7 @@ onMounted(loadPolicy);
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <h4 class="text-sm font-semibold text-content-primary">Conditions</h4>
-            <button class="cfg-btn-secondary text-xs" @click="addDraftCondition">Add Condition</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="addDraftCondition">Add Condition</button>
           </div>
 
           <div
@@ -1912,7 +1912,7 @@ onMounted(loadPolicy);
                       >
                         ▼
                       </button>
-                      <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light" @click="removeDraftCondition(cIdx)">Del</button>
+                      <button class="cfg-btn-danger cfg-btn-sm" @click="removeDraftCondition(cIdx)">Del</button>
                     </div>
                   </td>
                 </tr>

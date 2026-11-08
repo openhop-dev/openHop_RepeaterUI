@@ -165,7 +165,7 @@
               <button
                 @click="showFullBackupConfirm = false"
                 :disabled="fullBackupExporting"
-                class="btn-secondary"
+                class="cfg-btn-secondary"
               >
                 Cancel
               </button>
@@ -319,7 +319,7 @@
                 <button
                   @click="cancelImport"
                   :disabled="importing"
-                  class="btn-secondary"
+                  class="cfg-btn-secondary"
                 >
                   Cancel
                 </button>
@@ -418,7 +418,7 @@
               <button
                 @click="showIdentityConfirm = false"
                 :disabled="identityExporting"
-                class="btn-secondary"
+                class="cfg-btn-secondary"
               >
                 Cancel
               </button>

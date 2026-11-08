@@ -154,7 +154,7 @@
                     v-if="isUnlocked && isPurgeable(table.name) && table.row_count > 0"
                     @click="confirmPurge(table.name, table.row_count)"
                     :disabled="purging[table.name]"
-                    class="px-2.5 py-1 bg-accent-red/opacity-light dark:bg-accent-red/opacity-light hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded border border-accent-red/opacity-medium dark:border-accent-red/opacity-medium transition-colors text-xs disabled:opacity-50"
+                    class="cfg-btn-danger cfg-btn-sm"
                   >
                     <span v-if="purging[table.name]" class="flex items-center gap-1">
                       <Spinner size="xs" color="current" class="inline-block" />
@@ -208,14 +208,14 @@
             <button
               @click="purgeConfirm = null"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light border border-stroke-subtle dark:border-stroke/opacity-medium text-content-primary rounded-lg transition-colors"
+              class="modal-btn-cancel"
             >
               Cancel
             </button>
             <button
               @click="executePurge"
               :disabled="purgeConfirm.executing"
-              class="flex-1 px-4 py-3 bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium border border-accent-red/opacity-heavy text-accent-red rounded-lg transition-colors font-medium disabled:opacity-50"
+              class="modal-btn-danger"
             >
               {{ purgeConfirm.executing ? 'Purging…' : 'Yes, Delete Data' }}
             </button>
@@ -234,7 +234,7 @@
         <button
           @click="confirmPurge('all', totalRows)"
           :disabled="!stats || totalRows === 0 || !isUnlocked"
-          class="px-4 py-2 bg-accent-red/opacity-medium dark:bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium dark:hover:bg-accent-red/opacity-medium text-accent-red rounded-lg border border-accent-red/opacity-heavy dark:border-accent-red/opacity-heavy transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          class="cfg-btn-danger"
         >
           <span class="flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

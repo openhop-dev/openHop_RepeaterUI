@@ -700,7 +700,7 @@ onUnmounted(() => {
           <div class="relative">
             <button
               @click="showTemplateMenu = !showTemplateMenu"
-              class="inline-flex items-center gap-1.5 px-3 sm:cfg-btn-secondary"
+              class="cfg-btn-secondary inline-flex items-center gap-1.5"
             >
               From Template
               <svg class="w-3 h-3 transition-transform" :class="showTemplateMenu ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -790,7 +790,7 @@ onUnmounted(() => {
           </div>
           <button
             @click="addBroker"
-            class="btn-primary inline-flex items-center gap-1.5"
+            class="cfg-btn-primary inline-flex items-center gap-1.5"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -839,7 +839,7 @@ onUnmounted(() => {
             <div class="flex items-center gap-1.5 flex-shrink-0">
               <button
                 @click="openBrokerEdit(broker)"
-                class="px-2.5 py-1 text-xs bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded border border-primary/opacity-heavy transition-colors"
+                class="cfg-btn-secondary cfg-btn-sm"
               >
                 Edit
               </button>
@@ -877,7 +877,7 @@ onUnmounted(() => {
           :title="triggerDisabledReason || 'Run a discovery and publish cycle now'"
           :class="[
             'flex-shrink-0 inline-flex items-center gap-1.5 whitespace-nowrap',
-            !!triggerDisabledReason || isTriggering ? 'px-3 py-1.5 text-sm rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium text-content-muted/opacity-heavy cursor-not-allowed' : 'btn-primary',
+            !!triggerDisabledReason || isTriggering ? 'cfg-btn-secondary cursor-not-allowed' : 'cfg-btn-primary',
           ]"
         >
           <svg class="w-3.5 h-3.5" :class="isTriggering ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -364,7 +364,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
           >
           <button
             @click="openKeygenDialog"
-            class="flex-shrink-0 px-2 py-1 text-xs bg-primary/opacity-light hover:bg-primary/opacity-medium text-content-secondary dark:text-content-muted rounded border border-primary/opacity-medium transition-colors whitespace-nowrap"
+            class="cfg-btn-secondary cfg-btn-sm flex-shrink-0 whitespace-nowrap"
           >
             Generate New Key
           </button>
@@ -450,7 +450,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
         <h3 class="text-lg font-semibold text-content-primary mb-3">Location Settings</h3>
         <button
           @click="openMapPicker"
-          class="btn-primary flex items-center gap-2"
+          class="cfg-btn-primary flex items-center gap-2"
           title="Pick location on map"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -637,14 +637,14 @@ defineExpose({ requestLeave, isEditing: isDirty });
               <button
                 @click="applyGeneratedKey"
                 :disabled="keygenApplying"
-                class="px-3 py-1.5 bg-accent-red/opacity-light hover:bg-accent-red/opacity-light text-white rounded-lg text-xs transition-colors disabled:opacity-50"
+                class="cfg-btn-danger cfg-btn-sm"
               >
                 {{ keygenApplying ? 'Applying...' : 'Confirm Replace Key' }}
               </button>
               <button
                 @click="showApplyConfirm = false"
                 :disabled="keygenApplying"
-                class="btn-secondary-xs"
+                class="cfg-btn-secondary cfg-btn-sm"
               >
                 Cancel
               </button>
@@ -656,7 +656,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
             <button
               @click="showKeygenDialog = false"
               :disabled="keygenGenerating"
-              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors"
+              class="cfg-btn-secondary"
             >
               Close
             </button>
@@ -664,7 +664,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
               v-if="!keygenResult"
               @click="generateKey"
               :disabled="!isValidPrefix || keygenGenerating"
-              class="btn-primary"
+              class="cfg-btn-primary"
             >
               {{ keygenGenerating ? 'Generating...' : 'Generate' }}
             </button>
@@ -674,7 +674,7 @@ defineExpose({ requestLeave, isEditing: isDirty });
                   keygenResult = null;
                   keygenError = null;
                 "
-                class="btn-primary"
+                class="cfg-btn-primary"
               >
                 Try Again
               </button>
