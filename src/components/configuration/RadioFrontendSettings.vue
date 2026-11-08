@@ -63,15 +63,26 @@ const agcHint = computed(() =>
     : `Seconds, 0-${agcMax.value}; 0 turns it off`,
 );
 
+// A response for a radio that is no longer selected must not land on this one.
+let loadToken = 0;
+
 async function load() {
+  const token = ++loadToken;
   loading.value = true;
   try {
     const result = await ApiService.getRadioFrontend(props.radioId || undefined);
+    if (token !== loadToken) return;
     status.value = result.success ? result.data : null;
   } catch {
+    if (token !== loadToken) return;
     status.value = null;
   } finally {
-    loading.value = false;
+    if (token === loadToken) {
+      loading.value = false;
+      // Inputs opened before this radio's status arrived still hold the last
+      // radio's values; Save would send them here.
+      if (props.editing) resetInputs();
+    }
   }
 }
 

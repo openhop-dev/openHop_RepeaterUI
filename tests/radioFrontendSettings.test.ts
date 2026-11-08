@@ -328,6 +328,47 @@ function baudInput(wrapper: ReturnType<typeof mount>) {
     .find((i) => (i.element as HTMLInputElement).value === '115200')!;
 }
 
+describe('RadioFrontendSettings across radio switches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('ignores a slow response for a radio that is no longer selected', async () => {
+    let resolveSlow!: (value: unknown) => void;
+    apiMock.getRadioFrontend.mockImplementation((radioId?: string) =>
+      radioId === 'slow'
+        ? new Promise((resolve) => (resolveSlow = resolve))
+        : Promise.resolve({
+            success: true,
+            data: status({ running: { agc_reset_interval_seconds: 8 } }),
+          }),
+    );
+    const wrapper = mount(RadioFrontendSettings, { props: { editing: false, radioId: 'slow' } });
+    await wrapper.setProps({ radioId: 'fast' });
+    await flushPromises();
+    resolveSlow({ success: true, data: status({ running: { agc_reset_interval_seconds: 600 } }) });
+    await flushPromises();
+    expect(wrapper.get('[data-testid="frontend-agc"]').text()).toContain('8 s');
+  });
+
+  it('refills open inputs from the newly selected radio once it loads', async () => {
+    apiMock.getRadioFrontend.mockImplementation((radioId?: string) =>
+      Promise.resolve({
+        success: true,
+        data: status({
+          running: { agc_reset_interval_seconds: radioId === 'link' ? 60 : 32 },
+        }),
+      }),
+    );
+    const wrapper = mount(RadioFrontendSettings, { props: { editing: true, radioId: 'local' } });
+    await flushPromises();
+    await wrapper.setProps({ radioId: 'link' });
+    await flushPromises();
+    const input = wrapper.get('[data-testid="frontend-agc-input"]').element as HTMLInputElement;
+    expect(input.value).toBe('60');
+  });
+});
+
 describe('RadioHardwareSettings with the RF front end', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -444,6 +485,50 @@ describe('RadioHardwareSettings with the RF front end', () => {
     await flushPromises();
     expect(shown()).toBe(true);
     expect(ApiService.getRadioFrontend).toHaveBeenLastCalledWith('link');
+  });
+
+  it('saves a non-default radio’s front-end-only change live, without a restart', async () => {
+    apiMock.setRadioFrontend.mockResolvedValue(
+      applied(
+        { agc_reset_interval_seconds: 60, fem_rx_gain: false, rx_boosted_gain: true },
+        { agc_reset_interval_seconds: 60 },
+      ),
+    );
+    const config = {
+      ...kissConfig(),
+      radios: [
+        {
+          id: 'local',
+          radio_type: 'kiss',
+          radio: { ...AIR },
+          kiss: { port: '/dev/ttyACM0', baud_rate: 115200 },
+        },
+        {
+          id: 'link',
+          radio_type: 'modem_tcp',
+          radio: { ...AIR },
+          modem_tcp: { host: '192.0.2.7', port: 5055 },
+        },
+      ],
+      fabric: { default_radio: 'local', tx_mode: 'bridge' },
+    };
+    const wrapper = mountPage(config);
+    await flushPromises();
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().trim().startsWith('link'))!
+      .trigger('click');
+    await flushPromises();
+    await click(wrapper, 'Edit Settings');
+    await wrapper.get('[data-testid="frontend-agc-input"]').setValue(60);
+    await click(wrapper, 'Save Changes');
+
+    expect(ApiService.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 60 },
+      'link',
+    );
+    expect(ApiService.importConfig).not.toHaveBeenCalled();
+    expect(restartShown(wrapper)).toBe(false);
   });
 
   it('applies a non-default radio’s front end to that radio and saves it into its entry', async () => {

@@ -1657,11 +1657,17 @@ async function saveChanges(): Promise<boolean> {
     }
 
     // A front-end-only edit is done: don't resave the hardware or offer a restart.
-    // Without any edit, Save still writes the config as before (it also migrates
-    // legacy section names).
-    if (frontendChanged && JSON.stringify(importBody) === hardwareBaseline.value) {
-      isEditing.value = false;
-      return true;
+    // The overlay is applied to the baseline too, so on a multi-radio node the
+    // confirmed values alone do not read as a hardware change. Without any edit,
+    // Save still writes the config as before (it also migrates legacy section
+    // names).
+    if (frontendChanged && hardwareBaseline.value) {
+      const baseline = JSON.parse(hardwareBaseline.value) as Record<string, unknown>;
+      overlayFrontendConfigured(baseline, frontend!.configured, frontendRadioId.value ?? '');
+      if (JSON.stringify(importBody) === JSON.stringify(baseline)) {
+        isEditing.value = false;
+        return true;
+      }
     }
     return await persistImportBody(importBody);
   } finally {
