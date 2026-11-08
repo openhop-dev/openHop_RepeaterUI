@@ -896,6 +896,26 @@ function syncUiFromRulesJson() {
   uiRules.value = parsed.map((r, idx) => ruleToUi(r, idx));
 }
 
+/**
+ * Show or hide the JSON editor, carrying the rules across: opening it starts
+ * from the table, and closing it applies the JSON to the table, so neither view
+ * holds edits the other (and Save) would not see.
+ */
+function toggleAdvancedJson() {
+  if (useAdvancedJson.value) {
+    try {
+      syncUiFromRulesJson();
+    } catch (err) {
+      error.value = `Fix the rules JSON before hiding it: ${formatPolicyApiError(err, 'not valid JSON')}`;
+      return;
+    }
+    useAdvancedJson.value = false;
+    return;
+  }
+  syncRulesJsonFromUi();
+  useAdvancedJson.value = true;
+}
+
 function getRulesForSubmit(): Array<Record<string, unknown>> {
   if (useAdvancedJson.value) {
     return normalizeRulesFromEditor();
@@ -1445,7 +1465,7 @@ onMounted(loadPolicy);
                 <button
                   class="cfg-btn-secondary text-xs"
                   :disabled="saving"
-                  @click="useAdvancedJson = !useAdvancedJson"
+                  @click="toggleAdvancedJson"
                 >
                   {{ useAdvancedJson ? 'Hide JSON' : 'Advanced JSON' }}
                 </button>

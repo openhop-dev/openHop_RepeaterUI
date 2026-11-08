@@ -187,7 +187,7 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
     if (data.message || data.persisted) {
       txPowerNoticeConfirmed.value = false;
       selectedPrefillPreset.value = '';
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       dataService.invalidate('radioConfig');
       reset();
       if (!silent) showRestartModal.value = true;
@@ -209,10 +209,18 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
 
 const txPowerChanged = computed(() => txPower.value !== txPowerAtEditStart.value);
 
+// A save that waits on the TX power notice resolves once the notice is
+// confirmed (and the save done) or closed, so a save started from the
+// unsaved-changes prompt can still carry on with the navigation.
+let resolveNoticeSave: ((saved: boolean) => void) | null = null;
+
 const requestSaveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promise<boolean> => {
   if (txPowerChanged.value && !txPowerNoticeConfirmed.value) {
+    resolveNoticeSave?.(false);
     showTxPowerNoticeModal.value = true;
-    return false;
+    return new Promise<boolean>((resolve) => {
+      resolveNoticeSave = resolve;
+    });
   }
   return saveChanges({ silent });
 };
@@ -220,12 +228,16 @@ const requestSaveChanges = async ({ silent = false }: { silent?: boolean } = {})
 const confirmNoticeAndSave = async () => {
   if (!txPowerNoticeConfirmed.value) return;
   showTxPowerNoticeModal.value = false;
-  await saveChanges();
+  const saved = await saveChanges();
+  resolveNoticeSave?.(saved);
+  resolveNoticeSave = null;
 };
 
 const closeTxPowerNotice = () => {
   showTxPowerNoticeModal.value = false;
   txPowerNoticeConfirmed.value = false;
+  resolveNoticeSave?.(false);
+  resolveNoticeSave = null;
 };
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(

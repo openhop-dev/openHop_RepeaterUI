@@ -231,6 +231,9 @@ function addSensor() {
 // Edit sensor
 function beginEditSensor(index: number) {
   if (!draftConfig.value) return;
+  // Opening another row keeps the open row's edit in the page draft, where the
+  // save bar lists it, rather than dropping it.
+  if (editingIndex.value !== null && editingIndex.value !== index) saveEditSensor();
   editingIndex.value = index;
   editDraft.value = JSON.parse(JSON.stringify(draftConfig.value.definitions[index]));
 }
@@ -251,6 +254,14 @@ function saveEditSensor() {
 function removeSensor(index: number) {
   if (!draftConfig.value) return;
   draftConfig.value.definitions.splice(index, 1);
+  // Keep an open row editor on its own sensor: removing it closes the editor,
+  // and removing one above moves the editor up with its row.
+  if (editingIndex.value === index) {
+    editingIndex.value = null;
+    editDraft.value = null;
+  } else if (editingIndex.value !== null && editingIndex.value > index) {
+    editingIndex.value -= 1;
+  }
 }
 
 // Toggle sensor enabled

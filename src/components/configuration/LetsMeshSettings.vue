@@ -361,7 +361,7 @@ async function callSaveApi(): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await ApiService.post('/update_mqtt_config', buildPayload());
     if (res.success) {
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       await fetchStatus();
       return { success: true };
     }

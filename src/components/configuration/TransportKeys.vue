@@ -353,7 +353,7 @@ async function saveChanges(): Promise<boolean> {
     // Reloading takes a fresh snapshot of what the server now holds.
     snapshotUnscopedPolicy.value = unscopedFloodPolicy.value;
     await loadTransportKeys();
-    await systemStore.fetchStats();
+    await systemStore.fetchStats({ fresh: true });
     treeStore.setSelectedNode(null);
     return true;
   } catch (err) {

@@ -98,4 +98,38 @@ describe('PolicyEngineSettings without an edit mode', () => {
     expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
     expect(ApiService.updatePolicyDocument).not.toHaveBeenCalled();
   });
+
+  it('opens the JSON editor on a stored rule without reporting a change', async () => {
+    // A single-condition rule as stored; the table normalises it to an all-list.
+    const doc = structuredClone(DOCUMENT);
+    (doc.policy_engine.rules as unknown[]) = [
+      {
+        id: 1,
+        name: 'far',
+        enabled: true,
+        if: { field: 'hop_count', op: 'greater_than', value: 2 },
+        then: { action: 'drop' },
+      },
+    ];
+    apiMock.getPolicyDocument.mockResolvedValue({ success: true, data: doc });
+    const wrapper = mountPage();
+    await flushPromises();
+    await button(wrapper, 'Advanced JSON')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+  });
+
+  it('keeps the JSON editor open while its JSON does not parse', async () => {
+    const wrapper = mountPage();
+    await flushPromises();
+    await button(wrapper, 'Advanced JSON')!.trigger('click');
+    await wrapper.find('textarea').setValue('[ not json');
+    await flushPromises();
+    expect(changes(wrapper)).toEqual(['Rules JSON not valid yet']);
+
+    await button(wrapper, 'Hide JSON')!.trigger('click');
+    await flushPromises();
+    expect(button(wrapper, 'Hide JSON')).toBeDefined();
+    expect(wrapper.text()).toContain('Fix the rules JSON before hiding it');
+  });
 });

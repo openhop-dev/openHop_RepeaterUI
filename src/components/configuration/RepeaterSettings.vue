@@ -132,7 +132,7 @@ const saveChanges = async (): Promise<boolean> => {
     const data = response.data as any;
 
     if (data.message || data.persisted) {
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       reset();
       successMessage.value = data.message || 'Settings saved successfully';
       setTimeout(() => {
@@ -257,7 +257,7 @@ const applyGeneratedKey = async () => {
       showKeygenDialog.value = false;
       successMessage.value =
         'New identity key applied. Restart the repeater for the change to take effect.';
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       setTimeout(() => {
         successMessage.value = null;
       }, 8000);

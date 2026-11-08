@@ -66,7 +66,7 @@ async function saveChanges(): Promise<boolean> {
       | undefined;
     const inner = data?.data ?? data;
     if (data?.success || inner?.persisted || inner?.message) {
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       reset();
       successMessage.value = inner?.message || 'Settings saved successfully';
       setTimeout(() => {

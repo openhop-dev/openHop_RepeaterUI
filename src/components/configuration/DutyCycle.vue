@@ -56,7 +56,7 @@ async function saveChanges(): Promise<boolean> {
       | { message?: string; persisted?: boolean; error?: string }
       | undefined;
     if (data?.message || data?.persisted) {
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       reset();
       successMessage.value = data?.message || 'Settings saved successfully';
       setTimeout(() => {

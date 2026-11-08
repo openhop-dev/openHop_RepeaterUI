@@ -188,7 +188,7 @@ const saveChanges = async (): Promise<boolean> => {
 
     if (response.success) {
       successMessage.value = data?.message || 'Settings saved successfully';
-      await systemStore.fetchStats();
+      await systemStore.fetchStats({ fresh: true });
       await fetchStats();
       // The saved config is the new baseline.
       reset();

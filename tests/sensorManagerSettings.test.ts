@@ -370,4 +370,56 @@ describe('Sensor Manager', () => {
     expect(changes).toEqual(['Poll interval 30 s → 60 s', 'Edit sensor renamed']);
     wrapper.unmount();
   });
+
+  it('keeps an open row editor on its sensor when a sensor above it is removed', async () => {
+    vi.clearAllMocks();
+    vi.mocked(ApiService.getSensorTypes).mockResolvedValue({
+      success: true,
+      data: { types: [] },
+    } as never);
+    const def = (name: string) => ({
+      name,
+      _original_name: name,
+      type: 'openhop_modem',
+      enabled: true,
+      settings: { host: `${name}.local` },
+    });
+    vi.mocked(ApiService.getSensorConfig).mockResolvedValue({
+      success: true,
+      data: {
+        enabled: true,
+        poll_interval_seconds: 30,
+        auto_install_packages: false,
+        definitions: [def('a'), def('b'), def('c')],
+      },
+    } as never);
+    vi.mocked(ApiService.updateSensorConfig).mockResolvedValue({
+      success: true,
+      data: { saved: true, restart_required: false, message: 'saved' },
+    } as never);
+    const wrapper = mount(SensorManagerSettings, {
+      global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
+    });
+    await flushPromises();
+    // Edit b, then remove a above it, then save the page.
+    await wrapper
+      .findAll('button')
+      .filter((b) => b.text() === 'Edit')[1]
+      .trigger('click');
+    await wrapper.findAll('input[type="text"]')[0].setValue('b-renamed');
+    const remove = wrapper
+      .findAll('button')
+      .filter(
+        (b) => ['Remove', 'Delete', 'Del'].includes(b.text()) || b.attributes('title') === 'Remove',
+      );
+    await remove[0].trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save Changes')!
+      .trigger('click');
+    await flushPromises();
+    const saved = vi.mocked(ApiService.updateSensorConfig).mock.calls[0][0].definitions;
+    expect(saved.map((d: { name: string }) => d.name)).toEqual(['b-renamed', 'c']);
+    wrapper.unmount();
+  });
 });
