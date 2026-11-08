@@ -92,10 +92,9 @@ describe('Configuration panel routing (sidebar drives ?tab= query param)', () =>
   it('settles both pending tab navigations when keeping unsaved edits', async () => {
     const { wrapper, router } = await makeWrapper('/configuration', { tab: 'sensormanager' });
     try {
-      await wrapper
-        .findAll('button')
-        .find((button) => button.text() === 'Edit Sensors')!
-        .trigger('click');
+      // An unsaved edit; the page has no edit mode to enter.
+      await wrapper.find('input[type="number"]').setValue(45);
+      await flushPromises();
       const settled: string[] = [];
       const first = router.push('/configuration?tab=radio').then(() => settled.push('first'));
       await flushPromises();
@@ -114,10 +113,9 @@ describe('Configuration panel routing (sidebar drives ?tab= query param)', () =>
 
   it('asks before switching from unsaved Sensor Manager edits on the same route', async () => {
     const { wrapper, router } = await makeWrapper('/configuration', { tab: 'sensormanager' });
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Edit Sensors')!
-      .trigger('click');
+    // An unsaved edit; the page has no edit mode to enter.
+    await wrapper.find('input[type="number"]').setValue(45);
+    await flushPromises();
     const navigation = router.push('/configuration?tab=radio');
     await flushPromises();
     expect(wrapper.findComponent({ name: 'UnsavedChangesModal' }).props('show')).toBe(true);
@@ -130,10 +128,9 @@ describe('Configuration panel routing (sidebar drives ?tab= query param)', () =>
 
   it('asks before leaving Sensor Manager for another page', async () => {
     const { wrapper, router } = await makeWrapper('/configuration', { tab: 'sensormanager' });
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Edit Sensors')!
-      .trigger('click');
+    // An unsaved edit; the page has no edit mode to enter.
+    await wrapper.find('input[type="number"]').setValue(45);
+    await flushPromises();
     const navigation = router.push('/sensors');
     await flushPromises();
     expect(wrapper.findComponent({ name: 'UnsavedChangesModal' }).props('show')).toBe(true);
@@ -145,10 +142,9 @@ describe('Configuration panel routing (sidebar drives ?tab= query param)', () =>
   });
   it('switches tabs after explicitly discarding Sensor Manager edits', async () => {
     const { wrapper, router } = await makeWrapper('/configuration', { tab: 'sensormanager' });
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Edit Sensors')!
-      .trigger('click');
+    // An unsaved edit; the page has no edit mode to enter.
+    await wrapper.find('input[type="number"]').setValue(45);
+    await flushPromises();
     const navigation = router.push('/configuration?tab=radio');
     await flushPromises();
     await wrapper.findComponent({ name: 'UnsavedChangesModal' }).vm.$emit('discard');
@@ -160,10 +156,6 @@ describe('Configuration panel routing (sidebar drives ?tab= query param)', () =>
   it('saves an open row edit when confirming navigation to another page', async () => {
     vi.mocked(ApiService.updateSensorConfig).mockClear();
     const { wrapper, router } = await makeWrapper('/configuration', { tab: 'sensormanager' });
-    await wrapper
-      .findAll('button')
-      .find((b) => b.text() === 'Edit Sensors')!
-      .trigger('click');
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Edit')!

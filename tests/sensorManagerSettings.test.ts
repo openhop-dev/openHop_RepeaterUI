@@ -47,10 +47,6 @@ describe('Sensor Manager', () => {
       await flushPromises();
       await wrapper
         .findAll('button')
-        .find((b) => b.text() === 'Edit Sensors')!
-        .trigger('click');
-      await wrapper
-        .findAll('button')
         .find((b) => b.text() === 'Edit')!
         .trigger('click');
       await wrapper.findAll('input[type="text"]')[0].setValue('renamed');
@@ -114,7 +110,6 @@ describe('Sensor Manager', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('*****');
     expect(wrapper.text()).not.toContain('private-value');
-    await wrapper.get('button').trigger('click'); // Edit Sensors
     expect(wrapper.text()).not.toContain('private-value');
     await wrapper
       .findAll('button')
@@ -174,7 +169,6 @@ describe('Sensor Manager', () => {
     });
     await flushPromises();
     expect(wrapper.text()).toContain('legacy');
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((button) => button.text().includes('Add Sensor'))!
@@ -260,7 +254,6 @@ describe('Sensor Manager', () => {
       global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
     });
     await flushPromises();
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Edit')!
@@ -276,7 +269,8 @@ describe('Sensor Manager', () => {
       .trigger('click');
     await flushPromises();
     expect(vi.mocked(ApiService.getSensorConfig)).toHaveBeenCalledTimes(2);
-    await wrapper.get('button').trigger('click');
+    // An unrelated edit, so the second save has something to send.
+    await wrapper.find('input[type="number"]').setValue(45);
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Save Changes')!
@@ -317,7 +311,6 @@ describe('Sensor Manager', () => {
       global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
     });
     await flushPromises();
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Edit')!
@@ -334,6 +327,47 @@ describe('Sensor Manager', () => {
     expect(wrapper.text()).toContain('modem');
     expect(wrapper.text()).not.toContain('wrong-name');
     expect(ApiService.updateSensorConfig).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+
+  it('lists a sensor edit in the save bar while its row editor is still open', async () => {
+    vi.clearAllMocks();
+    vi.mocked(ApiService.getSensorTypes).mockResolvedValue({
+      success: true,
+      data: { types: [] },
+    } as never);
+    vi.mocked(ApiService.getSensorConfig).mockResolvedValue({
+      success: true,
+      data: {
+        enabled: true,
+        poll_interval_seconds: 30,
+        auto_install_packages: false,
+        definitions: [
+          {
+            name: 'modem',
+            _original_name: 'modem',
+            type: 'openhop_modem',
+            enabled: true,
+            settings: { host: 'a.local' },
+          },
+        ],
+      },
+    } as never);
+    const wrapper = mount(SensorManagerSettings, {
+      global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Edit')!
+      .trigger('click');
+    await wrapper.findAll('input[type="text"]')[0].setValue('renamed');
+    await wrapper.find('input[type="number"]').setValue(60);
+
+    const changes = wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
+    expect(changes).toEqual(['Poll interval 30 s → 60 s', 'Edit sensor renamed']);
     wrapper.unmount();
   });
 });

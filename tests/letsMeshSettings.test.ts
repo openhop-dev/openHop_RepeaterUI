@@ -180,7 +180,7 @@ describe('LetsMeshSettings without an edit mode', () => {
   });
 
   it('lists an edit and saves it', async () => {
-    vi.mocked(ApiService.post).mockResolvedValue(MQTT_SAVE_RESPONSE as any);
+    vi.mocked(ApiService.post).mockResolvedValue(MQTT_SAVE_RESPONSE as never);
     const wrapper = mountComponent();
     await flushPromises();
     await iata(wrapper).setValue('SEA');
