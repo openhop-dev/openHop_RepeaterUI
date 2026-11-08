@@ -237,7 +237,8 @@ describe('fabric fan-out controls', () => {
       bridgeConfig({ repeat_on_ingress: true, origin_tx: 'all' }),
     );
     await flushPromises();
-    await buttonWithText(wrapper, 'Go back to one radio')!.trigger('click');
+    await edit(wrapper);
+    await buttonWithText(wrapper, 'Use one radio')!.trigger('click');
     await flushPromises();
     await buttonWithText(wrapper, 'Save Changes')!.trigger('click');
     await flushPromises();

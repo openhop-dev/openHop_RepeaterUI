@@ -2134,15 +2134,6 @@ watch(selectedRadioType, (type, previous) => {
             {{ fabricTxMode }} · default TX {{ fabricDefaultRadio || '—' }}
           </span>
         </button>
-        <button
-          v-if="!isStagingDisableMultiRadio"
-          type="button"
-          class="self-start text-xs text-content-muted hover:text-accent-red underline-offset-2 hover:underline mt-1"
-          :disabled="multiRadioBusy || isSaving"
-          @click="disableMultiRadio"
-        >
-          Go back to one radio
-        </button>
       </nav>
 
       <div class="flex-[999_1_560px] min-w-0 space-y-4">
@@ -2208,6 +2199,26 @@ watch(selectedRadioType, (type, previous) => {
                 </span>
               </p>
             </label>
+          </div>
+
+          <div
+            class="pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-light flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div>
+              <div class="text-sm font-semibold text-content-primary">Use one radio</div>
+              <p class="text-xs text-content-muted mt-1">
+                Saving removes the radio list and these routing options. The repeater then runs one
+                radio from the top-level settings, which match the default TX radio as last saved.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="cfg-btn-danger cfg-btn-sm self-start sm:self-auto whitespace-nowrap"
+              :disabled="multiRadioBusy || isSaving"
+              @click="disableMultiRadio"
+            >
+              Use one radio
+            </button>
           </div>
         </section>
 
