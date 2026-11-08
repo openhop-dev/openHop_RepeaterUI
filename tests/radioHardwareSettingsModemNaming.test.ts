@@ -63,11 +63,14 @@ describe('RadioHardwareSettings modem transport naming', () => {
     });
     await flushPromises();
 
+    const values = wrapper.findAll('input').map((i) => (i.element as HTMLInputElement).value);
     expect(wrapper.text()).toContain('openHop Modem');
-    expect(wrapper.text()).toContain('canonical.local');
-    expect(wrapper.text()).toContain('6000');
-    expect(wrapper.text()).not.toContain('legacy.local');
-    expect(wrapper.text()).not.toContain('legacy-secret');
+    expect(values).toContain('canonical.local');
+    expect(values).toContain('6000');
+    expect(values).not.toContain('legacy.local');
+    expect(values).not.toContain('legacy-secret');
+    // The token stays in a password field, never in the page text.
+    expect(wrapper.find('input[type="password"]').exists()).toBe(true);
     expect(wrapper.text()).not.toContain('canonical-secret');
     expect(wrapper.text()).not.toContain('pymc_tcp firmware modem');
   });
@@ -79,13 +82,16 @@ describe('RadioHardwareSettings modem transport naming', () => {
     });
     await flushPromises();
 
-    await buttonWithText(wrapper, 'Edit Settings')!.trigger('click');
+    const port = wrapper
+      .findAll('input[type="number"]')
+      .find((i) => (i.element as HTMLInputElement).value === '5055')!;
+    await port.setValue(5056);
     await buttonWithText(wrapper, 'Save Changes')!.trigger('click');
     await flushPromises();
 
     expect(ApiService.importConfig).toHaveBeenCalledWith({
       radio_type: 'modem_tcp',
-      modem_tcp: { host: 'legacy.local', port: 5055 },
+      modem_tcp: { host: 'legacy.local', port: 5056 },
     });
   });
 
@@ -96,7 +102,6 @@ describe('RadioHardwareSettings modem transport naming', () => {
     });
     await flushPromises();
 
-    await buttonWithText(wrapper, 'Edit Settings')!.trigger('click');
     const tokenInput = wrapper.find('input[type="password"]');
     expect(tokenInput.exists()).toBe(true);
     await tokenInput.setValue('new-user-token');

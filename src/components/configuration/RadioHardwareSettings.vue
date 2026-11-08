@@ -8,6 +8,8 @@ import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 import { useMultiRadioConfig } from '@/composables/useMultiRadioConfig';
 import RadioFrontendSettings from '@/components/configuration/RadioFrontendSettings.vue';
+import SaveBar, { type SaveBarChange } from '@/components/ui/SaveBar.vue';
+import { diffChanges, formatChangeValue, type FieldChange } from '@/utils/changeSet';
 import {
   normalizeModemHardwareOptions,
   normalizeModemTransportConfig,
@@ -89,7 +91,6 @@ const config = computed<Record<string, any>>(() => {
   return normalizeModemTransportConfig({ ...stats, ...nested });
 });
 
-const isEditing = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref('');
 const showRestartModal = ref(false);
@@ -230,7 +231,7 @@ const canOriginTxAll = computed(() => originTxAllBlockedReason.value === '');
  * Older daemons omit the keys; say nothing rather than guess.
  */
 const fanoutPendingRestart = computed(() => {
-  if (hasUnsavedMultiRadioDraft.value || isEditing.value) return false;
+  if (hasUnsavedMultiRadioDraft.value || isDirty.value) return false;
   const live = radioStack.value || {};
   if (live.repeat_on_ingress === undefined && live.origin_tx === undefined) return false;
   return (
@@ -267,6 +268,54 @@ const workingSelectedEntry = computed<Record<string, unknown> | null>(() => {
   const id = workingSelectedId.value;
   return workingRadios.value.find((r) => String(r.id) === id) ?? null;
 });
+
+/**
+ * Unsaved changes. The form is always editable; nothing is written until Save.
+ *
+ * Each radio's hardware payload, as its form produced it when loaded from the
+ * saved config, is the baseline the form is compared with. Edits to a radio the
+ * form moves away from are kept in pendingPayloads and saved with the rest, so
+ * switching radios no longer needs the page locked.
+ */
+/** Right-hand panel on a multi-radio node: the selected radio, or the fabric's routing. */
+const activePanel = ref<'radio' | 'routing'>('radio');
+/** Key of the radio the form shows: its radios[] id, or '' on a single-radio node. */
+const formKey = computed(() => (showMultiRadioChrome.value ? workingSelectedId.value : ''));
+const baselinePayloads = ref<Record<string, string>>({});
+const pendingPayloads = ref<Record<string, Record<string, unknown>>>({});
+/** Front-end values each modem confirmed since the last save, by radio id ('' = default). */
+const liveConfigured = ref<Record<string, Record<string, unknown>>>({});
+const fabricBaseline = ref('');
+
+const formPayload = computed(() => buildPayload());
+const formDirty = computed(() => {
+  const base = baselinePayloads.value[formKey.value];
+  return base !== undefined && JSON.stringify(formPayload.value) !== base;
+});
+const fabricState = computed(() =>
+  JSON.stringify({
+    default_radio: fabricDefaultRadio.value,
+    tx_mode: fabricTxMode.value,
+    repeat_on_ingress: fabricRepeatOnIngress.value,
+    origin_tx: fabricOriginTx.value,
+  }),
+);
+const fabricDirty = computed(
+  () =>
+    showMultiRadioChrome.value &&
+    !isDraftingMultiRadio.value &&
+    fabricBaseline.value !== '' &&
+    fabricState.value !== fabricBaseline.value,
+);
+const isDirty = computed(
+  () =>
+    hasUnsavedMultiRadioDraft.value ||
+    formDirty.value ||
+    Object.keys(pendingPayloads.value).length > 0 ||
+    fabricDirty.value,
+);
+// The page-wide edit mode this replaces; Configuration's tab guard reads it.
+const isEditing = isDirty;
 
 function asString(value: unknown, fallback = ''): string {
   if (value === null || value === undefined) return fallback;
@@ -569,6 +618,7 @@ function loadFabricForm() {
   // changes during that hydration, so the watcher never runs. Without this the
   // form would show a checked *and* disabled box, then silently save it off.
   clampFanoutToLegal();
+  fabricBaseline.value = fabricState.value;
 }
 
 function sectionsFromEntry(entry: Record<string, unknown> | null) {
@@ -595,38 +645,76 @@ function sectionsFromEntry(entry: Record<string, unknown> | null) {
 }
 
 function selectWorkingRadio(id: string) {
+  activePanel.value = 'radio';
+  if (id === workingSelectedId.value) return;
   if (isDraftingMultiRadio.value) {
     // Persist in-progress form into the draft entry before switching.
-    if (isEditing.value) {
-      const payload = buildHardwarePayloadFromForm();
-      if (!payload) return;
-      const currentId = workingSelectedId.value;
-      draftRadios.value = (draftRadios.value || []).map((entry) => {
-        if (String(entry.id) !== currentId) return entry;
-        return applyPayloadToEntry(entry, payload);
-      });
-    }
+    const payload = buildHardwarePayloadFromForm();
+    if (!payload) return;
+    const currentId = workingSelectedId.value;
+    draftRadios.value = (draftRadios.value || []).map((entry) => {
+      if (String(entry.id) !== currentId) return entry;
+      return applyPayloadToEntry(entry, payload);
+    });
     draftSelectedId.value = id;
     const entry = (draftRadios.value || []).find((r) => String(r.id) === id) || null;
     loadHardwareFormFromSections(sectionsFromEntry(entry));
-    isEditing.value = true;
     errorMessage.value = '';
     return;
   }
-  if (isEditing.value) {
-    errorMessage.value = 'Finish or cancel editing before switching radios.';
-    return;
-  }
+  // Keep this radio's edits for Save; a form back at its baseline keeps none.
+  if (!stashFormEdits()) return;
   selectRadio(id);
+  loadSelectedRadio();
+}
+
+/** Move the form's edits into pendingPayloads; false (errorMessage set) when invalid. */
+function stashFormEdits(): boolean {
+  const key = formKey.value;
+  const others = { ...pendingPayloads.value };
+  delete others[key];
+  if (!formDirty.value) {
+    pendingPayloads.value = others;
+    return true;
+  }
+  const payload = buildHardwarePayloadFromForm();
+  if (!payload) return false;
+  pendingPayloads.value = { ...others, [key]: payload };
+  errorMessage.value = '';
+  return true;
+}
+
+/**
+ * Load the selected radio from the saved config, record that as its baseline,
+ * then put back any edits kept for it.
+ */
+function loadSelectedRadio() {
+  const key = formKey.value;
+  loadActiveHardwareAndAir();
+  baselinePayloads.value = { ...baselinePayloads.value, [key]: JSON.stringify(buildPayload()) };
+  const pending = pendingPayloads.value[key];
+  const entry = radios.value.find((r) => r.id === key) as Record<string, unknown> | undefined;
+  if (pending && entry) {
+    loadHardwareFormFromSections(
+      sectionsFromEntry(withInherited(applyPayloadToEntry({ ...entry }, pending))),
+    );
+  }
 }
 
 function loadActiveHardwareAndAir() {
   const entry = isMultiRadio.value
     ? (radios.value.find((r) => r.id === effectiveSelectedId.value) as Record<string, unknown> | undefined)
     : null;
+  if (entry) {
+    // An entry overlays the top-level sections key by key; load what the
+    // repeater builds, not the entry alone, so an inherited port or a partial
+    // radio section is not replaced by form defaults on the next save.
+    loadHardwareFormFromSections(sectionsFromEntry(withInherited(entry)));
+    return;
+  }
   loadHardwareFormFromSections({
     radio_type: activeHardware.value.radio_type ?? config.value.radio_type,
-    radio: (entry?.radio as Record<string, unknown>) || config.value.radio,
+    radio: config.value.radio,
     kiss: activeHardware.value.kiss,
     modem_usb: activeHardware.value.modem_usb,
     modem_tcp: activeHardware.value.modem_tcp,
@@ -638,18 +726,18 @@ function loadActiveHardwareAndAir() {
 watch(
   config,
   () => {
-    if (isDraftingMultiRadio.value || isEditing.value) return;
+    if (isDirty.value) return;
     ensureSelection();
-    loadActiveHardwareAndAir();
+    loadSelectedRadio();
     loadFabricForm();
   },
   { immediate: true },
 );
 
 watch(effectiveSelectedId, () => {
-  if (isDraftingMultiRadio.value || isEditing.value) return;
+  if (isDirty.value) return;
   ensureSelection();
-  loadActiveHardwareAndAir();
+  loadSelectedRadio();
 });
 
 const currentRadioType = computed(() => {
@@ -659,48 +747,18 @@ const currentRadioType = computed(() => {
   return normalizeRadioType(activeHardware.value.radio_type ?? config.value.radio_type);
 });
 
-const currentRadioTypeLabel = computed(() => {
-  const match = radioTypeOptions.find((opt) => opt.value === currentRadioType.value);
-  return match ? `${match.label} - ${match.detail}` : 'none - Disable radio hardware (no RF I/O)';
-});
-
-// What Save would send if nothing were edited, so a front-end-only change does not
-// resave the hardware or offer a restart.
-const hardwareBaseline = ref('');
-
-function startEditing() {
-  selectedRadioType.value = currentRadioType.value;
-  const payload = buildHardwarePayloadFromForm();
-  hardwareBaseline.value = payload ? JSON.stringify(existingSaveBody(payload)) : '';
-  isEditing.value = true;
-  errorMessage.value = '';
-  if (showMultiRadioChrome.value && setupStore.radioPresets.length === 0) {
-    void setupStore.fetchRadioPresets();
-  }
-}
-
+/** Discard every unsaved change: drafts, kept edits, and the form's own. */
 function cancelEditing() {
-  if (hasUnsavedMultiRadioDraft.value) {
-    // Discard multi-radio draft / staged disable and restore live config view.
-    draftRadios.value = null;
-    draftSelectedId.value = '';
-    isEditing.value = false;
-    errorMessage.value = '';
-    useCustomSerialPath.value = false;
-    selectedBoardPresetKey.value = '';
-    selectedAirPresetTitle.value = '';
-    ensureSelection();
-    loadActiveHardwareAndAir();
-    loadFabricForm();
-    return;
-  }
-  selectedRadioType.value = currentRadioType.value;
-  isEditing.value = false;
+  draftRadios.value = null;
+  draftSelectedId.value = '';
+  pendingPayloads.value = {};
   errorMessage.value = '';
   useCustomSerialPath.value = false;
   selectedBoardPresetKey.value = '';
   selectedAirPresetTitle.value = '';
-  loadActiveHardwareAndAir();
+  ensureSelection();
+  loadSelectedRadio();
+  loadFabricForm();
 }
 
 function parseEnPins(input: string): number[] {
@@ -1205,35 +1263,36 @@ function validateMultiRadioHardware(
   return null;
 }
 
-function buildHardwarePayloadFromForm(): Record<string, unknown> | null {
+/** Why the form cannot be saved as it stands, or ''. */
+function formValidationError(): string {
   if (selectedRadioType.value === 'modem_tcp' && !modemTcpHost.value.trim()) {
-    errorMessage.value = 'TCP modem host is required for modem_tcp';
-    return null;
+    return 'TCP modem host is required for modem_tcp';
   }
-
   if (showMultiRadioChrome.value) {
     const freq = asNumber(airFrequencyMHz.value, 0);
     const txp = asNumber(airTxPower.value, 0);
     const sf = asNumber(airSpreadingFactor.value, 0);
     const cr = asNumber(airCodingRate.value, 0);
-    if (freq < 100 || freq > 1000) {
-      errorMessage.value = 'Frequency must be between 100 and 1000 MHz';
-      return null;
-    }
-    if (txp < -9 || txp > 30) {
-      errorMessage.value = 'TX Power must be between -9 and +30 dBm';
-      return null;
-    }
-    if (sf < 5 || sf > 12) {
-      errorMessage.value = 'Spreading factor must be 5-12';
-      return null;
-    }
-    if (cr < 5 || cr > 8) {
-      errorMessage.value = 'Coding rate must be 5-8';
-      return null;
-    }
+    if (freq < 100 || freq > 1000) return 'Frequency must be between 100 and 1000 MHz';
+    if (txp < -9 || txp > 30) return 'TX Power must be between -9 and +30 dBm';
+    if (sf < 5 || sf > 12) return 'Spreading factor must be 5-12';
+    if (cr < 5 || cr > 8) return 'Coding rate must be 5-8';
   }
+  return '';
+}
 
+/** The form's hardware payload after checking it; null (and errorMessage set) when invalid. */
+function buildHardwarePayloadFromForm(): Record<string, unknown> | null {
+  const error = formValidationError();
+  if (error) {
+    errorMessage.value = error;
+    return null;
+  }
+  return buildPayload();
+}
+
+/** The form's hardware payload as it stands, unchecked. */
+function buildPayload(): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     radio_type: selectedRadioType.value === 'none' ? null : selectedRadioType.value,
   };
@@ -1336,21 +1395,24 @@ function frontendKeysOf(section: unknown): Record<string, unknown> {
 }
 
 /**
- * Write the default radio's confirmed front-end values into a save body.
+ * Write a radio's confirmed front-end values into a save body.
  *
  * A radios[] entry is replaced whole on import, so an entry built before the
- * front end was applied would put the old AGC/FEM values back. The mirrored
- * top-level section is merged key by key and would do the same.
+ * front end was applied would put the old AGC/FEM values back. The default
+ * radio's entry is mirrored into the top-level section, which is merged key by
+ * key and would do the same; another radio's entry is not mirrored.
  */
 function overlayFrontendConfigured(
   importBody: Record<string, unknown>,
   configured: Record<string, unknown>,
+  radioId: string,
 ) {
   const entries = importBody.radios;
   if (!Array.isArray(entries)) return;
   const fabricCfg = (importBody.fabric || {}) as Record<string, unknown>;
   const defId = String(fabricCfg.default_radio || entries[0]?.id || '');
-  const index = entries.findIndex((r) => String((r as Record<string, unknown>).id) === defId);
+  const targetId = radioId || defId;
+  const index = entries.findIndex((r) => String((r as Record<string, unknown>).id) === targetId);
   if (index < 0) return;
   const entry = { ...(entries[index] as Record<string, unknown>) };
   const name = FRONTEND_SECTIONS[normalizeRadioType(entry.radio_type)];
@@ -1360,12 +1422,31 @@ function overlayFrontendConfigured(
   Object.assign(section, frontendKeysOf(configured));
   entry[name] = section;
   importBody.radios = entries.map((r, i) => (i === index ? entry : r));
-  if (importBody[name] && typeof importBody[name] === 'object') {
+  if (targetId === defId && importBody[name] && typeof importBody[name] === 'object') {
     importBody[name] = { ...(importBody[name] as Record<string, unknown>), ...section };
     for (const key of FRONTEND_KEYS) {
       if (!(key in section)) delete (importBody[name] as Record<string, unknown>)[key];
     }
   }
+}
+
+/**
+ * Write front-end values the modems confirmed since the last save into a save
+ * body, so entries built from a config read before those applies do not put
+ * the old values back.
+ */
+function overlayLiveFrontend(importBody: Record<string, unknown>) {
+  for (const [radioId, configured] of Object.entries(liveConfigured.value)) {
+    overlayFrontendConfigured(importBody, configured, radioId);
+  }
+}
+
+/** A live front-end apply is in flight; Save waits for it so its body carries the result. */
+const frontendBusy = ref(false);
+
+function onFrontendApplied(configured: Record<string, unknown>, radioId: string | undefined) {
+  liveConfigured.value = { ...liveConfigured.value, [radioId ?? '']: configured };
+  void systemStore.fetchStats({ fresh: true });
 }
 
 function applyPayloadToEntry(
@@ -1417,10 +1498,12 @@ function applyPayloadToEntry(
 /** Save body for an existing single- or multi-radio node (not a multi-radio draft). */
 function existingSaveBody(payload: Record<string, unknown>): Record<string, unknown> {
   if (isMultiRadio.value && effectiveSelectedId.value) {
-    // Existing multi-radio: update the selected entry only.
+    // Existing multi-radio: the selected radio's form, plus edits kept for others.
     const nextRadios = radios.value.map((entry) => {
-      if (entry.id !== effectiveSelectedId.value) return { ...entry } as Record<string, unknown>;
-      return applyPayloadToEntry({ ...entry } as Record<string, unknown>, payload);
+      const edits =
+        entry.id === effectiveSelectedId.value ? payload : pendingPayloads.value[entry.id];
+      if (!edits) return { ...entry } as Record<string, unknown>;
+      return applyPayloadToEntry({ ...entry } as Record<string, unknown>, edits);
     });
     const importBody: Record<string, unknown> = {
       radios: nextRadios,
@@ -1444,9 +1527,11 @@ async function persistImportBody(importBody: Record<string, unknown>): Promise<b
     }
     draftRadios.value = null;
     draftSelectedId.value = '';
-    isEditing.value = false;
-    await systemStore.fetchStats();
+    pendingPayloads.value = {};
+    await systemStore.fetchStats({ fresh: true });
+    liveConfigured.value = {};
     ensureSelection();
+    loadSelectedRadio();
     loadFabricForm();
     showRestartModal.value = true;
     return true;
@@ -1460,8 +1545,8 @@ async function persistImportBody(importBody: Record<string, unknown>): Promise<b
 }
 
 function enableMultiRadio() {
-  if (isEditing.value && !isDraftingMultiRadio.value) {
-    errorMessage.value = 'Finish or cancel hardware editing before enabling multi-radio.';
+  if (isDirty.value && !isDraftingMultiRadio.value) {
+    errorMessage.value = 'Save or discard your changes before adding a second radio.';
     return;
   }
   errorMessage.value = '';
@@ -1472,18 +1557,36 @@ function enableMultiRadio() {
   draftSelectedId.value = secondaryId;
   fabricDefaultRadio.value = 'local';
   fabricTxMode.value = 'bridge';
-  isEditing.value = true;
+  activePanel.value = 'radio';
   if (setupStore.radioPresets.length === 0) {
     void setupStore.fetchRadioPresets();
   }
   loadHardwareFormFromSections(sectionsFromEntry(secondary));
 }
 
+/** The radios as edited so far: the draft, else the saved radios with kept and form edits. */
+function editedRadios(): Array<Record<string, unknown>> | null {
+  if (draftRadios.value) {
+    const payload = buildHardwarePayloadFromForm();
+    if (!payload) return null;
+    const currentId = workingSelectedId.value;
+    draftRadios.value = draftRadios.value.map((entry) =>
+      String(entry.id) === currentId ? applyPayloadToEntry(entry, payload) : entry,
+    );
+    return draftRadios.value.map((r) => ({ ...r }));
+  }
+  if (!stashFormEdits()) return null;
+  return radios.value.map((entry) => {
+    const edits = pendingPayloads.value[entry.id];
+    const copy = { ...entry } as Record<string, unknown>;
+    return edits ? applyPayloadToEntry(copy, edits) : copy;
+  });
+}
+
 function addRadioEntry() {
   errorMessage.value = '';
-  const base = draftRadios.value
-    ? draftRadios.value.map((r) => ({ ...r }))
-    : radios.value.map((r) => ({ ...r }) as Record<string, unknown>);
+  const base = editedRadios();
+  if (!base) return;
   if (!base.length) {
     enableMultiRadio();
     return;
@@ -1506,16 +1609,16 @@ function addRadioEntry() {
   draftRadios.value = [...(draftRadios.value || base), shell];
   draftSelectedId.value = id;
   newRadioId.value = '';
-  isEditing.value = true;
+  activePanel.value = 'radio';
   loadHardwareFormFromSections(sectionsFromEntry(shell));
 }
 
 function removeSelectedRadio() {
   if (!showMultiRadioChrome.value || !workingSelectedId.value) return;
   errorMessage.value = '';
-  const base = draftRadios.value
-    ? draftRadios.value.map((r) => ({ ...r }))
-    : radios.value.map((r) => ({ ...r }) as Record<string, unknown>);
+  const removedId = workingSelectedId.value;
+  const base = editedRadios();
+  if (!base) return;
   if (base.length <= 2) {
     // Exit multi-radio: draft clear if only local draft, else mark disable via empty draft sentinel.
     if (isDraftingMultiRadio.value && !isMultiRadio.value) {
@@ -1524,17 +1627,15 @@ function removeSelectedRadio() {
     }
     draftRadios.value = [];
     draftSelectedId.value = '';
-    isEditing.value = false;
     return;
   }
-  const next = base.filter((r) => String(r.id) !== workingSelectedId.value);
+  const next = base.filter((r) => String(r.id) !== removedId);
   draftRadios.value = next;
   const nextSelect = String(next[0]?.id || '');
   draftSelectedId.value = nextSelect;
-  if (fabricDefaultRadio.value === workingSelectedId.value) {
+  if (fabricDefaultRadio.value === removedId) {
     fabricDefaultRadio.value = nextSelect;
   }
-  isEditing.value = false;
   loadHardwareFormFromSections(sectionsFromEntry(next[0] || null));
 }
 
@@ -1546,7 +1647,6 @@ function disableMultiRadio() {
   // Stage disable; applied on Save Changes.
   draftRadios.value = [];
   draftSelectedId.value = '';
-  isEditing.value = true;
   errorMessage.value = '';
   loadHardwareFormFromSections({
     radio_type: config.value.radio_type,
@@ -1560,6 +1660,7 @@ function disableMultiRadio() {
 }
 
 async function saveChanges(): Promise<boolean> {
+  if (frontendBusy.value) return false;
   isSaving.value = true;
   errorMessage.value = '';
 
@@ -1612,7 +1713,7 @@ async function saveChanges(): Promise<boolean> {
 
       draftRadios.value = nextRadios;
 
-      const conflict = validateMultiRadioHardware(nextRadios);
+      const conflict = validateMultiRadioHardware(nextRadios.map(withInherited));
       if (conflict) {
         errorMessage.value = conflict.message;
         if (conflict.radioId) {
@@ -1620,7 +1721,6 @@ async function saveChanges(): Promise<boolean> {
           draftSelectedId.value = conflict.radioId;
           const entry = nextRadios.find((r) => String(r.id) === conflict.radioId) || null;
           loadHardwareFormFromSections(sectionsFromEntry(entry));
-          isEditing.value = true;
         }
         return false;
       }
@@ -1630,34 +1730,26 @@ async function saveChanges(): Promise<boolean> {
         fabric: buildFabricPayload(nextRadios),
       };
       mirrorDefaultRadioToLegacy(importBody, nextRadios);
+      overlayLiveFrontend(importBody);
       return await persistImportBody(importBody);
     }
 
     const importBody = existingSaveBody(payload);
     if (isMultiRadio.value && effectiveSelectedId.value) {
-      const conflict = validateMultiRadioHardware(importBody.radios as Record<string, unknown>[]);
+      const conflict = validateMultiRadioHardware(
+        (importBody.radios as Record<string, unknown>[]).map(withInherited),
+      );
       if (conflict) {
         errorMessage.value = conflict.message;
-        if (conflict.radioId) selectRadio(conflict.radioId);
+        if (conflict.radioId && conflict.radioId !== effectiveSelectedId.value) {
+          const message = conflict.message;
+          selectWorkingRadio(conflict.radioId);
+          errorMessage.value = message;
+        }
         return false;
       }
     }
-
-    // RF front end first: it applies live, and a failure keeps the page in edit
-    // mode with the reason shown next to those rows.
-    const frontend = frontendRef.value;
-    if (frontend && frontend.validate()) return false;
-    const frontendChanged = !!frontend?.hasChanges();
-    if (frontendChanged && !(await frontend!.apply())) return false;
-    if (frontendChanged) overlayFrontendConfigured(importBody, frontend!.configured);
-
-    // A front-end-only edit is done: don't resave the hardware or offer a restart.
-    // Without any edit, Save still writes the config as before (it also migrates
-    // legacy section names).
-    if (frontendChanged && JSON.stringify(importBody) === hardwareBaseline.value) {
-      isEditing.value = false;
-      return true;
-    }
+    overlayLiveFrontend(importBody);
     return await persistImportBody(importBody);
   } finally {
     isSaving.value = false;
@@ -1693,6 +1785,24 @@ function radioHardwareReady(entry: Record<string, unknown>): boolean {
   return true;
 }
 
+/**
+ * An entry as the repeater builds it: each section overlays the top-level one
+ * key by key (_merge_radio_entry), so a value the entry inherits still shows.
+ */
+function withInherited(entry: Record<string, unknown>): Record<string, unknown> {
+  const merged: Record<string, unknown> = { ...entry };
+  // Listed here, not as a module constant: the form loads during setup, before
+  // later declarations in this script are initialised.
+  for (const name of ['radio', 'kiss', 'modem_usb', 'modem_tcp', 'sx1262', 'ch341']) {
+    const top = config.value[name];
+    const own = entry[name];
+    if (top && typeof top === 'object') {
+      merged[name] = { ...(top as Record<string, unknown>), ...((own as Record<string, unknown>) || {}) };
+    }
+  }
+  return merged;
+}
+
 function radioAirSummary(entry: Record<string, unknown>): string {
   const r = (entry.radio as Record<string, unknown>) || {};
   const freq = r.frequency ? (Number(r.frequency) / 1e6).toFixed(3) : '?';
@@ -1709,30 +1819,140 @@ const workingRadioCards = computed(() =>
       radio_type: String(r.radio_type ?? 'unknown'),
       isDefault: id === (fabricDefaultRadio.value || workingRadios.value[0] && String(workingRadios.value[0].id)),
       isSelected: id === workingSelectedId.value,
-      hwReady: radioHardwareReady(r),
-      airSummary: radioAirSummary(r),
+      hwReady: radioHardwareReady(withInherited(r)),
+      airSummary: radioAirSummary(withInherited(r)),
+      edited:
+        id in pendingPayloads.value ||
+        (id === formKey.value && formDirty.value) ||
+        (isDraftingMultiRadio.value && id === workingSelectedId.value),
     };
   }),
 );
 
 const activeRadioLabel = computed(() => workingSelectedId.value || '—');
 
+const FIELD_LABELS: Record<string, string> = {
+  radio_type: 'Radio type',
+  'radio.frequency': 'Frequency',
+  'radio.bandwidth': 'Bandwidth',
+  'radio.spreading_factor': 'Spreading factor',
+  'radio.coding_rate': 'Coding rate',
+  'radio.tx_power': 'TX power',
+  'radio.preamble_length': 'Preamble',
+  'kiss.port': 'Serial port',
+  'kiss.baud_rate': 'Baud rate',
+  'modem_usb.port': 'Serial port',
+  'modem_usb.baudrate': 'Baud rate',
+  'modem_tcp.host': 'Host',
+  'modem_tcp.port': 'Port',
+  'modem_tcp.token': 'TCP token',
+  'sx1262.bus_id': 'SPI bus',
+  'sx1262.cs_id': 'SPI CS',
+  'sx1262.cs_pin': 'CS pin',
+  'sx1262.reset_pin': 'Reset pin',
+  'sx1262.busy_pin': 'Busy pin',
+  'sx1262.irq_pin': 'IRQ pin',
+  'sx1262.txen_pin': 'TX enable pin',
+  'sx1262.rxen_pin': 'RX enable pin',
+  'sx1262.en_pin': 'Power enable pin',
+  'sx1262.en_pins': 'Power enable pins',
+  'sx1262.txled_pin': 'TX LED pin',
+  'sx1262.rxled_pin': 'RX LED pin',
+  'sx1262.use_dio2_rf': 'DIO2 RF switch',
+  'sx1262.use_dio3_tcxo': 'DIO3 TCXO',
+  'sx1262.dio3_tcxo_voltage': 'TCXO voltage',
+  'sx1262.is_waveshare': 'Waveshare board',
+  'ch341.vid': 'CH341 VID',
+  'ch341.pid': 'CH341 PID',
+  'ch341.bus': 'USB bus',
+  'ch341.address': 'USB address',
+  'ch341.serial_number': 'USB serial',
+};
+
+function changeValue(path: string, value: unknown): string {
+  if (value === undefined || value === null || value === '') return '—';
+  if (path === 'modem_tcp.token') return 'set';
+  const n = Number(value);
+  if (path === 'radio.frequency' && Number.isFinite(n)) return `${(n / 1e6).toFixed(3)} MHz`;
+  if (path === 'radio.bandwidth' && Number.isFinite(n)) return `${n / 1000} kHz`;
+  if (path === 'radio.coding_rate') return `4/${value}`;
+  if (path === 'radio.tx_power') return `${value} dBm`;
+  return formatChangeValue(value);
+}
+
+function radioChanges(key: string, before: unknown, after: unknown): SaveBarChange[] {
+  let changes: FieldChange[] = diffChanges(before, after);
+  // A new radio type swaps whole sections; name the type, not every field.
+  if (changes.some((c) => c.path === 'radio_type')) {
+    changes = changes.filter((c) => c.from !== undefined && c.to !== undefined);
+  }
+  return changes.map((c) => ({
+    label: `${key ? `${key} › ` : ''}${FIELD_LABELS[c.path] ?? c.path}`,
+    detail: `${changeValue(c.path, c.from)} → ${changeValue(c.path, c.to)}`,
+  }));
+}
+
+const FABRIC_LABELS: Record<string, string> = {
+  default_radio: 'Default TX radio',
+  tx_mode: 'TX mode',
+  repeat_on_ingress: 'Repeat on ingress',
+  origin_tx: 'Originated traffic',
+};
+
+const saveBarChanges = computed<SaveBarChange[]>(() => {
+  const items: SaveBarChange[] = [];
+  if (isStagingDisableMultiRadio.value) {
+    items.push({ label: 'Remove the second radio', detail: 'back to one radio' });
+  } else if (isDraftingMultiRadio.value) {
+    const saved = new Set(radios.value.map((r) => r.id));
+    const drafted = (draftRadios.value || []).map((r) => String(r.id));
+    if (!isMultiRadio.value) {
+      items.push({ label: 'Set up multi-radio', detail: drafted.join(', ') });
+    } else {
+      for (const id of drafted) if (!saved.has(id)) items.push({ label: `Add radio ${id}` });
+      for (const id of saved) if (!drafted.includes(id)) items.push({ label: `Remove radio ${id}` });
+      if (!items.length) items.push({ label: 'Radio setup', detail: 'edited' });
+    }
+  } else {
+    const keys = new Set(Object.keys(pendingPayloads.value));
+    if (formDirty.value) keys.add(formKey.value);
+    for (const key of [...keys].sort()) {
+      const before = JSON.parse(baselinePayloads.value[key] ?? '{}');
+      const after = key === formKey.value ? formPayload.value : pendingPayloads.value[key];
+      items.push(...radioChanges(key, before, after));
+    }
+  }
+  if (fabricDirty.value) {
+    const before = JSON.parse(fabricBaseline.value) as Record<string, unknown>;
+    const after = JSON.parse(fabricState.value) as Record<string, unknown>;
+    for (const c of diffChanges(before, after)) {
+      items.push({
+        label: `Routing › ${FABRIC_LABELS[c.path] ?? c.path}`,
+        detail: `${formatChangeValue(c.from)} → ${formatChangeValue(c.to)}`,
+      });
+    }
+  }
+  return items;
+});
+
 const showSerialFields = computed(
   () => selectedRadioType.value === 'kiss' || selectedRadioType.value === 'modem_usb',
 );
 const showTcpFields = computed(() => selectedRadioType.value === 'modem_tcp');
 
-// The RF front end belongs to the running default radio's modem (KISS or openHop
-// USB/TCP), so show it only under that radio, while its type is unchanged, and
-// not while radios are being added or removed.
-const frontendRef = ref<InstanceType<typeof RadioFrontendSettings> | null>(null);
+// The RF front end belongs to the selected radio's running modem (KISS or openHop
+// USB/TCP), so show it under any such radio while its type is unchanged, and not
+// while radios are being added or removed. On a multi-radio node the panel names
+// that radio to the API; a single radio needs no id.
 const showFrontend = computed(
   () =>
     !!FRONTEND_SECTIONS[selectedRadioType.value] &&
     selectedRadioType.value === currentRadioType.value &&
     !isDraftingMultiRadio.value &&
-    !isStagingDisableMultiRadio.value &&
-    (!isMultiRadio.value || String(effectiveSelectedId.value) === String(defaultRadioId.value)),
+    !isStagingDisableMultiRadio.value,
+);
+const frontendRadioId = computed(() =>
+  isMultiRadio.value && effectiveSelectedId.value ? String(effectiveSelectedId.value) : undefined,
 );
 const showSx1262Fields = computed(
   () => selectedRadioType.value === 'sx1262' || selectedRadioType.value === 'sx1262_ch341',
@@ -1740,7 +1960,7 @@ const showSx1262Fields = computed(
 const showCh341Fields = computed(() => selectedRadioType.value === 'sx1262_ch341');
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  isDirty,
   isSaving,
   cancelEditing,
   async () => saveChanges(),
@@ -1754,19 +1974,12 @@ onMounted(() => {
   void setupStore.fetchRadioPresets();
 });
 
-watch(
-  [isEditing, selectedRadioType],
-  ([editing, type]) => {
-    if (editing && (type === 'kiss' || type === 'modem_usb')) {
-      void loadSerialDevices();
-    }
-    if (editing && (type === 'sx1262' || type === 'sx1262_ch341')) {
-      void loadHardwareOptions();
-    }
-    selectedBoardPresetKey.value = '';
-  },
-  { immediate: false },
-);
+watch(selectedRadioType, (type, previous) => {
+  if (type === previous) return;
+  if (type === 'kiss' || type === 'modem_usb') void loadSerialDevices();
+  if (type === 'sx1262' || type === 'sx1262_ch341') void loadHardwareOptions();
+  selectedBoardPresetKey.value = '';
+});
 </script>
 
 <template>
@@ -1785,224 +1998,187 @@ watch(
     @cancel="handleCancel"
   />
 
-  <div class="space-y-12">
-    <div class="cfg-page-heading flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-      <div>
-        <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
-          Radio Hardware
-        </h3>
-        <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          <template v-if="showMultiRadioChrome">
-            Editing
-            <span class="font-mono font-semibold text-content-primary">{{ activeRadioLabel }}</span>
-            — configure its over-the-air settings and hardware, then switch radios or Save.
-          </template>
-          <template v-else>
-            Select which radio hardware backend this repeater should use
-          </template>
-        </p>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button
-          v-if="!isEditing"
-          @click="startEditing"
-          class="cfg-btn-primary"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="cfg-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveChanges"
-            :disabled="isSaving"
-            class="cfg-btn-primary"
-          >
-            {{ isSaving || multiRadioBusy ? 'Saving...' : (isDraftingMultiRadio || isStagingDisableMultiRadio ? 'Save multi-radio config' : 'Save Changes') }}
-          </button>
+  <div class="space-y-6">
+    <div class="cfg-page-heading">
+      <h3 class="text-base sm:text-lg font-semibold text-content-primary mb-1 sm:mb-2">
+        Radio Hardware
+      </h3>
+      <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+        <template v-if="showMultiRadioChrome">
+          {{ workingRadios.length }} radios on one fabric. Live tuning applies immediately; channel,
+          connection and routing changes are saved together and take effect after a restart.
         </template>
-      </div>
+        <template v-else>
+          The radio this repeater uses. Live tuning applies immediately; connection changes are saved
+          and take effect after a restart.
+        </template>
+      </p>
     </div>
 
     <div
       v-if="errorMessage"
+      role="alert"
       class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
     >
       {{ errorMessage }}
     </div>
 
-<!-- Multi-radio: draft locally first; save only after hardware is configured -->
     <div
-      class="cfg-section rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-3 sm:p-4 space-y-3"
+      v-if="fanoutPendingRestart"
+      role="status"
+      class="rounded-lg border border-accent-amber/opacity-heavy bg-accent-amber/opacity-light p-3 text-xs text-accent-amber"
     >
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <div class="text-sm font-semibold text-content-primary">Multi-radio / fabric</div>
-          <div class="text-xs text-content-muted">
-            <template v-if="isStagingDisableMultiRadio">
-              Multi-radio will be disabled on Save. Cancel to keep the current radios[] config.
-            </template>
-            <template v-else-if="isDraftingMultiRadio">
-              Draft only — not saved yet. Configure each radio’s hardware (distinct GPIO / USB / serial), set fabric mode, then Save.
-            </template>
-            <template v-else-if="isMultiRadio">
-              Managing {{ radios.length }} radios[] entries. Hardware fields below apply to the selected radio.
-              <span v-if="fanoutPendingRestart" class="block mt-1 text-accent-amber">
-                Saved fan-out settings are not live yet — restart to apply them.
-              </span>
-            </template>
-            <template v-else>
-              Single-radio mode. Enable multi-radio to draft a second radio, configure its pins, then save once.
-            </template>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 shrink-0">
-          <button
-            v-if="!showMultiRadioChrome && !isStagingDisableMultiRadio"
-            type="button"
-            class="cfg-btn-primary"
-            :disabled="multiRadioBusy || isSaving || (isEditing && !isDraftingMultiRadio)"
-            @click="enableMultiRadio"
-          >
-            Enable multi-radio
-          </button>
-          <button
-            v-else-if="showMultiRadioChrome"
-            type="button"
-            class="cfg-btn-secondary"
-            :disabled="multiRadioBusy || isSaving"
-            @click="disableMultiRadio"
-          >
-            Disable multi-radio
-          </button>
-          <button
-            v-if="hasUnsavedMultiRadioDraft"
-            type="button"
-            class="cfg-btn-secondary"
-            :disabled="multiRadioBusy || isSaving"
-            @click="cancelEditing"
-          >
-            Discard draft
-          </button>
-        </div>
-      </div>
+      Saved fan-out settings are not live yet — restart to apply them.
+    </div>
 
-      <div
-        v-if="isDraftingMultiRadio"
-        class="rounded-lg border border-accent-amber/opacity-heavy bg-accent-amber/opacity-light p-3 text-xs text-accent-amber"
+    <div
+      v-if="isDraftingMultiRadio && !isMultiRadio"
+      class="rounded-lg border border-primary/opacity-heavy bg-primary/opacity-light p-3 text-xs text-content-secondary dark:text-content-muted"
+    >
+      New multi-radio setup, not saved yet. Give each radio its own hardware (distinct GPIO, USB
+      adapter or serial port), choose how they share traffic under Routing, then save.
+    </div>
+    <div
+      v-if="isStagingDisableMultiRadio"
+      class="rounded-lg border border-accent-amber/opacity-heavy bg-accent-amber/opacity-light p-3 text-xs text-content-secondary dark:text-content-muted"
+    >
+      Saving goes back to a single radio. Discard to keep the current radios.
+    </div>
+
+    <!-- Multi-radio: radio list beside the selected radio (or routing) -->
+    <div class="flex flex-wrap gap-6 items-start">
+      <nav
+        v-if="showMultiRadioChrome"
+        aria-label="Radios"
+        class="flex-[1_1_240px] max-w-xs w-full flex flex-col gap-2"
       >
-        New radios start with empty hardware pins. Use the radio cards to select each radio,
-        set <strong>Over-the-air</strong> + <strong>Hardware</strong> for that radio, then Save once.
-        Currently selected: <span class="font-mono font-semibold">{{ activeRadioLabel }}</span>.
-        Nothing is written until Save succeeds.
-      </div>
-
-      <template v-if="showMultiRadioChrome">
-        <div
-          class="rounded-xl border-2 border-primary/opacity-heavy bg-primary/opacity-light px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
-        >
-          <div>
-            <div class="text-[11px] uppercase tracking-wide font-semibold text-primary">
-              Currently editing
-            </div>
-            <div class="text-base font-semibold text-content-primary font-mono">
-              {{ activeRadioLabel }}
-            </div>
-            <div class="text-xs text-content-muted mt-0.5">
-              Both <strong>Over-the-air settings</strong> and <strong>Hardware</strong> below apply only to this radio.
-              Switch radios to configure the other one before Save.
-            </div>
-          </div>
-          <select
-            class="cfg-select w-full sm:w-64"
-            :value="workingSelectedId"
-            :disabled="multiRadioBusy"
-            @change="selectWorkingRadio(($event.target as HTMLSelectElement).value)"
-          >
-            <option v-for="opt in workingRadioOptions" :key="opt.id" :value="opt.id">
-              {{ opt.id }}{{ opt.isDefault ? ' (default TX)' : '' }} — {{ opt.radio_type }}
-            </option>
-          </select>
+        <div class="px-1 text-[11px] font-semibold uppercase tracking-wider text-content-muted">
+          Radios
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <button
-            v-for="card in workingRadioCards"
-            :key="`card-${card.id}`"
-            type="button"
-            class="text-left rounded-xl border px-3 py-2 transition-colors"
-            :class="card.isSelected
-              ? 'border-primary bg-primary/opacity-light shadow-sm'
-              : 'border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute/40 dark:bg-white/opacity-subtle hover:border-primary/opacity-medium'"
-            :disabled="multiRadioBusy"
-            @click="selectWorkingRadio(card.id)"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <span class="font-mono text-sm font-semibold text-content-primary">{{ card.id }}</span>
+        <button
+          v-for="card in workingRadioCards"
+          :key="`card-${card.id}`"
+          type="button"
+          :aria-current="card.isSelected && activePanel === 'radio' ? 'true' : undefined"
+          class="text-left rounded-lg border px-3 py-2.5 transition-colors"
+          :class="card.isSelected && activePanel === 'radio'
+            ? 'border-primary bg-primary/opacity-light'
+            : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-primary/opacity-medium'"
+          :disabled="multiRadioBusy"
+          @click="selectWorkingRadio(card.id)"
+        >
+          <span class="flex items-center justify-between gap-2">
+            <span class="font-mono text-sm font-semibold text-content-primary">{{ card.id }}</span>
+            <span class="flex items-center gap-1.5">
               <span
-                class="text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5"
-                :class="card.hwReady
-                  ? 'bg-accent-green/opacity-light text-accent-green'
-                  : 'bg-accent-amber/opacity-light text-accent-amber'"
+                v-if="card.edited"
+                class="text-[10px] font-semibold text-accent-amber"
+                :data-testid="`radio-edited-${card.id}`"
+                >edited</span
               >
-                {{ card.hwReady ? 'HW ready' : 'HW needed' }}
-              </span>
-            </div>
-            <div class="text-[11px] text-content-muted mt-1">
-              {{ card.radio_type }}{{ card.isDefault ? ' · default TX' : '' }}
-            </div>
-            <div class="text-[11px] font-mono text-content-secondary mt-0.5">
-              OTA {{ card.airSummary }}
-            </div>
-            <div v-if="card.isSelected" class="text-[10px] text-primary font-semibold mt-1">
-              ← editing this radio
-            </div>
+              <span
+                v-if="card.isDefault"
+                class="text-[10px] font-semibold rounded-full px-2 py-0.5 bg-primary/opacity-light text-primary"
+                >Default TX</span
+              >
+            </span>
+          </span>
+          <span class="block text-[11px] text-content-muted mt-1">{{ card.radio_type }}</span>
+          <span class="block text-[11px] font-mono text-content-secondary mt-0.5">
+            {{ card.airSummary }}
+          </span>
+          <span v-if="!card.hwReady" class="block text-[11px] text-accent-amber mt-0.5">
+            Needs hardware settings
+          </span>
+        </button>
+
+        <div class="flex gap-2">
+          <label class="sr-only" for="new-radio-id">New radio id</label>
+          <input
+            id="new-radio-id"
+            v-model="newRadioId"
+            type="text"
+            placeholder="new radio id"
+            class="cfg-input flex-1 min-w-0"
+            :disabled="multiRadioBusy || isSaving"
+            @keydown.enter.prevent="addRadioEntry"
+          />
+          <button
+            type="button"
+            class="cfg-btn-secondary whitespace-nowrap"
+            :disabled="multiRadioBusy || isSaving"
+            @click="addRadioEntry"
+          >
+            Add radio
           </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Default TX radio
-            <select
-              v-if="isEditing || isDraftingMultiRadio"
-              v-model="fabricDefaultRadio"
-              class="cfg-select mt-1"
-            >
-              <option v-for="opt in workingRadioOptions" :key="`def-${opt.id}`" :value="opt.id">
-                {{ opt.id }}
-              </option>
-            </select>
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ defaultRadioId }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Fabric TX mode
-            <select
-              v-if="isEditing || isDraftingMultiRadio"
-              v-model="fabricTxMode"
-              class="cfg-select mt-1"
-            >
-              <option value="default">default — always TX default radio</option>
-              <option value="sticky">sticky — TX on last RX radio</option>
-              <option value="bridge">bridge — TX on the other radio</option>
-            </select>
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ txMode }}</span>
-          </label>
+        <div class="h-px bg-stroke-subtle dark:bg-stroke/opacity-light my-2"></div>
+        <div class="px-1 text-[11px] font-semibold uppercase tracking-wider text-content-muted">
+          Fabric
         </div>
+        <button
+          type="button"
+          :aria-current="activePanel === 'routing' ? 'true' : undefined"
+          class="text-left rounded-lg border px-3 py-2.5 transition-colors"
+          :class="activePanel === 'routing'
+            ? 'border-primary bg-primary/opacity-light'
+            : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-primary/opacity-medium'"
+          @click="activePanel = 'routing'"
+        >
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-sm font-semibold text-content-primary">Routing</span>
+            <span v-if="fabricDirty" class="text-[10px] font-semibold text-accent-amber">edited</span>
+          </span>
+          <span class="block text-[11px] text-content-muted mt-1">
+            {{ fabricTxMode }} · default TX {{ fabricDefaultRadio || '—' }}
+          </span>
+        </button>
+        <button
+          v-if="!isStagingDisableMultiRadio"
+          type="button"
+          class="self-start text-xs text-content-muted hover:text-accent-red underline-offset-2 hover:underline mt-1"
+          :disabled="multiRadioBusy || isSaving"
+          @click="disableMultiRadio"
+        >
+          Go back to one radio
+        </button>
+      </nav>
 
-        <!-- Fan-out: only meaningful on an exactly-two-radio bridge -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            RF relay fan-out
-            <template v-if="isEditing || isDraftingMultiRadio">
-              <label
-                class="flex items-center gap-2 mt-1"
-                :class="canRepeatOnIngress ? 'text-content-primary' : 'text-content-muted'"
-              >
+      <div class="flex-[999_1_560px] min-w-0 space-y-4">
+        <!-- Routing between radios -->
+        <section
+          v-if="showMultiRadioChrome && activePanel === 'routing'"
+          aria-labelledby="routing-heading"
+          class="cfg-section !p-4 sm:!p-5 space-y-4"
+        >
+          <div class="flex flex-wrap items-center gap-2">
+            <h4 id="routing-heading" class="text-sm font-semibold text-content-primary">Routing</h4>
+            <span
+              class="text-[11px] font-semibold rounded-full px-2.5 py-0.5 bg-accent-amber/opacity-light text-accent-amber"
+              >Restart to apply</span
+            >
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+              Default TX radio
+              <select v-model="fabricDefaultRadio" class="cfg-select mt-1">
+                <option v-for="opt in workingRadioOptions" :key="`def-${opt.id}`" :value="opt.id">
+                  {{ opt.id }}
+                </option>
+              </select>
+            </label>
+            <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+              Fabric TX mode
+              <select v-model="fabricTxMode" class="cfg-select mt-1">
+                <option value="default">default — always TX default radio</option>
+                <option value="sticky">sticky — TX on last RX radio</option>
+                <option value="bridge">bridge — TX on the other radio</option>
+              </select>
+            </label>
+            <div class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+              RF relay fan-out
+              <label class="mt-2 flex items-center gap-2 text-content-primary text-sm">
                 <input
                   v-model="fabricRepeatOnIngress"
                   type="checkbox"
@@ -2010,23 +2186,16 @@ watch(
                 />
                 Repeat on ingress
               </label>
-              <p class="text-[11px] mt-1">
-                <span v-if="!canRepeatOnIngress" class="text-content-muted">
-                  {{ repeatOnIngressBlockedReason }}
-                </span>
-                <span v-else class="text-content-muted">
-                  RX local → TX link + local, RX link → TX local + link. The bridge radio
-                  is always attempted first.
+              <p class="text-[11px] mt-1 text-content-muted">
+                <span v-if="!canRepeatOnIngress">{{ repeatOnIngressBlockedReason }}</span>
+                <span v-else>
+                  RX local → TX link + local, RX link → TX local + link. The bridge radio is always
+                  attempted first.
                 </span>
               </p>
-            </template>
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">
-              {{ repeatOnIngress ? 'on' : 'off' }}
-            </span>
-          </div>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Originated traffic TX
-            <template v-if="isEditing || isDraftingMultiRadio">
+            </div>
+            <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+              Originated traffic TX
               <select v-model="fabricOriginTx" class="cfg-select mt-1">
                 <option value="default">default — follow default radio / TX mode</option>
                 <option value="all" :disabled="!canOriginTxAll">all — send on every radio</option>
@@ -2034,600 +2203,470 @@ watch(
               <p class="text-[11px] text-content-muted mt-1">
                 <span v-if="!canOriginTxAll">{{ originTxAllBlockedReason }}</span>
                 <span v-else>
-                  Applies to packets this node originates — adverts, room servers, companion
-                  and protocol replies — which have no ingress radio to route by.
+                  Applies to packets this node originates — adverts, room servers, companion and
+                  protocol replies — which have no ingress radio to route by.
                 </span>
               </p>
-            </template>
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ originTx }}</span>
-          </label>
-        </div>
-
-        <div class="flex flex-col sm:flex-row gap-2 sm:items-end">
-          <label class="flex-1 text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Add radio id
-            <input
-              v-model="newRadioId"
-              type="text"
-              class="cfg-input mt-1"
-              placeholder="e.g. link2"
-              :disabled="multiRadioBusy || isSaving"
-            />
-          </label>
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="cfg-btn-secondary"
-              :disabled="multiRadioBusy || isSaving"
-              @click="addRadioEntry"
-            >
-              Add radio
-            </button>
-            <button
-              type="button"
-              class="cfg-btn-secondary"
-              :disabled="multiRadioBusy || isSaving || !workingSelectedId"
-              @click="removeSelectedRadio"
-            >
-              Remove selected
-            </button>
+            </label>
           </div>
-        </div>
+        </section>
 
-        <p class="text-xs text-content-muted">
-          Configure every radio’s distinct hardware, choose fabric mode, then click Save Changes. Restart is only offered after a successful save.
-        </p>
-      </template>
-    </div>
-
-    <!-- Per-radio LoRa air settings (multi-radio setup / edit) -->
-    <div
-      v-if="showMultiRadioChrome"
-      class="cfg-section rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-3 sm:p-4 space-y-3"
-    >
-      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <div class="flex flex-wrap items-center gap-2">
-            <div class="text-sm font-semibold text-content-primary">1 · Over-the-air settings</div>
-            <span class="inline-flex items-center rounded-full bg-primary/opacity-light text-primary text-[11px] font-mono font-semibold px-2 py-0.5">
-              radio: {{ activeRadioLabel }}
-            </span>
-          </div>
-          <div class="text-xs text-content-muted mt-1">
-            Frequency / SF / bandwidth / power for
-            <span class="font-mono font-semibold">{{ activeRadioLabel }}</span>
-            only (not shared with other radios). Pick a preset or edit manually.
-          </div>
-        </div>
-      </div>
-
-      <div
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2"
-      >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Radio preset</span>
-        <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-          {{ selectedAirPresetTitle || 'Custom / current values' }}
-        </div>
-        <div v-else class="w-full sm:w-96 space-y-1">
-          <select
-            class="cfg-select w-full"
-            :value="selectedAirPresetTitle"
-            @change="applyAirPreset(($event.target as HTMLSelectElement).value)"
-          >
-            <option value="">Custom — keep / edit values below</option>
-            <option
-              v-for="preset in setupStore.radioPresets"
-              :key="preset.title"
-              :value="preset.title"
-            >
-              {{ preset.title }} — {{ preset.frequency }} MHz SF{{ preset.spreading_factor }} BW{{ preset.bandwidth }}
-            </option>
-          </select>
-          <p class="text-[11px] text-content-muted">
-            Presets fill frequency, SF, bandwidth, coding rate, and TX power for this radio only.
-          </p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Frequency (MHz)
-          <input
-            v-if="isEditing"
-            v-model.number="airFrequencyMHz"
-            type="number"
-            step="0.001"
-            min="100"
-            max="1000"
-            class="cfg-input mt-1"
-            @input="selectedAirPresetTitle = ''"
-          />
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">
-            {{ airFrequencyMHz.toFixed(3) }} MHz
-          </span>
-        </label>
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Spreading factor
-          <select
-            v-if="isEditing"
-            v-model.number="airSpreadingFactor"
-            class="cfg-select mt-1"
-            @change="selectedAirPresetTitle = ''"
-          >
-            <option v-for="sf in [5, 6, 7, 8, 9, 10, 11, 12]" :key="sf" :value="sf">{{ sf }}</option>
-          </select>
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ airSpreadingFactor }}</span>
-        </label>
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Bandwidth
-          <select
-            v-if="isEditing"
-            v-model.number="airBandwidthKHz"
-            class="cfg-select mt-1"
-            @change="selectedAirPresetTitle = ''"
-          >
-            <option v-for="bw in bandwidthOptions" :key="bw.value" :value="bw.value">{{ bw.label }}</option>
-          </select>
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ airBandwidthKHz }} kHz</span>
-        </label>
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          TX power (dBm)
-          <input
-            v-if="isEditing"
-            v-model.number="airTxPower"
-            type="number"
-            min="-9"
-            max="30"
-            class="cfg-input mt-1"
-            @input="selectedAirPresetTitle = ''"
-          />
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ airTxPower }} dBm</span>
-        </label>
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Coding rate
-          <select
-            v-if="isEditing"
-            v-model.number="airCodingRate"
-            class="cfg-select mt-1"
-            @change="selectedAirPresetTitle = ''"
-          >
-            <option :value="5">4/5</option>
-            <option :value="6">4/6</option>
-            <option :value="7">4/7</option>
-            <option :value="8">4/8</option>
-          </select>
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">4/{{ airCodingRate }}</span>
-        </label>
-        <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          Preamble length
-          <input
-            v-if="isEditing"
-            v-model.number="airPreambleLength"
-            type="number"
-            min="1"
-            class="cfg-input mt-1"
-          />
-          <span v-else class="block text-content-primary font-mono text-sm mt-1">
-            {{ airPreambleLength }} symbols
-          </span>
-        </label>
-      </div>
-    </div>
-
-    <div class="cfg-section space-y-3 rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-3 sm:p-4">
-      <div v-if="showMultiRadioChrome" class="pb-2 border-b border-stroke-subtle dark:border-stroke/opacity-light mb-1">
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="text-sm font-semibold text-content-primary">2 · Hardware</div>
-          <span class="inline-flex items-center rounded-full bg-primary/opacity-light text-primary text-[11px] font-mono font-semibold px-2 py-0.5">
-            radio: {{ activeRadioLabel }}
-          </span>
-        </div>
-        <div class="text-xs text-content-muted mt-1">
-          Board type, GPIO / SPI / USB / serial for
-          <span class="font-mono font-semibold">{{ activeRadioLabel }}</span>
-          only. Each radio must use distinct pins or adapters.
-        </div>
-      </div>
-      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1">
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Radio Type</span>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ currentRadioTypeLabel }}
-        </div>
-        <div v-else class="w-full sm:w-80">
-          <select v-model="selectedRadioType" class="cfg-select">
-            <option
-              v-for="option in radioTypeOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }} - {{ option.detail }}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <template v-if="showSerialFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Serial Port
-          </span>
-          <div v-if="!isEditing" class="text-content-primary font-mono text-sm break-all">
-            {{ selectedRadioType === 'kiss' ? kissPort : modemUsbPort }}
-          </div>
-          <template v-else>
-            <div class="w-full sm:w-80 space-y-2">
-              <div class="flex gap-2">
-                <select
-                  v-if="selectedRadioType === 'kiss'"
-                  v-model="kissPort"
-                  class="cfg-select flex-1"
-                  :disabled="useCustomSerialPath"
-                >
-                  <option
-                    v-if="kissPort && !serialDevices.some((d) => d.device === kissPort)"
-                    :value="kissPort"
-                  >
-                    {{ kissPort }} (current)
-                  </option>
-                  <option
-                    v-for="dev in serialDevices"
-                    :key="`kiss-${dev.device}`"
-                    :value="dev.device"
-                  >
-                    {{ dev.description || dev.device }}
-                  </option>
-                </select>
-                <select
-                  v-else
-                  v-model="modemUsbPort"
-                  class="cfg-select flex-1"
-                  :disabled="useCustomSerialPath"
-                >
-                  <option
-                    v-if="modemUsbPort && !serialDevices.some((d) => d.device === modemUsbPort)"
-                    :value="modemUsbPort"
-                  >
-                    {{ modemUsbPort }} (current)
-                  </option>
-                  <option
-                    v-for="dev in serialDevices"
-                    :key="`usb-${dev.device}`"
-                    :value="dev.device"
-                  >
-                    {{ dev.description || dev.device }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  class="cfg-btn-secondary"
-                  :disabled="serialDevicesLoading"
-                  @click="loadSerialDevices"
-                >
-                  {{ serialDevicesLoading ? '...' : 'Refresh' }}
-                </button>
-              </div>
-
-              <label class="flex items-center gap-2 text-xs text-content-secondary dark:text-content-muted">
-                <input v-model="useCustomSerialPath" type="checkbox" />
-                Enter custom device path
-              </label>
-
-              <input
-                v-if="useCustomSerialPath && selectedRadioType === 'kiss'"
-                v-model="kissPort"
-                type="text"
-                class="cfg-input"
-                placeholder="/dev/ttyUSB0"
-              />
-              <input
-                v-if="useCustomSerialPath && selectedRadioType !== 'kiss'"
-                v-model="modemUsbPort"
-                type="text"
-                class="cfg-input"
-                placeholder="/dev/ttyACM0"
-              />
-
-              <p
-                v-if="serialDevicesError"
-                class="text-xs text-accent-red"
+        <template v-else>
+          <div v-if="showMultiRadioChrome" class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <h4 class="font-mono text-lg font-semibold text-content-primary truncate">
+                {{ activeRadioLabel }}
+              </h4>
+              <span
+                class="text-[11px] rounded-full border border-stroke-subtle dark:border-stroke/opacity-light px-2.5 py-0.5 text-content-secondary"
+                >{{ selectedRadioType }}</span
               >
-                {{ serialDevicesError }}
-              </p>
             </div>
-          </template>
-        </div>
-
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-            Baud Rate
-          </span>
-          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-            {{ selectedRadioType === 'kiss' ? kissBaudRate : modemUsbBaudRate }}
-          </div>
-          <template v-else>
-            <input
-              v-if="selectedRadioType === 'kiss'"
-              v-model.number="kissBaudRate"
-              type="number"
-              min="1"
-              class="cfg-input w-full sm:w-40"
-            />
-            <input
-              v-else
-              v-model.number="modemUsbBaudRate"
-              type="number"
-              min="1"
-              class="cfg-input w-full sm:w-40"
-            />
-          </template>
-        </div>
-      </template>
-
-      <RadioFrontendSettings v-if="showFrontend" ref="frontendRef" :editing="isEditing" />
-
-      <template v-if="showTcpFields">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Host</span>
-          <div v-if="!isEditing" class="text-content-primary font-mono text-sm break-all">
-            {{ modemTcpHost || 'Not set' }}
-          </div>
-          <input
-            v-else
-            v-model="modemTcpHost"
-            type="text"
-            class="cfg-input w-full sm:w-72"
-            placeholder="openhop-modem.local"
-          />
-        </div>
-
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Port</span>
-          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-            {{ modemTcpPort }}
-          </div>
-          <input
-            v-else
-            v-model.number="modemTcpPort"
-            type="number"
-            min="1"
-            max="65535"
-            class="cfg-input w-full sm:w-40"
-          />
-        </div>
-
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TCP Token</span>
-          <div v-if="!isEditing" class="text-content-primary font-mono text-sm">
-            {{ modemTcpToken ? 'Configured' : 'Not set' }}
-          </div>
-          <input
-            v-else
-            v-model="modemTcpToken"
-            type="password"
-            class="cfg-input w-full sm:w-72"
-            placeholder="Optional"
-          />
-        </div>
-      </template>
-
-      <template v-if="showSx1262Fields && isEditing">
-        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Board Preset (Quick Apply)</span>
-          <div class="w-full sm:w-96 space-y-2">
             <div class="flex gap-2">
-              <select
-                v-model="selectedBoardPresetKey"
-                class="cfg-select flex-1"
-                @change="applyBoardPreset(selectedBoardPresetKey)"
-              >
-                <option value="">Leave current pin values unchanged</option>
-                <option v-for="preset in filteredBoardPresets" :key="preset.key" :value="preset.key">
-                  {{ preset.name || preset.key }}
-                </option>
-              </select>
               <button
+                v-if="fabricDefaultRadio !== workingSelectedId"
                 type="button"
                 class="cfg-btn-secondary"
-                :disabled="hardwareOptionsLoading"
-                @click="loadHardwareOptions"
+                :disabled="multiRadioBusy || isSaving"
+                @click="fabricDefaultRadio = workingSelectedId"
               >
-                {{ hardwareOptionsLoading ? '...' : 'Refresh' }}
+                Make default TX
+              </button>
+              <button
+                type="button"
+                class="cfg-btn-secondary !text-accent-red"
+                :disabled="multiRadioBusy || isSaving || !workingSelectedId"
+                @click="removeSelectedRadio"
+              >
+                Remove radio
               </button>
             </div>
-            <p v-if="hardwareOptionsError" class="text-xs text-accent-red">
-              {{ hardwareOptionsError }}
-            </p>
-            <p class="text-xs text-content-muted">
-              Selecting a preset loads pins/flags from radio-settings.json (e.g. PineDio: CS=0, Reset=-1, Busy=11, IRQ=10, DIO2 RF on, TCXO off, preamble 17).
-            </p>
-            <p
-              v-if="selectedBoardPresetKey"
-              class="text-[11px] font-mono text-content-secondary"
+          </div>
+
+          <RadioFrontendSettings
+            v-if="showFrontend"
+            :radio-id="frontendRadioId"
+            :locked="isSaving || multiRadioBusy"
+            @applied="onFrontendApplied"
+            @busy="frontendBusy = $event"
+          />
+
+          <!-- Channel (per radio; one radio keeps it under Radio Settings) -->
+          <section
+            v-if="showMultiRadioChrome"
+            aria-labelledby="channel-heading"
+            class="cfg-section !p-4 sm:!p-5 space-y-3"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <h4 id="channel-heading" class="text-sm font-semibold text-content-primary">
+                  Channel
+                </h4>
+                <span
+                  class="text-[11px] font-semibold rounded-full px-2.5 py-0.5 bg-accent-amber/opacity-light text-accent-amber"
+                  >Restart to apply</span
+                >
+              </div>
+              <label class="flex items-center gap-2 text-xs text-content-muted">
+                Preset
+                <select
+                  class="cfg-select w-56"
+                  :value="selectedAirPresetTitle"
+                  @change="applyAirPreset(($event.target as HTMLSelectElement).value)"
+                >
+                  <option value="">Custom</option>
+                  <option
+                    v-for="preset in setupStore.radioPresets"
+                    :key="preset.title"
+                    :value="preset.title"
+                  >
+                    {{ preset.title }} — {{ preset.frequency }} MHz SF{{ preset.spreading_factor }}
+                    BW{{ preset.bandwidth }}
+                  </option>
+                </select>
+              </label>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Frequency (MHz)
+                <input
+                  v-model.number="airFrequencyMHz"
+                  type="number"
+                  step="0.001"
+                  min="100"
+                  max="1000"
+                  class="cfg-input mt-1 font-mono"
+                  @input="selectedAirPresetTitle = ''"
+                />
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Bandwidth
+                <select
+                  v-model.number="airBandwidthKHz"
+                  class="cfg-select mt-1"
+                  @change="selectedAirPresetTitle = ''"
+                >
+                  <option v-for="bw in bandwidthOptions" :key="bw.value" :value="bw.value">
+                    {{ bw.label }}
+                  </option>
+                </select>
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Spreading factor
+                <select
+                  v-model.number="airSpreadingFactor"
+                  class="cfg-select mt-1"
+                  @change="selectedAirPresetTitle = ''"
+                >
+                  <option v-for="sf in [5, 6, 7, 8, 9, 10, 11, 12]" :key="sf" :value="sf">
+                    {{ sf }}
+                  </option>
+                </select>
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Coding rate
+                <select
+                  v-model.number="airCodingRate"
+                  class="cfg-select mt-1"
+                  @change="selectedAirPresetTitle = ''"
+                >
+                  <option :value="5">4/5</option>
+                  <option :value="6">4/6</option>
+                  <option :value="7">4/7</option>
+                  <option :value="8">4/8</option>
+                </select>
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                TX power (dBm)
+                <input
+                  v-model.number="airTxPower"
+                  type="number"
+                  min="-9"
+                  max="30"
+                  class="cfg-input mt-1 font-mono"
+                  @input="selectedAirPresetTitle = ''"
+                />
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Preamble length
+                <input
+                  v-model.number="airPreambleLength"
+                  type="number"
+                  min="1"
+                  class="cfg-input mt-1 font-mono"
+                />
+              </label>
+            </div>
+          </section>
+
+          <!-- Connection / hardware for the selected (or only) radio -->
+          <section
+            aria-labelledby="connection-heading"
+            class="cfg-section !p-4 sm:!p-5 space-y-3"
+          >
+            <div class="flex flex-wrap items-center gap-2">
+              <h4 id="connection-heading" class="text-sm font-semibold text-content-primary">
+                Connection
+              </h4>
+              <span
+                class="text-[11px] font-semibold rounded-full px-2.5 py-0.5 bg-accent-amber/opacity-light text-accent-amber"
+                >Restart to apply</span
+              >
+            </div>
+
+            <label class="flex flex-col gap-1 text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+              Radio Type
+              <select v-model="selectedRadioType" class="cfg-select sm:w-96">
+                <option v-for="option in radioTypeOptions" :key="option.value" :value="option.value">
+                  {{ option.label }} - {{ option.detail }}
+                </option>
+              </select>
+            </label>
+
+            <template v-if="showSerialFields">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="text-content-secondary dark:text-content-muted text-xs sm:text-sm space-y-2">
+                  <span>Serial Port</span>
+                  <div class="flex gap-2">
+                    <select
+                      v-if="selectedRadioType === 'kiss'"
+                      v-model="kissPort"
+                      aria-label="Serial port"
+                      class="cfg-select flex-1"
+                      :disabled="useCustomSerialPath"
+                    >
+                      <option
+                        v-if="kissPort && !serialDevices.some((d) => d.device === kissPort)"
+                        :value="kissPort"
+                      >
+                        {{ kissPort }} (current)
+                      </option>
+                      <option v-for="dev in serialDevices" :key="`kiss-${dev.device}`" :value="dev.device">
+                        {{ dev.description || dev.device }}
+                      </option>
+                    </select>
+                    <select
+                      v-else
+                      v-model="modemUsbPort"
+                      aria-label="Serial port"
+                      class="cfg-select flex-1"
+                      :disabled="useCustomSerialPath"
+                    >
+                      <option
+                        v-if="modemUsbPort && !serialDevices.some((d) => d.device === modemUsbPort)"
+                        :value="modemUsbPort"
+                      >
+                        {{ modemUsbPort }} (current)
+                      </option>
+                      <option v-for="dev in serialDevices" :key="`usb-${dev.device}`" :value="dev.device">
+                        {{ dev.description || dev.device }}
+                      </option>
+                    </select>
+                    <button
+                      type="button"
+                      class="cfg-btn-secondary"
+                      :disabled="serialDevicesLoading"
+                      @click="loadSerialDevices"
+                    >
+                      {{ serialDevicesLoading ? '...' : 'Refresh' }}
+                    </button>
+                  </div>
+                  <label class="flex items-center gap-2 text-xs">
+                    <input v-model="useCustomSerialPath" type="checkbox" />
+                    Enter custom device path
+                  </label>
+                  <input
+                    v-if="useCustomSerialPath && selectedRadioType === 'kiss'"
+                    v-model="kissPort"
+                    type="text"
+                    aria-label="Custom serial device path"
+                    class="cfg-input"
+                    placeholder="/dev/ttyUSB0"
+                  />
+                  <input
+                    v-if="useCustomSerialPath && selectedRadioType !== 'kiss'"
+                    v-model="modemUsbPort"
+                    type="text"
+                    aria-label="Custom serial device path"
+                    class="cfg-input"
+                    placeholder="/dev/ttyACM0"
+                  />
+                  <p v-if="serialDevicesError" class="text-xs text-accent-red">{{ serialDevicesError }}</p>
+                </div>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                  Baud Rate
+                  <input
+                    v-if="selectedRadioType === 'kiss'"
+                    v-model.number="kissBaudRate"
+                    type="number"
+                    min="1"
+                    class="cfg-input mt-1 font-mono"
+                  />
+                  <input
+                    v-else
+                    v-model.number="modemUsbBaudRate"
+                    type="number"
+                    min="1"
+                    class="cfg-input mt-1 font-mono"
+                  />
+                </label>
+              </div>
+            </template>
+
+            <div v-if="showTcpFields" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                TCP Host
+                <input
+                  v-model="modemTcpHost"
+                  type="text"
+                  class="cfg-input mt-1 font-mono"
+                  placeholder="openhop-modem.local"
+                />
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                TCP Port
+                <input
+                  v-model.number="modemTcpPort"
+                  type="number"
+                  min="1"
+                  max="65535"
+                  class="cfg-input mt-1 font-mono"
+                />
+              </label>
+              <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                TCP Token
+                <input
+                  v-model="modemTcpToken"
+                  type="password"
+                  class="cfg-input mt-1"
+                  placeholder="None — the modem accepts any client"
+                />
+              </label>
+            </div>
+
+            <template v-if="showSx1262Fields">
+              <label class="flex flex-col gap-1 text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+                Board Preset (Quick Apply)
+                <span class="flex gap-2 sm:w-[32rem]">
+                  <select
+                    v-model="selectedBoardPresetKey"
+                    class="cfg-select flex-1"
+                    @change="applyBoardPreset(selectedBoardPresetKey)"
+                  >
+                    <option value="">Leave current pin values unchanged</option>
+                    <option v-for="preset in filteredBoardPresets" :key="preset.key" :value="preset.key">
+                      {{ preset.name || preset.key }}
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    class="cfg-btn-secondary"
+                    :disabled="hardwareOptionsLoading"
+                    @click="loadHardwareOptions"
+                  >
+                    {{ hardwareOptionsLoading ? '...' : 'Refresh' }}
+                  </button>
+                </span>
+              </label>
+              <p v-if="hardwareOptionsError" class="text-xs text-accent-red">{{ hardwareOptionsError }}</p>
+              <p v-if="selectedBoardPresetKey" class="text-[11px] font-mono text-content-secondary">
+                Applied: CS={{ sxCsPin }} RST={{ sxResetPin }} BUSY={{ sxBusyPin }} IRQ={{ sxIrqPin }} ·
+                DIO2={{ sxUseDio2Rf ? 'on' : 'off' }} TCXO={{ sxUseDio3Tcxo ? 'on' : 'off' }}
+              </p>
+              <p class="text-xs text-content-muted">
+                <template v-if="selectedRadioType === 'sx1262_ch341'">
+                  CH341 GPIO pin map (not BCM). PineDio: CS=0, Reset=-1, Busy=11, IRQ=10. Use the board
+                  preset when unsure.
+                </template>
+                <template v-else>SX1262 board pins (BCM GPIO unless the board preset says otherwise).</template>
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI Bus ID
+                  <input v-model.number="sxBusId" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI CS ID
+                  <input v-model.number="sxCsId" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CS Pin
+                  <input
+                    v-model.number="sxCsPin"
+                    type="number"
+                    class="cfg-input mt-1 font-mono"
+                    title="-1 = native/hardware SPI CS via bus/cs id"
+                  />
+                  <span class="block text-[11px] text-content-muted mt-0.5">-1 = native SPI CS</span>
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Reset Pin
+                  <input v-model.number="sxResetPin" type="number" class="cfg-input mt-1 font-mono" />
+                  <span
+                    v-if="selectedRadioType === 'sx1262_ch341'"
+                    class="block text-[11px] text-content-muted mt-0.5"
+                    >-1 allowed (PineDio)</span
+                  >
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Busy Pin
+                  <input v-model.number="sxBusyPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IRQ Pin
+                  <input v-model.number="sxIrqPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX Enable Pin
+                  <input v-model.number="sxTxEnPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX Enable Pin
+                  <input v-model.number="sxRxEnPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pin
+                  <input v-model.number="sxEnPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pins (array)
+                  <input
+                    v-model="sxEnPinsInput"
+                    type="text"
+                    class="cfg-input mt-1 font-mono"
+                    placeholder="26, 23"
+                  />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX LED Pin
+                  <input v-model.number="sxTxLedPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX LED Pin
+                  <input v-model.number="sxRxLedPin" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+              </div>
+            </template>
+
+            <template v-if="showCh341Fields">
+              <div class="pt-2 text-xs text-content-muted">CH341 Adapter Configuration</div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 VID
+                  <input v-model.number="ch341Vid" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 PID
+                  <input v-model.number="ch341Pid" type="number" class="cfg-input mt-1 font-mono" />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">USB Bus
+                  <input
+                    v-model.number="ch341Bus"
+                    type="number"
+                    class="cfg-input mt-1 font-mono"
+                    placeholder="optional"
+                  />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">USB Address
+                  <input
+                    v-model.number="ch341Address"
+                    type="number"
+                    class="cfg-input mt-1 font-mono"
+                    placeholder="optional"
+                  />
+                </label>
+                <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm col-span-2">
+                  USB Serial Number
+                  <input
+                    v-model="ch341Serial"
+                    type="text"
+                    class="cfg-input mt-1 font-mono"
+                    placeholder="optional iSerial"
+                  />
+                </label>
+              </div>
+              <p class="text-xs text-content-muted">
+                Optional with one CH341. With two or more, give each radio its own bus/address (or serial):
+                pin numbers are per adapter, so both may use CS=0 / Busy=11 once the USB locations differ.
+              </p>
+            </template>
+          </section>
+
+          <div
+            v-if="!showMultiRadioChrome && !isStagingDisableMultiRadio"
+            class="cfg-section !p-4 sm:!p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div>
+              <div class="text-sm font-semibold text-content-primary">Add a second radio</div>
+              <p class="text-xs text-content-muted mt-1">
+                Run two radios on one fabric, on the same channel or as a backhaul on another band.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="cfg-btn-secondary"
+              :disabled="multiRadioBusy || isSaving"
+              @click="enableMultiRadio"
             >
-              Applied: CS={{ sxCsPin }} RST={{ sxResetPin }} BUSY={{ sxBusyPin }} IRQ={{ sxIrqPin }}
-              · DIO2={{ sxUseDio2Rf ? 'on' : 'off' }} TCXO={{ sxUseDio3Tcxo ? 'on' : 'off' }}
-            </p>
+              Enable multi-radio
+            </button>
           </div>
-        </div>
-
-        <div class="pt-2 text-xs text-content-muted">
-          <template v-if="selectedRadioType === 'sx1262_ch341'">
-            CH341 GPIO pin map (not BCM). PineDio: CS=0, Reset=-1, Busy=11, IRQ=10. Use board preset when unsure.
-          </template>
-          <template v-else>
-            SX1262 board pin configuration (BCM GPIO unless noted by board preset).
-          </template>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI Bus ID
-            <input v-if="isEditing" v-model.number="sxBusId" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxBusId }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">SPI CS ID
-            <input v-if="isEditing" v-model.number="sxCsId" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxCsId }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CS Pin
-            <input
-              v-if="isEditing"
-              v-model.number="sxCsPin"
-              type="number"
-              class="cfg-input mt-1"
-              title="-1 = native/hardware SPI CS via bus/cs id"
-            />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxCsPin }}</span>
-            <span class="block text-[11px] text-content-muted mt-0.5">-1 = native SPI CS (use SPI CS ID above)</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Reset Pin
-            <input v-if="isEditing" v-model.number="sxResetPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxResetPin }}</span>
-            <span
-              v-if="selectedRadioType === 'sx1262_ch341'"
-              class="block text-[11px] text-content-muted mt-0.5"
-            >-1 allowed (PineDio has no reset line)</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Busy Pin
-            <input v-if="isEditing" v-model.number="sxBusyPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxBusyPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IRQ Pin
-            <input v-if="isEditing" v-model.number="sxIrqPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxIrqPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX Enable Pin
-            <input v-if="isEditing" v-model.number="sxTxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxTxEnPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX Enable Pin
-            <input v-if="isEditing" v-model.number="sxRxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxRxEnPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pin
-            <input v-if="isEditing" v-model.number="sxEnPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxEnPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Power Enable Pins (array)
-            <input
-              v-if="isEditing"
-              v-model="sxEnPinsInput"
-              type="text"
-              class="cfg-input mt-1"
-              placeholder="26, 23"
-            />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">
-              {{ sxEnPinsInput || 'Not set' }}
-            </span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">TX LED Pin
-            <input v-if="isEditing" v-model.number="sxTxLedPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxTxLedPin }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">RX LED Pin
-            <input v-if="isEditing" v-model.number="sxRxLedPin" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ sxRxLedPin }}</span>
-          </label>
-        </div>
-      </template>
-
-      <div v-else-if="showSx1262Fields" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current SPI bus</div>
-          <div class="text-content-primary font-mono">{{ sxBusId }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current SPI CS</div>
-          <div class="text-content-primary font-mono">{{ sxCsId }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current CS pin</div>
-          <div class="text-content-primary font-mono">{{ sxCsPin }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current reset pin</div>
-          <div class="text-content-primary font-mono">{{ sxResetPin }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current busy pin</div>
-          <div class="text-content-primary font-mono">{{ sxBusyPin }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current IRQ pin</div>
-          <div class="text-content-primary font-mono">{{ sxIrqPin }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current power enable pin</div>
-          <div class="text-content-primary font-mono">{{ sxEnPin }}</div>
-        </div>
-        <div class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light bg-background-mute dark:bg-white/opacity-subtle p-3">
-          <div class="text-content-muted text-xs mb-1">Current power enable pins</div>
-          <div class="text-content-primary font-mono">
-            {{ sxEnPinsInput || 'Not set' }}
-          </div>
-        </div>
-      </div>
-
-      <template v-if="showCh341Fields">
-        <div class="pt-2 text-xs text-content-muted">CH341 Adapter Configuration</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 VID
-            <input v-if="isEditing" v-model.number="ch341Vid" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ ch341Vid }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">CH341 PID
-            <input v-if="isEditing" v-model.number="ch341Pid" type="number" class="cfg-input mt-1" />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">{{ ch341Pid }}</span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">USB Bus
-            <input
-              v-if="isEditing"
-              v-model.number="ch341Bus"
-              type="number"
-              class="cfg-input mt-1"
-              placeholder="optional"
-            />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">
-              {{ ch341Bus === null || ch341Bus === undefined ? 'Not set' : ch341Bus }}
-            </span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">USB Address
-            <input
-              v-if="isEditing"
-              v-model.number="ch341Address"
-              type="number"
-              class="cfg-input mt-1"
-              placeholder="optional"
-            />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">
-              {{ ch341Address === null || ch341Address === undefined ? 'Not set' : ch341Address }}
-            </span>
-          </label>
-          <label class="text-content-secondary dark:text-content-muted text-xs sm:text-sm sm:col-span-2">
-            USB Serial Number
-            <input
-              v-if="isEditing"
-              v-model="ch341Serial"
-              type="text"
-              class="cfg-input mt-1"
-              placeholder="optional iSerial"
-            />
-            <span v-else class="block text-content-primary font-mono text-sm mt-1">
-              {{ ch341Serial || 'Not set' }}
-            </span>
-          </label>
-        </div>
-        <p class="text-xs text-content-muted">
-          Optional with one CH341. With two+ CH341 adapters, set distinct bus/address (or serial) on each radio — pin numbers are per-adapter, so both may use CS=0 / Busy=11 once USB locations differ.
-        </p>
-      </template>
-
-      <div class="py-2 text-xs text-content-muted">
-        Hardware changes are saved and need a service restart to apply; RF front-end settings
-        apply to the modem straight away.
+        </template>
       </div>
     </div>
+
+    <SaveBar
+      :changes="saveBarChanges"
+      :saving="isSaving || multiRadioBusy || frontendBusy"
+      note="Takes effect after a restart"
+      @save="saveChanges"
+      @discard="cancelEditing"
+    />
   </div>
 </template>
