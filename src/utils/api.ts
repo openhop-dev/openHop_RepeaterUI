@@ -1385,18 +1385,27 @@ export class ApiService {
     }
   }
 
-  // RF front end (AGC reset interval, FEM gain, boosted RX gain) of the default radio.
-  static async getRadioFrontend(): Promise<{ success: boolean; data: RadioFrontendStatus }> {
+  // RF front end (AGC reset interval, FEM gain, boosted RX gain) of one radio:
+  // the radios[] entry named by radioId, or the default radio without one.
+  static async getRadioFrontend(
+    radioId?: string,
+  ): Promise<{ success: boolean; data: RadioFrontendStatus }> {
     try {
       const params = await this.getGeneratedRequestParams();
-      const response = await generatedApiClient.radioFrontend.radioFrontendList(params);
+      const response = await generatedApiClient.radioFrontend.radioFrontendList(
+        radioId ? { radio_id: radioId } : undefined,
+        params,
+      );
       return response.data;
     } catch (error: unknown) {
       throw this.handleError(error);
     }
   }
 
-  static async setRadioFrontend(settings: RadioFrontendSettings): Promise<{
+  static async setRadioFrontend(
+    settings: RadioFrontendSettings,
+    radioId?: string,
+  ): Promise<{
     success: boolean;
     error?: string;
     data?: RadioFrontendApplyResult;
@@ -1404,7 +1413,8 @@ export class ApiService {
     try {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.radioFrontend.radioFrontendCreate(
-        settings,
+        radioId ? { ...settings, radio_id: radioId } : settings,
+        undefined,
         params,
       );
       return response.data;
@@ -1769,6 +1779,15 @@ export class ApiService {
         // Request was made but no response received
         return new Error('Network error - no response received');
       }
+    }
+    // The generated fetch client throws its HttpResponse, with the parsed body in .error.
+    if (typeof Response !== 'undefined' && error instanceof Response) {
+      const body = (error as Response & { error?: unknown }).error as
+        | { error?: unknown; message?: unknown }
+        | null
+        | undefined;
+      const message = body && typeof body === 'object' ? (body.error ?? body.message) : undefined;
+      return new Error(typeof message === 'string' && message ? message : `HTTP ${error.status}`);
     }
     // Something else happened
     return new Error(error instanceof Error ? error.message : 'Unknown error occurred');

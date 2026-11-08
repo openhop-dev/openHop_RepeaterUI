@@ -135,7 +135,14 @@ export const useSystemStore = defineStore('system', () => {
   // Actions
   let _fetchPromise: Promise<SystemStats> | null = null;
 
-  async function fetchStats(options?: { onFirstByte?: () => void }): Promise<SystemStats> {
+  async function fetchStats(options?: {
+    onFirstByte?: () => void;
+    /** Read after this call: wait out a fetch already in flight (it may predate a save). */
+    fresh?: boolean;
+  }): Promise<SystemStats> {
+    if (options?.fresh) {
+      while (_fetchPromise !== null) await _fetchPromise.catch(() => undefined);
+    }
     // Deduplicate: if a fetch is already in flight return the same promise
     if (_fetchPromise !== null) return _fetchPromise;
 

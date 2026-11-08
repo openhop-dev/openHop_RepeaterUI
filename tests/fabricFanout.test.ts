@@ -112,8 +112,9 @@ function savedFabric() {
   return calls[calls.length - 1][0].fabric as Record<string, unknown>;
 }
 
+/** Open the Routing panel, where the fabric's fan-out controls live. */
 async function edit(wrapper: ReturnType<typeof mount>) {
-  await buttonWithText(wrapper, 'Edit Settings')!.trigger('click');
+  await buttonWithText(wrapper, 'Routing')!.trigger('click');
   await flushPromises();
 }
 
@@ -128,17 +129,19 @@ describe('fabric fan-out controls', () => {
     sessionStorage.clear();
   });
 
-  it('shows the saved fan-out state read-only', async () => {
+  it('shows the saved fan-out state under Routing', async () => {
     const wrapper = mountComponent(
       bridgeConfig({ repeat_on_ingress: true, origin_tx: 'all' }),
     );
     await flushPromises();
+    await edit(wrapper);
 
     const panel = wrapper.text();
     expect(panel).toContain('RF relay fan-out');
     expect(panel).toContain('Originated traffic TX');
-    expect(panel).toContain('on');
-    expect(panel).toContain('all');
+    expect((repeatCheckbox(wrapper).element as HTMLInputElement).checked).toBe(true);
+    expect((originSelect(wrapper).element as HTMLSelectElement).value).toBe('all');
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
   });
 
   it('reads origin_tx from local_tx_mode when that is the only spelling stored', async () => {
@@ -234,9 +237,10 @@ describe('fabric fan-out controls', () => {
       bridgeConfig({ repeat_on_ingress: true, origin_tx: 'all' }),
     );
     await flushPromises();
-    await buttonWithText(wrapper, 'Disable multi-radio')!.trigger('click');
+    await edit(wrapper);
+    await buttonWithText(wrapper, 'Use one radio')!.trigger('click');
     await flushPromises();
-    await buttonWithText(wrapper, 'Save multi-radio config')!.trigger('click');
+    await buttonWithText(wrapper, 'Save Changes')!.trigger('click');
     await flushPromises();
 
     const calls = (ApiService.importConfig as ReturnType<typeof vi.fn>).mock.calls;

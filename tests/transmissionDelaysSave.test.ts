@@ -70,7 +70,7 @@ describe('TransmissionDelays save — response parsing', () => {
     vi.mocked(ApiService.post).mockResolvedValue(REAL_SUCCESS_RESPONSE as any);
 
     const wrapper = mountComponent();
-    await wrapper.find('button').trigger('click'); // Enter edit mode
+    await wrapper.find('input[type="number"]').setValue(1.5);
     await flushPromises();
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save'));
@@ -85,7 +85,7 @@ describe('TransmissionDelays save — response parsing', () => {
     vi.mocked(ApiService.post).mockResolvedValue(REAL_SUCCESS_RESPONSE as any);
 
     const wrapper = mountComponent();
-    await wrapper.find('button').trigger('click');
+    await wrapper.find('input[type="number"]').setValue(1.5);
     await flushPromises();
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save'));

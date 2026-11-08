@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { ApiService } from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar, { type SaveBarChange } from '@/components/ui/SaveBar.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 import Spinner from '@/components/ui/Spinner.vue';
 
@@ -42,7 +43,6 @@ const error = ref<string | null>(null);
 const showRestartModal = ref(false);
 
 // Editing state
-const isEditing = ref(false);
 const isSaving = ref(false);
 const draftConfig = ref<SensorConfig | null>(null);
 
@@ -92,14 +92,93 @@ async function loadData() {
   }
 }
 
-function startEditing() {
-  isEditing.value = true;
-  draftConfig.value = JSON.parse(JSON.stringify(config.value));
-  showAddForm.value = false;
-}
+// The page edits draftConfig directly, and an open row editor holds one
+// definition apart until its own Save; Save Changes takes both. The page has
+// unsaved changes while that combined draft differs from the config as loaded.
+const effectiveDraft = computed<SensorConfig | null>(() => {
+  if (!draftConfig.value) return null;
+  if (editingIndex.value === null || !editDraft.value) return draftConfig.value;
+  const definitions = [...draftConfig.value.definitions];
+  definitions[editingIndex.value] = editDraft.value;
+  return { ...draftConfig.value, definitions };
+});
 
+const draftDirty = computed(
+  () =>
+    !!config.value &&
+    !!effectiveDraft.value &&
+    JSON.stringify(effectiveDraft.value) !== JSON.stringify(config.value),
+);
+
+/** The add form holds a sensor the operator has started but not yet added. */
+const addFormStarted = computed(
+  () => showAddForm.value && (selectedNewType.value !== '' || newSensorName.value.trim() !== ''),
+);
+
+const isDirty = computed(() => draftDirty.value || addFormStarted.value);
+
+const GLOBAL_LABELS: Record<string, string> = {
+  enabled: 'Sensors',
+  poll_interval_seconds: 'Poll interval',
+  auto_install_packages: 'Auto-install packages',
+};
+
+/** What differs from the loaded config; sensors are named rather than diffed field by field. */
+const changes = computed<SaveBarChange[]>(() => {
+  if (!isDirty.value || !config.value || !effectiveDraft.value) return [];
+  const before = config.value;
+  const after = effectiveDraft.value;
+  const items: SaveBarChange[] = [];
+  for (const key of ['enabled', 'poll_interval_seconds', 'auto_install_packages'] as const) {
+    if (before[key] !== after[key]) {
+      const show = (v: unknown) =>
+        typeof v === 'boolean'
+          ? v
+            ? 'on'
+            : 'off'
+          : key === 'poll_interval_seconds'
+            ? `${v} s`
+            : String(v);
+      items.push({
+        label: GLOBAL_LABELS[key],
+        detail: `${show(before[key])} → ${show(after[key])}`,
+      });
+    }
+  }
+  const saved = new Map(before.definitions.map((d) => [d.name, d]));
+  const kept = new Set<string>();
+  for (const def of after.definitions) {
+    const old = saved.get(def._original_name ?? def.name);
+    if (!old) {
+      items.push({ label: `Add sensor ${def.name}`, detail: def.type });
+      continue;
+    }
+    kept.add(old.name);
+    if (JSON.stringify(old) === JSON.stringify(def)) continue;
+    if (
+      old.enabled !== def.enabled &&
+      JSON.stringify({ ...old, enabled: def.enabled }) === JSON.stringify(def)
+    ) {
+      items.push({ label: `Sensor ${def.name}`, detail: def.enabled ? 'enabled' : 'disabled' });
+    } else {
+      items.push({ label: `Edit sensor ${def.name}` });
+    }
+  }
+  for (const name of saved.keys()) {
+    if (!kept.has(name)) items.push({ label: `Remove sensor ${name}` });
+  }
+  if (addFormStarted.value) {
+    items.push({
+      label: `New sensor ${newSensorName.value.trim() || '(unnamed)'}`,
+      detail: 'not added yet',
+    });
+  }
+  return items;
+});
+
+/** Discard: back to the config as loaded. */
 function cancelEditing() {
-  isEditing.value = false;
+  draftConfig.value = config.value ? JSON.parse(JSON.stringify(config.value)) : null;
   showAddForm.value = false;
   selectedNewType.value = '';
   newSensorName.value = '';
@@ -165,6 +244,9 @@ function addSensor() {
 // Edit sensor
 function beginEditSensor(index: number) {
   if (!draftConfig.value) return;
+  // Opening another row keeps the open row's edit in the page draft, where the
+  // save bar lists it, rather than dropping it.
+  if (editingIndex.value !== null && editingIndex.value !== index) saveEditSensor();
   editingIndex.value = index;
   editDraft.value = JSON.parse(JSON.stringify(draftConfig.value.definitions[index]));
 }
@@ -185,6 +267,14 @@ function saveEditSensor() {
 function removeSensor(index: number) {
   if (!draftConfig.value) return;
   draftConfig.value.definitions.splice(index, 1);
+  // Keep an open row editor on its own sensor: removing it closes the editor,
+  // and removing one above moves the editor up with its row.
+  if (editingIndex.value === index) {
+    editingIndex.value = null;
+    editDraft.value = null;
+  } else if (editingIndex.value !== null && editingIndex.value > index) {
+    editingIndex.value -= 1;
+  }
 }
 
 // Toggle sensor enabled
@@ -198,12 +288,19 @@ async function saveAll(): Promise<boolean> {
   if (!draftConfig.value || isSaving.value) return false;
   // The row editor is a separate draft; include it in both page and leave-guard saves.
   if (editingIndex.value !== null) saveEditSensor();
+  // So is a started add form: add it, or stop rather than save without it.
+  if (addFormStarted.value) {
+    if (!canAddSensor()) {
+      error.value = 'Finish or cancel the new sensor before saving.';
+      return false;
+    }
+    addSensor();
+  }
   isSaving.value = true;
   error.value = null;
   try {
     const result = await ApiService.updateSensorConfig(draftConfig.value);
     if (result.success && result.data) {
-      isEditing.value = false;
       // Reload server-issued origins and masked passwords. Reusing the old
       // draft after a rename would point at a no-longer-existing identity.
       await loadData();
@@ -222,21 +319,13 @@ async function saveAll(): Promise<boolean> {
 }
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } =
-  useUnsavedChanges(isEditing, isSaving, cancelEditing, saveAll);
+  useUnsavedChanges(isDirty, isSaving, cancelEditing, saveAll);
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 
 onMounted(() => {
   void loadData();
 });
-
-// Watch config changes for unsaved-changes guard
-watch(
-  () => draftConfig.value?.enabled,
-  () => {
-    // Handled by useUnsavedChanges via isEditing flag
-  },
-);
 </script>
 
 <template>
@@ -266,17 +355,6 @@ watch(
           Configure and manage I2C sensors — add, edit, enable, or disable sensor definitions.
         </p>
       </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <template v-if="!isEditing">
-          <button @click="startEditing" class="cfg-btn-primary">Edit Sensors</button>
-        </template>
-        <template v-else>
-          <button @click="cancelEditing" class="cfg-btn-secondary">Discard</button>
-          <button @click="saveAll" :disabled="isSaving" class="cfg-btn-primary">
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
-      </div>
     </div>
 
     <!-- Error -->
@@ -292,85 +370,7 @@ watch(
       <Spinner />
     </div>
 
-    <!-- Non-editing view -->
-    <template v-if="!isEditing && !loading && config">
-      <!-- Global settings -->
-      <div
-        class="cfg-section rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-4 sm:p-5 space-y-4"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold text-content-primary">Sensor Manager</div>
-            <div class="text-xs text-content-muted mt-0.5">
-              {{ config.enabled ? 'Enabled' : 'Disabled' }} ·
-              {{ config.definitions.length }} configured
-            </div>
-          </div>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              :checked="config.enabled"
-              class="w-4 h-4 accent-primary"
-              disabled
-            />
-            <span class="text-sm text-content-primary">Enable sensor manager</span>
-          </label>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-content-muted">Poll interval:</span>
-          <span class="text-sm font-mono text-content-primary"
-            >{{ config.poll_interval_seconds }}s</span
-          >
-        </div>
-      </div>
-
-      <!-- Sensor list -->
-      <div
-        class="cfg-section rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-4 sm:p-5 space-y-3"
-      >
-        <div class="text-sm font-semibold text-content-primary">Configured Sensors</div>
-
-        <div
-          v-if="config.definitions.length === 0"
-          class="text-xs text-content-muted py-4 text-center"
-        >
-          No sensors configured. Click "Edit Sensors" to add one.
-        </div>
-
-        <div
-          v-for="def in config.definitions"
-          :key="def.name"
-          class="rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light p-3"
-        >
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="font-semibold text-content-primary text-sm">{{ def.name }}</span>
-              <span
-                class="text-xs px-2 py-0.5 rounded-full bg-primary/opacity-light text-primary font-mono"
-              >
-                {{ def.type }}
-              </span>
-              <span
-                class="text-[10px] px-2 py-0.5 rounded-full"
-                :class="
-                  def.enabled
-                    ? 'bg-accent-green/opacity-light text-accent-green dark:bg-accent-green/opacity-medium dark:text-accent-green'
-                    : 'bg-accent-amber/opacity-light text-accent-amber dark:bg-accent-amber/opacity-medium dark:text-accent-amber'
-                "
-              >
-                {{ def.enabled ? 'Enabled' : 'Disabled' }}
-              </span>
-            </div>
-            <div class="flex items-center gap-2 text-xs text-content-muted">
-              <span class="font-mono">{{ displaySettings(def.settings) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- Editing view -->
-    <template v-if="isEditing && !loading && draftConfig">
+    <template v-if="!loading && draftConfig">
       <!-- Global settings -->
       <div
         class="cfg-section rounded-xl border border-stroke-subtle dark:border-stroke/opacity-light p-4 sm:p-5 space-y-4"
@@ -402,7 +402,7 @@ watch(
       >
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div class="text-sm font-semibold text-content-primary">Configured Sensors</div>
-          <button v-if="!showAddForm" @click="beginAddSensor" class="cfg-btn-primary text-xs">
+          <button v-if="!showAddForm" @click="beginAddSensor" class="cfg-btn-primary cfg-btn-sm">
             + Add Sensor
           </button>
         </div>
@@ -478,7 +478,7 @@ watch(
               <button
                 @click="addSensor"
                 :disabled="!canAddSensor()"
-                class="cfg-btn-primary text-xs"
+                class="cfg-btn-primary cfg-btn-sm"
               >
                 Add
               </button>
@@ -489,7 +489,7 @@ watch(
                     resetAddForm();
                   }
                 "
-                class="cfg-btn-secondary text-xs"
+                class="cfg-btn-secondary cfg-btn-sm"
               >
                 Cancel
               </button>
@@ -527,12 +527,12 @@ watch(
                   </label>
                 </div>
                 <div class="flex items-center gap-1">
-                  <button @click="beginEditSensor(idx)" class="cfg-btn-secondary text-xs px-2 py-1">
+                  <button @click="beginEditSensor(idx)" class="cfg-btn-secondary cfg-btn-sm">
                     Edit
                   </button>
                   <button
                     @click="removeSensor(idx)"
-                    class="text-xs px-2 py-1 rounded-lg border border-accent-red/opacity-medium text-accent-red hover:bg-accent-red/opacity-light"
+                    class="cfg-btn-danger cfg-btn-sm"
                   >
                     Delete
                   </button>
@@ -576,8 +576,8 @@ watch(
                 </div>
               </div>
               <div class="flex items-center gap-2 pt-2">
-                <button @click="saveEditSensor" class="cfg-btn-primary text-xs">Save</button>
-                <button @click="cancelEditSensor" class="cfg-btn-secondary text-xs">Cancel</button>
+                <button @click="saveEditSensor" class="cfg-btn-primary cfg-btn-sm">Save</button>
+                <button @click="cancelEditSensor" class="cfg-btn-secondary cfg-btn-sm">Cancel</button>
               </div>
             </div>
           </div>
@@ -591,5 +591,7 @@ watch(
         </div>
       </div>
     </template>
+
+    <SaveBar :changes="changes" :saving="isSaving" @save="saveAll" @discard="cancelEditing" />
   </div>
 </template>

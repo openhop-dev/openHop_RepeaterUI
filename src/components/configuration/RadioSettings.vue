@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useSystemStore } from '@/stores/system';
 import { useDataService } from '@/stores/dataService';
@@ -8,8 +8,10 @@ import apiClient from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
 import TxPowerNoticeModal from '@/components/modals/TxPowerNoticeModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar from '@/components/ui/SaveBar.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 import { useMultiRadioConfig } from '@/composables/useMultiRadioConfig';
+import { useSettingsDraft } from '@/composables/useSettingsDraft';
 
 const router = useRouter();
 const systemStore = useSystemStore();
@@ -32,8 +34,6 @@ const {
 const radioConfig = computed(() => activeRadioAirConfig.value || {});
 const cadConfig = computed(() => (systemStore.stats?.config?.radio as any)?.cad ?? {});
 
-// Editable form values
-const isEditing = ref(false);
 const isSaving = ref(false);
 const error = ref<string | null>(null);
 const showRestartModal = ref(false);
@@ -72,67 +72,49 @@ function loadFormFromConfig(config: Record<string, any>) {
   txPower.value = config.tx_power ?? 0;
   codingRate.value = config.coding_rate ?? 0;
   preambleLength.value = config.preamble_length ?? 0;
+  txPowerAtEditStart.value = txPower.value;
 }
 
-// Load current values into form
-watch(
-  radioConfig,
-  (config) => {
-    if (config && !isEditing.value) {
-      loadFormFromConfig(config);
-    }
+// The form is always editable; the saved values (of the selected radio on a
+// multi-radio node) are its baseline, and a change opens the save bar.
+const { isDirty, changes, reset } = useSettingsDraft({
+  state: () => ({
+    frequency: frequencyMHz.value,
+    spreading_factor: spreadingFactor.value,
+    bandwidth: bandwidthKHz.value,
+    tx_power: txPower.value,
+    coding_rate: codingRate.value,
+  }),
+  load: () => loadFormFromConfig(radioConfig.value || {}),
+  source: radioConfig,
+  labels: {
+    frequency: 'Frequency',
+    spreading_factor: 'Spreading factor',
+    bandwidth: 'Bandwidth',
+    tx_power: 'TX power',
+    coding_rate: 'Coding rate',
   },
-  { immediate: true },
-);
-
-// Multi-radio: switching the selected radio reloads air settings (view mode).
-watch(effectiveSelectedId, () => {
-  ensureSelection();
-  if (!isEditing.value) {
-    loadFormFromConfig(radioConfig.value || {});
-  }
+  format: (path, value) => {
+    if (path === 'frequency') return `${Number(value).toFixed(3)} MHz`;
+    if (path === 'bandwidth') return `${value} kHz`;
+    if (path === 'tx_power') return `${value} dBm`;
+    if (path === 'coding_rate') return `4/${value}`;
+    return String(value);
+  },
 });
 
-// Formatted display values
-const formattedFrequency = computed(() => {
-  const freq = radioConfig.value.frequency;
-  return freq ? (freq / 1000000).toFixed(3) + ' MHz' : 'Not set';
-});
-
-const formattedBandwidth = computed(() => {
-  const bw = radioConfig.value.bandwidth;
-  return bw ? (bw / 1000).toFixed(1) + ' kHz' : 'Not set';
-});
-
-const formattedTxPower = computed(() => {
-  const power = radioConfig.value.tx_power;
-  return power !== undefined ? power + ' dBm' : 'Not set';
-});
-
-const formattedCodingRate = computed(() => {
-  const cr = radioConfig.value.coding_rate;
-  return cr ? '4/' + cr : 'Not set';
-});
+// Multi-radio: switching the selected radio (only while nothing is unsaved)
+// changes radioConfig, which reloads the form.
+watch(effectiveSelectedId, () => ensureSelection());
 
 const formattedPreambleLength = computed(() => {
   const preamble = radioConfig.value.preamble_length;
   return preamble ? preamble + ' symbols' : 'Not set';
 });
 
-const formattedSpreadingFactor = computed(() => {
-  return radioConfig.value.spreading_factor ?? 'Not set';
+onMounted(() => {
+  if (setupStore.radioPresets.length === 0) void setupStore.fetchRadioPresets();
 });
-
-const startEditing = async () => {
-  if (setupStore.radioPresets.length === 0) {
-    await setupStore.fetchRadioPresets();
-  }
-
-  isEditing.value = true;
-  error.value = null;
-  txPowerNoticeConfirmed.value = false;
-  txPowerAtEditStart.value = txPower.value;
-};
 
 const applyPresetToForm = (preset: { frequency: string; spreading_factor: string; bandwidth: string; coding_rate: string }) => {
   frequencyMHz.value = preset.frequency ? Number(Number(preset.frequency).toFixed(3)) : 0;
@@ -155,7 +137,7 @@ const applySelectedPreset = () => {
 };
 
 watch(selectedPrefillPreset, (presetTitle) => {
-  if (!isEditing.value || !presetTitle) return;
+  if (!presetTitle) return;
   applySelectedPreset();
 });
 
@@ -169,19 +151,12 @@ const choosePrefillPreset = (title: string) => {
 };
 
 const cancelEditing = () => {
-  isEditing.value = false;
   error.value = null;
   selectedPrefillPreset.value = '';
   showPrefillPicker.value = false;
   showTxPowerNoticeModal.value = false;
   txPowerNoticeConfirmed.value = false;
-  const config = radioConfig.value;
-  frequencyMHz.value = config.frequency ? Number((config.frequency / 1000000).toFixed(3)) : 0;
-  spreadingFactor.value = config.spreading_factor ?? 0;
-  bandwidthKHz.value = config.bandwidth ? Number((config.bandwidth / 1000).toFixed(1)) : 0;
-  txPower.value = config.tx_power ?? 0;
-  codingRate.value = config.coding_rate ?? 0;
-  preambleLength.value = config.preamble_length ?? 0;
+  reset();
 };
 
 const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promise<boolean> => {
@@ -210,10 +185,11 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
     const data = response.data as any;
 
     if (data.message || data.persisted) {
-      isEditing.value = false;
       txPowerNoticeConfirmed.value = false;
-      await systemStore.fetchStats();
+      selectedPrefillPreset.value = '';
+      await systemStore.fetchStats({ fresh: true });
       dataService.invalidate('radioConfig');
+      reset();
       if (!silent) showRestartModal.value = true;
       return true;
     } else if (data.error) {
@@ -233,10 +209,18 @@ const saveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promi
 
 const txPowerChanged = computed(() => txPower.value !== txPowerAtEditStart.value);
 
+// A save that waits on the TX power notice resolves once the notice is
+// confirmed (and the save done) or closed, so a save started from the
+// unsaved-changes prompt can still carry on with the navigation.
+let resolveNoticeSave: ((saved: boolean) => void) | null = null;
+
 const requestSaveChanges = async ({ silent = false }: { silent?: boolean } = {}): Promise<boolean> => {
-  if (isEditing.value && txPowerChanged.value && !txPowerNoticeConfirmed.value) {
+  if (txPowerChanged.value && !txPowerNoticeConfirmed.value) {
+    resolveNoticeSave?.(false);
     showTxPowerNoticeModal.value = true;
-    return false;
+    return new Promise<boolean>((resolve) => {
+      resolveNoticeSave = resolve;
+    });
   }
   return saveChanges({ silent });
 };
@@ -244,22 +228,26 @@ const requestSaveChanges = async ({ silent = false }: { silent?: boolean } = {})
 const confirmNoticeAndSave = async () => {
   if (!txPowerNoticeConfirmed.value) return;
   showTxPowerNoticeModal.value = false;
-  await saveChanges();
+  const saved = await saveChanges();
+  resolveNoticeSave?.(saved);
+  resolveNoticeSave = null;
 };
 
 const closeTxPowerNotice = () => {
   showTxPowerNoticeModal.value = false;
   txPowerNoticeConfirmed.value = false;
+  resolveNoticeSave?.(false);
+  resolveNoticeSave = null;
 };
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  isDirty,
   isSaving,
   cancelEditing,
   () => requestSaveChanges(),
 );
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 
 </script>
 
@@ -297,36 +285,12 @@ defineExpose({ requestLeave, isEditing });
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Configure LoRa radio parameters and frequency presets<span v-if="isMultiRadio"> for the selected radio</span></p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
-        <template v-if="!isEditing">
-          <button
-            @click="startEditing"
-            class="cfg-btn-primary"
-          >
-            Edit Settings
-          </button>
-        </template>
-        <template v-else>
-          <button
-            @click="showPrefillPicker = !showPrefillPicker"
-            class="cfg-btn-secondary"
-          >
-            Prefill Preset
-          </button>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="cfg-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            @click="requestSaveChanges()"
-            :disabled="isSaving"
-            class="cfg-btn-primary"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
+        <button
+          @click="showPrefillPicker = !showPrefillPicker"
+          class="cfg-btn-secondary"
+        >
+          Prefill Preset
+        </button>
       </div>
     </div>
 
@@ -348,7 +312,7 @@ defineExpose({ requestLeave, isEditing });
         <select
           class="cfg-select w-full sm:w-64"
           :value="effectiveSelectedId"
-          :disabled="isEditing"
+          :disabled="isDirty"
           @change="selectRadio(($event.target as HTMLSelectElement).value)"
         >
           <option v-for="opt in radioOptions" :key="opt.id" :value="opt.id">
@@ -356,8 +320,8 @@ defineExpose({ requestLeave, isEditing });
           </option>
         </select>
       </div>
-      <p v-if="isEditing" class="text-xs text-content-muted">
-        Finish or cancel editing before switching radios.
+      <p v-if="isDirty" class="text-xs text-content-muted">
+        Save or discard your changes before switching radios.
       </p>
     </div>
 
@@ -370,7 +334,7 @@ defineExpose({ requestLeave, isEditing });
     <div class="cfg-section space-y-3">
       <Transition name="fade">
         <div
-          v-if="isEditing && showPrefillPicker"
+          v-if="showPrefillPicker"
           class="modal-backdrop"
           @click.self="showPrefillPicker = false"
         >
@@ -404,7 +368,7 @@ defineExpose({ requestLeave, isEditing });
                     'w-full text-left rounded-[18px] border px-4 py-3 transition-all duration-200 flex items-center justify-between gap-4',
                     selectedPrefillPreset === preset.title
                       ? 'border-primary/opacity-heavy bg-primary/opacity-light shadow-sm shadow-primary/10'
-                      : 'border-stroke-subtle dark:border-white/opacity-light bg-white/60 dark:bg-white/opacity-subtle hover:border-primary/opacity-medium dark:hover:border-primary/opacity-medium hover:bg-stroke-subtle/60 dark:hover:bg-white/opacity-light',
+                      : 'border-stroke-subtle dark:border-white/opacity-light bg-white/60 dark:bg-white/opacity-subtle hover:border-stroke-hover dark:hover:border-stroke-hover hover:bg-stroke-subtle/60 dark:hover:bg-white/opacity-light',
                   ]"
                 >
                   <div class="min-w-0">
@@ -452,13 +416,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Frequency</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ formattedFrequency }}
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="frequencyMHz"
             type="number"
@@ -478,13 +436,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Spreading Factor</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ formattedSpreadingFactor }}
-        </div>
-        <div v-else>
+        <div>
           <select
             v-model.number="spreadingFactor"
             class="cfg-select"
@@ -503,13 +455,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Bandwidth</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ formattedBandwidth }}
-        </div>
-        <div v-else>
+        <div>
           <select
             v-model.number="bandwidthKHz"
             class="cfg-select"
@@ -528,13 +474,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >TX Power</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ formattedTxPower }}
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="txPower"
             type="number"
@@ -553,13 +493,7 @@ defineExpose({ requestLeave, isEditing });
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Coding Rate</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ formattedCodingRate }}
-        </div>
-        <div v-else>
+        <div>
           <select
             v-model.number="codingRate"
             class="cfg-select"
@@ -615,5 +549,12 @@ defineExpose({ requestLeave, isEditing });
         </span>
       </div>
     </div>
+    <SaveBar
+      :changes="changes"
+      :saving="isSaving"
+      note="Takes effect after a restart"
+      @save="requestSaveChanges()"
+      @discard="cancelEditing"
+    />
   </div>
 </template>

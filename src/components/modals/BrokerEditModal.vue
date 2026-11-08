@@ -38,6 +38,8 @@ interface Props {
 interface Emits {
   (e: 'done', data: Broker): void;
   (e: 'cancel'): void;
+  /** The draft as it stands, so the page can count and save an unfinished edit. */
+  (e: 'change', data: Broker): void;
 }
 
 const props = defineProps<Props>();
@@ -96,6 +98,15 @@ function onPasswordBlur() {
     draft.value.password = REDACTED_PASSWORD;
   }
 }
+
+/** The draft with a cleared-on-focus stored password put back, as Done would send it. */
+function snapshot(): Broker {
+  const b = cloneBroker(draft.value);
+  if (passwordWasRedacted.value && !b.password) b.password = REDACTED_PASSWORD;
+  return b;
+}
+
+watch(draft, () => emit('change', snapshot()), { deep: true });
 
 function handleDone() {
   onPasswordBlur();

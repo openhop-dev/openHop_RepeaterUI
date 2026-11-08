@@ -60,6 +60,12 @@ function mountDutyCycle() {
 // ApiService.post() returns response.data (the JSON body) directly, not a
 // full AxiosResponse. The component then accesses .data on that, landing on
 // the inner payload — so data.message and data.persisted are correctly found.
+/** An edit, so the save bar has something to save. */
+async function editAirtime(wrapper: ReturnType<typeof mountDutyCycle>) {
+  await wrapper.find('input[type="number"]').setValue(7.5);
+  await flushPromises();
+}
+
 function apiSuccess() {
   return Promise.resolve({
     success: true,
@@ -95,9 +101,7 @@ describe('DutyCycle save — response envelope parsing', () => {
 
     const wrapper = mountDutyCycle();
 
-    // Enter edit mode
-    await wrapper.find('button').trigger('click');
-    await flushPromises();
+    await editAirtime(wrapper);
 
     // Trigger save
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save'));
@@ -113,8 +117,7 @@ describe('DutyCycle save — response envelope parsing', () => {
 
     const wrapper = mountDutyCycle();
 
-    await wrapper.find('button').trigger('click');
-    await flushPromises();
+    await editAirtime(wrapper);
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save'));
     await saveBtn!.trigger('click');
@@ -128,8 +131,7 @@ describe('DutyCycle save — response envelope parsing', () => {
     vi.mocked(ApiService.post).mockImplementation(() => apiSuccess());
 
     const wrapper = mountDutyCycle();
-    await wrapper.find('button').trigger('click');
-    await flushPromises();
+    await editAirtime(wrapper);
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save'));
     await saveBtn!.trigger('click');
@@ -142,5 +144,24 @@ describe('DutyCycle save — response envelope parsing', () => {
         enforcement_enabled: expect.any(Boolean),
       }),
     );
+  });
+
+  it('shows no save bar until a field changes, lists the change, and discards it', async () => {
+    const wrapper = mountDutyCycle();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+
+    await editAirtime(wrapper);
+    const items = wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
+    expect(items).toEqual(['Max airtime 6% → 7.5%']);
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Discard')!
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+    expect((wrapper.find('input[type="number"]').element as HTMLInputElement).value).toBe('6');
+    expect(ApiService.post).not.toHaveBeenCalled();
   });
 });

@@ -257,7 +257,7 @@ onMounted(() => {
           <button
             @click="openRevokeConfirm(token.id, token.name)"
             :disabled="isLoading"
-            class="w-full sm:w-auto px-3 py-1.5 bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium hover:bg-accent-red/opacity-medium text-accent-red rounded-lg border border-accent-red/opacity-heavy transition-colors disabled:opacity-50 text-sm"
+            class="cfg-btn-danger cfg-btn-sm w-full sm:w-auto"
           >
             Revoke
           </button>
@@ -327,14 +327,14 @@ onMounted(() => {
             <button
               @click="closeCreateModal"
               :disabled="isLoading"
-              class="px-4 py-2 bg-background-mute dark:bg-white/opacity-subtle hover:bg-stroke-subtle dark:hover:bg-white/opacity-light text-content-primary rounded-lg border border-stroke-subtle dark:border-stroke/opacity-light transition-colors disabled:opacity-50"
+              class="cfg-btn-secondary"
             >
               Cancel
             </button>
             <button
               @click="createToken"
               :disabled="isLoading || !newTokenName.trim()"
-              class="btn-primary"
+              class="cfg-btn-primary"
             >
               {{ isLoading ? 'Creating...' : 'Create Token' }}
             </button>
@@ -392,7 +392,7 @@ onMounted(() => {
               />
               <button
                 @click="handleCopyToken"
-                :class="['flex items-center gap-2 transition-colors', tokenCopied ? 'btn-success' : 'btn-primary']"
+                :class="['flex items-center gap-2 transition-colors', tokenCopied ? 'cfg-btn-success' : 'cfg-btn-primary']"
               >
                 <svg v-if="!tokenCopied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -415,7 +415,7 @@ onMounted(() => {
           <div class="flex justify-end mt-6">
             <button
               @click="closeTokenModal"
-              class="btn-primary"
+              class="cfg-btn-primary"
             >
               Done
             </button>

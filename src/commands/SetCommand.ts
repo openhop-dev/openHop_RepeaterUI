@@ -71,9 +71,12 @@ export class SetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36mflood.max <0-64>\x1b[0m         Max flood hops');
       this.writeLine(term, '  \x1b[36madvert.interval <mins>\x1b[0m   Local advert interval');
       this.writeLine(term, '');
-      this.writeLine(term, '  \x1b[33mRF front end (default radio, applied live):\x1b[0m');
+      this.writeLine(
+        term,
+        '  \x1b[33mRF front end (applied live; add a radio id, or the default radio):\x1b[0m',
+      );
       for (const [name, arg, help] of FRONTEND_PARAM_HELP) {
-        this.writeLine(term, `  \x1b[36m${`${name} ${arg}`.padEnd(25)}\x1b[0m${help}`);
+        this.writeLine(term, `  \x1b[36m${`${name} ${arg} [id]`.padEnd(30)}\x1b[0m${help}`);
       }
       this.writeLine(term, '');
       writePrompt();
@@ -81,8 +84,16 @@ export class SetCommand extends BaseCommand {
     }
 
     if (isFrontendParam(param)) {
+      // <value> [radio_id]; without an id, the default radio.
+      const [frontendValue = '', radioId, ...extra] = args.slice(1);
+      if (extra.length) {
+        this.writeError(term, `Usage: set ${param} <value> [radio_id]`);
+        this.writeLine(term, '');
+        writePrompt();
+        return;
+      }
       const stopFrontendLoading = this.startLoading(term, 'Applying to the radio...');
-      const { ok, text } = await setFrontendParam(param, value);
+      const { ok, text } = await setFrontendParam(param, frontendValue, radioId);
       stopFrontendLoading();
       if (ok) {
         this.writeSuccess(term, text);

@@ -57,7 +57,7 @@ const editableTabRefs: Record<string, Ref<EditableTabRef | null>> = {
   delays:          delaysRef,
   transport:       transportRef,
   observer:        letsMeshRef,
-  policy:          policyRef,
+  'policy-engine': policyRef,
   sensormanager:   sensorRef,
 };
 
@@ -199,7 +199,7 @@ onMounted(async () => {
         <APITokens              v-if="activeTab === 'api-tokens'"                           key="api-tokens" />
         <WebSettings            v-if="activeTab === 'web'"                                  key="web-settings" />
         <LetsMeshSettings       v-if="activeTab === 'observer'"      ref="letsMeshRef"      key="letsmesh-settings" />
-        <PolicyEngineSettings   v-if="activeTab === 'policy-engine'"                        key="policy-engine" />
+        <PolicyEngineSettings   v-if="activeTab === 'policy-engine'" ref="policyRef"        key="policy-engine" />
         <BackupRestore          v-if="activeTab === 'backup'"                               key="backup-restore" />
         <DatabaseManagement     v-if="activeTab === 'database'"                             key="database-management" />
         <MemoryDebug            v-if="activeTab === 'memory'"                               key="memory-debug" />

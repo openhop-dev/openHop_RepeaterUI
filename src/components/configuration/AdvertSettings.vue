@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, nextTick } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useSystemStore } from '@/stores/system';
 import ApiService from '@/utils/api';
 import Spinner from '@/components/ui/Spinner.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar from '@/components/ui/SaveBar.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
+import { useSettingsDraft } from '@/composables/useSettingsDraft';
 
 const systemStore = useSystemStore();
 
@@ -15,8 +17,6 @@ const penaltyConfig = computed(() => repeaterConfig.value.advert_penalty_box || 
 const adaptiveConfig = computed(() => repeaterConfig.value.advert_adaptive || {});
 const thresholds = computed(() => adaptiveConfig.value.thresholds || {});
 
-// Edit mode state
-const isEditing = ref(false);
 const isSaving = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
@@ -64,50 +64,11 @@ const fetchStats = async () => {
   }
 };
 
-// Load current values into form
-watch(
-  [rateLimitConfig, penaltyConfig, adaptiveConfig],
-  () => {
-    if (!isEditing.value) {
-
-      // Rate limit
-      rateLimitEnabled.value = rateLimitConfig.value.enabled ?? false;
-      bucketCapacity.value = rateLimitConfig.value.bucket_capacity ?? 2;
-      refillTokens.value = rateLimitConfig.value.refill_tokens ?? 1;
-      refillIntervalHours.value = Math.round(
-        (rateLimitConfig.value.refill_interval_seconds ?? 36000) / 3600,
-      );
-      minIntervalMinutes.value = Math.round((rateLimitConfig.value.min_interval_seconds ?? 0) / 60);
-
-      // Penalty box
-      penaltyEnabled.value = penaltyConfig.value.enabled ?? false;
-      violationThreshold.value = penaltyConfig.value.violation_threshold ?? 2;
-      violationDecayHours.value = Math.round(
-        (penaltyConfig.value.violation_decay_seconds ?? 43200) / 3600,
-      );
-      basePenaltyHours.value = Math.round(
-        (penaltyConfig.value.base_penalty_seconds ?? 21600) / 3600,
-      );
-      penaltyMultiplier.value = penaltyConfig.value.penalty_multiplier ?? 2.0;
-      maxPenaltyHours.value = Math.round((penaltyConfig.value.max_penalty_seconds ?? 86400) / 3600);
-
-      // Adaptive
-      adaptiveEnabled.value = adaptiveConfig.value.enabled ?? false;
-      ewmaAlpha.value = adaptiveConfig.value.ewma_alpha ?? 0.1;
-      hysteresisMinutes.value = Math.round((adaptiveConfig.value.hysteresis_seconds ?? 300) / 60);
-      quietMax.value = thresholds.value.quiet_max ?? 0.05;
-      normalMax.value = thresholds.value.normal_max ?? 0.2;
-      busyMax.value = thresholds.value.busy_max ?? 0.5;
-    }
-  },
-  { immediate: true },
-);
-
 onMounted(() => {
   fetchStats();
 });
 
-const reloadFormValues = () => {
+function loadForm() {
   // Rate limit
   rateLimitEnabled.value = rateLimitConfig.value.enabled ?? false;
   bucketCapacity.value = rateLimitConfig.value.bucket_capacity ?? 2;
@@ -134,23 +95,66 @@ const reloadFormValues = () => {
   quietMax.value = thresholds.value.quiet_max ?? 0.05;
   normalMax.value = thresholds.value.normal_max ?? 0.2;
   busyMax.value = thresholds.value.busy_max ?? 0.5;
+}
+
+const LABELS: Record<string, string> = {
+  rate_limit_enabled: 'Rate limiting',
+  bucket_capacity: 'Bucket capacity',
+  refill_tokens: 'Refill tokens',
+  refill_interval_hours: 'Refill interval',
+  min_interval_minutes: 'Minimum interval',
+  penalty_enabled: 'Penalty box',
+  violation_threshold: 'Violation threshold',
+  violation_decay_hours: 'Violation decay',
+  base_penalty_hours: 'Base penalty',
+  penalty_multiplier: 'Penalty multiplier',
+  max_penalty_hours: 'Max penalty',
+  adaptive_enabled: 'Adaptive limiting',
+  ewma_alpha: 'EWMA alpha',
+  hysteresis_minutes: 'Hysteresis',
+  quiet_max: 'Quiet max',
+  normal_max: 'Normal max',
+  busy_max: 'Busy max',
 };
 
-const startEditing = () => {
-  isEditing.value = true;
-  successMessage.value = '';
-  errorMessage.value = '';
-};
+const { isDirty, changes, reset } = useSettingsDraft({
+  state: () => ({
+    rate_limit_enabled: rateLimitEnabled.value,
+    bucket_capacity: bucketCapacity.value,
+    refill_tokens: refillTokens.value,
+    refill_interval_hours: refillIntervalHours.value,
+    min_interval_minutes: minIntervalMinutes.value,
+    penalty_enabled: penaltyEnabled.value,
+    violation_threshold: violationThreshold.value,
+    violation_decay_hours: violationDecayHours.value,
+    base_penalty_hours: basePenaltyHours.value,
+    penalty_multiplier: penaltyMultiplier.value,
+    max_penalty_hours: maxPenaltyHours.value,
+    adaptive_enabled: adaptiveEnabled.value,
+    ewma_alpha: ewmaAlpha.value,
+    hysteresis_minutes: hysteresisMinutes.value,
+    quiet_max: quietMax.value,
+    normal_max: normalMax.value,
+    busy_max: busyMax.value,
+  }),
+  load: loadForm,
+  source: () => [rateLimitConfig.value, penaltyConfig.value, adaptiveConfig.value],
+  labels: LABELS,
+  format: (path, value) => {
+    if (typeof value === 'boolean') return value ? 'Enabled' : 'Disabled';
+    if (path.endsWith('_hours')) return `${value} h`;
+    if (path.endsWith('_minutes')) return `${value} min`;
+    return String(value);
+  },
+});
 
 const cancelEditing = () => {
-  isEditing.value = false;
   successMessage.value = '';
   errorMessage.value = '';
-  // Reload values from store
-  reloadFormValues();
+  reset();
 };
 
-const saveChanges = async () => {
+const saveChanges = async (): Promise<boolean> => {
   isSaving.value = true;
   errorMessage.value = '';
   successMessage.value = '';
@@ -184,43 +188,36 @@ const saveChanges = async () => {
 
     if (response.success) {
       successMessage.value = data?.message || 'Settings saved successfully';
-
-      // Fetch updated config from backend first
-      await systemStore.fetchStats();
-
+      await systemStore.fetchStats({ fresh: true });
       await fetchStats();
-
-      // Wait for Vue reactivity to update computed values from store
-      await nextTick();
-
-      // Reload form values from updated store
-      reloadFormValues();
-
-      // Exit edit mode AFTER reloading to prevent watch from loading stale values
-      isEditing.value = false;
+      // The saved config is the new baseline.
+      reset();
       setTimeout(() => {
         successMessage.value = '';
       }, 3000);
-    } else {
-      errorMessage.value = data?.error || 'Failed to save settings';
-      console.error('[AdvertSettings] Save failed:', data?.error);
+      return true;
     }
-  } catch (error: any) {
+    errorMessage.value = data?.error || 'Failed to save settings';
+    console.error('[AdvertSettings] Save failed:', data?.error);
+    return false;
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { error?: string } } };
     console.error('Failed to save advert settings:', error);
-    errorMessage.value = error.response?.data?.error || 'Failed to save settings';
+    errorMessage.value = e.response?.data?.error || 'Failed to save settings';
+    return false;
   } finally {
     isSaving.value = false;
   }
 };
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  isDirty,
   isSaving,
   cancelEditing,
-  async () => { await saveChanges(); return !isEditing.value; },
+  saveChanges,
 );
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 
 // Computed display values
 const currentTier = computed(() => rateLimitStats.value?.adaptive?.current_tier || 'unknown');
@@ -272,29 +269,6 @@ const tierBadgeClass = computed(() => {
             />
           </svg>
         </button>
-        <button
-          v-if="!isEditing"
-          @click="startEditing"
-          class="cfg-btn-primary"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            @click="cancelEditing"
-            :disabled="isSaving"
-            class="cfg-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveChanges"
-            :disabled="isSaving"
-            class="cfg-btn-primary"
-          >
-            {{ isSaving ? 'Saving...' : 'Save Changes' }}
-          </button>
-        </template>
       </div>
     </div>
 
@@ -469,14 +443,7 @@ const tierBadgeClass = computed(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Rate Limiting</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ rateLimitEnabled ? 'Enabled' : 'Disabled' }}
-        </div>
         <select
-          v-else
           v-model="rateLimitEnabled"
           class="cfg-select w-full sm:w-32"
         >
@@ -495,14 +462,7 @@ const tierBadgeClass = computed(() => {
           >
           <p class="text-xs text-content-muted">Max burst size (adverts)</p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ bucketCapacity }}
-        </div>
         <input
-          v-else
           v-model.number="bucketCapacity"
           type="number"
           min="1"
@@ -523,13 +483,7 @@ const tierBadgeClass = computed(() => {
             Time between token refills
           </p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ refillIntervalHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="refillIntervalHours"
             type="number"
@@ -551,13 +505,7 @@ const tierBadgeClass = computed(() => {
             Hard minimum between adverts
           </p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ minIntervalMinutes }} min
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="minIntervalMinutes"
             type="number"
@@ -596,14 +544,7 @@ const tierBadgeClass = computed(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Penalty Box</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ penaltyEnabled ? 'Enabled' : 'Disabled' }}
-        </div>
         <select
-          v-else
           v-model="penaltyEnabled"
           class="cfg-select w-full sm:w-32"
         >
@@ -624,14 +565,7 @@ const tierBadgeClass = computed(() => {
             Violations before penalty
           </p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ violationThreshold }}
-        </div>
         <input
-          v-else
           v-model.number="violationThreshold"
           type="number"
           min="1"
@@ -650,13 +584,7 @@ const tierBadgeClass = computed(() => {
           >
           <p class="text-xs text-content-muted">First penalty duration</p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ basePenaltyHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="basePenaltyHours"
             type="number"
@@ -678,13 +606,7 @@ const tierBadgeClass = computed(() => {
           >
           <p class="text-xs text-content-muted">Escalation factor</p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ penaltyMultiplier }}x
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="penaltyMultiplier"
             type="number"
@@ -705,13 +627,7 @@ const tierBadgeClass = computed(() => {
           >
           <p class="text-xs text-content-muted">Maximum cooldown cap</p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ maxPenaltyHours }} hours
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="maxPenaltyHours"
             type="number"
@@ -747,14 +663,7 @@ const tierBadgeClass = computed(() => {
         <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm"
           >Adaptive Mode</span
         >
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ adaptiveEnabled ? 'Enabled' : 'Disabled' }}
-        </div>
         <select
-          v-else
           v-model="adaptiveEnabled"
           class="cfg-select w-full sm:w-32"
         >
@@ -773,13 +682,7 @@ const tierBadgeClass = computed(() => {
           >
           <p class="text-xs text-content-muted">Prevents tier flapping</p>
         </div>
-        <div
-          v-if="!isEditing"
-          class="text-content-primary font-mono text-sm"
-        >
-          {{ hysteresisMinutes }} min
-        </div>
-        <div v-else class="flex items-center gap-2">
+        <div class="flex items-center gap-2">
           <input
             v-model.number="hysteresisMinutes"
             type="number"
@@ -799,14 +702,7 @@ const tierBadgeClass = computed(() => {
         <div class="grid grid-cols-3 gap-2 mt-2">
           <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-accent-green mb-1">Quiet Max</div>
-            <div
-              v-if="!isEditing"
-              class="font-mono text-sm text-content-primary"
-            >
-              {{ quietMax }}
-            </div>
             <input
-              v-else
               v-model.number="quietMax"
               type="number"
               min="0"
@@ -817,14 +713,7 @@ const tierBadgeClass = computed(() => {
           </div>
           <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-accent-cyan mb-1">Normal Max</div>
-            <div
-              v-if="!isEditing"
-              class="font-mono text-sm text-content-primary"
-            >
-              {{ normalMax }}
-            </div>
             <input
-              v-else
               v-model.number="normalMax"
               type="number"
               min="0"
@@ -835,14 +724,7 @@ const tierBadgeClass = computed(() => {
           </div>
           <div class="text-center p-2 bg-white dark:bg-white/opacity-subtle rounded-lg border border-stroke-subtle dark:border-white/opacity-light">
             <div class="text-xs text-secondary mb-1">Busy Max</div>
-            <div
-              v-if="!isEditing"
-              class="font-mono text-sm text-content-primary"
-            >
-              {{ busyMax }}
-            </div>
             <input
-              v-else
               v-model.number="busyMax"
               type="number"
               min="0"
@@ -857,6 +739,13 @@ const tierBadgeClass = computed(() => {
         </p>
       </div>
     </div>
+
+    <SaveBar
+      :changes="changes"
+      :saving="isSaving"
+      @save="saveChanges"
+      @discard="cancelEditing"
+    />
 
     <!-- Help Dialog -->
     <div
@@ -1079,7 +968,7 @@ const tierBadgeClass = computed(() => {
           <div class="flex justify-end pt-4 border-t border-stroke-subtle dark:border-stroke/opacity-medium">
             <button
               @click="showHelp = false"
-              class="btn-primary"
+              class="cfg-btn-primary"
             >
               Got it!
             </button>

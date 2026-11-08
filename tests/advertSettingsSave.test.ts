@@ -93,11 +93,14 @@ describe('AdvertSettings — response parsing', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
-    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
-      matches: false,
-      addListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
   });
 
   afterEach(() => {
@@ -125,10 +128,12 @@ describe('AdvertSettings — response parsing', () => {
     const wrapper = mountComponent();
     await flushPromises();
 
-    // Enter edit mode
-    const editBtn = wrapper.findAll('button').find((b) => b.text().includes('Edit'));
-    await editBtn!.trigger('click');
+    // An edit, so the save bar offers Save.
+    await wrapper.find('input[type="number"]').setValue(5);
     await flushPromises();
+    expect(wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text())).toEqual([
+      'Bucket capacity 2 → 5',
+    ]);
 
     const saveBtn = wrapper.findAll('button').find((b) => b.text().includes('Save Changes'));
     await saveBtn!.trigger('click');

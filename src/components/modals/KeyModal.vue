@@ -152,6 +152,30 @@ const handleSubmit = () => {
   }
 };
 
+// ── Unfinished edits ──────────────────────────────────────────────────────────
+
+/** The open form differs from what it opened with, so the page has unsaved work. */
+const dirty = computed(() => {
+  if (!props.show) return false;
+  if (isAddMode.value) return keyName.value.trim() !== '';
+  const node = props.node!;
+  const nameIsRegion = node.name.startsWith('#');
+  return (
+    nameChanged.value ||
+    floodPolicy.value !== node.floodPolicy ||
+    entryType.value !== (nameIsRegion ? 'region' : 'privateKey')
+  );
+});
+
+/** Apply the open form as its Add or Save button would; false if it does not validate. */
+function submit(): boolean {
+  if (!isValid.value) return false;
+  handleSubmit();
+  return true;
+}
+
+defineExpose({ dirty, submit });
+
 const handleCancel = () => {
   if (isAddMode.value) {
     keyName.value = '';

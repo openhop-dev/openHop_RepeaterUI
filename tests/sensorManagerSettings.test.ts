@@ -47,10 +47,6 @@ describe('Sensor Manager', () => {
       await flushPromises();
       await wrapper
         .findAll('button')
-        .find((b) => b.text() === 'Edit Sensors')!
-        .trigger('click');
-      await wrapper
-        .findAll('button')
         .find((b) => b.text() === 'Edit')!
         .trigger('click');
       await wrapper.findAll('input[type="text"]')[0].setValue('renamed');
@@ -114,7 +110,6 @@ describe('Sensor Manager', () => {
     await flushPromises();
     expect(wrapper.text()).toContain('*****');
     expect(wrapper.text()).not.toContain('private-value');
-    await wrapper.get('button').trigger('click'); // Edit Sensors
     expect(wrapper.text()).not.toContain('private-value');
     await wrapper
       .findAll('button')
@@ -174,7 +169,6 @@ describe('Sensor Manager', () => {
     });
     await flushPromises();
     expect(wrapper.text()).toContain('legacy');
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((button) => button.text().includes('Add Sensor'))!
@@ -260,7 +254,6 @@ describe('Sensor Manager', () => {
       global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
     });
     await flushPromises();
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Edit')!
@@ -276,7 +269,8 @@ describe('Sensor Manager', () => {
       .trigger('click');
     await flushPromises();
     expect(vi.mocked(ApiService.getSensorConfig)).toHaveBeenCalledTimes(2);
-    await wrapper.get('button').trigger('click');
+    // An unrelated edit, so the second save has something to send.
+    await wrapper.find('input[type="number"]').setValue(45);
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Save Changes')!
@@ -317,7 +311,6 @@ describe('Sensor Manager', () => {
       global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
     });
     await flushPromises();
-    await wrapper.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((b) => b.text() === 'Edit')!
@@ -335,5 +328,188 @@ describe('Sensor Manager', () => {
     expect(wrapper.text()).not.toContain('wrong-name');
     expect(ApiService.updateSensorConfig).not.toHaveBeenCalled();
     wrapper.unmount();
+  });
+
+  it('lists a sensor edit in the save bar while its row editor is still open', async () => {
+    vi.clearAllMocks();
+    vi.mocked(ApiService.getSensorTypes).mockResolvedValue({
+      success: true,
+      data: { types: [] },
+    } as never);
+    vi.mocked(ApiService.getSensorConfig).mockResolvedValue({
+      success: true,
+      data: {
+        enabled: true,
+        poll_interval_seconds: 30,
+        auto_install_packages: false,
+        definitions: [
+          {
+            name: 'modem',
+            _original_name: 'modem',
+            type: 'openhop_modem',
+            enabled: true,
+            settings: { host: 'a.local' },
+          },
+        ],
+      },
+    } as never);
+    const wrapper = mount(SensorManagerSettings, {
+      global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Edit')!
+      .trigger('click');
+    await wrapper.findAll('input[type="text"]')[0].setValue('renamed');
+    await wrapper.find('input[type="number"]').setValue(60);
+
+    const changes = wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
+    expect(changes).toEqual(['Poll interval 30 s → 60 s', 'Edit sensor renamed']);
+    wrapper.unmount();
+  });
+
+  it('keeps an open row editor on its sensor when a sensor above it is removed', async () => {
+    vi.clearAllMocks();
+    vi.mocked(ApiService.getSensorTypes).mockResolvedValue({
+      success: true,
+      data: { types: [] },
+    } as never);
+    const def = (name: string) => ({
+      name,
+      _original_name: name,
+      type: 'openhop_modem',
+      enabled: true,
+      settings: { host: `${name}.local` },
+    });
+    vi.mocked(ApiService.getSensorConfig).mockResolvedValue({
+      success: true,
+      data: {
+        enabled: true,
+        poll_interval_seconds: 30,
+        auto_install_packages: false,
+        definitions: [def('a'), def('b'), def('c')],
+      },
+    } as never);
+    vi.mocked(ApiService.updateSensorConfig).mockResolvedValue({
+      success: true,
+      data: { saved: true, restart_required: false, message: 'saved' },
+    } as never);
+    const wrapper = mount(SensorManagerSettings, {
+      global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
+    });
+    await flushPromises();
+    // Edit b, then remove a above it, then save the page.
+    await wrapper
+      .findAll('button')
+      .filter((b) => b.text() === 'Edit')[1]
+      .trigger('click');
+    await wrapper.findAll('input[type="text"]')[0].setValue('b-renamed');
+    const remove = wrapper
+      .findAll('button')
+      .filter(
+        (b) => ['Remove', 'Delete', 'Del'].includes(b.text()) || b.attributes('title') === 'Remove',
+      );
+    await remove[0].trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Save Changes')!
+      .trigger('click');
+    await flushPromises();
+    const saved = vi.mocked(ApiService.updateSensorConfig).mock.calls[0][0].definitions;
+    expect(saved.map((d: { name: string }) => d.name)).toEqual(['b-renamed', 'c']);
+    wrapper.unmount();
+  });
+
+  describe('a started add form', () => {
+    function mountWithTypes() {
+      vi.clearAllMocks();
+      vi.mocked(ApiService.getSensorTypes).mockResolvedValue({
+        success: true,
+        data: {
+          types: [
+            {
+              type: 'future_sensor',
+              name: 'Future Sensor',
+              description: '',
+              settings: [{ key: 'pin', type: 'string', label: 'Pin', default: '4' }],
+            },
+          ],
+        },
+      } as never);
+      vi.mocked(ApiService.getSensorConfig).mockResolvedValue({
+        success: true,
+        data: {
+          enabled: true,
+          poll_interval_seconds: 30,
+          auto_install_packages: false,
+          definitions: [],
+        },
+      } as never);
+      vi.mocked(ApiService.updateSensorConfig).mockResolvedValue({
+        success: true,
+        data: { saved: true, restart_required: false, message: 'saved' },
+      } as never);
+      return mount(SensorManagerSettings, {
+        global: { stubs: { RestartModal: true, UnsavedChangesModal: true, Spinner: true } },
+      });
+    }
+
+    async function startAdding(wrapper: ReturnType<typeof mountWithTypes>, name: string) {
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === '+ Add Sensor')
+        ?.trigger('click');
+      await wrapper.find('select').setValue('future_sensor');
+      await wrapper.findAll('input[type="text"]')[0].setValue(name);
+    }
+
+    it('counts as unsaved and is listed in the save bar', async () => {
+      const wrapper = mountWithTypes();
+      await flushPromises();
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === '+ Add Sensor')!
+        .trigger('click');
+      // An empty form is not a change.
+      expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+
+      await startAdding(wrapper, 'porch');
+      const changes = wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
+      expect(changes).toEqual(['New sensor porch not added yet']);
+      expect((wrapper.vm as unknown as { isEditing: boolean }).isEditing).toBe(true);
+      wrapper.unmount();
+    });
+
+    it('is added by Save Changes', async () => {
+      const wrapper = mountWithTypes();
+      await flushPromises();
+      await startAdding(wrapper, 'porch');
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === 'Save Changes')!
+        .trigger('click');
+      await flushPromises();
+      const sent = vi.mocked(ApiService.updateSensorConfig).mock.calls[0][0];
+      expect(sent.definitions.map((d: { name: string }) => d.name)).toEqual(['porch']);
+      wrapper.unmount();
+    });
+
+    it('stops Save Changes while it is incomplete', async () => {
+      const wrapper = mountWithTypes();
+      await flushPromises();
+      await startAdding(wrapper, 'porch');
+      await wrapper.findAll('input[type="text"]')[1].setValue('');
+      await wrapper
+        .findAll('button')
+        .find((b) => b.text() === 'Save Changes')!
+        .trigger('click');
+      await flushPromises();
+      expect(ApiService.updateSensorConfig).not.toHaveBeenCalled();
+      expect(wrapper.text()).toContain('Finish or cancel the new sensor before saving.');
+      wrapper.unmount();
+    });
   });
 });

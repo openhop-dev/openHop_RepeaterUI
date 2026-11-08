@@ -128,7 +128,7 @@
               !frontend.available ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
               selectedFrontendId === frontend.id
                 ? 'border-accent-cyan bg-accent-cyan/opacity-light'
-                : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-accent-cyan/opacity-heavy dark:hover:border-accent-cyan/opacity-heavy',
+                : 'border-stroke-subtle dark:border-stroke/opacity-light hover:border-stroke-hover dark:hover:border-stroke-hover',
             ]"
           >
             <input

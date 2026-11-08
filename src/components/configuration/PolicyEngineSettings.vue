@@ -10,6 +10,7 @@ import type {
 } from '@/types/api';
 import Spinner from '@/components/ui/Spinner.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar, { type SaveBarChange } from '@/components/ui/SaveBar.vue';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
 defineOptions({ name: 'PolicyEngineSettings' });
@@ -70,7 +71,6 @@ interface UiRule {
 }
 
 const loading = ref(false);
-const isEditing = ref(false);
 const saving = ref(false);
 const message = ref<string | null>(null);
 const error = ref<string | null>(null);
@@ -111,6 +111,8 @@ const showRuleModal = ref(false);
 const editingRuleIndex = ref<number | null>(null);
 const ruleDraft = ref<UiRule | null>(null);
 const ruleModalError = ref<string | null>(null);
+/** The rule as the modal opened it; edits since then are not in the policy yet. */
+const ruleModalBaseline = ref('');
 const showLogicMatrix = ref(false);
 const draggingConditionIndex = ref<number | null>(null);
 const dropInsertIndex = ref<number | null>(null);
@@ -303,12 +305,88 @@ function resetDraftState() {
   uiRules.value = policyEngine.value.rules.map((rule, idx) => ruleToUi(rule, idx));
 }
 
-function startEditing() {
-  message.value = null;
-  error.value = null;
-  validationInfo.value = null;
-  isEditing.value = true;
+/**
+ * The draft as Save would send it. Rules come from the table, or from the JSON
+ * editor in advanced mode; JSON that does not parse yet is kept as text so it
+ * still reads as a change.
+ */
+function draftDocument() {
+  let rules: unknown;
+  try {
+    rules = getRulesForSubmit();
+  } catch {
+    rules = { unparsed: rulesJson.value };
+  }
+  return {
+    enabled: policyEngine.value.enabled,
+    default_action: policyEngine.value.default_action,
+    rules,
+    groups: groups.value,
+  };
 }
+
+/** The draft as loaded; the page has unsaved changes while the draft differs. */
+const loadedDocument = ref('');
+
+function markLoaded() {
+  loadedDocument.value = JSON.stringify(draftDocument());
+}
+
+const isDirty = computed(
+  () => loadedDocument.value !== '' && JSON.stringify(draftDocument()) !== loadedDocument.value,
+);
+
+/** The rule modal holds edits that have not been applied to the policy yet. */
+const ruleModalDirty = computed(
+  () =>
+    showRuleModal.value &&
+    ruleDraft.value !== null &&
+    JSON.stringify(ruleDraft.value) !== ruleModalBaseline.value,
+);
+
+/** What the leave guards check: the policy draft or an open rule edit. */
+const hasUnsavedChanges = computed(() => isDirty.value || ruleModalDirty.value);
+
+const draftChanges = computed<SaveBarChange[]>(() => {
+  if (!isDirty.value) return [];
+  const before = JSON.parse(loadedDocument.value) as ReturnType<typeof draftDocument>;
+  const after = draftDocument();
+  const items: SaveBarChange[] = [];
+  if (before.enabled !== after.enabled) {
+    items.push({
+      label: 'Policy engine',
+      detail: `${before.enabled ? 'on' : 'off'} → ${after.enabled ? 'on' : 'off'}`,
+    });
+  }
+  if (before.default_action !== after.default_action) {
+    items.push({ label: 'Default action', detail: `${before.default_action} → ${after.default_action}` });
+  }
+  if (JSON.stringify(before.rules) !== JSON.stringify(after.rules)) {
+    const count = (rules: unknown) => (Array.isArray(rules) ? rules.length : null);
+    const from = count(before.rules);
+    const to = count(after.rules);
+    items.push({
+      label: 'Rules',
+      detail:
+        to === null
+          ? 'JSON not valid yet'
+          : from === to
+            ? 'edited'
+            : `${from ?? '?'} → ${to} rules`,
+    });
+  }
+  for (const [kind, label] of [
+    ['channel_hashes', 'Channel hash groups'],
+    ['pubkeys', 'Public key groups'],
+  ] as const) {
+    if (JSON.stringify(before.groups[kind]) !== JSON.stringify(after.groups[kind])) {
+      const from = before.groups[kind].length;
+      const to = after.groups[kind].length;
+      items.push({ label, detail: from === to ? 'edited' : `${from} → ${to} groups` });
+    }
+  }
+  return items;
+});
 
 function showSuccessMessage(text: string) {
   message.value = text;
@@ -323,7 +401,7 @@ function showSuccessMessage(text: string) {
 
 function cancelEditing() {
   resetDraftState();
-  isEditing.value = false;
+  markLoaded();
   message.value = null;
   error.value = null;
   validationInfo.value = null;
@@ -353,14 +431,23 @@ function getPolicyObjectsForSubmit(): Record<string, unknown> {
   };
 }
 
+// Saving on the way out applies an open rule edit first, and stays if it does not validate.
+async function saveForNavigation(): Promise<boolean> {
+  if (ruleModalDirty.value) {
+    saveRuleModal();
+    if (showRuleModal.value) return false;
+  }
+  return savePolicy();
+}
+
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  hasUnsavedChanges,
   saving,
   cancelEditing,
-  async () => savePolicy(),
+  saveForNavigation,
 );
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: hasUnsavedChanges });
 
 function formatPolicyApiError(err: unknown, fallback: string): string {
   const raw = err instanceof Error ? err.message : fallback;
@@ -831,6 +918,26 @@ function syncUiFromRulesJson() {
   uiRules.value = parsed.map((r, idx) => ruleToUi(r, idx));
 }
 
+/**
+ * Show or hide the JSON editor, carrying the rules across: opening it starts
+ * from the table, and closing it applies the JSON to the table, so neither view
+ * holds edits the other (and Save) would not see.
+ */
+function toggleAdvancedJson() {
+  if (useAdvancedJson.value) {
+    try {
+      syncUiFromRulesJson();
+    } catch (err) {
+      error.value = `Fix the rules JSON before hiding it: ${formatPolicyApiError(err, 'not valid JSON')}`;
+      return;
+    }
+    useAdvancedJson.value = false;
+    return;
+  }
+  syncRulesJsonFromUi();
+  useAdvancedJson.value = true;
+}
+
 function getRulesForSubmit(): Array<Record<string, unknown>> {
   if (useAdvancedJson.value) {
     return normalizeRulesFromEditor();
@@ -874,6 +981,7 @@ function actionBadgeClasses(action: PolicyAction): string {
 function openAddRuleModal() {
   editingRuleIndex.value = null;
   ruleDraft.value = makeRule(nextRuleId());
+  ruleModalBaseline.value = JSON.stringify(ruleDraft.value);
   ruleModalError.value = null;
   showRuleModal.value = true;
 }
@@ -883,6 +991,7 @@ function openEditRuleModal(index: number) {
   if (!existing) return;
   editingRuleIndex.value = index;
   ruleDraft.value = JSON.parse(JSON.stringify(existing)) as UiRule;
+  ruleModalBaseline.value = JSON.stringify(ruleDraft.value);
   ruleModalError.value = null;
   showRuleModal.value = true;
 }
@@ -890,6 +999,7 @@ function openEditRuleModal(index: number) {
 function closeRuleModal() {
   showRuleModal.value = false;
   ruleDraft.value = null;
+  ruleModalBaseline.value = '';
   editingRuleIndex.value = null;
   ruleModalError.value = null;
   showLogicMatrix.value = false;
@@ -1120,6 +1230,7 @@ async function loadPolicy() {
     const data = asPolicyDocumentData(response.data);
     syncLoadedState(data);
     resetDraftState();
+    markLoaded();
   } catch (err) {
     error.value = formatPolicyApiError(err, 'Failed to load policy');
   } finally {
@@ -1188,7 +1299,6 @@ async function savePolicy(): Promise<boolean> {
 
     const successText = response.message || 'Settings saved successfully';
     await loadPolicy();
-    isEditing.value = false;
     showSuccessMessage(successText);
     return true;
   } catch (err) {
@@ -1301,32 +1411,6 @@ onMounted(loadPolicy);
           Policy and object management with chained rule conditions
         </p>
       </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <button
-          v-if="!isEditing"
-          class="cfg-btn-primary"
-          :disabled="loading"
-          @click="startEditing"
-        >
-          Edit Settings
-        </button>
-        <template v-else>
-          <button
-            class="cfg-btn-secondary"
-            :disabled="saving"
-            @click="cancelEditing"
-          >
-            Cancel
-          </button>
-          <button
-            class="cfg-btn-primary"
-            :disabled="saving"
-            @click="savePolicy"
-          >
-            {{ saving ? 'Saving…' : 'Save Changes' }}
-          </button>
-        </template>
-      </div>
     </div>
     <div v-if="error" class="alert-error">
       {{ error }}
@@ -1381,7 +1465,7 @@ onMounted(loadPolicy);
                 <input
                   v-model="policyEngine.enabled"
                   type="checkbox"
-                  :disabled="!isEditing || saving"
+                  :disabled="saving"
                   class="h-4 w-4 rounded border-stroke-subtle dark:border-stroke/opacity-medium accent-primary"
                 />
                 <span>Enable policy enforcement</span>
@@ -1392,7 +1476,7 @@ onMounted(loadPolicy);
                 <label class="cfg-label">Default Action</label>
                 <p class="mt-1 text-xs text-content-muted">Applied when no policy rule matches.</p>
               </div>
-              <select v-model="policyEngine.default_action" class="cfg-select w-full md:max-w-sm" :disabled="!isEditing || saving">
+              <select v-model="policyEngine.default_action" class="cfg-select w-full md:max-w-sm" :disabled="saving">
                 <option v-for="opt in actionOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
               </select>
             </div>
@@ -1402,11 +1486,11 @@ onMounted(loadPolicy);
             <div class="flex flex-wrap items-center justify-between gap-2">
               <label class="cfg-label">Policy Rules</label>
               <div class="flex items-center gap-2">
-                <button class="cfg-btn-secondary text-xs" :disabled="!isEditing || saving" @click="openAddRuleModal">Add Rule</button>
+                <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="openAddRuleModal">Add Rule</button>
                 <button
-                  class="cfg-btn-secondary text-xs"
+                  class="cfg-btn-secondary cfg-btn-sm"
                   :disabled="saving"
-                  @click="useAdvancedJson = !useAdvancedJson"
+                  @click="toggleAdvancedJson"
                 >
                   {{ useAdvancedJson ? 'Hide JSON' : 'Advanced JSON' }}
                 </button>
@@ -1460,10 +1544,10 @@ onMounted(loadPolicy);
                     </td>
                     <td class="px-3 py-3 text-right">
                       <div class="inline-flex flex-wrap items-center justify-end gap-1">
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, -1)">▲</button>
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="moveRule(idx, 1)">▼</button>
-                        <button class="cfg-btn-secondary text-xs px-2 py-1" :disabled="!isEditing || saving" @click="openEditRuleModal(idx)">Edit</button>
-                        <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light disabled:opacity-40" :disabled="!isEditing || saving" @click="removeRule(idx)">Del</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="moveRule(idx, -1)">▲</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="moveRule(idx, 1)">▼</button>
+                        <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="openEditRuleModal(idx)">Edit</button>
+                        <button class="cfg-btn-danger cfg-btn-sm" :disabled="saving" @click="removeRule(idx)">Del</button>
                       </div>
                     </td>
                   </tr>
@@ -1484,18 +1568,18 @@ onMounted(loadPolicy);
                 v-model="rulesJson"
                 rows="12"
                 spellcheck="false"
-                :disabled="!isEditing || saving"
+                :disabled="saving"
                 class="cfg-textarea font-mono text-xs"
                 placeholder='[{"id":1,"if":{"all":[{"field":"hop_count","op":"greater_than","value":4}]},"then":{"action":"drop"}}]'
               />
               <div class="flex justify-end">
-                <button class="cfg-btn-secondary text-xs" :disabled="!isEditing || saving" @click="syncUiFromRulesJson">Apply JSON To Table</button>
+                <button class="cfg-btn-secondary cfg-btn-sm" :disabled="saving" @click="syncUiFromRulesJson">Apply JSON To Table</button>
               </div>
             </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2 justify-end">
-            <button class="cfg-btn-secondary" :disabled="saving || !isEditing" @click="validatePolicy">Validate</button>
+            <button class="cfg-btn-secondary" :disabled="saving" @click="validatePolicy">Validate</button>
           </div>
         </div>
       </div>
@@ -1559,9 +1643,9 @@ onMounted(loadPolicy);
 
             <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/opacity-medium space-y-2">
               <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Create Group</h5>
-              <input v-model="newGroup.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
-              <input v-model="newGroup.description" class="cfg-input" :disabled="!isEditing || saving" placeholder="Description (optional)" />
-              <button class="cfg-btn-primary w-full" :disabled="!isEditing || saving" @click="createGroup">Add Group</button>
+              <input v-model="newGroup.friendly_name" class="cfg-input" :disabled="saving" placeholder="Friendly name" />
+              <input v-model="newGroup.description" class="cfg-input" :disabled="saving" placeholder="Description (optional)" />
+              <button class="cfg-btn-primary w-full" :disabled="saving" @click="createGroup">Add Group</button>
             </div>
           </div>
 
@@ -1572,8 +1656,8 @@ onMounted(loadPolicy);
               </h4>
               <button
                 v-if="selectedGroup"
-                class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
-                :disabled="!isEditing || saving"
+                class="cfg-btn-danger cfg-btn-sm"
+                :disabled="saving"
                 @click="deleteGroup(selectedGroup.id)"
               >
                 Delete Group
@@ -1595,8 +1679,8 @@ onMounted(loadPolicy);
                     <td class="px-3 py-2 font-mono text-xs text-content-secondary">{{ entry.value }}</td>
                     <td class="px-3 py-2 text-right">
                       <button
-                        class="text-xs px-2.5 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light"
-                        :disabled="!isEditing || saving"
+                        class="cfg-btn-danger cfg-btn-sm"
+                        :disabled="saving"
                         @click="removeEntry(entry.id)"
                       >
                         Remove
@@ -1617,15 +1701,15 @@ onMounted(loadPolicy);
             <div class="pt-2 border-t border-stroke-subtle dark:border-stroke/opacity-medium space-y-2" v-if="selectedGroup">
               <h5 class="text-xs font-semibold uppercase tracking-wide text-content-muted">Add Entry</h5>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <input v-model="newEntry.friendly_name" class="cfg-input" :disabled="!isEditing || saving" placeholder="Friendly name" />
+                <input v-model="newEntry.friendly_name" class="cfg-input" :disabled="saving" placeholder="Friendly name" />
                 <input
                   v-model="newEntry.value"
                   class="cfg-input font-mono"
-                  :disabled="!isEditing || saving"
+                  :disabled="saving"
                   :placeholder="objectKind === 'channel_hashes' ? '0x...' : '0xaabbccdd'"
                 />
               </div>
-              <button class="cfg-btn-primary" :disabled="!isEditing || saving" @click="addEntry">Add Entry</button>
+              <button class="cfg-btn-primary" :disabled="saving" @click="addEntry">Add Entry</button>
             </div>
           </div>
         </div>
@@ -1656,7 +1740,7 @@ onMounted(loadPolicy);
             >
               i
             </button>
-            <button class="cfg-btn-secondary text-xs" @click="closeRuleModal">Close</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="closeRuleModal">Close</button>
           </div>
         </div>
 
@@ -1666,7 +1750,7 @@ onMounted(loadPolicy);
         >
           <div class="flex items-center justify-between">
             <h4 class="text-sm font-semibold text-content-primary">Match Field Logic Matrix</h4>
-            <button class="cfg-btn-secondary text-xs" @click="showLogicMatrix = false">Hide</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="showLogicMatrix = false">Hide</button>
           </div>
           <div class="overflow-x-auto rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium">
             <table class="w-full min-w-[840px] text-xs">
@@ -1722,7 +1806,7 @@ onMounted(loadPolicy);
         <div class="space-y-2">
           <div class="flex items-center justify-between">
             <h4 class="text-sm font-semibold text-content-primary">Conditions</h4>
-            <button class="cfg-btn-secondary text-xs" @click="addDraftCondition">Add Condition</button>
+            <button class="cfg-btn-secondary cfg-btn-sm" @click="addDraftCondition">Add Condition</button>
           </div>
 
           <div
@@ -1853,7 +1937,7 @@ onMounted(loadPolicy);
                       >
                         ▼
                       </button>
-                      <button class="text-xs px-2 py-1 rounded border border-accent-red/opacity-heavy text-accent-red hover:bg-accent-red/opacity-light" @click="removeDraftCondition(cIdx)">Del</button>
+                      <button class="cfg-btn-danger cfg-btn-sm" @click="removeDraftCondition(cIdx)">Del</button>
                     </div>
                   </td>
                 </tr>
@@ -1878,5 +1962,12 @@ onMounted(loadPolicy);
         </div>
       </div>
     </div>
+
+    <SaveBar
+      :changes="draftChanges"
+      :saving="saving"
+      @save="savePolicy"
+      @discard="cancelEditing"
+    />
   </div>
 </template>

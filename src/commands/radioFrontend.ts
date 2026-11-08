@@ -1,9 +1,10 @@
 import ApiService from '@/utils/api';
 import type { RadioFrontendSettings } from '@/generated/openapi';
 
-// RF front-end parameters of the default radio (KISS or openHop modem), named as
-// in the MeshCore CLI. They are read from and applied to the modem through
-// /api/radio_frontend, take effect immediately, and need no restart.
+// RF front-end parameters of one radio (KISS or openHop modem), named as in the
+// MeshCore CLI. They are read from and applied to the modem through
+// /api/radio_frontend, take effect immediately, and need no restart. An optional
+// trailing radio id picks a radios[] entry; without it, the default radio.
 const PARAMS = {
   'agc.reset.interval': 'agc_reset_interval_seconds',
   'radio.fem.rxgain': 'fem_rx_gain',
@@ -38,13 +39,17 @@ function errorText(error: unknown): string {
   return e.response?.data?.error || e.message || String(error);
 }
 
-export async function getFrontendParam(param: FrontendParam): Promise<FrontendResult> {
+export async function getFrontendParam(
+  param: FrontendParam,
+  radioId?: string,
+): Promise<FrontendResult> {
   const key = PARAMS[param];
   try {
-    const result = await ApiService.getRadioFrontend();
+    const result = await ApiService.getRadioFrontend(radioId);
     if (!result.success) return { ok: false, text: 'Radio front end not available' };
-    const { available, supports, running } = result.data;
-    if (!available || !supports[key]) return { ok: false, text: 'unsupported' };
+    const { available, supports, running, unavailable_reason } = result.data;
+    if (!available) return { ok: false, text: unavailable_reason || 'unsupported' };
+    if (!supports[key]) return { ok: false, text: 'unsupported' };
     const value = running[key];
     if (value === undefined) return { ok: false, text: 'no response from radio' };
     if (typeof value === 'number') return { ok: true, text: value === 0 ? '0 (off)' : `${value}s` };
@@ -57,6 +62,7 @@ export async function getFrontendParam(param: FrontendParam): Promise<FrontendRe
 export async function setFrontendParam(
   param: FrontendParam,
   value: string,
+  radioId?: string,
 ): Promise<FrontendResult> {
   const key = PARAMS[param];
   const settings: RadioFrontendSettings = {};
@@ -74,7 +80,7 @@ export async function setFrontendParam(
     settings[key] = choice === 'on';
   }
   try {
-    const result = await ApiService.setRadioFrontend(settings);
+    const result = await ApiService.setRadioFrontend(settings, radioId);
     if (!result.success) {
       const reason = result.data?.errors?.[key] ?? result.error ?? 'failed to apply';
       return { ok: false, text: reason };
