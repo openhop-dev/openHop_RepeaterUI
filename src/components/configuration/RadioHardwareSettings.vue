@@ -1336,21 +1336,24 @@ function frontendKeysOf(section: unknown): Record<string, unknown> {
 }
 
 /**
- * Write the default radio's confirmed front-end values into a save body.
+ * Write a radio's confirmed front-end values into a save body.
  *
  * A radios[] entry is replaced whole on import, so an entry built before the
- * front end was applied would put the old AGC/FEM values back. The mirrored
- * top-level section is merged key by key and would do the same.
+ * front end was applied would put the old AGC/FEM values back. The default
+ * radio's entry is mirrored into the top-level section, which is merged key by
+ * key and would do the same; another radio's entry is not mirrored.
  */
 function overlayFrontendConfigured(
   importBody: Record<string, unknown>,
   configured: Record<string, unknown>,
+  radioId: string,
 ) {
   const entries = importBody.radios;
   if (!Array.isArray(entries)) return;
   const fabricCfg = (importBody.fabric || {}) as Record<string, unknown>;
   const defId = String(fabricCfg.default_radio || entries[0]?.id || '');
-  const index = entries.findIndex((r) => String((r as Record<string, unknown>).id) === defId);
+  const targetId = radioId || defId;
+  const index = entries.findIndex((r) => String((r as Record<string, unknown>).id) === targetId);
   if (index < 0) return;
   const entry = { ...(entries[index] as Record<string, unknown>) };
   const name = FRONTEND_SECTIONS[normalizeRadioType(entry.radio_type)];
@@ -1360,7 +1363,7 @@ function overlayFrontendConfigured(
   Object.assign(section, frontendKeysOf(configured));
   entry[name] = section;
   importBody.radios = entries.map((r, i) => (i === index ? entry : r));
-  if (importBody[name] && typeof importBody[name] === 'object') {
+  if (targetId === defId && importBody[name] && typeof importBody[name] === 'object') {
     importBody[name] = { ...(importBody[name] as Record<string, unknown>), ...section };
     for (const key of FRONTEND_KEYS) {
       if (!(key in section)) delete (importBody[name] as Record<string, unknown>)[key];
@@ -1649,14 +1652,22 @@ async function saveChanges(): Promise<boolean> {
     if (frontend && frontend.validate()) return false;
     const frontendChanged = !!frontend?.hasChanges();
     if (frontendChanged && !(await frontend!.apply())) return false;
-    if (frontendChanged) overlayFrontendConfigured(importBody, frontend!.configured);
+    if (frontendChanged) {
+      overlayFrontendConfigured(importBody, frontend!.configured, frontendRadioId.value ?? '');
+    }
 
     // A front-end-only edit is done: don't resave the hardware or offer a restart.
-    // Without any edit, Save still writes the config as before (it also migrates
-    // legacy section names).
-    if (frontendChanged && JSON.stringify(importBody) === hardwareBaseline.value) {
-      isEditing.value = false;
-      return true;
+    // The overlay is applied to the baseline too, so on a multi-radio node the
+    // confirmed values alone do not read as a hardware change. Without any edit,
+    // Save still writes the config as before (it also migrates legacy section
+    // names).
+    if (frontendChanged && hardwareBaseline.value) {
+      const baseline = JSON.parse(hardwareBaseline.value) as Record<string, unknown>;
+      overlayFrontendConfigured(baseline, frontend!.configured, frontendRadioId.value ?? '');
+      if (JSON.stringify(importBody) === JSON.stringify(baseline)) {
+        isEditing.value = false;
+        return true;
+      }
     }
     return await persistImportBody(importBody);
   } finally {
@@ -1722,17 +1733,20 @@ const showSerialFields = computed(
 );
 const showTcpFields = computed(() => selectedRadioType.value === 'modem_tcp');
 
-// The RF front end belongs to the running default radio's modem (KISS or openHop
-// USB/TCP), so show it only under that radio, while its type is unchanged, and
-// not while radios are being added or removed.
+// The RF front end belongs to the selected radio's running modem (KISS or openHop
+// USB/TCP), so show it under any such radio while its type is unchanged, and not
+// while radios are being added or removed. On a multi-radio node the panel names
+// that radio to the API; a single radio needs no id.
 const frontendRef = ref<InstanceType<typeof RadioFrontendSettings> | null>(null);
 const showFrontend = computed(
   () =>
     !!FRONTEND_SECTIONS[selectedRadioType.value] &&
     selectedRadioType.value === currentRadioType.value &&
     !isDraftingMultiRadio.value &&
-    !isStagingDisableMultiRadio.value &&
-    (!isMultiRadio.value || String(effectiveSelectedId.value) === String(defaultRadioId.value)),
+    !isStagingDisableMultiRadio.value,
+);
+const frontendRadioId = computed(() =>
+  isMultiRadio.value && effectiveSelectedId.value ? String(effectiveSelectedId.value) : undefined,
 );
 const showSx1262Fields = computed(
   () => selectedRadioType.value === 'sx1262' || selectedRadioType.value === 'sx1262_ch341',
@@ -2366,7 +2380,12 @@ watch(
         </div>
       </template>
 
-      <RadioFrontendSettings v-if="showFrontend" ref="frontendRef" :editing="isEditing" />
+      <RadioFrontendSettings
+        v-if="showFrontend"
+        ref="frontendRef"
+        :editing="isEditing"
+        :radio-id="frontendRadioId"
+      />
 
       <template v-if="showTcpFields">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-2">
