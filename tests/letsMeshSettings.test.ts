@@ -153,3 +153,62 @@ describe('LetsMeshSettings — response parsing', () => {
     expect(wrapper.exists()).toBe(true);
   });
 });
+
+describe('LetsMeshSettings without an edit mode', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const iata = (wrapper: ReturnType<typeof mountComponent>) =>
+    wrapper.find('input[placeholder="TEST"]');
+  const changes = (wrapper: ReturnType<typeof mountComponent>) =>
+    wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
+  const button = (wrapper: ReturnType<typeof mountComponent>, text: string) =>
+    wrapper.findAll('button').find((b) => b.text() === text);
+
+  it('shows the observer fields and no save bar until something changes', async () => {
+    const wrapper = mountComponent();
+    await flushPromises();
+    expect(iata(wrapper).exists()).toBe(true);
+    expect(button(wrapper, 'Edit Settings')).toBeUndefined();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+  });
+
+  it('lists an edit and saves it', async () => {
+    vi.mocked(ApiService.post).mockResolvedValue(MQTT_SAVE_RESPONSE as any);
+    const wrapper = mountComponent();
+    await flushPromises();
+    await iata(wrapper).setValue('SEA');
+    await flushPromises();
+    expect(changes(wrapper)).toEqual(['IATA code — → SEA']);
+
+    await button(wrapper, 'Save Changes')!.trigger('click');
+    await flushPromises();
+    expect(ApiService.post).toHaveBeenCalledWith(
+      '/update_mqtt_config',
+      expect.objectContaining({ iata_code: 'SEA' }),
+    );
+  });
+
+  it('names an added broker rather than listing its fields', async () => {
+    const wrapper = mountComponent();
+    await flushPromises();
+    await button(wrapper, 'From Template')!.trigger('click');
+    await flushPromises();
+    // The template row is a clickable row, not a button.
+    const add = wrapper.findAll('div.cursor-pointer').find((d) => d.text().includes('LetsMesh'))!;
+    await add.trigger('click');
+    await flushPromises();
+    expect(changes(wrapper)).toEqual(['Add broker Europe (LetsMesh v1)']);
+
+    await button(wrapper, 'Discard')!.trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('No brokers configured');
+  });
+});

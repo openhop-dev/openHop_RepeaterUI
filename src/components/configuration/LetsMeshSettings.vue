@@ -5,6 +5,8 @@ import ApiService from '@/utils/api';
 import RestartModal from '@/components/modals/RestartModal.vue';
 import BrokerEditModal from '@/components/modals/BrokerEditModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar, { type SaveBarChange } from '@/components/ui/SaveBar.vue';
+import { diffChanges, formatChangeValue } from '@/utils/changeSet';
 import { useUnsavedChanges } from '@/composables/useUnsavedChanges';
 
 const systemStore = useSystemStore();
@@ -57,22 +59,11 @@ function cloneBroker(b: CustomBroker): CustomBroker {
   return { ...b, tls: { ...b.tls }, disallowedInput: [...(b.disallowedInput ?? [])] };
 }
 
-// ── Global edit state ─────────────────────────────────────────────────────
-const isGlobalEditing = ref(false);
+// ── Save state ────────────────────────────────────────────────────────────
 const isSaving = ref(false);
 const errorMsg = ref('');
 const showRestartModal = ref(false);
 
-interface Snapshot {
-  iata: string;
-  interval: number;
-  owner: string;
-  email: string;
-  neighborsEnabled: boolean;
-  neighborsInterval: number;
-  brokers: CustomBroker[];
-}
-const globalSnapshot = ref<Snapshot | null>(null);
 
 // Schedule summary for the neighbours topic, from the repeater's publisher.
 // Absent (null/undefined) on repeaters that predate the feature.
@@ -98,7 +89,6 @@ interface MqttStatus {
 }
 
 // ── Observer settings ─────────────────────────────────────────────────────
-const isEditingObserver = ref(false);
 const iataCodeInput = ref('');
 const statusIntervalInput = ref(300);
 const ownerInput = ref('');
@@ -210,7 +200,7 @@ const triggerDisabledReason = computed(() => {
   const n = status.value?.neighbors;
   if (!status.value) return 'Status unavailable — the service may not be running.';
   if (n === undefined || n === null) return 'This repeater build does not support manual triggering.';
-  if (isGlobalEditing.value) return 'Save or cancel your changes first.';
+  if (isDirty.value) return 'Save or discard your changes first.';
   if (n.phase === 'active') return 'A cycle is already running.';
   if (n.phase === 'disabled') return 'Enable publishing and opt a broker in first.';
   return '';
@@ -261,6 +251,9 @@ function mkBroker(b: Partial<Omit<CustomBroker, '_id'>> = {}): CustomBroker {
   };
 }
 
+/** The save payload as loaded; the form is dirty while its payload differs. */
+const baseline = ref('');
+
 function syncForm() {
   const c = mqttConfig.value;
   iataCodeInput.value = c.iata_code ?? '';
@@ -276,10 +269,58 @@ function syncForm() {
         previous_name: typeof b.name === 'string' ? b.name : undefined,
       }))
     : [];
+  baseline.value = JSON.stringify(buildPayload());
 }
 
+const isDirty = computed(
+  () => baseline.value !== '' && JSON.stringify(buildPayload()) !== baseline.value,
+);
+
+const FIELD_LABELS: Record<string, string> = {
+  iata_code: 'IATA code',
+  status_interval: 'Status interval',
+  owner: 'Owner',
+  email: 'Email',
+  'neighbors.enabled': 'Neighbour publishing',
+  'neighbors.interval_hours': 'Neighbour interval',
+};
+
+/** What differs from the loaded settings; brokers are named rather than diffed field by field. */
+const changes = computed<SaveBarChange[]>(() => {
+  if (!isDirty.value) return [];
+  const before = JSON.parse(baseline.value) as ReturnType<typeof buildPayload>;
+  const after = buildPayload();
+  const { brokers: beforeBrokers, ...beforeRest } = before;
+  const { brokers: afterBrokers, ...afterRest } = after;
+  const items: SaveBarChange[] = diffChanges(beforeRest, afterRest).map((c) => ({
+    label: FIELD_LABELS[c.path] ?? c.path,
+    detail:
+      c.path === 'neighbors.enabled'
+        ? `${c.from ? 'on' : 'off'} → ${c.to ? 'on' : 'off'}`
+        : `${formatChangeValue(c.from)} → ${formatChangeValue(c.to)}`,
+  }));
+  const byName = new Map(beforeBrokers.map((b) => [b.name, b]));
+  const kept = new Set<string>();
+  for (const broker of afterBrokers) {
+    const key = ('previous_name' in broker && broker.previous_name) || broker.name;
+    const old = byName.get(key);
+    if (!old) {
+      items.push({ label: `Add broker ${broker.name || '(unnamed)'}` });
+      continue;
+    }
+    kept.add(key);
+    if (JSON.stringify(old) !== JSON.stringify(broker)) {
+      items.push({ label: `Edit broker ${broker.name || '(unnamed)'}` });
+    }
+  }
+  for (const name of byName.keys()) {
+    if (!kept.has(name)) items.push({ label: `Remove broker ${name || '(unnamed)'}` });
+  }
+  return items;
+});
+
 watch(mqttConfig, () => {
-  if (!isGlobalEditing.value) syncForm();
+  if (!isDirty.value) syncForm();
 }, { immediate: true });
 
 // ── API ───────────────────────────────────────────────────────────────────
@@ -331,39 +372,13 @@ async function callSaveApi(): Promise<{ success: boolean; error?: string }> {
   }
 }
 
-// ── Global edit/save/cancel ───────────────────────────────────────────────
-function startGlobalEditing() {
-  syncForm();
-  globalSnapshot.value = {
-    iata: iataCodeInput.value,
-    interval: statusIntervalInput.value,
-    owner: ownerInput.value,
-    email: emailInput.value,
-    neighborsEnabled: neighborsEnabledInput.value,
-    neighborsInterval: neighborsIntervalInput.value,
-    brokers: customBrokers.value.map(cloneBroker),
-  };
-  isGlobalEditing.value = true;
-  errorMsg.value = '';
-}
-
+// ── Discard / save ────────────────────────────────────────────────────────
 function cancelGlobalEditing() {
-  if (globalSnapshot.value) {
-    iataCodeInput.value = globalSnapshot.value.iata;
-    statusIntervalInput.value = globalSnapshot.value.interval;
-    ownerInput.value = globalSnapshot.value.owner;
-    emailInput.value = globalSnapshot.value.email;
-    neighborsEnabledInput.value = globalSnapshot.value.neighborsEnabled;
-    neighborsIntervalInput.value = globalSnapshot.value.neighborsInterval;
-    customBrokers.value = globalSnapshot.value.brokers.map(cloneBroker);
-  }
   editingBrokerId.value = null;
   isNewBroker.value = false;
   originalBrokerDraft.value = null;
-  isEditingObserver.value = false;
-  isGlobalEditing.value = false;
-  globalSnapshot.value = null;
   errorMsg.value = '';
+  syncForm();
 }
 
 async function saveGlobalSettings() {
@@ -381,18 +396,12 @@ async function saveGlobalSettings() {
   const result = await callSaveApi();
   isSaving.value = false;
   if (result.success) {
-    isGlobalEditing.value = false;
-    isEditingObserver.value = false;
-    globalSnapshot.value = null;
+    // callSaveApi refreshed the store; what was saved is the new baseline.
+    syncForm();
     showRestartModal.value = true;
   } else {
     errorMsg.value = result.error!;
   }
-}
-
-// ── Observer (local only, no API) ─────────────────────────────────────────
-function doneEditingObserver() {
-  isEditingObserver.value = false;
 }
 
 // ── Broker management (local only, no API) ────────────────────────────────
@@ -514,9 +523,7 @@ async function saveForNavigation(): Promise<boolean> {
   const result = await callSaveApi();
   isSaving.value = false;
   if (result.success) {
-    isGlobalEditing.value = false;
-    isEditingObserver.value = false;
-    globalSnapshot.value = null;
+    syncForm();
     showRestartModal.value = true;
     return true;
   }
@@ -525,13 +532,13 @@ async function saveForNavigation(): Promise<boolean> {
 }
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isGlobalEditing,
+  isDirty,
   isSaving,
   cancelGlobalEditing,
   saveForNavigation,
 );
 
-defineExpose({ requestLeave, isEditing: isGlobalEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 
 let _statusTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -576,32 +583,6 @@ onUnmounted(() => {
         <p class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
           Configure LetsMesh observer settings, MQTT brokers, and connection status
         </p>
-      </div>
-      <div class="flex items-center gap-2 flex-shrink-0">
-        <template v-if="!isGlobalEditing">
-          <button
-            @click="startGlobalEditing"
-            class="btn-primary"
-          >
-            Edit Settings
-          </button>
-        </template>
-        <template v-else>
-          <button
-            @click="cancelGlobalEditing"
-            :disabled="isSaving"
-            class="px-3 sm:cfg-btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveGlobalSettings"
-            :disabled="isSaving"
-            class="btn-primary"
-          >
-            {{ isSaving ? 'Saving…' : 'Save Settings' }}
-          </button>
-        </template>
       </div>
     </div>
 
@@ -676,28 +657,7 @@ onUnmounted(() => {
       </div>
 
       <div>
-        <!-- View mode -->
-        <div v-if="!isGlobalEditing" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-            <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">IATA Code</span>
-            <span class="text-content-primary font-mono text-sm mt-0.5">{{ mqttConfig.iata_code || '—' }}</span>
-          </div>
-          <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-            <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Status Interval</span>
-            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.status_interval ?? 300 }}s</span>
-          </div>
-          <div class="flex flex-col py-1">
-            <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Owner</span>
-            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.owner || '—' }}</span>
-          </div>
-          <div class="flex flex-col py-1">
-            <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Email</span>
-            <span class="text-content-primary text-sm mt-0.5">{{ mqttConfig.email || '—' }}</span>
-          </div>
-        </div>
-
-        <!-- Edit mode -->
-        <div v-if="isGlobalEditing" class="space-y-3">
+        <div class="space-y-3">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="block text-xs sm:text-sm text-content-secondary dark:text-content-muted mb-1">
@@ -735,7 +695,7 @@ onUnmounted(() => {
           <h3 class="text-lg font-semibold text-content-primary mb-1">Broker Settings</h3>
           <p class="text-sm text-content-secondary dark:text-content-muted">MQTT brokers for observer publishing</p>
         </div>
-        <div v-if="isGlobalEditing" class="flex items-center gap-2 flex-shrink-0 ml-4">
+        <div class="flex items-center gap-2 flex-shrink-0 ml-4">
           <!-- From Template dropdown -->
           <div class="relative">
             <button
@@ -849,7 +809,7 @@ onUnmounted(() => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12l4-4m-4 4l4 4" />
         </svg>
         <p class="text-sm">No brokers configured</p>
-        <p v-if="isGlobalEditing" class="text-xs mt-0.5 opacity-70">Use Add or From Template above</p>
+        <p class="text-xs mt-0.5 opacity-70">Use Add or From Template above</p>
       </div>
 
       <!-- Broker list -->
@@ -876,7 +836,7 @@ onUnmounted(() => {
                 Neighbours
               </span>
             </div>
-            <div v-if="isGlobalEditing" class="flex items-center gap-1.5 flex-shrink-0">
+            <div class="flex items-center gap-1.5 flex-shrink-0">
               <button
                 @click="openBrokerEdit(broker)"
                 class="px-2.5 py-1 text-xs bg-primary/opacity-medium hover:bg-primary/opacity-medium text-content-primary rounded border border-primary/opacity-heavy transition-colors"
@@ -941,29 +901,7 @@ onUnmounted(() => {
         {{ triggerError }}
       </div>
 
-      <!-- View mode -->
-      <div v-if="!isGlobalEditing" class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
-        <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Feature</span>
-          <span class="text-content-primary text-sm mt-0.5">{{ neighborsEnabledInput ? 'Enabled' : 'Disabled' }}</span>
-        </div>
-        <div class="flex flex-col py-1 border-b border-stroke-subtle dark:border-stroke/opacity-light">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Interval</span>
-          <span class="text-content-primary text-sm mt-0.5">{{ neighborsIntervalInput }}h</span>
-        </div>
-        <div class="flex flex-col py-1 sm:col-span-2">
-          <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">Publishing to</span>
-          <span v-if="neighborsBrokerNames.length" class="text-content-primary text-sm mt-0.5">
-            {{ neighborsBrokerNames.join(', ') }}
-          </span>
-          <span v-else class="text-content-muted/opacity-heavy text-sm italic mt-0.5">
-            No enabled broker has opted in — nothing is published.
-          </span>
-        </div>
-      </div>
-
-      <!-- Edit mode -->
-      <div v-else class="space-y-4">
+      <div class="space-y-4">
         <div class="flex items-start gap-3">
           <button
             type="button"
@@ -1009,6 +947,13 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <SaveBar
+      :changes="changes"
+      :saving="isSaving"
+      note="Takes effect after a restart"
+      @save="saveGlobalSettings"
+      @discard="cancelGlobalEditing"
+    />
   </div>
 </template>
 
