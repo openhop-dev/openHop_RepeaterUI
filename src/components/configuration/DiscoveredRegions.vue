@@ -113,7 +113,10 @@ const reportedBy = (region: DiscoveredRegion) =>
               </svg>
               <span class="truncate">{{ region.name }}</span>
             </div>
-            <div class="text-content-muted text-[10px] sm:text-xs truncate" :title="reportedBy(region)">
+            <div
+              class="text-content-muted text-[10px] sm:text-xs truncate"
+              :title="reportedBy(region)"
+            >
               {{ region.neighbors.length }}
               neighbour{{ region.neighbors.length === 1 ? '' : 's' }}
             </div>
@@ -131,7 +134,7 @@ const reportedBy = (region: DiscoveredRegion) =>
             class="flex items-center justify-center w-6 h-6 flex-shrink-0 rounded-full text-accent-green hover:bg-accent-green/opacity-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             :disabled="!canAdd"
             :aria-label="`Add region ${region.name}`"
-            :title="canAdd ? `Add ${region.name} to the region list` : 'Click Edit Settings first'"
+            :title="canAdd ? `Add ${region.name} to the region list` : 'Not available while saving'"
             @click="emit('add', region.name)"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,13 +149,8 @@ const reportedBy = (region: DiscoveredRegion) =>
         </li>
       </ul>
       <p class="text-content-muted text-xs">
-        <template v-if="canAdd">
-          <span class="text-accent-green font-medium">+</span> adds a region to the list on the
-          left; it is created when you save.
-        </template>
-        <template v-else>
-          Click "Edit Settings" to add a discovered region to the list on the left.
-        </template>
+        <span class="text-accent-green font-medium">+</span> adds a region to the list on the left;
+        it is created when you save.
       </p>
     </template>
   </div>

@@ -4,6 +4,7 @@ import TreeNode from '@/components/ui/TreeNode.vue';
 import KeyModal from '@/components/modals/KeyModal.vue';
 import DeleteConfirmModal from '@/components/modals/DeleteConfirmModal.vue';
 import UnsavedChangesModal from '@/components/ui/UnsavedChangesModal.vue';
+import SaveBar, { type SaveBarChange } from '@/components/ui/SaveBar.vue';
 import DiscoveredRegions from '@/components/configuration/DiscoveredRegions.vue';
 import { useTreeStateStore } from '@/stores/treeState';
 import { useSystemStore } from '@/stores/system';
@@ -19,8 +20,7 @@ const treeStore = useTreeStateStore();
 const systemStore = useSystemStore();
 const neighborStore = useNeighborStore();
 
-// ── Edit state ────────────────────────────────────────────────────────────
-const isEditing = ref(false);
+// ── Save state ────────────────────────────────────────────────────────────
 const isSaving = ref(false);
 const saveError = ref<string | null>(null);
 
@@ -30,19 +30,16 @@ function nextTempId() { return _nextTempId--; }
 
 // ── Flood policy ──────────────────────────────────────────────────────────
 const unscopedFloodPolicy = ref<'allow' | 'deny'>('deny');
-let snapshotUnscopedPolicy: 'allow' | 'deny' = 'deny';
+const snapshotUnscopedPolicy = ref<'allow' | 'deny'>('deny');
 const defaultRegion = ref<string | null>(null);
 const defaultRegionInput = ref('');
-let snapshotDefaultRegion: string | null = null;
-
-const statsFloodAllow = computed(() => systemStore.stats?.config?.mesh?.unscoped_flood_allow ?? null);
-watch(statsFloodAllow, (val) => {
-  if (val !== null && !isEditing.value) unscopedFloodPolicy.value = val ? 'allow' : 'deny';
-}, { immediate: true });
+const snapshotDefaultRegion = ref<string | null>(null);
 
 // ── Tree data ─────────────────────────────────────────────────────────────
+// The tree as loaded is the snapshot; edits work on transportKeysData and are
+// written (deletes, creates, edits) as a diff against it on save.
 const transportKeysData = ref<TreeNodeData[]>([]);
-let snapshot: TreeNodeData[] | null = null;
+const snapshot = ref<TreeNodeData[]>([]);
 const loading = ref(false);
 const error = ref<string | null>(null);
 
@@ -124,6 +121,7 @@ const loadTransportKeys = async () => {
 
     if (keysResponse.success && keysResponse.data) {
       transportKeysData.value = buildTreeFromApiData(keysResponse.data as any[]);
+      snapshot.value = cloneTree(transportKeysData.value);
     } else {
       error.value = keysResponse.error || 'Failed to load regions';
     }
@@ -131,9 +129,8 @@ const loadTransportKeys = async () => {
     if (defaultRegionResponse.success) {
       const loadedDefault = defaultRegionResponse.data?.default_region ?? null;
       defaultRegion.value = loadedDefault;
-      if (!isEditing.value) {
-        defaultRegionInput.value = loadedDefault ?? '';
-      }
+      snapshotDefaultRegion.value = loadedDefault;
+      defaultRegionInput.value = loadedDefault ?? '';
     } else if (!error.value) {
       error.value = defaultRegionResponse.error || 'Failed to load default region';
     }
@@ -180,7 +177,7 @@ const discoveredRegions = computed(() =>
 );
 
 function addDiscoveredRegion(name: string) {
-  if (!isEditing.value || isSaving.value) return;
+  if (isSaving.value) return;
   if (carriedRegionNames.value.has(name.toLowerCase())) return;
   // A draft node like any other addition on this tab: the '#' prefix matches what
   // the region editor stores, flood 'allow' is what makes it advertised, and the
@@ -198,27 +195,7 @@ onMounted(async () => {
   await loadDiscoveredRegions();
 });
 
-// ── Edit workflow ─────────────────────────────────────────────────────────
-function startEditing() {
-  snapshot = cloneTree(transportKeysData.value);
-  snapshotUnscopedPolicy = unscopedFloodPolicy.value;
-  snapshotDefaultRegion = defaultRegion.value;
-  defaultRegionInput.value = defaultRegion.value ?? '';
-  isEditing.value = true;
-  saveError.value = null;
-}
-
-function cancelEditing() {
-  if (snapshot) transportKeysData.value = cloneTree(snapshot);
-  unscopedFloodPolicy.value = snapshotUnscopedPolicy;
-  defaultRegion.value = snapshotDefaultRegion;
-  defaultRegionInput.value = snapshotDefaultRegion ?? '';
-  snapshot = null;
-  isEditing.value = false;
-  saveError.value = null;
-  treeStore.setSelectedNode(null);
-}
-
+// ── Unsaved changes ───────────────────────────────────────────────────────
 function normalizeDefaultRegionInput(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === '<null>') {
@@ -227,12 +204,93 @@ function normalizeDefaultRegionInput(raw: string): string | null {
   return trimmed;
 }
 
-async function saveChanges() {
+/** A node's saved fields and place in the tree, for comparing with the snapshot. */
+function treeShape(nodes: TreeNodeData[]) {
+  return flattenTree(nodes).map(({ node, parentId }) => ({
+    id: node.id,
+    parentId: parentId ?? null,
+    name: node.name,
+    floodPolicy: node.floodPolicy,
+    transport_key: node.transport_key ?? null,
+  }));
+}
+
+const statsFloodAllow = computed(() => systemStore.stats?.config?.mesh?.unscoped_flood_allow ?? null);
+
+const regionChanges = computed<SaveBarChange[]>(() => {
+  const items: SaveBarChange[] = [];
+  const before = new Map(treeShape(snapshot.value).map((n) => [n.id, n]));
+  const after = treeShape(transportKeysData.value);
+  const afterIds = new Set(after.map((n) => n.id));
+  for (const node of before.values()) {
+    if (!afterIds.has(node.id)) items.push({ label: `Remove region ${node.name}` });
+  }
+  for (const node of after) {
+    const old = before.get(node.id);
+    if (!old) {
+      items.push({ label: `Add region ${node.name}`, detail: `flood ${node.floodPolicy}` });
+      continue;
+    }
+    if (old.name !== node.name) {
+      items.push({ label: `Rename region ${old.name}`, detail: `→ ${node.name}` });
+    }
+    if (old.floodPolicy !== node.floodPolicy) {
+      items.push({
+        label: `Region ${node.name} flood`,
+        detail: `${old.floodPolicy} → ${node.floodPolicy}`,
+      });
+    }
+    if (old.transport_key !== node.transport_key) {
+      items.push({ label: `Region ${node.name} transport key`, detail: 'changed' });
+    }
+  }
+  if (unscopedFloodPolicy.value !== snapshotUnscopedPolicy.value) {
+    items.push({
+      label: 'Unscoped flood policy',
+      detail: `${snapshotUnscopedPolicy.value} → ${unscopedFloodPolicy.value}`,
+    });
+  }
+  const region = normalizeDefaultRegionInput(defaultRegionInput.value);
+  if (region !== snapshotDefaultRegion.value) {
+    items.push({
+      label: 'Default region',
+      detail: `${snapshotDefaultRegion.value ?? '—'} → ${region ?? '—'}`,
+    });
+  }
+  return items;
+});
+
+const isDirty = computed(() => regionChanges.value.length > 0);
+
+watch(
+  statsFloodAllow,
+  (val) => {
+    if (val === null) return;
+    const policy = val ? 'allow' : 'deny';
+    // A clean page follows the saved policy; an edited one keeps the edit.
+    if (unscopedFloodPolicy.value === snapshotUnscopedPolicy.value) {
+      unscopedFloodPolicy.value = policy;
+    }
+    snapshotUnscopedPolicy.value = policy;
+  },
+  { immediate: true },
+);
+
+function cancelEditing() {
+  transportKeysData.value = cloneTree(snapshot.value);
+  unscopedFloodPolicy.value = snapshotUnscopedPolicy.value;
+  defaultRegion.value = snapshotDefaultRegion.value;
+  defaultRegionInput.value = snapshotDefaultRegion.value ?? '';
+  saveError.value = null;
+  treeStore.setSelectedNode(null);
+}
+
+async function saveChanges(): Promise<boolean> {
   isSaving.value = true;
   saveError.value = null;
   try {
     const currentFlat = flattenTree(transportKeysData.value);
-    const snapshotFlat = snapshot ? flattenTree(snapshot) : [];
+    const snapshotFlat = flattenTree(snapshot.value);
 
     const snapshotMap = new Map(snapshotFlat.map(({ node }) => [node.id, node]));
     const currentPositive = currentFlat.filter(({ node }) => node.id > 0);
@@ -281,24 +339,26 @@ async function saveChanges() {
     }
 
     // 4. Flood policy
-    if (unscopedFloodPolicy.value !== snapshotUnscopedPolicy) {
+    if (unscopedFloodPolicy.value !== snapshotUnscopedPolicy.value) {
       await ApiService.updateUnscopedFloodPolicy(unscopedFloodPolicy.value === 'allow');
     }
 
     // 5. Default region
     const currentDefaultRegion = normalizeDefaultRegionInput(defaultRegionInput.value);
-    if (currentDefaultRegion !== snapshotDefaultRegion) {
+    if (currentDefaultRegion !== snapshotDefaultRegion.value) {
       await ApiService.updateDefaultRegion(currentDefaultRegion);
       defaultRegion.value = currentDefaultRegion;
     }
 
+    // Reloading takes a fresh snapshot of what the server now holds.
+    snapshotUnscopedPolicy.value = unscopedFloodPolicy.value;
     await loadTransportKeys();
     await systemStore.fetchStats();
-    snapshot = null;
-    isEditing.value = false;
     treeStore.setSelectedNode(null);
+    return true;
   } catch (err) {
     saveError.value = err instanceof Error ? err.message : 'Save failed';
+    return false;
   } finally {
     isSaving.value = false;
   }
@@ -386,13 +446,13 @@ function handleUnscopedFloodPolicyChange(policy: 'allow' | 'deny') {
 }
 
 const { showUnsavedModal, requestLeave, handleDiscard, handleSave, handleCancel } = useUnsavedChanges(
-  isEditing,
+  isDirty,
   isSaving,
   cancelEditing,
-  async () => { await saveChanges(); return !isEditing.value; },
+  saveChanges,
 );
 
-defineExpose({ requestLeave, isEditing });
+defineExpose({ requestLeave, isEditing: isDirty });
 </script>
 
 <template>
@@ -420,7 +480,6 @@ defineExpose({ requestLeave, isEditing });
       <!-- Action Buttons -->
       <div class="flex items-center gap-2 flex-shrink-0">
         <button
-          v-if="isEditing"
           @click="addNode"
           class="cfg-btn-secondary flex items-center gap-1.5"
           :disabled="isSaving"
@@ -430,15 +489,6 @@ defineExpose({ requestLeave, isEditing });
           </svg>
           Add Region
         </button>
-        <template v-if="!isEditing">
-          <button @click="startEditing" class="cfg-btn-primary">Edit Settings</button>
-        </template>
-        <template v-else>
-          <button @click="cancelEditing" :disabled="isSaving" class="cfg-btn-secondary">Cancel</button>
-          <button @click="saveChanges" :disabled="isSaving" class="cfg-btn-primary">
-            {{ isSaving ? 'Saving…' : 'Save Changes' }}
-          </button>
-        </template>
       </div>
     </div>
 
@@ -461,7 +511,7 @@ defineExpose({ requestLeave, isEditing });
         <div
           :class="[
             'flex bg-background-mute dark:bg-stroke/opacity-subtle rounded-lg border border-stroke-subtle dark:border-stroke/opacity-medium p-0.5 sm:p-1',
-            !isEditing ? 'opacity-50 pointer-events-none' : '',
+            isSaving ? 'opacity-50 pointer-events-none' : '',
           ]"
         >
           <button
@@ -504,13 +554,13 @@ defineExpose({ requestLeave, isEditing });
         <div class="w-full sm:w-auto sm:min-w-[320px] flex items-center gap-2">
           <input
             v-model="defaultRegionInput"
-            :disabled="!isEditing || isSaving"
+            :disabled="isSaving"
             class="cfg-input flex-1"
             placeholder="Region name or &lt;null&gt;"
           />
           <button
             @click="defaultRegionInput = ''"
-            :disabled="!isEditing || isSaving"
+            :disabled="isSaving"
             class="cfg-btn-secondary whitespace-nowrap"
           >
             Clear
@@ -522,7 +572,7 @@ defineExpose({ requestLeave, isEditing });
     <!-- Regions + Discovered Regions: side by side on desktop, stacked on mobile -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
     <!-- Tree Viewer -->
-    <div class="cfg-section space-y-4 h-full flex flex-col" @click="isEditing && treeStore.setSelectedNode(null)">
+    <div class="cfg-section space-y-4 h-full flex flex-col" @click="treeStore.setSelectedNode(null)">
       <div>
         <h3 class="text-lg font-semibold text-content-primary">Regions</h3>
         <p class="text-content-secondary dark:text-content-muted text-xs mt-1">
@@ -549,7 +599,7 @@ defineExpose({ requestLeave, isEditing });
       <div v-else-if="transportKeysData.length === 0" class="text-center py-8">
         <div class="text-content-muted mb-2">No regions found</div>
         <div class="text-content-muted/opacity-heavy text-sm">
-          Click "Edit Settings" then "Add Region" to get started
+          Click "Add Region" to get started
         </div>
       </div>
 
@@ -562,13 +612,13 @@ defineExpose({ requestLeave, isEditing });
             :node="node"
             :selected-node-id="treeStore.selectedNodeId.value"
             :level="0"
-            :unlocked="isEditing"
+            :unlocked="!isSaving"
             @select="selectNode"
             @edit="editNodeById"
             @delete="deleteNodeById"
           />
         </div>
-        <p v-if="isEditing" class="text-content-muted text-xs">
+        <p class="text-content-muted text-xs">
           To add a child region, click on a region to select it, then click "Add Region".
         </p>
       </template>
@@ -578,11 +628,18 @@ defineExpose({ requestLeave, isEditing });
         :regions="discoveredRegions"
         :loading="discoveredLoading"
         :error="discoveredError"
-        :can-add="isEditing && !isSaving"
+        :can-add="!isSaving"
         @add="addDiscoveredRegion"
         @refresh="loadDiscoveredRegions"
       />
     </div>
+
+    <SaveBar
+      :changes="regionChanges"
+      :saving="isSaving"
+      @save="saveChanges"
+      @discard="cancelEditing"
+    />
 
     <!-- Add Modal -->
     <KeyModal

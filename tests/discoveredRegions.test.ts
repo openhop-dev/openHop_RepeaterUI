@@ -134,15 +134,17 @@ describe('Region Configuration discovered column', () => {
   });
 
   const mountTab = async () => {
-    const { default: TransportKeys } = await import(
-      '@/components/configuration/TransportKeys.vue'
-    );
+    const { default: TransportKeys } = await import('@/components/configuration/TransportKeys.vue');
     const wrapper = mount(TransportKeys, { attachTo: document.body });
     await flushPromises();
     return wrapper;
   };
 
-  const rows = (wrapper: ReturnType<typeof mount>) => wrapper.findAll('li');
+  // Discovered-region rows; the save bar's change list is made of <li> too.
+  const rows = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('li').filter((li) => li.attributes('data-testid') !== 'save-bar-change');
+  const saveBarChanges = (wrapper: ReturnType<typeof mount>) =>
+    wrapper.findAll('[data-testid="save-bar-change"]').map((li) => li.text());
 
   it('marks a region already in the list as carried, with no add button', async () => {
     const wrapper = await mountTab();
@@ -156,29 +158,33 @@ describe('Region Configuration discovered column', () => {
     wrapper.unmount();
   });
 
-  it('disables adding until edit mode is entered, since additions are drafts', async () => {
+  it('offers adding straight away, with no save bar until something is added', async () => {
     const wrapper = await mountTab();
 
     const bou = rows(wrapper).find((li) => li.text().includes('BOU'))!;
-    expect((bou.find('button').element as HTMLButtonElement).disabled).toBe(true);
-
-    await wrapper.findAll('button').find((b) => b.text() === 'Edit Settings')!.trigger('click');
     expect((bou.find('button').element as HTMLButtonElement).disabled).toBe(false);
+    expect(wrapper.find('[data-testid="save-bar"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
   it('adds as a draft that flips to Carried and is created on save', async () => {
     const wrapper = await mountTab();
-    await wrapper.findAll('button').find((b) => b.text() === 'Edit Settings')!.trigger('click');
 
-    await rows(wrapper).find((li) => li.text().includes('BOU'))!.find('button').trigger('click');
+    await rows(wrapper)
+      .find((li) => li.text().includes('BOU'))!
+      .find('button')
+      .trigger('click');
 
     // Immediately reflected against the working tree, not the saved one.
     const bou = rows(wrapper).find((li) => li.text().includes('BOU'))!;
     expect(bou.text()).toContain('Carried');
+    expect(saveBarChanges(wrapper)).toEqual(['Add region #BOU flood allow']);
     expect(api.createTransportKey).not.toHaveBeenCalled();
 
-    await wrapper.findAll('button').find((b) => b.text().includes('Save Changes'))!.trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Save Changes'))!
+      .trigger('click');
     await flushPromises();
 
     // '#'-prefixed like the region editor stores, allow-flood so it is advertised,
@@ -187,12 +193,17 @@ describe('Region Configuration discovered column', () => {
     wrapper.unmount();
   });
 
-  it('drops a drafted region when the edit is cancelled', async () => {
+  it('drops a drafted region when the change is discarded', async () => {
     const wrapper = await mountTab();
-    await wrapper.findAll('button').find((b) => b.text() === 'Edit Settings')!.trigger('click');
-    await rows(wrapper).find((li) => li.text().includes('BOU'))!.find('button').trigger('click');
+    await rows(wrapper)
+      .find((li) => li.text().includes('BOU'))!
+      .find('button')
+      .trigger('click');
 
-    await wrapper.findAll('button').find((b) => b.text() === 'Cancel')!.trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === 'Discard')!
+      .trigger('click');
 
     const bou = rows(wrapper).find((li) => li.text().includes('BOU'))!;
     expect(bou.text()).not.toContain('Carried');
