@@ -695,7 +695,9 @@ function loadSelectedRadio() {
   const pending = pendingPayloads.value[key];
   const entry = radios.value.find((r) => r.id === key) as Record<string, unknown> | undefined;
   if (pending && entry) {
-    loadHardwareFormFromSections(sectionsFromEntry(applyPayloadToEntry({ ...entry }, pending)));
+    loadHardwareFormFromSections(
+      sectionsFromEntry(withInherited(applyPayloadToEntry({ ...entry }, pending))),
+    );
   }
 }
 
@@ -703,9 +705,16 @@ function loadActiveHardwareAndAir() {
   const entry = isMultiRadio.value
     ? (radios.value.find((r) => r.id === effectiveSelectedId.value) as Record<string, unknown> | undefined)
     : null;
+  if (entry) {
+    // An entry overlays the top-level sections key by key; load what the
+    // repeater builds, not the entry alone, so an inherited port or a partial
+    // radio section is not replaced by form defaults on the next save.
+    loadHardwareFormFromSections(sectionsFromEntry(withInherited(entry)));
+    return;
+  }
   loadHardwareFormFromSections({
     radio_type: activeHardware.value.radio_type ?? config.value.radio_type,
-    radio: (entry?.radio as Record<string, unknown>) || config.value.radio,
+    radio: config.value.radio,
     kiss: activeHardware.value.kiss,
     modem_usb: activeHardware.value.modem_usb,
     modem_tcp: activeHardware.value.modem_tcp,
@@ -1432,9 +1441,12 @@ function overlayLiveFrontend(importBody: Record<string, unknown>) {
   }
 }
 
+/** A live front-end apply is in flight; Save waits for it so its body carries the result. */
+const frontendBusy = ref(false);
+
 function onFrontendApplied(configured: Record<string, unknown>, radioId: string | undefined) {
   liveConfigured.value = { ...liveConfigured.value, [radioId ?? '']: configured };
-  void systemStore.fetchStats();
+  void systemStore.fetchStats({ fresh: true });
 }
 
 function applyPayloadToEntry(
@@ -1516,7 +1528,7 @@ async function persistImportBody(importBody: Record<string, unknown>): Promise<b
     draftRadios.value = null;
     draftSelectedId.value = '';
     pendingPayloads.value = {};
-    await systemStore.fetchStats();
+    await systemStore.fetchStats({ fresh: true });
     liveConfigured.value = {};
     ensureSelection();
     loadSelectedRadio();
@@ -1554,7 +1566,15 @@ function enableMultiRadio() {
 
 /** The radios as edited so far: the draft, else the saved radios with kept and form edits. */
 function editedRadios(): Array<Record<string, unknown>> | null {
-  if (draftRadios.value) return draftRadios.value.map((r) => ({ ...r }));
+  if (draftRadios.value) {
+    const payload = buildHardwarePayloadFromForm();
+    if (!payload) return null;
+    const currentId = workingSelectedId.value;
+    draftRadios.value = draftRadios.value.map((entry) =>
+      String(entry.id) === currentId ? applyPayloadToEntry(entry, payload) : entry,
+    );
+    return draftRadios.value.map((r) => ({ ...r }));
+  }
   if (!stashFormEdits()) return null;
   return radios.value.map((entry) => {
     const edits = pendingPayloads.value[entry.id];
@@ -1640,6 +1660,7 @@ function disableMultiRadio() {
 }
 
 async function saveChanges(): Promise<boolean> {
+  if (frontendBusy.value) return false;
   isSaving.value = true;
   errorMessage.value = '';
 
@@ -1692,7 +1713,7 @@ async function saveChanges(): Promise<boolean> {
 
       draftRadios.value = nextRadios;
 
-      const conflict = validateMultiRadioHardware(nextRadios);
+      const conflict = validateMultiRadioHardware(nextRadios.map(withInherited));
       if (conflict) {
         errorMessage.value = conflict.message;
         if (conflict.radioId) {
@@ -1715,7 +1736,9 @@ async function saveChanges(): Promise<boolean> {
 
     const importBody = existingSaveBody(payload);
     if (isMultiRadio.value && effectiveSelectedId.value) {
-      const conflict = validateMultiRadioHardware(importBody.radios as Record<string, unknown>[]);
+      const conflict = validateMultiRadioHardware(
+        (importBody.radios as Record<string, unknown>[]).map(withInherited),
+      );
       if (conflict) {
         errorMessage.value = conflict.message;
         if (conflict.radioId && conflict.radioId !== effectiveSelectedId.value) {
@@ -1762,15 +1785,15 @@ function radioHardwareReady(entry: Record<string, unknown>): boolean {
   return true;
 }
 
-const ENTRY_SECTIONS = ['radio', 'kiss', 'modem_usb', 'modem_tcp', 'sx1262', 'ch341'] as const;
-
 /**
  * An entry as the repeater builds it: each section overlays the top-level one
  * key by key (_merge_radio_entry), so a value the entry inherits still shows.
  */
 function withInherited(entry: Record<string, unknown>): Record<string, unknown> {
   const merged: Record<string, unknown> = { ...entry };
-  for (const name of ENTRY_SECTIONS) {
+  // Listed here, not as a module constant: the form loads during setup, before
+  // later declarations in this script are initialised.
+  for (const name of ['radio', 'kiss', 'modem_usb', 'modem_tcp', 'sx1262', 'ch341']) {
     const top = config.value[name];
     const own = entry[name];
     if (top && typeof top === 'object') {
@@ -2223,7 +2246,9 @@ watch(selectedRadioType, (type, previous) => {
           <RadioFrontendSettings
             v-if="showFrontend"
             :radio-id="frontendRadioId"
+            :locked="isSaving || multiRadioBusy"
             @applied="onFrontendApplied"
+            @busy="frontendBusy = $event"
           />
 
           <!-- Channel (per radio; one radio keeps it under Radio Settings) -->
@@ -2638,7 +2663,7 @@ watch(selectedRadioType, (type, previous) => {
 
     <SaveBar
       :changes="saveBarChanges"
-      :saving="isSaving || multiRadioBusy"
+      :saving="isSaving || multiRadioBusy || frontendBusy"
       note="Takes effect after a restart"
       @save="saveChanges"
       @discard="cancelEditing"

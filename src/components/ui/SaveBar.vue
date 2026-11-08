@@ -51,9 +51,12 @@ const overflow = computed(() => Math.max(0, count.value - inline.value.length));
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="min-w-0 text-sm">
-          <span class="font-semibold text-content-primary" data-testid="save-bar-summary">{{
-            summary
-          }}</span>
+          <span
+            class="font-semibold text-content-primary"
+            aria-live="polite"
+            data-testid="save-bar-summary"
+            >{{ summary }}</span
+          >
           <span v-if="note" class="text-content-secondary dark:text-content-muted">
             · {{ note }}</span
           >
@@ -61,8 +64,8 @@ const overflow = computed(() => Math.max(0, count.value - inline.value.length));
             class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-content-secondary dark:text-content-muted"
           >
             <li
-              v-for="change in expanded ? changes : inline"
-              :key="change.label"
+              v-for="(change, index) in expanded ? changes : inline"
+              :key="`${index}:${change.label}`"
               data-testid="save-bar-change"
             >
               <span class="text-content-primary">{{ change.label }}</span>

@@ -13,11 +13,15 @@ import { AGC_HOST_MAX_SEC } from '@/commands/radioFrontend';
 const props = defineProps<{
   /** radios[] entry on a multi-radio node; omitted for the default radio. */
   radioId?: string;
+  /** No changes while the page saves its hardware settings. */
+  locked?: boolean;
 }>();
 
 const emit = defineEmits<{
   /** The modem confirmed a change; `configured` is the server's saved set. */
   applied: [configured: Record<string, unknown>, radioId: string | undefined];
+  /** A change is in flight to the modem. */
+  busy: [busy: boolean];
 }>();
 
 type GainKey = 'fem_rx_gain' | 'fem_tx_gain' | 'rx_boosted_gain';
@@ -101,13 +105,21 @@ function boardDefault(key: keyof RadioFrontendSettings): boolean {
   return status.value?.configured[key] === undefined;
 }
 
+watch(pending, (key) => emit('busy', key !== null));
+
 /** Send one setting; on failure the control returns to what the modem runs. */
 async function send(settings: RadioFrontendSettings, key: string): Promise<boolean> {
+  // The radio this change is for; the selection can move while it is in flight.
+  const radioId = props.radioId || undefined;
+  const stillShown = () => (props.radioId || undefined) === radioId;
   pending.value = key;
   errorMessage.value = '';
   successMessage.value = '';
   try {
-    const response = await ApiService.setRadioFrontend(settings, props.radioId || undefined);
+    const response = await ApiService.setRadioFrontend(settings, radioId);
+    if (response.success) emit('applied', { ...(response.data?.configured ?? {}) }, radioId);
+    // Only the radio still shown takes the response into its panel.
+    if (!stillShown()) return response.success;
     if (response.data) status.value = response.data;
     if (!response.success) {
       errorMessage.value = response.error || 'Failed to apply RF front-end settings';
@@ -119,21 +131,23 @@ async function send(settings: RadioFrontendSettings, key: string): Promise<boole
         ? `Applied. The radio set the AGC reset interval to ${agc} s.`
         : 'Applied to the radio.';
     setTimeout(() => (successMessage.value = ''), 4000);
-    emit('applied', { ...(response.data?.configured ?? {}) }, props.radioId || undefined);
     return true;
   } catch (error: unknown) {
+    if (!stillShown()) return false;
     const e = error as { response?: { data?: { error?: string } }; message?: string };
     errorMessage.value =
       e.response?.data?.error || e.message || 'Failed to apply RF front-end settings';
     return false;
   } finally {
     pending.value = null;
-    agcInput.value = status.value?.running.agc_reset_interval_seconds ?? agcInput.value;
+    if (stillShown()) {
+      agcInput.value = status.value?.running.agc_reset_interval_seconds ?? agcInput.value;
+    }
   }
 }
 
 async function commitAgc() {
-  if (agcInput.value === null || pending.value) return;
+  if (agcInput.value === null || pending.value || props.locked) return;
   const agc = Number(agcInput.value);
   if (!Number.isInteger(agc) || agc < 0 || agc > agcMax.value) {
     errorMessage.value = `AGC reset interval must be a whole number of seconds, 0-${agcMax.value}`;
@@ -144,7 +158,7 @@ async function commitAgc() {
 }
 
 async function toggleGain(key: GainKey) {
-  if (pending.value) return;
+  if (pending.value || props.locked) return;
   await send({ [key]: !running.value[key] }, key);
 }
 
@@ -218,7 +232,7 @@ defineExpose({ reload: load, available, configured });
             min="0"
             :max="agcMax"
             :step="agcStep"
-            :disabled="pending !== null"
+            :disabled="pending !== null || locked"
             class="cfg-input w-28 font-mono"
             data-testid="frontend-agc-input"
             @change="commitAgc"
@@ -250,7 +264,7 @@ defineExpose({ reload: load, available, configured });
             role="switch"
             :aria-checked="running[row.key] === true"
             :aria-label="row.label"
-            :disabled="pending !== null"
+            :disabled="pending !== null || locked"
             class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
             :class="
               running[row.key] ? 'bg-primary' : 'bg-stroke-subtle dark:bg-white/opacity-medium'
