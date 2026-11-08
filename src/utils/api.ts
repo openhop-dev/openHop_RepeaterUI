@@ -1414,6 +1414,7 @@ export class ApiService {
       const params = await this.getGeneratedRequestParams();
       const response = await generatedApiClient.radioFrontend.radioFrontendCreate(
         radioId ? { ...settings, radio_id: radioId } : settings,
+        undefined,
         params,
       );
       return response.data;
@@ -1778,6 +1779,15 @@ export class ApiService {
         // Request was made but no response received
         return new Error('Network error - no response received');
       }
+    }
+    // The generated fetch client throws its HttpResponse, with the parsed body in .error.
+    if (typeof Response !== 'undefined' && error instanceof Response) {
+      const body = (error as Response & { error?: unknown }).error as
+        | { error?: unknown; message?: unknown }
+        | null
+        | undefined;
+      const message = body && typeof body === 'object' ? (body.error ?? body.message) : undefined;
+      return new Error(typeof message === 'string' && message ? message : `HTTP ${error.status}`);
     }
     // Something else happened
     return new Error(error instanceof Error ? error.message : 'Unknown error occurred');
