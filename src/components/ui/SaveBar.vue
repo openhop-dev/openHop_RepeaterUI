@@ -27,7 +27,9 @@ const emit = defineEmits<{ save: []; discard: [] }>();
 
 const expanded = ref(false);
 const count = computed(() => props.changes.length);
-const summary = computed(() => (count.value === 1 ? '1 unsaved change' : `${count.value} unsaved changes`));
+const summary = computed(() =>
+  count.value === 1 ? '1 unsaved change' : `${count.value} unsaved changes`,
+);
 // Inline when short; past three, the list folds behind a toggle.
 const inline = computed(() => props.changes.slice(0, 3));
 const overflow = computed(() => Math.max(0, count.value - inline.value.length));
@@ -49,22 +51,43 @@ const overflow = computed(() => Math.max(0, count.value - inline.value.length));
     >
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="min-w-0 text-sm">
-          <span class="font-semibold text-content-primary" data-testid="save-bar-summary">{{ summary }}</span>
-          <span v-if="note" class="text-content-secondary dark:text-content-muted"> · {{ note }}</span>
-          <ul class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-content-secondary dark:text-content-muted">
-            <li v-for="change in expanded ? changes : inline" :key="change.label" data-testid="save-bar-change">
+          <span class="font-semibold text-content-primary" data-testid="save-bar-summary">{{
+            summary
+          }}</span>
+          <span v-if="note" class="text-content-secondary dark:text-content-muted">
+            · {{ note }}</span
+          >
+          <ul
+            class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-content-secondary dark:text-content-muted"
+          >
+            <li
+              v-for="change in expanded ? changes : inline"
+              :key="change.label"
+              data-testid="save-bar-change"
+            >
               <span class="text-content-primary">{{ change.label }}</span>
-              <template v-if="change.detail">{{ ' ' }}<span class="font-mono">{{ change.detail }}</span></template>
+              <template v-if="change.detail"
+                >{{ ' ' }}<span class="font-mono">{{ change.detail }}</span></template
+              >
             </li>
             <li v-if="overflow > 0 && !expanded">
-              <button type="button" class="text-primary underline-offset-2 hover:underline" @click="expanded = true">
+              <button
+                type="button"
+                class="text-primary underline-offset-2 hover:underline"
+                @click="expanded = true"
+              >
                 +{{ overflow }} more
               </button>
             </li>
           </ul>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <button type="button" class="cfg-btn-secondary" :disabled="saving" @click="emit('discard')">
+          <button
+            type="button"
+            class="cfg-btn-secondary"
+            :disabled="saving"
+            @click="emit('discard')"
+          >
             Discard
           </button>
           <button type="button" class="cfg-btn-primary" :disabled="saving" @click="emit('save')">

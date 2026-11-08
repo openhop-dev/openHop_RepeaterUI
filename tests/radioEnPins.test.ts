@@ -135,7 +135,6 @@ describe('radio EN pin persistence', () => {
 
   it('saves the PiMesh scalar EN instead of manufacturing GPIO 0 from the empty list', async () => {
     const wrapper = await mountEditor();
-    await click(wrapper, 'Edit Settings');
     await applyPreset(wrapper, 'pimesh-1w-v2');
     await click(wrapper, 'Save Changes');
     expect(savedBody().sx1262).toHaveProperty('en_pin', 26);
@@ -146,7 +145,6 @@ describe('radio EN pin persistence', () => {
     'preserves stock $key EN on single-radio save',
     async ({ key, type, expected }) => {
       const wrapper = await mountEditor();
-      await click(wrapper, 'Edit Settings');
       await selectRadioType(wrapper, type);
       await applyPreset(wrapper, key);
       await click(wrapper, 'Save Changes');
@@ -166,7 +164,7 @@ describe('radio EN pin persistence', () => {
       await click(wrapper, 'Add radio');
       await selectRadioType(wrapper, type);
       await applyPreset(wrapper, key);
-      await click(wrapper, 'Save multi-radio config');
+      await click(wrapper, 'Save Changes');
       const body = savedBody();
       expect(body.radios).toHaveLength(3);
       expect(body.radios.slice(0, 2)).toEqual(existingRadios);
@@ -186,9 +184,10 @@ describe('radio EN pin persistence', () => {
     'saves explicit EN tokens without phantom zero: $input / scalar $scalar',
     async ({ input, scalar, expected }) => {
       const wrapper = await mountEditor();
-      await click(wrapper, 'Edit Settings');
       await field(wrapper, 'Power Enable Pin').setValue(scalar);
       await field(wrapper, 'Power Enable Pins (array)').setValue(input);
+      // Some inputs parse to what was loaded; an unrelated edit keeps a save to check.
+      await field(wrapper, 'TX LED Pin').setValue(7);
       await click(wrapper, 'Save Changes');
       expectEn(savedBody().sx1262, expected);
     },
@@ -202,7 +201,8 @@ describe('radio EN pin persistence', () => {
     { sx: { ...pins, en_pins: [0, 26] }, expected: [0, 26] },
   ])('round-trips loaded single-radio EN: $expected', async ({ sx, expected }) => {
     const wrapper = await mountEditor({ radio_type: 'sx1262', sx1262: sx });
-    await click(wrapper, 'Edit Settings');
+    // An unrelated edit, so there is something to save.
+    await field(wrapper, 'TX LED Pin').setValue(7);
     await click(wrapper, 'Save Changes');
     expectEn(savedBody().sx1262, expected);
   });
@@ -216,7 +216,6 @@ describe('radio EN pin persistence', () => {
     'replaces rather than carries EN across presets: $sequence',
     async ({ sequence, expected }) => {
       const wrapper = await mountEditor();
-      await click(wrapper, 'Edit Settings');
       for (const key of sequence) await applyPreset(wrapper, key);
       await click(wrapper, 'Save Changes');
       expectEn(savedBody().sx1262, expected);
@@ -232,7 +231,7 @@ describe('radio EN pin persistence', () => {
     await click(wrapper, 'Enable multi-radio');
     // A non-GPIO secondary keeps this test about EN, not board pin collisions.
     await selectRadioType(wrapper, 'kiss');
-    await click(wrapper, 'Save multi-radio config');
+    await click(wrapper, 'Save Changes');
     expectEn(savedBody().radios[0].sx1262, 26);
   });
 
@@ -246,7 +245,6 @@ describe('radio EN pin persistence', () => {
       ],
       fabric: { default_radio: 'local' },
     });
-    await click(wrapper, 'Edit Settings');
     await applyPreset(wrapper, 'pimesh-1w-v2');
     await click(wrapper, 'Save Changes');
     const body = savedBody();

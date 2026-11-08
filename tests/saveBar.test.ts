@@ -16,9 +16,7 @@ describe('diffChanges', () => {
   it('lists changed leaves by dotted path', () => {
     const before = { radio_type: 'modem_tcp', modem_tcp: { host: 'g2', port: 5055 } };
     const after = { radio_type: 'modem_tcp', modem_tcp: { host: 'g2', port: 5056 } };
-    expect(diffChanges(before, after)).toEqual([
-      { path: 'modem_tcp.port', from: 5055, to: 5056 },
-    ]);
+    expect(diffChanges(before, after)).toEqual([{ path: 'modem_tcp.port', from: 5055, to: 5056 }]);
   });
 
   it('reports each leaf of a section added or removed', () => {
@@ -70,7 +68,10 @@ describe('SaveBar', () => {
     const many = Array.from({ length: 5 }, (_, i) => ({ label: `field ${i}` }));
     const wrapper = mount(SaveBar, { props: { changes: many } });
     expect(wrapper.findAll('[data-testid="save-bar-change"]')).toHaveLength(3);
-    await wrapper.findAll('button').find((b) => b.text() === '+2 more')!.trigger('click');
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text() === '+2 more')!
+      .trigger('click');
     expect(wrapper.findAll('[data-testid="save-bar-change"]')).toHaveLength(5);
   });
 

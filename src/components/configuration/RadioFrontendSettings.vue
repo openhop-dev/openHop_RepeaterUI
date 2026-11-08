@@ -1,45 +1,42 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { ApiService } from '@/utils/api';
 import type { RadioFrontendSettings, RadioFrontendStatus } from '@/generated/openapi';
 import { AGC_HOST_MAX_SEC } from '@/commands/radioFrontend';
 
-// RF front-end rows for one radio (KISS or openHop modem), shown inside Radio
-// Hardware under the selected radio and driven by that page's Edit / Save.
-// Unlike the rest of the page, these apply to the modem immediately rather than
-// after a restart, so the parent calls apply() first and only offers a restart
-// for hardware changes.
+// Live tuning for one radio (KISS or openHop modem): AGC reset interval, FEM
+// gain and the chip's boosted RX gain. Each control is sent to the modem as it
+// changes and the server saves what the modem confirms, so these never wait for
+// the page's Save or a restart. Shown inside Radio Hardware under the selected
+// radio.
 
 const props = defineProps<{
-  /** Follows the parent page's edit mode; entering it reloads the inputs. */
-  editing: boolean;
   /** radios[] entry on a multi-radio node; omitted for the default radio. */
   radioId?: string;
 }>();
 
-type GainChoice = 'on' | 'off' | '';
+const emit = defineEmits<{
+  /** The modem confirmed a change; `configured` is the server's saved set. */
+  applied: [configured: Record<string, unknown>, radioId: string | undefined];
+}>();
+
+type GainKey = 'fem_rx_gain' | 'fem_tx_gain' | 'rx_boosted_gain';
 
 const status = ref<RadioFrontendStatus | null>(null);
 const loading = ref(true);
 const errorMessage = ref('');
 const successMessage = ref('');
+const pending = ref<string | null>(null);
 
 const agcInput = ref<number | null>(null);
-// On/off controls. Boosted RX gain is the radio chip's own (MeshCore radio.rxgain),
-// independent of the external FEM LNA.
-type GainKey = 'fem_rx_gain' | 'fem_tx_gain' | 'rx_boosted_gain';
-const gainInput = reactive<Record<GainKey, GainChoice>>({
-  fem_rx_gain: '',
-  fem_tx_gain: '',
-  rx_boosted_gain: '',
-});
 const gainRows: ReadonlyArray<{ key: GainKey; label: string; hint?: string }> = [
-  { key: 'fem_rx_gain', label: 'FEM RX Gain (LNA)' },
-  { key: 'fem_tx_gain', label: 'FEM TX Gain (PA)' },
-  { key: 'rx_boosted_gain', label: 'Radio RX Boosted Gain', hint: 'The LoRa chip’s own gain mode' },
+  { key: 'fem_rx_gain', label: 'FEM RX gain (LNA)', hint: 'External front-end receive amplifier' },
+  { key: 'fem_tx_gain', label: 'FEM TX gain (PA)', hint: 'External front-end transmit amplifier' },
+  { key: 'rx_boosted_gain', label: 'Radio RX boosted gain', hint: 'The LoRa chip’s own gain mode' },
 ];
 
 const supports = computed(() => status.value?.supports);
+const running = computed(() => status.value?.running ?? {});
 const hasAnyControl = computed(
   () =>
     !!supports.value &&
@@ -79,9 +76,7 @@ async function load() {
   } finally {
     if (token === loadToken) {
       loading.value = false;
-      // Inputs opened before this radio's status arrived still hold the last
-      // radio's values; Save would send them here.
-      if (props.editing) resetInputs();
+      agcInput.value = status.value?.running.agc_reset_interval_seconds ?? null;
     }
   }
 }
@@ -98,88 +93,21 @@ watch(
 );
 
 function agcLabel(seconds: number | undefined): string {
-  if (seconds === undefined) return 'Unknown';
-  return seconds === 0 ? 'Off' : `${seconds} s`;
+  if (seconds === undefined) return 'unknown';
+  return seconds === 0 ? 'off' : `${seconds} s`;
 }
 
-function gainLabel(value: boolean | undefined): string {
-  if (value === undefined) return 'Unknown';
-  return value ? 'On' : 'Off';
+function boardDefault(key: keyof RadioFrontendSettings): boolean {
+  return status.value?.configured[key] === undefined;
 }
 
-function configuredNote(key: keyof RadioFrontendSettings): string {
-  return status.value?.configured[key] === undefined ? ' (board default)' : '';
-}
-
-function gainChoice(value: boolean | undefined): GainChoice {
-  return value === undefined ? '' : value ? 'on' : 'off';
-}
-
-function resetInputs() {
-  const running = status.value?.running ?? {};
-  agcInput.value = running.agc_reset_interval_seconds ?? null;
-  for (const { key } of gainRows) gainInput[key] = gainChoice(running[key]);
+/** Send one setting; on failure the control returns to what the modem runs. */
+async function send(settings: RadioFrontendSettings, key: string): Promise<boolean> {
+  pending.value = key;
   errorMessage.value = '';
-}
-
-watch(
-  () => props.editing,
-  (editing) => {
-    if (editing) {
-      successMessage.value = '';
-      resetInputs();
-    } else {
-      errorMessage.value = '';
-    }
-  },
-);
-
-/** Settings the operator changed from what the modem runs, or an error message. */
-function changes(): RadioFrontendSettings | string {
-  if (!available.value) return {};
-  const running = status.value?.running ?? {};
-  const result: RadioFrontendSettings = {};
-  if (supports.value?.agc_reset_interval_seconds && agcInput.value !== null) {
-    const agc = Number(agcInput.value);
-    if (!Number.isInteger(agc) || agc < 0 || agc > agcMax.value) {
-      return `AGC reset interval must be a whole number of seconds, 0-${agcMax.value}`;
-    }
-    if (agc !== running.agc_reset_interval_seconds) result.agc_reset_interval_seconds = agc;
-  }
-  for (const { key } of gainRows) {
-    if (!supports.value?.[key] || !gainInput[key]) continue;
-    const enabled = gainInput[key] === 'on';
-    if (enabled !== running[key]) result[key] = enabled;
-  }
-  return result;
-}
-
-/** Check the inputs without sending anything; returns an error message or ''. */
-function validate(): string {
-  const result = changes();
-  errorMessage.value = typeof result === 'string' ? result : '';
-  return errorMessage.value;
-}
-
-function hasChanges(): boolean {
-  const result = changes();
-  return typeof result !== 'string' && Object.keys(result).length > 0;
-}
-
-/**
- * Apply changed settings to the modem. Resolves true when there was nothing to
- * apply or everything applied; on failure the reason is shown next to the rows.
- */
-async function apply(): Promise<boolean> {
-  const result = changes();
-  if (typeof result === 'string') {
-    errorMessage.value = result;
-    return false;
-  }
-  if (Object.keys(result).length === 0) return true;
-  errorMessage.value = '';
+  successMessage.value = '';
   try {
-    const response = await ApiService.setRadioFrontend(result, props.radioId || undefined);
+    const response = await ApiService.setRadioFrontend(settings, props.radioId || undefined);
     if (response.data) status.value = response.data;
     if (!response.success) {
       errorMessage.value = response.error || 'Failed to apply RF front-end settings';
@@ -187,44 +115,79 @@ async function apply(): Promise<boolean> {
     }
     const agc = response.data?.applied.agc_reset_interval_seconds;
     successMessage.value =
-      agc !== undefined && agc !== result.agc_reset_interval_seconds
-        ? `RF front end applied. The radio set the AGC reset interval to ${agc} s.`
-        : 'RF front end applied to the radio.';
+      agc !== undefined && agc !== settings.agc_reset_interval_seconds
+        ? `Applied. The radio set the AGC reset interval to ${agc} s.`
+        : 'Applied to the radio.';
     setTimeout(() => (successMessage.value = ''), 4000);
+    emit('applied', { ...(response.data?.configured ?? {}) }, props.radioId || undefined);
     return true;
   } catch (error: unknown) {
     const e = error as { response?: { data?: { error?: string } }; message?: string };
     errorMessage.value =
       e.response?.data?.error || e.message || 'Failed to apply RF front-end settings';
     return false;
+  } finally {
+    pending.value = null;
+    agcInput.value = status.value?.running.agc_reset_interval_seconds ?? agcInput.value;
   }
 }
 
-// What the server now has configured for this radio, after apply().
+async function commitAgc() {
+  if (agcInput.value === null || pending.value) return;
+  const agc = Number(agcInput.value);
+  if (!Number.isInteger(agc) || agc < 0 || agc > agcMax.value) {
+    errorMessage.value = `AGC reset interval must be a whole number of seconds, 0-${agcMax.value}`;
+    return;
+  }
+  if (agc === running.value.agc_reset_interval_seconds) return;
+  await send({ agc_reset_interval_seconds: agc }, 'agc_reset_interval_seconds');
+}
+
+async function toggleGain(key: GainKey) {
+  if (pending.value) return;
+  await send({ [key]: !running.value[key] }, key);
+}
+
+// What the server now has configured for this radio.
 const configured = computed<Record<string, unknown>>(() => ({
   ...(status.value?.configured ?? {}),
 }));
 
-defineExpose({ apply, validate, hasChanges, reload: load, available, configured });
+defineExpose({ reload: load, available, configured });
 </script>
 
 <template>
-  <template v-if="available">
-    <div class="pt-2 text-xs text-content-muted" data-testid="radio-frontend">
-      RF Front End
-      <span class="block text-[11px]">Applied to the modem on Save, without a restart.</span>
+  <section
+    v-if="available"
+    aria-labelledby="live-tuning-heading"
+    class="cfg-section !p-4 sm:!p-5 space-y-1"
+    data-testid="radio-frontend"
+  >
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h4 id="live-tuning-heading" class="text-sm font-semibold text-content-primary">
+        Live tuning
+      </h4>
+      <span
+        class="text-[11px] font-semibold rounded-full px-2.5 py-0.5 bg-accent-green/opacity-light text-accent-green"
+        >Applies immediately</span
+      >
     </div>
+    <p class="text-xs text-content-muted pb-1">
+      Sent to the modem as you change it and saved once the modem confirms. No restart.
+    </p>
 
     <div
       v-if="successMessage"
-      class="bg-accent-green/opacity-light dark:bg-accent-green/opacity-medium border border-accent-green dark:border-accent-green/opacity-heavy rounded-lg p-3 text-accent-green text-sm"
+      role="status"
+      class="bg-accent-green/opacity-light border border-accent-green/opacity-heavy rounded-lg px-3 py-2 text-accent-green text-xs"
       data-testid="frontend-success"
     >
       {{ successMessage }}
     </div>
     <div
       v-if="errorMessage"
-      class="bg-accent-red/opacity-light dark:bg-accent-red/opacity-medium border border-accent-red dark:border-accent-red/opacity-heavy rounded-lg p-3 text-accent-red text-sm"
+      role="alert"
+      class="bg-accent-red/opacity-light border border-accent-red/opacity-heavy rounded-lg px-3 py-2 text-accent-red text-xs"
       data-testid="frontend-error"
     >
       {{ errorMessage }}
@@ -239,73 +202,80 @@ defineExpose({ apply, validate, hasChanges, reload: load, available, configured 
     <template v-else>
       <div
         v-if="supports?.agc_reset_interval_seconds"
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 py-2.5 border-t border-stroke-subtle dark:border-stroke/opacity-light"
       >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
-          AGC Reset Interval
+        <label for="frontend-agc-input" class="text-sm text-content-primary">
+          AGC reset interval
           <span class="block text-[11px] text-content-muted" data-testid="frontend-agc-hint">{{
             agcHint
           }}</span>
+        </label>
+        <span class="flex items-center gap-2">
+          <input
+            id="frontend-agc-input"
+            v-model.number="agcInput"
+            type="number"
+            min="0"
+            :max="agcMax"
+            :step="agcStep"
+            :disabled="pending !== null"
+            class="cfg-input w-28 font-mono"
+            data-testid="frontend-agc-input"
+            @change="commitAgc"
+            @keydown.enter.prevent="commitAgc"
+          />
+          <span class="text-[11px] text-content-muted whitespace-nowrap" data-testid="frontend-agc">
+            running: {{ agcLabel(running.agc_reset_interval_seconds)
+            }}{{ boardDefault('agc_reset_interval_seconds') ? ' (board default)' : '' }}
+          </span>
         </span>
-        <span
-          v-if="!props.editing"
-          class="text-content-primary font-mono text-sm"
-          data-testid="frontend-agc"
-        >
-          {{ agcLabel(status!.running.agc_reset_interval_seconds)
-          }}{{ configuredNote('agc_reset_interval_seconds') }}
-        </span>
-        <input
-          v-else
-          v-model.number="agcInput"
-          type="number"
-          min="0"
-          :max="agcMax"
-          :step="agcStep"
-          class="cfg-input w-full sm:w-40"
-          data-testid="frontend-agc-input"
-        />
       </div>
 
       <div
         v-for="row in gainRows"
         :key="row.key"
-        class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b border-stroke-subtle dark:border-stroke/opacity-light gap-1"
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 py-2.5 border-t border-stroke-subtle dark:border-stroke/opacity-light"
       >
-        <span class="text-content-secondary dark:text-content-muted text-xs sm:text-sm">
+        <span class="text-sm text-content-primary">
           {{ row.label }}
           <span v-if="row.hint" class="block text-[11px] text-content-muted">{{ row.hint }}</span>
         </span>
-        <template v-if="supports?.[row.key]">
-          <span
-            v-if="!props.editing"
-            class="text-content-primary font-mono text-sm"
-            :data-testid="`frontend-${row.key}`"
-          >
-            {{ gainLabel(status!.running[row.key]) }}{{ configuredNote(row.key) }}
+        <span v-if="supports?.[row.key]" class="flex items-center gap-2">
+          <span class="text-[11px] text-content-muted" :data-testid="`frontend-${row.key}`">
+            {{ running[row.key] === undefined ? 'Unknown' : running[row.key] ? 'On' : 'Off'
+            }}{{ boardDefault(row.key) ? ' (board default)' : '' }}
           </span>
-          <select
-            v-else
-            v-model="gainInput[row.key]"
-            class="cfg-select w-full sm:w-40"
+          <button
+            type="button"
+            role="switch"
+            :aria-checked="running[row.key] === true"
+            :aria-label="row.label"
+            :disabled="pending !== null"
+            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50"
+            :class="
+              running[row.key] ? 'bg-primary' : 'bg-stroke-subtle dark:bg-white/opacity-medium'
+            "
             :data-testid="`frontend-${row.key}-input`"
+            @click="toggleGain(row.key)"
           >
-            <option v-if="gainInput[row.key] === ''" value="" disabled>Unknown</option>
-            <option value="on">On</option>
-            <option value="off">Off</option>
-          </select>
-        </template>
-        <span v-else class="text-content-muted text-sm" :data-testid="`frontend-${row.key}`"
+            <span
+              aria-hidden="true"
+              class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
+              :class="running[row.key] ? 'translate-x-[22px]' : 'translate-x-0.5'"
+            ></span>
+          </button>
+        </span>
+        <span v-else class="text-[11px] text-content-muted" :data-testid="`frontend-${row.key}`"
           >Not available on this board</span
         >
       </div>
     </template>
-  </template>
+  </section>
   <p
     v-else-if="!loading && status?.unavailable_reason"
-    class="pt-2 text-xs text-content-muted"
+    class="cfg-section !p-4 sm:!p-5 text-xs text-content-muted"
     data-testid="radio-frontend-unavailable"
   >
-    RF front end: {{ status.unavailable_reason }}
+    Live tuning: {{ status.unavailable_reason }}
   </p>
 </template>

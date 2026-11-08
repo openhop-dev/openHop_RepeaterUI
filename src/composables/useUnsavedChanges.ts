@@ -2,8 +2,8 @@ import { ref, type Ref } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 
 export function useUnsavedChanges(
-  isEditing: Ref<boolean>,
-  isSaving: Ref<boolean>,
+  isEditing: Readonly<Ref<boolean>>,
+  isSaving: Readonly<Ref<boolean>>,
   cancelFn: () => void,
   saveFn: () => Promise<boolean>,
 ) {
