@@ -16,8 +16,13 @@ export class GetCommand extends BaseCommand {
     const param = args[0]?.toLowerCase();
 
     if (param && isFrontendParam(param)) {
+      if (args.length > 2) {
+        this.writeError(term, `Usage: get ${param} [radio_id]`);
+        writePrompt();
+        return;
+      }
       // Read from the modem, not the cached config: this is what the radio runs.
-      return getFrontendParam(param).then(({ ok, text }) => {
+      return getFrontendParam(param, args[1]).then(({ ok, text }) => {
         if (ok) this.writeSuccess(term, text);
         else this.writeError(term, text);
         writePrompt();
@@ -54,7 +59,7 @@ export class GetCommand extends BaseCommand {
       this.writeLine(term, '  \x1b[36mduty.max\x1b[0m            Max airtime %');
       this.writeLine(term, '  \x1b[36mpublic.key\x1b[0m          Public key');
       this.writeLine(term, '');
-      this.writeLine(term, '  \x1b[33mRF front end (default radio):\x1b[0m');
+      this.writeLine(term, '  \x1b[33mRF front end (add a radio id, or the default radio):\x1b[0m');
       for (const [name, , help] of FRONTEND_PARAM_HELP) {
         this.writeLine(term, `  \x1b[36m${name.padEnd(20)}\x1b[0m${help}`);
       }

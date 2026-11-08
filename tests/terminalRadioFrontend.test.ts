@@ -95,7 +95,10 @@ describe('web terminal RF front end', () => {
       data: { ...status().data, applied: { agc_reset_interval_seconds: 8 }, errors: {} },
     });
     const out = await run(new SetCommand(), 'agc.reset.interval', '10');
-    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 10 });
+    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 10 },
+      undefined,
+    );
     expect(out).toContain('OK - interval now 8');
     expect(out).not.toContain('restart');
   });
@@ -114,7 +117,10 @@ describe('web terminal RF front end', () => {
       },
     });
     const out = await run(new SetCommand(), 'agc.reset.interval', '2000');
-    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ agc_reset_interval_seconds: 2000 });
+    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith(
+      { agc_reset_interval_seconds: 2000 },
+      undefined,
+    );
     expect(out).toContain('(0-1020 seconds)');
   });
 
@@ -134,7 +140,7 @@ describe('web terminal RF front end', () => {
       data: { ...status().data, applied: { rx_boosted_gain: false }, errors: {} },
     });
     expect(await run(new SetCommand(), 'radio.rxgain', 'off')).toContain('✓ OK');
-    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ rx_boosted_gain: false });
+    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ rx_boosted_gain: false }, undefined);
   });
 
   it('validates before sending', async () => {
@@ -152,6 +158,49 @@ describe('web terminal RF front end', () => {
       data: { ...status().data, applied: {}, errors: { fem_tx_gain: 'unsupported' } },
     });
     expect(await run(new SetCommand(), 'radio.fem.txgain', 'on')).toContain('Error: unsupported');
+  });
+
+  it('reads and sets one radio when given its id', async () => {
+    await run(new GetCommand(), 'radio.rxgain', 'g2');
+    expect(apiMock.getRadioFrontend).toHaveBeenCalledWith('g2');
+
+    apiMock.setRadioFrontend.mockResolvedValue({
+      success: true,
+      data: { ...status().data, applied: { fem_rx_gain: true }, errors: {} },
+    });
+    expect(await run(new SetCommand(), 'radio.fem.rxgain', 'on', 'g2')).toContain('✓ OK');
+    expect(apiMock.setRadioFrontend).toHaveBeenCalledWith({ fem_rx_gain: true }, 'g2');
+  });
+
+  it('uses the default radio without an id', async () => {
+    await run(new GetCommand(), 'radio.rxgain');
+    expect(apiMock.getRadioFrontend).toHaveBeenCalledWith(undefined);
+  });
+
+  it('says why a configured radio has no controls', async () => {
+    const reason = "radio 'g2' is configured but not running (restart to apply radios[] changes)";
+    apiMock.getRadioFrontend.mockResolvedValue(
+      status({ available: false, unavailable_reason: reason }),
+    );
+    expect(await run(new GetCommand(), 'radio.rxgain', 'g2')).toContain(`Error: ${reason}`);
+  });
+
+  it('shows the server’s reason when it refuses the radio id', async () => {
+    apiMock.setRadioFrontend.mockRejectedValue(new Error("Unknown radio_id 'nope'"));
+    expect(await run(new SetCommand(), 'radio.rxgain', 'on', 'nope')).toContain(
+      "Error: Unknown radio_id 'nope'",
+    );
+  });
+
+  it('rejects extra words after the radio id', async () => {
+    expect(await run(new GetCommand(), 'radio.rxgain', 'g2', 'x')).toContain(
+      'Usage: get radio.rxgain [radio_id]',
+    );
+    expect(await run(new SetCommand(), 'radio.rxgain', 'on', 'g2', 'x')).toContain(
+      'Usage: set radio.rxgain <value> [radio_id]',
+    );
+    expect(apiMock.getRadioFrontend).not.toHaveBeenCalled();
+    expect(apiMock.setRadioFrontend).not.toHaveBeenCalled();
   });
 
   it('lists the parameters in help', async () => {

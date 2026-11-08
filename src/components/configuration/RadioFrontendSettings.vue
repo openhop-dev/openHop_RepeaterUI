@@ -301,4 +301,11 @@ defineExpose({ apply, validate, hasChanges, reload: load, available, configured 
       </div>
     </template>
   </template>
+  <p
+    v-else-if="!loading && status?.unavailable_reason"
+    class="pt-2 text-xs text-content-muted"
+    data-testid="radio-frontend-unavailable"
+  >
+    RF front end: {{ status.unavailable_reason }}
+  </p>
 </template>

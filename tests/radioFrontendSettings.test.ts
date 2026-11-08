@@ -87,6 +87,20 @@ describe('RadioFrontendSettings', () => {
     expect(await (wrapper.vm as unknown as Card).apply()).toBe(true);
   });
 
+  it('says why a configured radio that is not running has no controls', async () => {
+    const reason = "radio 'g2' is configured but not running (restart to apply radios[] changes)";
+    apiMock.getRadioFrontend.mockResolvedValue({
+      success: true,
+      data: status({ available: false, unavailable_reason: reason }),
+    });
+    const wrapper = mountCard();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="radio-frontend"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="radio-frontend-unavailable"]').text()).toBe(
+      `RF front end: ${reason}`,
+    );
+  });
+
   it('explains an old firmware / board with no controls', async () => {
     apiMock.getRadioFrontend.mockResolvedValue({
       success: true,
